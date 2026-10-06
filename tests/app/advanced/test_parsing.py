@@ -144,3 +144,15 @@ def test_parse_client_supplied_credentials_uses_property_attachment_and_defaults
     assert len(records) == 1
     assert records[0]["attachment"] == "cross-platform"
     assert records[0]["signCount"] == 0
+
+
+def test_optional_bool_flag_and_first_value_helpers():
+    assert advanced_parsing._coerce_optional_bool(True) is True
+    assert advanced_parsing._coerce_optional_bool(0) is False
+    assert advanced_parsing._coerce_optional_bool('yes') is True
+    assert advanced_parsing._coerce_optional_bool('No') is False
+    assert advanced_parsing._coerce_optional_bool(float('nan')) is None
+    assert advanced_parsing._coerce_optional_bool('maybe') is None
+    mapping = {'resident': 'maybe', 'residentKey': 'true'}
+    assert advanced_parsing._extract_flag_from_mapping(mapping, ('resident', 'residentKey')) is True
+    assert advanced_parsing._extract_flag_from_mapping({}, ('resident',)) is None

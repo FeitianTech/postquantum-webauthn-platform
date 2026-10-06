@@ -48,3 +48,28 @@ def test_a_blank_name_names_no_algorithm(name):
 def test_lookup_named_cose_algorithm_supports_suffix_matching_for_descriptive_labels():
     assert cose_algorithms.lookup_name("WebAuthn: RSASSA-PKCS1-V1_5-SHA1") == -65535
     assert cose_algorithms.lookup_name("Experimental profile ML-DSA-65") == -49
+
+
+def test_extract_credential_algorithm_from_mapping_and_objects():
+    mapping = {"credential_id": b"cred", "public_key": {3: -7}}
+    assert cose_algorithms.credential_algorithm(mapping) == -7
+
+    class _CredentialObj:
+        credential_id = b"obj-cred"
+        public_key = {"alg": -257}
+
+    assert cose_algorithms.credential_algorithm(_CredentialObj()) == -257
+
+    class _IndexablePublicKey:
+        alg = -8
+
+        def __getitem__(self, key):
+            if key == 3:
+                return -8
+            raise KeyError(key)
+
+    class _IndexableCredentialObj:
+        credential_id = None
+        public_key = _IndexablePublicKey()
+
+    assert cose_algorithms.credential_algorithm(_IndexableCredentialObj()) == -8

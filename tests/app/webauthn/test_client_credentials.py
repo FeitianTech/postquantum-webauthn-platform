@@ -1,4 +1,5 @@
 """``webauthn.client_credentials``: a saved credential the page sends back, read into its key material."""
+
 from __future__ import annotations
 
 import pytest
@@ -30,3 +31,9 @@ def test_the_first_field_present_is_selected_with_its_name():
     assert client_credentials.select_field(entry, ("aaguid", "aaguidBase64", "aaguidHex")) == ("aaguidHex", "00")
     assert client_credentials.select_field(entry, ("aaguidBase64", "aaguidHex"), skip_none=False) == ("aaguidBase64", None)
     assert client_credentials.select_field(entry, ("aaguid",)) == (None, None)
+
+
+def test_first_value_skips_none_only_when_requested():
+    values = {'first': None, 'second': 0, 'third': 'x'}
+    assert client_credentials.select_first(values, ('first', 'second', 'third')) == 0
+    assert client_credentials.select_first(values, ('first', 'second', 'third'), skip_none=False) is None
