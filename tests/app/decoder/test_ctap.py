@@ -74,3 +74,39 @@ def test_try_decode_cbor_interprets_prefixed_get_assertion_request_payload():
     assert list(decoded["ctapDecoded"]) == ["getAssertionRequest"]
     assert decoded["ctapDecoded"]["getAssertionRequest"]["1 (rpId)"] == "example.com"
     assert decoded["expandedJson"]["2 (clientDataHash)"] == (b"\x22" * 32).hex()
+
+
+def test_extract_ctap_prefix_handles_empty_command_status_and_unknown_codes():
+    prefix, remaining = decode_ctap._extract_ctap_prefix(b"")
+    assert prefix is None
+    assert remaining == b""
+
+    prefix, remaining = decode_ctap._extract_ctap_prefix(b"\x01\xaa\xbb")
+    assert prefix == {
+        "code": 1,
+        "codeHex": "0x01",
+        "command": "MAKE_CREDENTIAL",
+        "meaning": "MAKE_CREDENTIAL command",
+        "kind": "command",
+    }
+    assert remaining == b"\xaa\xbb"
+
+    prefix, remaining = decode_ctap._extract_ctap_prefix(b"\x00\xcc")
+    assert prefix == {
+        "code": 0,
+        "codeHex": "0x00",
+        "status": "SUCCESS",
+        "meaning": "SUCCESS status",
+        "kind": "status",
+    }
+    assert remaining == b"\xcc"
+
+    prefix, remaining = decode_ctap._extract_ctap_prefix(b"\x7f\xdd")
+    assert prefix is None
+    assert remaining == b"\x7f\xdd"
+
+
+def test_is_padding_bytes_distinguishes_padding_from_content():
+    assert decode_ctap._is_padding_bytes(b"") is True
+    assert decode_ctap._is_padding_bytes(b"\x00\xff\x00") is True
+    assert decode_ctap._is_padding_bytes(b"\x00\x01\xff") is False

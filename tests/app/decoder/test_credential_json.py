@@ -5,7 +5,7 @@ from __future__ import annotations
 import base64
 import json
 
-from server.app.decoder.decode import credential_json
+from server.app.decoder.decode import binary_text, credential_json
 from server.app.decoder.decode.text import decode_payload_text
 from tests.app.security.ceremony_helpers import b64u
 
@@ -98,3 +98,26 @@ def test_credential_and_client_data_detectors_require_their_members():
     client_data_candidate = {'type': 'webauthn.create', 'challenge': 'AQID', 'origin': 'https://example.com'}
     assert credential_json.is_client_data_dict(client_data_candidate) is True
     assert credential_json.is_client_data_dict({'type': 'x', 'challenge': 'AQID'}) is False
+
+
+def test_decode_public_key_credential_uses_rawid_and_extension_fallbacks(monkeypatch):
+    monkeypatch.setattr(binary_text, "decode_binary_field", lambda _v: None)
+
+    credential = {
+        "id": "credential-id",
+        "type": "public-key",
+        "rawId": "@@@not-binary@@@",
+        "getClientExtensionResults": {"uvm": True},
+        "response": {"other": "value"},
+    }
+
+    result = credential_json.decode_public_key_credential(credential, raw_text="{\"x\":1}")
+
+    assert result["format"] == "PublicKeyCredential"
+    assert result["inputEncoding"] == "json"
+
+    decoded = result["decoded"]
+    assert decoded["rawId"] == {"raw": "@@@not-binary@@@"}
+    assert decoded["clientExtensionResults"] == {"uvm": True}
+    assert decoded["rawJson"] == '{"x":1}'
+    assert decoded["response"] == {"other": "value"}
