@@ -11,6 +11,8 @@ from server.app.routes.advanced import parsing as advanced_parsing
 from server.app.webauthn import assertion_hash
 from tests.app.entry_app import entry_app
 from tests.app.security.ceremony_helpers import Authenticator, assertion_payload, b64u
+from tests.app.storage.codec_examples import _stored_credential_entry
+from tests.app.storage.credential_seed import sample_public_key_bytes
 
 from .assertion_ceremony import CHALLENGE, begin, complete
 
@@ -494,3 +496,151 @@ def test_advanced_authenticate_begin_propagates_algorithms_extensions_and_uv_pre
         "prf": {"eval": {"first": b"\x01\x02", "second": b"\xaa\xbb"}},
     }
     assert getattr(captured["user_verification"], "value", captured["user_verification"]) == "discouraged"
+
+
+def test_advanced_authenticate_begin_accepts_storedcredentials_without_dunder(monkeypatch):
+    captured = {}
+
+    class _FakeServer:
+        def __init__(self):
+            self.allowed_algorithms = []
+            self.timeout = None
+
+        def authenticate_begin(self, credentials, **kwargs):
+            captured["credential_count"] = 0 if credentials is None else len(credentials)
+            captured["challenge"] = kwargs.get("challenge")
+            return {
+                "publicKey": {
+                    "challenge": "AQID",
+                    "allowCredentials": [{"type": "public-key", "id": "placeholder"}],
+                }
+            }, {"challenge": "advanced-auth-state"}
+
+    monkeypatch.setattr(relying_party, "determine_rp_id", lambda value=None: value or "example.com")
+    monkeypatch.setattr(relying_party, "create_fido_server", lambda **_kwargs: _FakeServer())
+
+    credential_id = b"frontend-adv-auth"
+    challenge = b"frontend-auth-challenge"
+
+    wrapped_entry = {
+        "credentialId": {"$base64url": b64u(credential_id)},
+        "publicKey": {"$base64url": b64u(sample_public_key_bytes())},
+        "aaguid": {"$hex": "00112233445566778899aabbccddeeff"},
+        "resident": True,
+        "authenticatorAttachment": "platform",
+        "algorithm": -7,
+    }
+
+    with entry_app().test_client() as client:
+        response = client.post(
+            "/api/advanced/authenticate/begin",
+            json={
+                "publicKey": {"challenge": {"$base64url": b64u(challenge)}},
+                "storedCredentials": [wrapped_entry],
+            },
+        )
+
+        assert response.status_code == 200
+        payload = response.get_json()
+        assert "__session_state" not in payload
+        assert "allowCredentials" not in payload["publicKey"]
+        assert captured["credential_count"] == 1
+        assert captured["challenge"] == challenge
+
+
+def test_advanced_authenticate_begin_accepts_credentials_fallback_field(monkeypatch):
+    captured = {}
+
+    class _FakeServer:
+        def __init__(self):
+            self.allowed_algorithms = []
+            self.timeout = None
+
+        def authenticate_begin(self, credentials, **_kwargs):
+            captured["credential_count"] = 0 if credentials is None else len(credentials)
+            return {"publicKey": {"challenge": "AQID"}}, {"challenge": "advanced-auth-state"}
+
+    monkeypatch.setattr(relying_party, "determine_rp_id", lambda value=None: value or "example.com")
+    monkeypatch.setattr(relying_party, "create_fido_server", lambda **_kwargs: _FakeServer())
+
+    with entry_app().test_client() as client:
+        response = client.post(
+            "/api/advanced/authenticate/begin",
+            json={
+                "publicKey": {"challenge": "010203"},
+                "credentials": [_stored_credential_entry(b"advanced-auth-credentials-field")],
+            },
+        )
+
+    assert response.status_code == 200
+    assert captured["credential_count"] == 1
+
+
+def test_advanced_authenticate_complete_accepts_storedcredentials_without_dunder(monkeypatch):
+    credential_id = b"adv-complete-storedCredentials"
+    encoded_credential_id = b64u(credential_id)
+
+    class _FakeServer:
+        allowed_algorithms = []
+
+        def authenticate_complete(self, *_args, **_kwargs):
+            return SimpleNamespace(public_key={3: -7})
+
+    monkeypatch.setattr(relying_party, "determine_rp_id", lambda value=None: value or "example.com")
+    monkeypatch.setattr(relying_party, "create_fido_server", lambda **_kwargs: _FakeServer())
+    monkeypatch.setattr(advanced_algorithms, "_derive_algorithms_from_credentials", lambda _credentials: [])
+
+    with entry_app().test_client() as client:
+        with client.session_transaction() as session_state:
+            session_state["advanced_auth_state"] = {"challenge": "state"}
+            session_state["advanced_auth_rp"] = {"id": "example.com", "name": "Example"}
+
+        response = client.post(
+            "/api/advanced/authenticate/complete",
+            json={
+                "publicKey": {
+                    "challenge": "AQID",
+                    "allowCredentials": [{"type": "public-key", "id": encoded_credential_id}],
+                },
+                "storedCredentials": [_stored_credential_entry(credential_id)],
+                "__assertion_response": {"rawId": encoded_credential_id, "response": {}},
+            },
+        )
+
+    assert response.status_code == 200
+    assert response.get_json()["authenticatedCredentialId"] == encoded_credential_id
+
+
+def test_advanced_authenticate_complete_accepts_credentials_fallback_field(monkeypatch):
+    credential_id = b"adv-complete-credentials-field"
+    encoded_credential_id = b64u(credential_id)
+
+    class _FakeServer:
+        allowed_algorithms = []
+
+        def authenticate_complete(self, *_args, **_kwargs):
+            return SimpleNamespace(public_key={3: -7})
+
+    monkeypatch.setattr(relying_party, "determine_rp_id", lambda value=None: value or "example.com")
+    monkeypatch.setattr(relying_party, "create_fido_server", lambda **_kwargs: _FakeServer())
+    monkeypatch.setattr(advanced_algorithms, "_derive_algorithms_from_credentials", lambda _credentials: [])
+
+    with entry_app().test_client() as client:
+        with client.session_transaction() as session_state:
+            session_state["advanced_auth_state"] = {"challenge": "state"}
+            session_state["advanced_auth_rp"] = {"id": "example.com", "name": "Example"}
+
+        response = client.post(
+            "/api/advanced/authenticate/complete",
+            json={
+                "publicKey": {
+                    "challenge": "AQID",
+                    "allowCredentials": [{"type": "public-key", "id": encoded_credential_id}],
+                },
+                "credentials": [_stored_credential_entry(credential_id)],
+                "__assertion_response": {"rawId": encoded_credential_id, "response": {}},
+            },
+        )
+
+    assert response.status_code == 200
+    assert response.get_json()["authenticatedCredentialId"] == encoded_credential_id

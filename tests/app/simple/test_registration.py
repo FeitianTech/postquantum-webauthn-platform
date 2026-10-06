@@ -16,6 +16,7 @@ from tests.app.security.ceremony_helpers import (
     registration_payload,
     unb64u,
 )
+from tests.app.storage.codec_examples import _stored_credential_entry
 
 EMAIL = "user@example.com"
 
@@ -163,3 +164,39 @@ def test_simple_register_complete_rejects_request_state_fallback_before_verifica
 
         with client.session_transaction() as session_state:
             assert "register_rp_id" not in session_state
+
+
+def test_simple_register_begin_accepts_existing_credentials_alias(monkeypatch):
+    captured = {}
+
+    class _FakeServer:
+        def register_begin(self, _user, credentials, **_kwargs):
+            captured["credential_count"] = len(credentials)
+            return {
+                "publicKey": {
+                    "challenge": "AQID",
+                    "pubKeyCredParams": [{"type": "public-key", "alg": -7}],
+                }
+            }, {"challenge": "simple-register-state"}
+
+    monkeypatch.setattr(relying_party, "determine_rp_id", lambda: "example.com")
+    monkeypatch.setattr(relying_party, "create_fido_server", lambda **_kwargs: _FakeServer())
+
+    with entry_app().test_client() as client:
+        response = client.post(
+            "/api/register/begin?email=user@example.com",
+            json={"existingCredentials": [_stored_credential_entry(b"simple-register-alias")]},
+        )
+
+        assert response.status_code == 200
+        payload = response.get_json()
+        # The ceremony state stays server-side and is never echoed back.
+        assert "__session_state" not in payload
+        assert captured["credential_count"] == 1
+
+        with client.session_transaction() as session_state:
+            assert session_state["state"]["challenge"] == "simple-register-state"
+            assert isinstance(session_state["state"]["issued_at"], float)
+
+        with client.session_transaction() as session_state:
+            assert "simple_credentials" not in session_state

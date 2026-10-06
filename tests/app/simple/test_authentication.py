@@ -3,12 +3,14 @@
 The ceremonies are genuinely signed (``ceremony_helpers``) and the credential
 store is the real one, in this test's directory.
 """
+
 from __future__ import annotations
 
 from types import SimpleNamespace
 
 import pytest
 
+from server.app.config import relying_party
 from server.app.routes.simple import authentication as simple_authentication
 from server.app.storage import credentials as storage_credentials
 from tests.app.characterization import material
@@ -23,6 +25,7 @@ from tests.app.security.ceremony_helpers import (
     simple_complete_body,
     unb64u,
 )
+from tests.app.storage.codec_examples import _stored_credential_entry
 
 EMAIL = "user@example.com"
 
@@ -177,3 +180,34 @@ def test_a_counter_that_cannot_be_saved_fails_the_authentication(credential_stor
 
 def test_a_matched_credential_without_readable_bytes_has_no_id():
     assert simple_authentication._matched_credential_id(SimpleNamespace(credential_id=object())) == b""
+
+
+def test_simple_authenticate_begin_accepts_stored_credentials_alias(monkeypatch):
+    captured = {}
+
+    class _FakeServer:
+        def authenticate_begin(self, credentials, **_kwargs):
+            captured["credential_count"] = len(credentials)
+            return {"publicKey": {"challenge": "AQID"}}, {"challenge": "simple-auth-state"}
+
+    monkeypatch.setattr(relying_party, "determine_rp_id", lambda: "example.com")
+    monkeypatch.setattr(relying_party, "create_fido_server", lambda **_kwargs: _FakeServer())
+
+    with entry_app().test_client() as client:
+        response = client.post(
+            "/api/authenticate/begin?email=user@example.com",
+            json={"storedCredentials": [_stored_credential_entry(b"simple-auth-alias")]},
+        )
+
+        assert response.status_code == 200
+        payload = response.get_json()
+        # The ceremony state stays server-side and is never echoed back.
+        assert "__session_state" not in payload
+        assert captured["credential_count"] == 1
+
+        with client.session_transaction() as session_state:
+            assert session_state["state"]["challenge"] == "simple-auth-state"
+            assert isinstance(session_state["state"]["issued_at"], float)
+            # The credentials' digest, never their public keys: complete is sent them again.
+            assert "simple_credentials" not in session_state
+            assert isinstance(session_state["simple_credentials_digest"], str)

@@ -481,3 +481,66 @@ def test_advanced_register_complete_prefers_session_attachment_scope_over_tamper
 
         with client.session_transaction() as session_store:
             assert "advanced_register_allowed_attachments" not in session_store
+
+
+def test_advanced_register_begin_accepts_base64url_wrapped_user_id_and_challenge(monkeypatch):
+    captured = {}
+
+    class _FakeServer:
+        def __init__(self):
+            self.allowed_algorithms = []
+            self.timeout = None
+            self.attestation = None
+
+        def register_begin(self, user_entity, *_args, **kwargs):
+            captured["user_id"] = bytes(getattr(user_entity, "id"))
+            captured["challenge"] = kwargs.get("challenge")
+            return {"publicKey": {"challenge": "AQID"}}, {"challenge": "advanced-register-state"}
+
+    monkeypatch.setattr(relying_party, "create_fido_server", lambda **_kwargs: _FakeServer())
+
+    user_id = b"frontend-user-id"
+    challenge = b"frontend-register-challenge"
+
+    with entry_app().test_client() as client:
+        response = client.post(
+            "/api/advanced/register/begin",
+            json={
+                "publicKey": {
+                    "rp": {"id": "example.com", "name": "Example"},
+                    "user": {
+                        "id": {"$base64url": b64u(user_id)},
+                        "name": "user@example.com",
+                        "displayName": "User",
+                    },
+                    "challenge": {"$base64url": b64u(challenge)},
+                    "pubKeyCredParams": [{"type": "public-key", "alg": -7}],
+                }
+            },
+        )
+
+    assert response.status_code == 200
+    assert captured["user_id"] == user_id
+    assert captured["challenge"] == challenge
+
+
+def test_advanced_register_begin_rejects_invalid_binary_wrapper_in_user_id():
+    with entry_app().test_client() as client:
+        response = client.post(
+            "/api/advanced/register/begin",
+            json={
+                "publicKey": {
+                    "rp": {"id": "example.com", "name": "Example"},
+                    "user": {
+                        "id": {"$hex": "zz"},
+                        "name": "user@example.com",
+                        "displayName": "User",
+                    },
+                    "challenge": "00112233445566778899aabbccddeeff",
+                    "pubKeyCredParams": [{"type": "public-key", "alg": -7}],
+                }
+            },
+        )
+
+    assert response.status_code == 400
+    assert "Invalid user ID format" in response.get_json()["error"]
