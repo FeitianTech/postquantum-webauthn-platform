@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { getAllAdvancedCredentials, removeAdvancedCredential, saveAdvancedCredential, updateAdvancedCredentialSignCount } from './advanced-credentials.js';
+import { getAllAdvancedCredentials, prepareAdvancedCredentialsForServer, removeAdvancedCredential, saveAdvancedCredential, updateAdvancedCredentialSignCount } from './advanced-credentials.js';
 import { seedUnifiedCredentialRecords } from './storage-core.js';
 import { repoFile } from '@/test/logic/repo-file.js';
 import { getAllSimpleCredentials, saveSimpleCredential } from './simple-credentials.js';
@@ -244,5 +244,108 @@ describe("stored credentials: artifacts", () => {
 
   it("reports false when an advanced removal names no credential", async () => {
     expect(removeAdvancedCredential('', null)).toBe(false);
+  });
+});
+
+
+describe("stored credentials: advanced", () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    seedUnifiedCredentialRecords([]);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("stores, prepares, updates, and removes advanced credentials", async () => {
+    saveSimpleCredential({
+          credentialId: 'adv-1',
+          email: 'advanced@example.com',
+          publicKey: 'cHVibGlj',
+          signCount: 1,
+        });
+    const saved = saveAdvancedCredential({
+          credentialId: 'adv-1',
+          publicKey: 'cHVibGlj',
+          signCount: 4,
+          authenticatorAttachment: 'platform',
+          residentKey: true,
+        });
+    expect(saved.storageId).toContain('adv-1');
+    expect(getAllSimpleCredentials()).toHaveLength(0);
+    expect(getAllAdvancedCredentials()).toHaveLength(1);
+    const prepared = prepareAdvancedCredentialsForServer();
+    expect(prepareAdvancedCredentialsForServer([])).toEqual([]);
+    expect(prepared).toEqual([
+          {
+            credentialId: 'adv-1',
+            publicKey: 'cHVibGlj',
+            aaguid: null,
+            signCount: 4,
+            algorithm: undefined,
+            authenticatorAttachment: 'platform',
+            resident: true,
+          },
+        ]);
+    expect(updateAdvancedCredentialSignCount('adv-1', undefined, saved.storageId)).toBe(true);
+    expect(getAllAdvancedCredentials()[0].signCount).toBe(5);
+    expect(removeAdvancedCredential('adv-1', saved.storageId)).toBe(true);
+    expect(getAllAdvancedCredentials()).toHaveLength(0);
+  });
+
+  it("merges simple credential data into advanced saves and updates/removes by storageId", async () => {
+    saveSimpleCredential({
+          credentialId: 'advanced-merge',
+          email: 'advanced-merge@example.com',
+          publicKey: 'cHVibGlj',
+          signCount: 6,
+        });
+    const savedAdvanced = saveAdvancedCredential({
+          credentialId: 'advanced-merge',
+          publicKey: 'cHVibGlj',
+          authenticatorAttachment: 'cross-platform',
+        });
+    expect(savedAdvanced).not.toBeNull();
+    expect(savedAdvanced.storageId).toContain('advanced-merge');
+    expect(getAllSimpleCredentials()).toHaveLength(0);
+    const advanced = getAllAdvancedCredentials();
+    expect(advanced).toHaveLength(1);
+    expect(advanced[0].email).toBe('advanced-merge@example.com');
+    expect(advanced[0].signCount).toBe(6);
+    expect(updateAdvancedCredentialSignCount('', 19, savedAdvanced.storageId)).toBe(true);
+    expect(getAllAdvancedCredentials()[0].signCount).toBe(19);
+    expect(removeAdvancedCredential('', savedAdvanced.storageId)).toBe(true);
+    expect(getAllAdvancedCredentials()).toHaveLength(0);
+  });
+
+  it("keeps simple credentials and replaces a matching advanced record", async () => {
+    saveSimpleCredential({
+          credentialId: 'simple-ready',
+          email: 'simple@example.com',
+          publicKey: 'cHVibGlj',
+          signCount: 1,
+          algorithm: -7,
+        });
+    saveAdvancedCredential({
+          credentialId: 'advanced-ready',
+          publicKey: 'cHVibGlj',
+          signCount: 2,
+          aaguidHex: '00112233445566778899aabbccddeeff',
+          authenticatorAttachment: 'platform',
+          residentKey: true,
+          algorithm: -257,
+        });
+    saveAdvancedCredential({
+          credentialId: 'advanced-ready',
+          publicKey: 'cHVibGlj',
+          signCount: 9,
+          authenticatorAttachment: 'cross-platform',
+          resident: false,
+          algorithm: -257,
+        });
+    expect(getAllSimpleCredentials()[0].credentialId).toBe('simple-ready');
+    expect(getAllAdvancedCredentials()).toHaveLength(1);
+    expect(getAllAdvancedCredentials()[0]).toMatchObject({ signCount: 9, email: '', authenticatorAttachment: 'cross-platform', resident: false });
   });
 });

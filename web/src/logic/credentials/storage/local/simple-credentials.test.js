@@ -348,3 +348,38 @@ describe("stored credentials: simple", () => {
     expect(getAllAdvancedCredentials()[0].signCount).toBe(1);
   });
 });
+
+
+describe("stored credentials: advanced", () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    seedUnifiedCredentialRecords([]);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("prepares simple payloads and filters credentials without a key", async () => {
+    saveSimpleCredential({
+          credentialId: 'simple-ready',
+          email: 'simple@example.com',
+          publicKey: 'cHVibGlj',
+          signCount: 1,
+          algorithm: -7,
+        });
+    const simpleServerPayload = prepareCredentialsForServer([
+          ...getAllSimpleCredentials(),
+          { credentialId: '', publicKey: '' },
+        ]);
+    expect(simpleServerPayload).toEqual([
+          {
+            credentialId: 'simple-ready',
+            aaguid: null,
+            publicKey: 'cHVibGlj',
+            signCount: 1,
+            algorithm: -7,
+          },
+        ]);
+  });
+});
