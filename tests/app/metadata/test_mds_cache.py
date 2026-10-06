@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import os
 import types
+from datetime import datetime, timezone
 
 import pytest
 
@@ -220,3 +221,30 @@ def test_what_another_thread_loaded_while_this_one_waited_for_the_lock_is_used(
 def test_cache_cleaning_and_formatting_helpers():
     assert mds_cache._clean_metadata_cache_value("  etag-value  ") == "etag-value"
     assert mds_cache._clean_metadata_cache_value("   ") is None
+
+
+def test_load_base_explorer_snapshot_prefers_packaged_explorer_when_newer(monkeypatch, tmp_path, metadata_state):
+    verified_path = tmp_path / "fido-mds3.verified.json"
+    explorer_path = tmp_path / "fido-mds3.explorer.json"
+
+    verified_path.write_text(
+        json.dumps({"legalHeader": "L", "no": 1, "nextUpdate": "2099-01-01", "entries": []}),
+        encoding="utf-8",
+    )
+    explorer_path.write_text(
+        json.dumps({"meta": {"entryCount": 1, "source": "packaged"}, "entries": [{"entryId": "x"}]}),
+        encoding="utf-8",
+    )
+
+    now = datetime.now(timezone.utc).timestamp()
+    os.utime(verified_path, (now - 10, now - 10))
+    os.utime(explorer_path, (now, now))
+
+    monkeypatch.setenv("FIDO_SERVER_MDS_SNAPSHOT_DIR", str(tmp_path))
+    monkeypatch.setattr(mds_cache.CACHE, "explorer", None)
+    monkeypatch.setattr(mds_cache.CACHE, "explorer_mtime", None)
+
+    snapshot, marker = mds_cache._load_base_explorer_snapshot()
+
+    assert snapshot["meta"]["entryCount"] == 1
+    assert marker is not None

@@ -982,3 +982,46 @@ def test_maybe_store_uploaded_metadata_file_adds_new_file_with_sanitized_name(mo
     assert args[1] == content
     assert args[2] == "metadata: add custom.json"
     assert kwargs == {"sha": None}
+
+
+def test_safe_filename_and_upload_flow_handles_skip_update_and_disabled_logging(metadata_state, monkeypatch):
+    content = b"metadata-payload"
+
+    recorded = []
+    monkeypatch.setattr(github_mirror, "is_logging_enabled", lambda: True)
+    monkeypatch.setattr(github_mirror, "git_blob_sha", lambda _content: "sha-content")
+
+    monkeypatch.setattr(
+        github_mirror,
+        "github_list_directory",
+        lambda _folder: [{"type": "file", "name": "metadata.json", "sha": "sha-content"}],
+    )
+    monkeypatch.setattr(
+        github_mirror,
+        "github_upload_file",
+        lambda *args, **kwargs: recorded.append((args, kwargs)),
+    )
+
+    assert github_mirror.maybe_store_uploaded_metadata_file("metadata.json", content) is False
+    assert recorded == []
+
+    monkeypatch.setattr(
+        github_mirror,
+        "github_list_directory",
+        lambda _folder: [
+            {
+                "type": "file",
+                "name": "metadata.json",
+                "sha": "old-sha",
+                "path": "metadata/metadata.json",
+            }
+        ],
+    )
+
+    assert github_mirror.maybe_store_uploaded_metadata_file(" metadata.json ", content) is True
+    assert recorded and recorded[-1][0][0] == "metadata/metadata.json"
+    assert recorded[-1][0][2] == "metadata: update metadata.json"
+    assert recorded[-1][1]["sha"] == "old-sha"
+
+    monkeypatch.setattr(github_mirror, "is_logging_enabled", lambda: False)
+    assert github_mirror.maybe_store_uploaded_metadata_file("metadata.json", content) is False

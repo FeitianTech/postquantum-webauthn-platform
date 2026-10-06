@@ -216,3 +216,45 @@ def test_entry_aaguids_are_normalized_and_read_from_a_statement():
         aaguid = None
         metadata_statement = {'aaguid': 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'}
     assert mds_entries._extract_entry_aaguid(_MappingBackedEntry()) == 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+
+
+def test_json_clone_copies_values_and_refuses_non_json_values(metadata_state, monkeypatch):
+    assert mds_entries._clone_json_value({'a': [1, 2]}) == {'a': [1, 2]}
+    assert mds_entries._clone_json_value(object()) is None
+
+
+def test_build_metadata_entry_components_and_expand_payloads(metadata_state):
+    raw = {
+        "legalHeader": "Demo legal",
+        "aaguid": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+        "metadataStatement": {
+            "description": "Demo authenticator",
+        },
+        "statusReports": [{"status": "NOT_FIDO_CERTIFIED"}],
+    }
+
+    entry, legal_header, payload = mds_entries.build_metadata_entry_components(raw)
+
+    assert legal_header == "Demo legal"
+    assert payload["metadataStatement"]["description"] == "Demo authenticator"
+    assert payload["metadataStatement"]["attestationRootCertificates"] == []
+    assert payload["statusReports"][0]["status"] == "NOT_FIDO_CERTIFIED"
+    assert entry["metadataStatement"]["description"] == "Demo authenticator"
+
+    expanded = mds_entries.expand_metadata_entry_payloads(
+        {
+            "legalHeader": "Bulk legal",
+            "entries": [
+                {"metadataStatement": {"description": "First"}},
+                {"metadataStatement": {"description": "Second"}},
+            ],
+        }
+    )
+    assert len(expanded) == 2
+    assert all(item.get("legalHeader") == "Bulk legal" for item in expanded)
+
+    with pytest.raises(ValueError, match="does not contain any entries"):
+        mds_entries.expand_metadata_entry_payloads({"entries": []})
+
+    with pytest.raises(ValueError, match="is not a JSON object"):
+        mds_entries.expand_metadata_entry_payloads({"entries": ["bad-entry"]})

@@ -3,6 +3,7 @@
 Each test stores in a session metadata directory of its own. A storage call that
 fails is stood in for by a raising one: what a full disk or a lost bucket does.
 """
+
 from __future__ import annotations
 
 import json
@@ -169,3 +170,10 @@ def test_an_emptied_namespace_that_cannot_be_pruned_still_has_its_upload_deleted
 
     assert mds_uploads.delete_session_metadata_item(stored, session_id=SESSION) is True
     assert not (storage / SESSION / stored).exists()
+
+
+def test_saved_metadata_info_keeps_json_objects_and_refuses_malformed_json(metadata_state, monkeypatch):
+    monkeypatch.setattr(session_metadata, 'read_file', lambda _sid, _name: b'{"uploaded_at":"now"}')
+    assert mds_uploads._load_session_metadata_info('session', 'entry.meta.json') == {'uploaded_at': 'now'}
+    monkeypatch.setattr(session_metadata, 'read_file', lambda _sid, _name: b'not-json')
+    assert mds_uploads._load_session_metadata_info('session', 'entry.meta.json') == {}
