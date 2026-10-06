@@ -1,5 +1,6 @@
 """``decoder.decode.answer_auth_data``: authenticator data as the decoder's answer shows it,
 from the decoded details where a reading gave them, else from the bytes."""
+
 import hashlib
 
 import cbor2
@@ -68,3 +69,49 @@ def test_attested_credential_details_are_shown_beside_what_the_bytes_say():
 )
 def test_attested_credential_details_show_only_the_parts_they_have(details, credential):
     assert answer_auth_data._build_credential_payload(details, None) == credential
+
+
+def _authenticator_data_with_counter_five() -> bytes:
+    rp_id_hash = bytes(range(32))
+    flags = bytes([0x45])  # UP + UV + AT
+    sign_count = (5).to_bytes(4, "big")
+
+    aaguid = bytes.fromhex("00112233445566778899aabbccddeeff")
+    credential_id = b"\x10\x20\x30\x40"
+    credential_length = len(credential_id).to_bytes(2, "big")
+    cose_key = cbor2.dumps({1: 2, 3: -7, -1: 1, -2: b"\x01" * 32, -3: b"\x02" * 32})
+
+    return rp_id_hash + flags + sign_count + aaguid + credential_length + credential_id + cose_key
+
+
+def test_build_authenticator_data_payload_uses_bytes_and_details_to_build_credential_fields():
+    auth_bytes = _authenticator_data_with_counter_five()
+    details = {
+        "flags": {
+            "value": 0x45,
+            "bitfield": "0b01000101",
+            "userPresent": True,
+            "userVerified": True,
+            "backupEligibility": False,
+            "backupState": False,
+            "attestedCredentialDataIncluded": True,
+            "extensionDataIncluded": False,
+        },
+        "signCount": 5,
+        "attestedCredentialData": {
+            "aaguid": "00112233-4455-6677-8899-aabbccddeeff",
+            "aaguidHex": "00112233445566778899aabbccddeeff",
+            "credentialId": {"hex": "10203040", "length": 4},
+            "publicKey": {1: 2, 3: -7, -2: "AQID", -3: "BAUG"},
+        },
+    }
+
+    payload = answer_auth_data.build_authenticator_data_payload(auth_bytes, details, -7)
+
+    assert payload["rpIdHash"] == bytes(range(32)).hex()
+    assert payload["counter"] == 5
+    assert payload["flags"]["UP"] is True
+    assert payload["flags"]["AT"] is True
+    assert payload["credential"]["credentialIdLength"] == "0004"
+    assert payload["credential"]["credentialId"] == "10203040"
+    assert payload["credential"]["publicKey"]["alg"] == "ES256 (ECDSA)"

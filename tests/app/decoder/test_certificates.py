@@ -1,4 +1,5 @@
 """``decoder.decode.certificates``: an attestation's certificates as the decoder's answer shows them."""
+
 from __future__ import annotations
 
 import base64
@@ -7,6 +8,7 @@ import pytest
 
 from server.app.decoder.decode import certificates as decode_certificates
 from tests.app.characterization import material
+from tests.app.python_fido2_vectors import GSR2_DER as _GSR2_DER
 
 CERTIFICATE = material.certificate(material.ec_key("decoder-certificates").public_key(), common_name="Decoded", serial=0xDE)
 
@@ -63,3 +65,30 @@ def test_an_attestation_without_x5c_certificates_shows_the_one_its_details_read(
 
     assert converted == {"fmt": "packed", "attStmt": {"x5c": [{"raw": "0102", "parsedX5c": {"derBase64": "AQI="}}]}}
     assert decode_certificates.convert_attestation_entry("not-a-mapping") == {}
+
+
+def test_convert_attestation_entry_injects_certificate_when_x5c_is_empty():
+    der_b64 = base64.b64encode(_GSR2_DER).decode("ascii")
+    entry = {
+        "raw": "raw-attestation",
+        "details": {
+            "attestationFormat": "packed",
+            "attestationStatement": {
+                "alg": -7,
+                "sig": b"\x01\x02",
+                "x5c": [],
+            },
+            "attestationCertificate": {
+                "derBase64": der_b64,
+                "pem": "-----BEGIN CERTIFICATE-----\nZm9v\n-----END CERTIFICATE-----",
+                "subject": "CN=Demo",
+            },
+        },
+    }
+
+    converted = decode_certificates.convert_attestation_entry(entry)
+
+    assert converted["fmt"] == "packed"
+    assert converted["attStmt"]["sig"] == "0102"
+    assert len(converted["attStmt"]["x5c"]) == 1
+    assert "parsedX5c" in converted["attStmt"]["x5c"][0]

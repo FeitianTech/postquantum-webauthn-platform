@@ -1,4 +1,5 @@
 """``decoder.decode.answer_bytes``: the bytes the decoder's answer reads back from a reading's entries."""
+
 import base64
 import hashlib
 
@@ -75,3 +76,11 @@ def test_an_attestation_objects_authenticator_data_is_its_auth_data_bytes(raw, e
 
 def test_a_field_with_an_empty_hex_is_read_from_its_base64url():
     assert answer_bytes.extract_bytes_from_binary({"binary": {"hex": ""}, "raw": "AQI"}) == b"\x01\x02"
+
+
+def test_extract_bytes_from_binary_prefers_hex_and_then_base64url_raw():
+    assert answer_bytes.extract_bytes_from_binary({"hex": "AA BB"}) == b"\xaa\xbb"
+
+    raw_value = base64.urlsafe_b64encode(b"\x01\x02\x03").decode("ascii").rstrip("=")
+    assert answer_bytes.extract_bytes_from_binary({"raw": raw_value}) == b"\x01\x02\x03"
+    assert answer_bytes.extract_bytes_from_binary({"raw": ""}) is None

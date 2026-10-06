@@ -279,3 +279,37 @@ def test_decoder_response_keeps_json_type_and_success():
     prepared = decode_answer._prepare_decoder_response({'format': 'JSON', 'decoded': {'ok': True}})
     assert prepared['success'] is True
     assert prepared['type'] == 'JSON'
+
+
+def test_build_decoder_payload_cbor_adds_unique_qualifiers_and_ctap_sections():
+    result = {
+        "format": "CBOR",
+        "decoded": {
+            "ctap": {
+                "meaning": "AuthenticatorGetAssertion command",
+                "kind": "command",
+                "code": 2,
+                "codeHex": "0x02",
+            },
+            "ctapDecoded": {
+                "getAssertionResponse": {"signature": "deadbeef"},
+                "getAssertionRequest": {"rpId": "example.com"},
+            },
+            "expandedJson": {
+                "signature": "deadbeef",
+                "attStmt": {"sig": "c0ffee"},
+            },
+            "decodedValue": {"k": "v"},
+        },
+    }
+
+    payload = decode_answer._build_decoder_payload(result)
+
+    assert payload["success"] is True
+    assert payload["type"].startswith("CBOR (")
+    assert payload["type"].count("GetAssertion response") == 1
+    assert "GetAssertion request" in payload["type"]
+    # An "attStmt" key in expandedJson is not a makeCredential response.
+    assert "MakeCredential response" not in payload["type"]
+    assert payload["data"]["ctap"]["codeHex"] == "0x02"
+    assert payload["data"]["expandedJson"]["attStmt"]["sig"] == "c0ffee"
