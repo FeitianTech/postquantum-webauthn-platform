@@ -487,6 +487,33 @@ def test_a_rate_limit_without_retry_after_waits_the_backoff(monkeypatch):
     assert waits == [updater.MDS_DOWNLOAD_BACKOFF_BASE_SECONDS]
 
 
+
+def test_retryable_server_errors_use_backoff_until_the_blob_arrives(monkeypatch):
+    waits = []
+    answers = [
+        urllib.error.HTTPError("https://mds.example", 503, "Unavailable", {"Retry-After": "0"}, io.BytesIO()),
+        urllib.error.HTTPError("https://mds.example", 502, "Bad Gateway", None, io.BytesIO()),
+        (b"verified-blob", "Wed, 01 Apr 2026 12:00:00 GMT", '"blob-etag"'),
+    ]
+
+    def _fetch():
+        answer = answers.pop(0)
+        if isinstance(answer, urllib.error.HTTPError):
+            raise answer
+        return answer
+
+    monkeypatch.setattr(updater, "_fetch_remote_blob", _fetch)
+    monkeypatch.setattr(updater.time, "sleep", waits.append)
+
+    assert updater._fetch_remote_blob_with_retry() == (
+        b"verified-blob", "Wed, 01 Apr 2026 12:00:00 GMT", '"blob-etag"'
+    )
+    assert waits == [
+        updater.MDS_DOWNLOAD_BACKOFF_BASE_SECONDS,
+        updater.MDS_DOWNLOAD_BACKOFF_BASE_SECONDS * 2,
+    ]
+    assert answers == []
+
 def _rate_limited(monkeypatch):
     attempts = []
 
