@@ -1,3 +1,5 @@
+"""Tests of pem behavior."""
+
 import base64
 
 import pytest
