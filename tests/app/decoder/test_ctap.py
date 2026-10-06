@@ -110,3 +110,42 @@ def test_is_padding_bytes_distinguishes_padding_from_content():
     assert decode_ctap._is_padding_bytes(b"") is True
     assert decode_ctap._is_padding_bytes(b"\x00\xff\x00") is True
     assert decode_ctap._is_padding_bytes(b"\x00\x01\xff") is False
+
+
+def test_try_decode_cbor_returns_none_for_empty_data():
+    assert decode_ctap._try_decode_cbor(b"", "hex") is None
+
+
+def test_try_decode_cbor_reports_bytes_after_the_first_item_as_trailing():
+    payload = cbor2.dumps({"a": 1}) + cbor2.dumps(2) + cbor2.dumps(3)
+
+    result = decode_ctap._try_decode_cbor(payload, "base64url")
+
+    assert result["format"] == "CBOR"
+    assert result["inputEncoding"] == "base64url"
+    assert result["decoded"]["decodedValue"] == {"a": 1}
+    assert result["malformed"] == ["Trailing 2 byte(s) after CBOR payload."]
+
+
+def test_try_decode_cbor_handles_ctap_prefix_without_payload():
+    result = decode_ctap._try_decode_cbor(b"\x01", "hex")
+
+    assert result is not None
+    assert result["format"] == "CBOR"
+    assert result["decoded"]["decodedValue"]["summary"] == "Empty CBOR payload"
+    # Alone, 0x01 is MAKE_CREDENTIAL without parameters or the INVALID_COMMAND status.
+    assert result["decoded"]["ctap"]["kind"] == "command or status"
+    assert result["decoded"]["ctap"]["payloadLength"] == 0
+
+
+def test_try_decode_cbor_reports_ctap_padding_bytes_as_padding():
+    payload = b"\x01" + cbor2.dumps({"a": 1}) + b"\x00\xff"
+
+    result = decode_ctap._try_decode_cbor(payload, "base64url")
+
+    assert result["format"] == "CBOR"
+    ctap = result["decoded"]["ctap"]
+    assert ctap["kind"] == "command"
+    assert ctap["paddingBytes"] == 2
+    trailing = [finding["message"] for finding in result["findings"] if finding["code"] == "trailing-bytes"]
+    assert trailing == ["Trailing 2 byte(s) after CBOR payload (all 0x00/0xff: HID report padding?)."]

@@ -71,3 +71,32 @@ def test_decoder_reports_encoding_ambiguity_rather_than_guessing():
     )
     assert urlsafe.encoding == "base64url"
     assert urlsafe.ambiguous is False
+
+
+def test_decode_binary_input_prefers_hex_when_candidate_is_valid_hex():
+    decoded, encoding = binary_text.decode_binary_input("414243")
+
+    assert decoded == b"ABC"
+    assert encoding == "hex"
+
+
+def test_decode_binary_input_prefers_hex_for_ambiguous_alphabetic_payload():
+    decoded, encoding = binary_text.decode_binary_input("AAAA")
+
+    assert decoded == bytes.fromhex("AAAA")
+    assert encoding == "hex"
+
+
+def test_decode_binary_input_accepts_base64url_without_padding():
+    original = b"\xfb\xff"
+    base64url_value = base64.urlsafe_b64encode(original).decode("ascii").rstrip("=")
+
+    decoded, encoding = binary_text.decode_binary_input(base64url_value)
+
+    assert decoded == original
+    assert encoding == "base64url"
+
+
+def test_decode_binary_input_rejects_invalid_binary_text():
+    with pytest.raises(ValueError, match="Input does not appear to be valid"):
+        binary_text.decode_binary_input("g$")

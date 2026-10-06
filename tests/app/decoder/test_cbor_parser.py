@@ -1,4 +1,6 @@
 """``decoder.decode.cbor_parser``: CBOR read strictly, or leniently with what it stepped over."""
+
+
 import pytest
 
 from server.app.decoder import values as decoder_values
@@ -241,3 +243,156 @@ def test_a_short_unterminated_or_invalid_item_is_kept_when_lenient_and_refused_w
     assert [(entry["code"], entry["offset"], entry["message"]) for entry in stepped_over] == [skipped]
     with pytest.raises(decode_cbor_parser._CborDecodingError, match=skipped[2]):
         decode_cbor_parser.decode_item(data)
+
+
+def test_parse_cbor_item_rejects_a_truncated_byte_string_and_keeps_its_bytes_only_when_lenient():
+    # Major type 2, additional info 26 -> 4-byte length; declares 5 bytes, carries only 2.
+    payload = b"\x5a\x00\x00\x00\x05\x01\x02"
+
+    with pytest.raises(decode_cbor_parser._CborDecodingError, match="byte string declares 5 bytes; 2 remain"):
+        decode_cbor_parser._parse_cbor_item(payload, 0)
+
+    node, offset, skipped = decode_cbor_parser.decode_item(payload, lenient=True)
+
+    assert offset == len(payload)
+    assert node["majorType"] == 2
+    assert node["type"] == "byte string"
+    assert node["length"] == 2
+    assert node["declaredLength"] == 5
+    assert node["truncated"] is True
+    assert node["summary"] == "bytes[2] (truncated from 5)"
+    assert [entry["code"] for entry in skipped] == ["truncated"]
+
+
+def test_parse_cbor_item_rejects_invalid_utf8_and_keeps_its_bytes_only_when_lenient():
+    payload = b"\x63\xff\xff\xff"
+    with pytest.raises(decode_cbor_parser._CborDecodingError, match="text string is not valid UTF-8"):
+        decode_cbor_parser._parse_cbor_item(payload, 0)
+
+    node, offset, _ = decode_cbor_parser.decode_item(payload, lenient=True)
+
+    assert offset == len(payload)
+    assert node["majorType"] == 3
+    assert node["type"] == "text string"
+    assert node["error"] == "Invalid UTF-8 in text string."
+    assert node["hex"] == "ffffff"
+    assert node["summary"] == "text[3]"
+
+
+def test_parse_cbor_item_rejects_break_code_outside_indefinite_container():
+    with pytest.raises(
+        decode_cbor_parser._CborDecodingError,
+        match=r"a break byte \(0xff\) outside an indefinite-length item",
+    ):
+        decode_cbor_parser._parse_cbor_item(b"\xff", 0)
+
+
+def test_parse_cbor_item_rejects_non_bytes_segment_in_indefinite_byte_string():
+    # 0x5f => start indefinite byte string; next chunk is text string (major type 3).
+    payload = b"\x5f\x61a\xff"
+
+    with pytest.raises(
+        decode_cbor_parser._CborDecodingError,
+        match="a chunk of an indefinite-length byte string must be a definite-length byte string",
+    ):
+        decode_cbor_parser._parse_cbor_item(payload, 0)
+
+
+def test_parse_cbor_item_rejects_non_text_segment_in_indefinite_text_string():
+    # 0x7f => start indefinite text string; next chunk is byte string (major type 2).
+    payload = b"\x7f\x41a\xff"
+
+    with pytest.raises(
+        decode_cbor_parser._CborDecodingError,
+        match="a chunk of an indefinite-length text string must be a definite-length text string",
+    ):
+        decode_cbor_parser._parse_cbor_item(payload, 0)
+
+
+def test_parse_cbor_item_rejects_an_orphan_map_key_and_keeps_completed_pairs_only_when_lenient():
+    # 0xbf => indefinite map: {"a": 1, "b": <missing-value>}
+    payload = b"\xbf\x61a\x01\x61b\xff"
+
+    with pytest.raises(decode_cbor_parser._CborDecodingError) as caught:
+        decode_cbor_parser._parse_cbor_item(payload, 0)
+    assert (caught.value.reason, caught.value.offset, caught.value.path) == ('map key "b" has no value', 4, '${"b"}')
+
+    node, offset, skipped = decode_cbor_parser.decode_item(payload, lenient=True)
+
+    assert node["majorType"] == 5
+    assert node["type"] == "map"
+    assert node["indefinite"] is True
+    assert node["length"] == 1
+    assert node["summary"] == "map[1]"
+    assert node["entries"][0]["value"]["value"] == 1
+    assert offset == len(payload)
+    assert [entry["code"] for entry in skipped] == ["missing-map-value"]
+
+
+def test_parse_cbor_item_rejects_an_unterminated_indefinite_array_and_keeps_its_items_only_when_lenient():
+    # 0x9f => indefinite array containing a single nested definite array [1, 2],
+    # with no break byte for the outer container.
+    payload = b"\x9f\x82\x01\x02"
+
+    with pytest.raises(decode_cbor_parser._CborDecodingError, match="indefinite-length array has no break byte"):
+        decode_cbor_parser._parse_cbor_item(payload, 0)
+
+    node, offset, skipped = decode_cbor_parser.decode_item(payload, lenient=True)
+
+    assert offset == len(payload)
+    assert node["majorType"] == 4
+    assert node["type"] == "array"
+    assert node["indefinite"] is True
+    assert node["length"] == 1
+    assert node["summary"] == "array[1]"
+    nested = node["items"][0]
+    assert nested["type"] == "array"
+    assert nested["length"] == 2
+    assert [entry["code"] for entry in skipped] == ["truncated"]
+
+
+def test_structure_to_value_preserves_integer_map_keys():
+    structure = {
+        "majorType": 5,
+        "type": "map",
+        "entries": [
+            {
+                "key": {"majorType": 0, "type": "unsigned", "value": 1},
+                "value": {"majorType": 3, "type": "text string", "value": "first"},
+            },
+            {
+                "key": {"majorType": 0, "type": "unsigned", "value": 2},
+                "value": {"majorType": 3, "type": "text string", "value": "second"},
+            },
+        ],
+    }
+
+    value = decode_cbor_parser._structure_to_value(structure)
+
+    assert value == {1: "first", 2: "second"}
+
+
+def test_structure_to_value_keeps_an_array_key_as_a_key_of_its_own_type():
+    structure = {
+        "majorType": 5,
+        "type": "map",
+        "entries": [
+            {
+                "key": {
+                    "majorType": 4,
+                    "type": "array",
+                    "items": [
+                        {"majorType": 0, "type": "unsigned", "value": 1},
+                        {"majorType": 0, "type": "unsigned", "value": 2},
+                    ],
+                },
+                "value": {"majorType": 3, "type": "text string", "value": "value"},
+            }
+        ],
+    }
+
+    value = decode_cbor_parser._structure_to_value(structure)
+
+    # Not the text "[1, 2]": a text key spelled that way stays a different key.
+    assert value == {decoder_values.CborDiagnostic("[1, 2]", "array"): "value"}
+    assert decoder_values.stringify_mapping_keys(value) == {"[1, 2]": "value"}
