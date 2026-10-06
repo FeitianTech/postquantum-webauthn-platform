@@ -4,6 +4,7 @@ import base64
 import json
 
 import cbor2
+import pytest
 
 from server.app.decoder.encode import text as encode_text
 from tests.app.decoder.credential_bytes import _build_attestation_object
@@ -196,3 +197,21 @@ def test_codec_api_encode_maps_unexpected_error_to_500(monkeypatch):
 
     assert response.status_code == 500
     assert response.get_json() == {"error": "Unable to encode payload."}
+
+
+@pytest.mark.parametrize(
+    ("request_kwargs", "status", "answer"),
+    [
+        ({"data": "payload", "content_type": "text/plain"}, 400, {"error": "Expected JSON payload."}),
+        ({"json": {"payload": "   "}}, 400, {"error": "Codec payload must be a non-empty string."}),
+        ({"json": {"payload": "bad"}}, 422, {"error": "bad payload"}),
+        ({"json": {"payload": "boom"}}, 500, {"error": "Unable to decode payload."}),
+        ({"json": {"payload": "AQID"}}, 200, {"success": True, "decoded": "AQID"}),
+    ],
+    ids=["not-json", "empty", "unreadable", "decoder-fails", "decoded"],
+)
+def test_the_codec_route_answers_each_payload_with_its_status(fake_decoders, request_kwargs, status, answer):
+    response = entry_app().test_client().post("/api/codec", **request_kwargs)
+
+    assert response.status_code == status
+    assert response.get_json() == answer

@@ -10,10 +10,12 @@ from typing import Any
 import pytest
 
 from server.app import factory, visitor_session
+from server.app.decoder.decode import text as decode_text
 from server.app.mds import cache as mds_cache
 from server.app.mds import provisioning as mds_provisioning
 from server.app.mds import trust as mds_trust
 from server.app.storage import github_mirror
+from server.app.webauthn.attestation import certificates as attestation_certificates
 from tests.app.metadata import mds_fixture
 from tests.app.web_export_files import write, write_export
 
@@ -121,3 +123,23 @@ def export_root(tmp_path):
 
     write(tmp_path / "secret.txt", b"outside the export")
     return write_export(tmp_path / "out")
+
+
+@pytest.fixture
+def fake_decoders(monkeypatch):
+    """A codec decoder and certificate reader whose failures the payload chooses."""
+
+    def _fake_decode(payload_text, **_options):
+        if payload_text == "bad":
+            raise ValueError("bad payload")
+        if payload_text == "boom":
+            raise RuntimeError("decoder crashed")
+        return {"success": True, "decoded": payload_text}
+
+    def _fake_serialize(certificate_bytes):
+        if certificate_bytes == b"bad-cert":
+            raise ValueError("certificate parse failed")
+        return {"length": len(certificate_bytes), "hex": certificate_bytes.hex()}
+
+    monkeypatch.setattr(decode_text, "decode_payload_text", _fake_decode)
+    monkeypatch.setattr(attestation_certificates, "serialize_attestation_certificate", _fake_serialize)
