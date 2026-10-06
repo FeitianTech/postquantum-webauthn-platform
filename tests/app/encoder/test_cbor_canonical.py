@@ -1,4 +1,5 @@
 """``decoder.cbor_canonical``: the one writer of CBOR from values, in CTAP2 canonical form."""
+
 from __future__ import annotations
 
 from decimal import Decimal
@@ -90,3 +91,32 @@ def test_a_tag_and_a_simple_value_are_checked_even_when_cbor2_did_not_make_them(
     assert encoder._encode_simple(cbor2.CBORSimpleValue(16)) == b"\xf0"
     with pytest.raises(ValueError, match="lengths must be non-negative"):
         cbor_canonical._encode_major_type_with_length(2, -1)
+
+
+def test_canonical_encoder_map_ordering_and_duplicate_detection():
+    encoder = cbor_canonical._CanonicalCBOREncoder()
+
+    encoded = encoder.encode({"b": 2, "a": 1})
+    canonicalized = encoder.canonicalize_structure({"b": 2, "a": 1})
+
+    assert isinstance(encoded, bytes) and encoded
+    assert list(canonicalized.keys()) == ["a", "b"]
+
+    with pytest.raises(ValueError, match="reserved"):
+        encoder._encode_cbor_simple_value(SimpleNamespace(value=24))
+
+
+def test_canonical_float_encoding_and_unsigned_integer_helpers():
+    nan_bytes = cbor_canonical._encode_canonical_float(float("nan"))
+    assert nan_bytes == b"\xf9\x7e\x00"
+
+    finite_bytes = cbor_canonical._encode_canonical_float(1.5)
+    assert finite_bytes.startswith((b"\xf9", b"\xfa", b"\xfb"))
+
+    assert cbor_canonical._encode_unsigned_integer(0, 10) == bytes([10])
+
+    with pytest.raises(ValueError, match="non-negative"):
+        cbor_canonical._encode_unsigned_integer(0, -1)
+
+    with pytest.raises(ValueError, match="64 bits"):
+        cbor_canonical._encode_unsigned_integer(0, 1 << 80)

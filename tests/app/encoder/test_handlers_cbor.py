@@ -108,3 +108,17 @@ def test_encode_ctap_webauthn_preserves_unknown_extra_numeric_fields():
     assert encoded["42"] == "debug-metadata"
     decoded = result["data"]["ctapDecoded"]["getAssertionRequest"]
     assert decoded["42"] == "debug-metadata"
+
+
+def test_ctap_webauthn_encoder_keeps_extra_fields():
+    nested = {'wrapper': {'02 (authData)': {'base64': 'A' * 52}, '03 (signature)': {'hex': 'aabbcc'}, '07 (largeBlobKey)': {'bytes': [1, 2, 3]}}}
+    response = encode_handlers_cbor._encode_ctap_webauthn_value(nested)
+    assert response['success'] is True
+    assert response['type'].startswith('CBOR (CTAP/WebAuthn Data)')
+    assert 'ctapDecoded' in response['data']
+
+
+def test_cose_encoder_reports_the_key_type():
+    cose_response = encode_handlers_cbor._encode_cose_value({'cose': {1: 2, 3: -7, -1: 1, -2: b'\x01', -3: b'\x02'}})
+    assert cose_response['success'] is True
+    assert cose_response['type'].startswith('COSE')

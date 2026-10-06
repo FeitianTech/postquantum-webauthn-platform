@@ -162,3 +162,30 @@ def test_classify_ctap_numeric_mapping_requires_exact_client_data_hash_length_fo
                 2: {"id": "example.com", "name": "Example"},
             }
         )
+
+
+def test_ctap_numeric_key_coercion_and_classification_paths():
+    assert encode_ctap_numeric._coerce_ctap_numeric_key("0x02") == 2
+    assert encode_ctap_numeric._coerce_ctap_numeric_key("02 (clientDataHash)") == 2
+    assert encode_ctap_numeric._coerce_ctap_numeric_key("not-a-key") is None
+
+    with pytest.raises(ValueError, match="must be non-negative"):
+        encode_ctap_numeric._coerce_ctap_numeric_key(-1)
+
+    classified = encode_ctap_numeric._classify_ctap_numeric_mapping(
+        {
+            1: "example.com",
+            2: b"\x11" * 32,
+        }
+    )
+    assert classified == "getAssertionRequest"
+
+    with pytest.raises(ValueError, match="Missing field 0x02"):
+        encode_ctap_numeric._classify_ctap_numeric_mapping({1: b"\x00" * 32})
+
+
+def test_nested_ctap_payload_is_classified_by_its_numeric_members():
+    nested = {'wrapper': {'02 (authData)': {'base64': 'A' * 52}, '03 (signature)': {'hex': 'aabbcc'}, '07 (largeBlobKey)': {'bytes': [1, 2, 3]}}}
+    numeric_map, ctap_type = encode_ctap_numeric._extract_ctap_numeric_payload(nested)
+    assert ctap_type == 'getAssertionResponse'
+    assert 2 in numeric_map and 3 in numeric_map
