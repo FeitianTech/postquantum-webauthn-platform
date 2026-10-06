@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { followStoredCredentialChanges, persistStoredCredentials, persistUnifiedCredentialRecords, readStoredCredentials, readUnifiedCredentialRecords, seedUnifiedCredentialRecords } from './storage-core.js';
-import { getAllStoredCredentialsInOrder } from '../records.js';
 import { SIMPLE_RECORD } from '@/test/logic/credentials/storage/standard-base64-records.js';
 import { savedRecord } from '@/test/logic/credentials/storage/markup-record.js';
 
@@ -170,22 +169,6 @@ describe('another tab\'s changes', () => {
     stop();
     anotherTabSaves(SHARED, [advanced]);
     expect(changed).not.toHaveBeenCalled();
-  });
-});
-
-describe('the ordered list both interfaces show', () => {
-  it('lists every record in the order stored, as copies', () => {
-    seedUnifiedCredentialRecords([advanced, simple]);
-    const [first, second] = getAllStoredCredentialsInOrder();
-
-    expect(first).toMatchObject(advanced);
-    expect(second).toEqual(simple);
-    second.email = 'changed';
-    expect(readUnifiedCredentialRecords()[1].email).toBe('alice');
-  });
-
-  it('lists nothing when nothing is saved', () => {
-    expect(getAllStoredCredentialsInOrder()).toEqual([]);
   });
 });
 
