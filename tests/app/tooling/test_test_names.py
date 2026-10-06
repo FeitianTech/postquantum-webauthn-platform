@@ -80,6 +80,15 @@ def _names() -> list[tuple[str, str]]:
     return found
 
 
+def test_no_python_file_uses_a_broad_contracts_or_edges_suffix():
+    vague = [
+        str(source.relative_to(REPO_ROOT))
+        for source in sorted(TESTS_ROOT.rglob("*.py"))
+        if source.stem.endswith(("_contracts", "_edges"))
+    ]
+    assert not vague, "Name these files for their module or behavior:\n" + "\n".join(vague)
+
+
 def test_no_file_or_test_is_named_for_how_it_was_written():
     found = [
         f"{where}: {', '.join(words)}"

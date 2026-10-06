@@ -320,9 +320,9 @@ page updates the saved credentials, which both tabs show.
 - A test of one module goes in that module's file (`test_<module>.py`, in its area's folder
   under `tests/app/`); a test of one behaviour across modules goes in a file named for that
   behaviour (`security/test_registration_race.py`, `storage/test_storage_read_errors.py`).
-  Each test is named for the behaviour it checks. Older files named for neither (the
-  `*_contracts`, `*_edges` files) take no new tests. Tests import the app's modules at the
-  top; a shared helper lives once (`tests/app/fido2_stand_ins.py`,
+  Each test is named for the behaviour it checks. Filenames ending in `_contracts.py`
+  or `_edges.py` are refused by `test_test_names.py`. Tests import the app's modules at
+  the top; a shared helper lives once (`tests/app/fido2_stand_ins.py`,
   `tests/app/security/ceremony_helpers.py`, `tests/app/storage/credential_seed.py`, …).
 - `make_app` (`tests/app/conftest.py`) builds an app from the environment at that moment:
   `monkeypatch.setenv` before it. Do not `importlib.reload` config modules. pytest never reads
@@ -355,7 +355,8 @@ Guards on the code and the checkout (`tests/app/tooling/`; each `ALLOWED` list m
 - `test_code_size_ratchet.py`: no function over 80 lines or module over 700 in `server/app`,
   with no exceptions.
 - `test_test_names.py`: no test file or test named for how it was written (an uplift, a batch, a
-  residual, a branch focus, coverage) rather than what it tests; in `web/`, every test file is
+  residual, a branch focus, coverage) rather than what it tests; no `_contracts.py` or
+  `_edges.py` filename; in `web/`, every test file is
   named for a module beside it, and no file name or test title says such a word or "edge cases".
 - `test_test_layout.py`: tests import first-party modules at the top, nothing writes
   `sys.modules`, no helper is defined twice, and (with the `tests/fixture_values.py` plugin) no
