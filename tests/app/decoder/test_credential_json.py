@@ -1,4 +1,5 @@
 """``decoder.decode.credential_json``: a PublicKeyCredential's JSON and its client data, as the decoder reads them."""
+
 from __future__ import annotations
 
 import base64
@@ -6,6 +7,7 @@ import json
 
 from server.app.decoder.decode import credential_json
 from server.app.decoder.decode.text import decode_payload_text
+from tests.app.security.ceremony_helpers import b64u
 
 
 def test_a_credentials_signature_and_user_handle_are_shown_with_their_bytes():
@@ -87,3 +89,12 @@ def test_client_data_json_is_shown_as_client_data():
 
 def test_json_that_is_no_credential_or_client_data_is_shown_as_json():
     assert credential_json.decode_json_object([1, 2, 3]) == {"format": "JSON", "inputEncoding": "json", "decoded": [1, 2, 3]}
+
+
+def test_credential_and_client_data_detectors_require_their_members():
+    credential_candidate = {'id': 'credential-id', 'type': 'public-key', 'response': {'clientDataJSON': b64u(b'{}')}}
+    assert credential_json.is_public_key_credential(credential_candidate) is True
+    assert credential_json.is_public_key_credential({'response': {}}) is False
+    client_data_candidate = {'type': 'webauthn.create', 'challenge': 'AQID', 'origin': 'https://example.com'}
+    assert credential_json.is_client_data_dict(client_data_candidate) is True
+    assert credential_json.is_client_data_dict({'type': 'x', 'challenge': 'AQID'}) is False

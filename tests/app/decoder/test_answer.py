@@ -5,9 +5,13 @@ results of the shapes the readings return. Its authenticator data view is
 ``answer_auth_data``'s, the bytes it reads back ``answer_bytes``'s.
 """
 
+import base64
+
 import pytest
 
 from server.app.decoder.decode import answer as decode_answer
+from tests.app.decoder.credential_bytes import _build_attestation_and_auth_data
+from tests.app.security.ceremony_helpers import b64u
 
 
 def _answer(**result):
@@ -111,3 +115,167 @@ def test_an_attestation_object_with_nothing_readable_shows_nothing():
 def test_a_certificate_result_without_a_certificate_shows_nothing():
     assert _answer(format="X.509 certificate (DER)", decoded={})["data"] == {}
 
+
+def test_build_decoder_payload_for_cbor_deduplicates_qualifiers_and_normalizes_malformed():
+    payload = decode_answer._build_decoder_payload(
+        {
+            "format": "CBOR",
+            "decoded": {
+                "ctap": {"meaning": "AuthenticatorGetAssertion command"},
+                "ctapDecoded": {
+                    "getAssertionRequest": {"rpId": "example.com"},
+                    "getAssertionResponse": {"signature": "deadbeef"},
+                },
+                "expandedJson": {
+                    "signature": "deadbeef",
+                },
+            },
+            "malformed": "not-a-list",
+        }
+    )
+
+    assert payload["success"] is True
+    assert payload["type"].startswith("CBOR (")
+    assert payload["type"].count("GetAssertion response") == 1
+    assert payload["type"].count("GetAssertion request") == 1
+    assert payload["malformed"] == []
+
+
+def test_json_cbor_and_unrecognised_results_become_their_data():
+    assert decode_answer._convert_result_to_data("JSON", {"decoded": {"a": 1}}) == {
+        "json": {"a": 1}
+    }
+
+    cbor_payload = decode_answer._convert_result_to_data(
+        "CBOR",
+        {
+            "decoded": {
+                "ctapDecoded": {1: {"sig": b"\x01\x02"}},
+                "expandedJson": {"attStmt": {"sig": b"\x03\x04"}},
+                "decodedValue": {"k": "v"},
+                "ctap": {"code": 2},
+            }
+        },
+    )
+    assert "ctapDecoded" in cbor_payload
+    assert "expandedJson" in cbor_payload
+    assert "decodedValue" in cbor_payload
+    assert cbor_payload["ctap"]["code"] == 2
+
+    fallback = decode_answer._convert_result_to_data(
+        "Unknown type",
+        {"decoded": None, "binary": {"hex": "aabb"}},
+    )
+    assert fallback == {"hex": "aabb"}
+
+
+def test_convert_public_key_credential_and_attestation_object_data_paths():
+    attestation_bytes, auth_data_bytes = _build_attestation_and_auth_data()
+    attestation_b64 = base64.b64encode(attestation_bytes).decode("ascii")
+
+    public_key_result = {
+        "decoded": {
+            "id": b64u(b"cred"),
+            "type": "public-key",
+            "response": {
+                "attestationObject": {
+                    "raw": attestation_b64,
+                    "details": {
+                        "attestationFormat": "none",
+                        "attestationStatement": {"alg": -7},
+                        "authenticatorData": {
+                            "flags": {"value": 0x41, "userPresent": True, "attestedCredentialData": True},
+                            "signCount": 2,
+                        },
+                    },
+                },
+                "clientDataJSON": {
+                    "details": {
+                        "type": "webauthn.create",
+                        "challenge": "AQID",
+                        "origin": "https://example.com",
+                        "crossOrigin": False,
+                    }
+                },
+            },
+            "clientExtensionResults": {"credProps": {"rk": True}},
+        }
+    }
+
+    converted_public = decode_answer._convert_result_to_data("PublicKeyCredential", public_key_result)
+    assert converted_public["credential"]["type"] == "public-key"
+    assert converted_public["attestationObject"]["fmt"] == "none"
+    assert converted_public["clientExtensionResults"]["credProps"]["rk"] is True
+
+    attestation_result = {
+        "decoded": {
+            "attestationFormat": "packed",
+            "attestationStatement": {"alg": -7},
+            "extensions": {"credProps": {"rk": True}},
+            "authenticatorData": {
+                "flags": {
+                    "value": 0x41,
+                    "userPresent": True,
+                    "attestedCredentialDataIncluded": True,
+                },
+                "signCount": 2,
+            },
+        },
+        "binary": {"base64": attestation_b64},
+    }
+
+    converted_attestation = decode_answer._convert_result_to_data("Attestation object", attestation_result)
+    assert converted_attestation["attestationObject"]["raw"] == attestation_b64
+    assert converted_attestation["extensions"]["credProps"]["rk"] is True
+    assert converted_attestation["authenticatorData"]["counter"] == 2
+    assert converted_attestation["authenticatorData"]["flags"]["AT"] is True
+
+
+def test_convert_authenticator_clientdata_and_certificate_result_paths():
+    _attestation_bytes, auth_data_bytes = _build_attestation_and_auth_data()
+
+    auth_result = {
+        "decoded": {
+            "flags": {"value": 0x41, "userPresent": True, "attestedCredentialDataIncluded": True},
+            "signCount": 2,
+        },
+        "binary": {"hex": auth_data_bytes.hex()},
+    }
+    converted_auth = decode_answer._convert_result_to_data("Authenticator data", auth_result)
+    assert converted_auth["raw"] == auth_data_bytes.hex()
+    assert converted_auth["counter"] == 2
+
+    client_result = {
+        "decoded": {
+            "type": "webauthn.get",
+            "challenge": "AQID",
+            "origin": "https://example.com",
+            "crossOrigin": True,
+        }
+    }
+    converted_client = decode_answer._convert_result_to_data("WebAuthn client data", client_result)
+    assert converted_client["type"] == "webauthn.get"
+    assert converted_client["crossOrigin"] is True
+
+    certificate_bytes = b"\x30\x82\x01\x00"
+    certificate_result = {
+        "decoded": {
+            "certificates": [
+                {
+                    "derBase64": base64.b64encode(certificate_bytes).decode("ascii"),
+                    "pem": "-----BEGIN CERTIFICATE-----\nZm9v\n-----END CERTIFICATE-----",
+                }
+            ]
+        }
+    }
+    converted_certificate = decode_answer._convert_result_to_data(
+        "X.509 certificate", certificate_result
+    )
+    assert converted_certificate["certificates"]
+    assert converted_certificate["certificates"][0]["raw"] == certificate_bytes.hex()
+
+
+def test_decoder_response_keeps_json_type_and_success():
+    prepared = decode_answer._prepare_decoder_response({'format': 'JSON', 'decoded': {'ok': True}})
+    assert prepared['success'] is True
+    assert prepared['type'] == 'JSON'

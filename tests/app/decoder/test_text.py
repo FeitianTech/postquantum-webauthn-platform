@@ -4,11 +4,15 @@ from __future__ import annotations
 
 import json
 
+import cbor2
 import pytest
 
 from server.app.decoder.decode import text as decode_text
 from tests.app.core.codec_examples import PLAIN_TEXT
-from tests.app.decoder.credential_bytes import _build_attestation_object
+from tests.app.decoder.credential_bytes import (
+    _build_attestation_and_auth_data,
+    _build_attestation_object,
+)
 from tests.app.security.ceremony_helpers import b64u
 
 
@@ -55,3 +59,38 @@ def test_decode_public_key_credential_preserves_key_fields_and_extensions():
 def test_plain_english_text_is_not_reported_as_decoded_cbor():
     with pytest.raises(ValueError):
         decode_text.decode_payload_text(PLAIN_TEXT)
+
+
+def test_decode_payload_text_json_public_key_credential_and_cbor_roundtrip():
+    attestation_bytes, _auth_data_bytes = _build_attestation_and_auth_data()
+    client_data_json = json.dumps(
+        {
+            "type": "webauthn.create",
+            "challenge": "AQID",
+            "origin": "https://example.com",
+        }
+    ).encode("utf-8")
+
+    credential = {
+        "id": b64u(b"cred-id"),
+        "rawId": b64u(b"cred-id"),
+        "type": "public-key",
+        "response": {
+            "attestationObject": b64u(attestation_bytes),
+            "clientDataJSON": b64u(client_data_json),
+        },
+    }
+
+    decoded_credential = decode_text.decode_payload_text(json.dumps(credential))
+    assert decoded_credential["success"] is True
+    assert decoded_credential["type"] == "PublicKeyCredential"
+    assert decoded_credential["data"]["attestationObject"]["fmt"] in {
+        "none",
+        "packed",
+    }
+
+    cbor_payload = cbor2.dumps({1: b"\x00" * 32, 2: "example.com"})
+    decoded_cbor = decode_text.decode_payload_text(b64u(cbor_payload))
+    assert decoded_cbor["success"] is True
+    assert decoded_cbor["type"].startswith("CBOR")
+    assert "decodedValue" in decoded_cbor["data"]
