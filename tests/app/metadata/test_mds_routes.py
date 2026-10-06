@@ -1,12 +1,17 @@
 """The MDS routes that only read give a visitor without a namespace none."""
+
 from __future__ import annotations
 
+import base64
 import io
 import json
 
 import pytest
 
 from server.app.storage import session_metadata
+from server.app.webauthn.attestation import certificates as attestation_certificates
+from tests.app.core.codec_examples import PLAIN_TEXT
+from tests.app.entry_app import entry_app
 from tests.app.metadata.upload_entries import minimal_entry
 
 
@@ -68,3 +73,44 @@ def test_an_aaguid_no_entry_has_is_not_found(mds_fixture_snapshot, client):
 
     assert response.status_code == 404
     assert response.get_json() == {"error": "Metadata entry not found."}
+
+
+def test_mds_certificate_route_decodes_base64url_without_truncation(monkeypatch):
+    """A base64url certificate must decode whole, or be refused -- not truncated."""
+
+    certificate = bytes(range(24, 63))
+    monkeypatch.setattr(
+        attestation_certificates,
+        "serialize_attestation_certificate",
+        lambda data: {"length": len(data), "hex": data.hex()},
+    )
+
+    urlsafe = base64.urlsafe_b64encode(certificate).decode("ascii").rstrip("=")
+    assert "-" in urlsafe or "_" in urlsafe
+
+    with entry_app().test_client() as client:
+        response = client.post(
+            "/api/mds/decode-certificate", json={"certificate": urlsafe}
+        )
+
+    assert response.status_code == 200
+    assert response.get_json() == {
+        "details": {"length": 39, "hex": certificate.hex()}
+    }
+    assert len(certificate) == 39
+
+
+def test_mds_certificate_route_refuses_plain_text_with_400(monkeypatch):
+    monkeypatch.setattr(
+        attestation_certificates,
+        "serialize_attestation_certificate",
+        lambda data: {"length": len(data), "hex": data.hex()},
+    )
+
+    with entry_app().test_client() as client:
+        response = client.post(
+            "/api/mds/decode-certificate", json={"certificate": PLAIN_TEXT}
+        )
+
+    assert response.status_code == 400
+    assert response.get_json() == {"error": "Invalid certificate encoding."}

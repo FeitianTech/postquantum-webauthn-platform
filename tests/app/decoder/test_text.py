@@ -1,8 +1,13 @@
 """Tests of text behavior."""
 
+from __future__ import annotations
+
 import json
 
+import pytest
+
 from server.app.decoder.decode import text as decode_text
+from tests.app.core.codec_examples import PLAIN_TEXT
 from tests.app.decoder.credential_bytes import _build_attestation_object
 from tests.app.security.ceremony_helpers import b64u
 
@@ -45,3 +50,8 @@ def test_decode_public_key_credential_preserves_key_fields_and_extensions():
     assert payload["attestationObject"]["fmt"] == "none"
     assert payload["clientDataJSON"]["type"] == "webauthn.create"
     assert payload["authenticatorData"]["counter"] == 3
+
+
+def test_plain_english_text_is_not_reported_as_decoded_cbor():
+    with pytest.raises(ValueError):
+        decode_text.decode_payload_text(PLAIN_TEXT)

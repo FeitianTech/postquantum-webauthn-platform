@@ -8,6 +8,7 @@ import pytest
 
 from server.app import encoding
 from server.app.webauthn import client_binary
+from tests.app.core.codec_examples import PLAIN_TEXT
 from tests.app.security.ceremony_helpers import b64u
 
 STANDARD = base64.b64encode(b"\xfb\xef\xbe").decode("ascii")  # "++++"-style, base64 only
@@ -149,3 +150,33 @@ def test_decode_client_binary_handles_none_bytes_and_empty_string_inputs():
 
     with pytest.raises(ValueError, match="empty binary value"):
         client_binary.read("   ", wrappers=True)
+
+
+def test_advanced_client_binary_rejects_plain_text():
+    with pytest.raises(ValueError):
+        client_binary.read(PLAIN_TEXT, wrappers=True)
+
+
+def test_simple_binary_value_rejects_plain_text():
+    with pytest.raises(ValueError):
+        client_binary.read(PLAIN_TEXT, iterables=True)
+
+
+def test_base64url_helpers_do_not_return_garbage_for_plain_text():
+    """The credential-ID intake path must return nothing, not junk bytes."""
+
+    assert client_binary.decode_base64url_bytes(PLAIN_TEXT) == b""
+    assert client_binary.extract_assertion_credential_id({"rawId": PLAIN_TEXT}) is None
+
+
+def test_credential_intake_reads_both_base64_alphabets_exactly():
+    raw = b"\xfb\xef\xbe\xff\xee\xdd"
+    standard = base64.b64encode(raw).decode("ascii").rstrip("=")
+    urlsafe = base64.urlsafe_b64encode(raw).decode("ascii").rstrip("=")
+    assert "+" in standard or "/" in standard
+    assert "-" in urlsafe or "_" in urlsafe
+
+    assert client_binary.read(standard, wrappers=True) == raw
+    assert client_binary.read(urlsafe, wrappers=True) == raw
+    assert client_binary.read(standard, iterables=True) == raw
+    assert client_binary.read(urlsafe, iterables=True) == raw
