@@ -215,3 +215,8 @@ def test_what_another_thread_loaded_while_this_one_waited_for_the_lock_is_used(
     answer = load()
 
     assert (answer[0] if isinstance(answer, tuple) else answer) is loaded
+
+
+def test_cache_cleaning_and_formatting_helpers():
+    assert mds_cache._clean_metadata_cache_value("  etag-value  ") == "etag-value"
+    assert mds_cache._clean_metadata_cache_value("   ") is None

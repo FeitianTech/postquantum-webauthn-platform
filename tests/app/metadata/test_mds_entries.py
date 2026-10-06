@@ -1,4 +1,5 @@
 """``mds.entries``: an uploaded metadata statement read into a MetadataBlobPayloadEntry."""
+
 from __future__ import annotations
 
 from datetime import datetime, timezone
@@ -8,6 +9,7 @@ import pytest
 from fido2.mds3 import MetadataBlobPayloadEntry
 
 from server.app.mds import entries as mds_entries
+from tests.app.metadata.upload_entries import _entry_payload
 
 AAGUID = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
 
@@ -160,3 +162,57 @@ def test_an_uploaded_statement_on_its_own_has_only_the_entry_fields_it_names():
 
     assert set(payload) == {"statusReports", "timeOfLastStatusChange", "aaguid", "metadataStatement"}
     assert payload["metadataStatement"]["rogueListURL"] == "https://x.example"
+
+
+def test_status_reports_keep_only_the_objects():
+    reports = mds_entries._normalise_status_reports(
+        {
+            "statusReports": [
+                {"status": "NOT_FIDO_CERTIFIED"},
+                "skip",
+                {"status": "FIDO_CERTIFIED"},
+            ]
+        }
+    )
+    assert reports == [
+        {"status": "NOT_FIDO_CERTIFIED"},
+        {"status": "FIDO_CERTIFIED"},
+    ]
+
+
+def test_attestation_key_identifiers_keep_only_trimmed_text():
+    identifiers = mds_entries._normalise_attestation_identifiers(
+        {"attestationCertificateKeyIdentifiers": [" id-1 ", "", 1, "id-2"]}
+    )
+    assert identifiers == ["id-1", "id-2"]
+
+
+def test_a_statement_gets_the_legal_header_and_defaults_for_fields_that_do_not_read():
+    statement, legal = mds_entries._normalise_metadata_statement(
+        {
+            "legalHeader": " Demo legal ",
+            "metadataStatement": {
+                "description": 123,
+                "authenticatorVersion": "bad",
+                "schema": "bad",
+            },
+        }
+    )
+    assert legal == "Demo legal"
+    assert statement["legalHeader"] == "Demo legal"
+    assert statement["description"] == ""
+    assert statement["authenticatorVersion"] == 0
+    assert statement["schema"] == 3
+    assert isinstance(statement["attestationRootCertificates"], list)
+
+
+def test_entry_aaguids_are_normalized_and_read_from_a_statement():
+    session_payload = _entry_payload(aaguid='AAAAAAAA-AAAA-AAAA-AAAA-AAAAAAAAAAAA', description='Session metadata')
+    session_entry = MetadataBlobPayloadEntry.from_dict(session_payload)
+    assert mds_entries._normalise_aaguid(' AAAA-BBBB-CCCC-DDDD-EEEEFFFF0000 ') == 'aaaabbbbccccddddeeeeffff0000'
+    assert mds_entries._extract_entry_aaguid(session_entry) is None
+
+    class _MappingBackedEntry:
+        aaguid = None
+        metadata_statement = {'aaguid': 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'}
+    assert mds_entries._extract_entry_aaguid(_MappingBackedEntry()) == 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'

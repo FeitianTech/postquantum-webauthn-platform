@@ -3,15 +3,18 @@
 An upload takes the place of the packaged entry with its AAGUID, the first upload of
 an AAGUID wins, and a lookup finds the visitor's entry before the packaged one.
 """
+
 from __future__ import annotations
 
 import pytest
+from fido2.mds3 import MetadataBlobPayloadEntry
 
 from server.app import visitor_session
 from server.app.mds import cache as mds_cache
 from server.app.mds import effective as mds_effective
 from server.app.mds import uploads as mds_uploads
 from server.app.storage import session_metadata
+from tests.app.metadata.upload_entries import _entry_payload
 
 PACKAGED = "f1d0f1d0-0000-4000-8000-000000000001"
 PACKAGED_AAID = "F1D0#0012"
@@ -121,3 +124,14 @@ def test_a_snapshot_whose_meta_or_entries_are_not_what_they_should_be_keeps_what
     composed = mds_effective._compose_effective_snapshot(snapshot, include_detail=False)
 
     assert composed["meta"]["baseEntryCount"] == len([entry for entry in snapshot["entries"] if isinstance(entry, dict)])
+
+
+def test_uploaded_entry_source_names_its_file_and_times():
+    session_payload = _entry_payload(aaguid='AAAAAAAA-AAAA-AAAA-AAAA-AAAAAAAAAAAA', description='Session metadata')
+    session_entry = MetadataBlobPayloadEntry.from_dict(session_payload)
+    session_item = mds_uploads.SessionMetadataItem(filename='session.json', payload=session_payload, legal_header='Session Legal', entry=session_entry, uploaded_at='2026-04-03T00:00:00+00:00', original_filename='upload.json', mtime=1.0)
+    source_info = mds_effective._session_item_source_info(session_item)
+    assert source_info['storedFilename'] == 'session.json'
+    assert source_info['originalFilename'] == 'upload.json'
+    assert source_info['uploadedAt'] == '2026-04-03T00:00:00+00:00'
+    assert 'modifiedAt' in source_info

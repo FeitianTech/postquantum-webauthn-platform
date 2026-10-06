@@ -12,3 +12,24 @@ def minimal_entry(description: str) -> dict:
             "description": description,
         },
     }
+
+
+def _entry_payload(*, aaguid: str, description: str):
+    return {
+        "aaguid": aaguid,
+        "statusReports": [],
+        "timeOfLastStatusChange": "2026-01-01",
+        "metadataStatement": {
+            "description": description,
+            "authenticatorVersion": 1,
+            "schema": 3,
+            "upv": [],
+            "attestationTypes": [],
+            "userVerificationDetails": [],
+            "keyProtection": [],
+            "matcherProtection": [],
+            "attachmentHint": [],
+            "tcDisplay": [],
+            "attestationRootCertificates": [],
+        },
+    }
