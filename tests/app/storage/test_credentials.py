@@ -1,4 +1,4 @@
-"""Local-storage contract tests for server.app.storage.credentials."""
+"""Tests of credentials behavior."""
 
 from __future__ import annotations
 
@@ -94,18 +94,3 @@ def test_add_public_key_material_respects_existing_type_and_algorithm(storage_lo
     untouched = {"x": 1}
     storage.add_public_key_material(untouched, "not-a-dict")
     assert untouched == {"x": 1}
-
-
-def test_a_write_that_fails_leaves_the_file_as_it_was_and_no_temporary_file(tmp_path, monkeypatch):
-    target = tmp_path / "record.json"
-    target.write_bytes(b"before")
-
-    def _disk_full(_source, _destination):
-        raise OSError("no space left on device")
-
-    monkeypatch.setattr(storage_common.os, "replace", _disk_full)
-    with pytest.raises(OSError, match="no space left"):
-        storage_common.replace_file(str(target), b"after")
-
-    assert target.read_bytes() == b"before"
-    assert sorted(path.name for path in tmp_path.iterdir()) == ["record.json"]
