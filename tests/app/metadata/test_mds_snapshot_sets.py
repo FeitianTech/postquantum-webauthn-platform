@@ -28,6 +28,17 @@ def _sets(bucket):
     return {name.rsplit("/", 1)[0] + "/" for name in bucket.objects if name.startswith("mds/sets/")}
 
 
+def test_a_publish_under_another_prefix_keeps_its_set_and_pointer_there(bucket, monkeypatch):
+    monkeypatch.setenv(snapshot_sets.PREFIX_ENV, "snapshots/fido")
+
+    result = snapshot_sets.publish(snapshot_version(8))
+
+    assert result.outcome == "published"
+    assert result.pointer["set"].startswith("snapshots/fido/sets/1/8-")
+    assert json.loads(bucket.objects["snapshots/fido/current.json"][0]) == result.pointer
+    assert not [name for name in bucket.objects if name.startswith("mds/")]
+
+
 def test_a_publish_writes_a_complete_set_then_points_to_it(bucket):
     files = snapshot_version(8)
 
