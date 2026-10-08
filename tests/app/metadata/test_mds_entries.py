@@ -136,6 +136,50 @@ def test_a_payload_whose_entry_has_a_biometric_report_is_read():
     assert payload["entries"][0]["biometricStatusReports"] == [BIOMETRIC_REPORT]
 
 
+def _passkey_provider_entry() -> dict:
+    """A passkey provider's entry as MDS no. 290 has Dashlane's: no
+    ``userVerificationDetails`` and no ``attachmentHint``."""
+
+    return {
+        "aaguid": "531126d6-e717-415c-9320-3d9aa6981239",
+        "metadataStatement": {
+            "aaguid": "531126d6-e717-415c-9320-3d9aa6981239",
+            "description": "Passkey provider",
+            "authenticatorVersion": 1,
+            "protocolFamily": "fido2",
+            "schema": 3,
+            "upv": [{"major": 1, "minor": 0}],
+            "authenticationAlgorithms": ["secp256r1_ecdsa_sha256_raw"],
+            "publicKeyAlgAndEncodings": ["cose"],
+            "attestationTypes": ["none"],
+            "keyProtection": ["software"],
+            "matcherProtection": ["software"],
+            "tcDisplay": [],
+            "attestationRootCertificates": [],
+            "multiDeviceCredentialSupport": "explicit",
+        },
+        "statusReports": [{"status": "NOT_FIDO_CERTIFIED", "effectiveDate": "2026-09-30"}],
+        "timeOfLastStatusChange": "2026-09-30",
+    }
+
+
+def test_a_passkey_providers_statement_without_verification_details_or_attachment_hint_is_read():
+    with pytest.raises(TypeError):
+        MetadataBlobPayloadEntry.from_dict(_passkey_provider_entry())
+
+    entry = mds_entries.parse_entry(_passkey_provider_entry())
+
+    assert entry.metadata_statement.user_verification_details == []
+    assert entry.metadata_statement.attachment_hint == []
+
+
+def test_a_payload_with_a_passkey_providers_entry_is_read_and_left_as_it_was():
+    payload = {"legalHeader": "", "no": 290, "nextUpdate": "2026-11-01", "entries": [_passkey_provider_entry()]}
+
+    assert len(mds_entries.parse_payload(payload).entries) == 1
+    assert "attachmentHint" not in payload["entries"][0]["metadataStatement"]
+
+
 def test_an_uploaded_blob_entry_keeps_every_entry_level_field():
     raw = {
         **_entry_with_a_biometric_report(),

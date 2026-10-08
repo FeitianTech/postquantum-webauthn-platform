@@ -129,11 +129,25 @@ def _normalise_metadata_statement(raw: Mapping[str, Any]) -> tuple[dict[str, Any
 # entry's JSON), so they are left out of what fido2 parses.
 _FIDO2_MISREADS = ("biometricStatusReports",)
 
+# fido2 2.2.1 requires a statement's ``userVerificationDetails`` and
+# ``attachmentHint``, which MDS leaves out of a passkey provider's statement
+# (Dashlane's, from no. 290), so it refuses the entry and with it the payload.
+# Neither is read from fido2's dataclasses; what fido2 parses has them empty.
+_FIDO2_REQUIRED_LISTS = ("userVerificationDetails", "attachmentHint")
+
+
+def _fido2_readable(entry: Mapping[str, Any]) -> dict[str, Any]:
+    readable = {key: value for key, value in entry.items() if key not in _FIDO2_MISREADS}
+    statement = readable.get("metadataStatement")
+    if isinstance(statement, Mapping) and any(key not in statement for key in _FIDO2_REQUIRED_LISTS):
+        readable["metadataStatement"] = {**{key: [] for key in _FIDO2_REQUIRED_LISTS}, **statement}
+    return readable
+
 
 def parse_entry(raw: Mapping[str, Any]) -> MetadataBlobPayloadEntry:
-    """An entry's JSON as fido2's ``MetadataBlobPayloadEntry``, its biometric status reports left out."""
+    """An entry's JSON as fido2's ``MetadataBlobPayloadEntry``, as ``_fido2_readable`` gives it."""
 
-    return MetadataBlobPayloadEntry.from_dict({key: value for key, value in raw.items() if key not in _FIDO2_MISREADS})
+    return MetadataBlobPayloadEntry.from_dict(_fido2_readable(raw))
 
 
 def parse_payload(raw: Mapping[str, Any]) -> MetadataBlobPayload:
@@ -141,7 +155,7 @@ def parse_payload(raw: Mapping[str, Any]) -> MetadataBlobPayload:
 
     entries = raw.get("entries")
     readable = [
-        {key: value for key, value in entry.items() if key not in _FIDO2_MISREADS} if isinstance(entry, Mapping) else entry
+        _fido2_readable(entry) if isinstance(entry, Mapping) else entry
         for entry in (entries if isinstance(entries, list) else [])
     ]
     return MetadataBlobPayload.from_dict({**raw, "entries": readable} if isinstance(entries, list) else raw)
