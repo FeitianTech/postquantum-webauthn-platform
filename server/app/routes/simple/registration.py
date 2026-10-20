@@ -25,7 +25,7 @@ from ...mds import provisioning as mds_provisioning
 from ...webauthn.attachments import normalize_attachment
 from ...webauthn.attestation import aaguid as attestation_aaguid
 from ...webauthn.attestation import certificates as attestation_certificates
-from ...webauthn.attestation import checks
+from ...webauthn.attestation import checks, error_codes
 from .. import ceremony_session, json_body
 from . import parsing, registration_persistence, registration_record
 
@@ -131,13 +131,16 @@ def _verify_registration(
         request.host_url.rstrip("/")
     )
 
-    attestation_checks = checks.perform_attestation_checks(
-        response if isinstance(response, Mapping) else {},
-        state if isinstance(state, Mapping) else None,
-        public_key_options_for_checks if isinstance(public_key_options_for_checks, Mapping) else None,
-        auth_data,
-        expected_origin,
-        resolved_rp_id,
+    # Only an integrity error refuses the registration; every other finding is its warning.
+    attestation_checks = error_codes.integrity_errors_only(
+        checks.perform_attestation_checks(
+            response if isinstance(response, Mapping) else {},
+            state if isinstance(state, Mapping) else None,
+            public_key_options_for_checks if isinstance(public_key_options_for_checks, Mapping) else None,
+            auth_data,
+            expected_origin,
+            resolved_rp_id,
+        )
     )
     return {"auth_data": auth_data, "resolved_rp_id": resolved_rp_id, "attestation_checks": attestation_checks}, None
 
@@ -165,7 +168,7 @@ def _registration_context(
 
 
 def _attestation_error_response(attestation_checks: Mapping[str, Any]) -> Any:
-    """The 400 when the attestation checks found errors: the simple flow rejects on them."""
+    """The 400 when the attestation checks found an integrity error, the only errors the simple flow keeps."""
 
     attestation_errors = attestation_checks.get("errors")
     if isinstance(attestation_errors, list) and attestation_errors:

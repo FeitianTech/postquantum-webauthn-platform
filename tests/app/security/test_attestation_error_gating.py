@@ -1,17 +1,17 @@
-"""Fix 4 -- computed attestation failures must not return HTTP 200.
+"""Which attestation findings refuse a registration, and which are only reported.
 
-``perform_attestation_checks`` computes real failures into ``results["errors"]``
-(``origin_mismatch``, ``cross_origin_not_allowed``, ``algorithm_not_allowed``,
-``attestation_signature_invalid``, ``cose_key_error``), but the callers only
-ever read ``signature_valid`` / ``root_valid`` / ``rp_id_hash_valid`` /
-``aaguid_match`` / ``warnings``. ``errors`` was read nowhere, so a ceremony
-with genuine failures still returned ``status: OK``.
-
-The simple flow must now reject on a non-empty ``errors`` list; the advanced
-flow may still complete, but must surface them.
+``perform_attestation_checks`` lists every failure it finds in ``errors``. The
+Simple tab refuses a registration on an integrity error alone
+(``error_codes.INTEGRITY_ERRORS``: the response is not the one the request asked
+for, or its attestation statement does not verify); every other finding, about
+the trust path, its root or the metadata, is answered and stored as a warning.
+The Advanced tab completes either way and reports every one as an error.
 """
 from __future__ import annotations
 
+from cryptography.hazmat.primitives.asymmetric import ec
+
+from tests.app.characterization import material
 from tests.app.entry_app import entry_app
 
 from .ceremony_helpers import (
@@ -21,6 +21,18 @@ from .ceremony_helpers import (
     registration_payload,
     unb64u,
 )
+
+
+def _simple_complete(client, authenticator, **payload):
+    """A Simple registration of ``authenticator``, begun and completed; complete's answer."""
+
+    begin = client.post("/api/register/begin?email=user@example.com", json={"credentials": []})
+    challenge = unb64u(begin.get_json()["publicKey"]["challenge"])
+    return client.post(
+        "/api/register/complete?email=user@example.com",
+        json=registration_payload(authenticator, challenge=challenge, **payload),
+        headers={"Origin": ORIGIN},
+    )
 
 # --------------------------------------------------------------------------
 # NEGATIVE -- the simple flow gates on errors.
@@ -84,6 +96,35 @@ def test_simple_register_complete_rejects_origin_mismatch(simple_storage):
     assert simple_storage == {}
 
 
+def test_a_simple_refusal_lists_only_the_integrity_errors(simple_storage):
+    """A cross-origin self attestation also has no trust path: only the integrity error is the refusal's."""
+
+    response = _simple_complete(entry_app().test_client(), Authenticator(), attestation="packed", cross_origin=True)
+
+    assert response.status_code == 400
+    assert response.get_json()["attestationErrors"] == ["cross_origin_not_allowed"]
+    assert simple_storage == {}
+
+
+def test_a_simple_registration_whose_attestation_signature_does_not_verify_is_refused(simple_storage):
+    """fido2 does not verify the attestation statement here: the statement check is what refuses it."""
+
+    authenticator = Authenticator()
+    certificate = material.attestation_leaf_certificate(authenticator.aaguid)
+
+    response = _simple_complete(
+        entry_app().test_client(),
+        authenticator,
+        attestation="packed",
+        attestation_key=ec.generate_private_key(ec.SECP256R1()),
+        x5c=[certificate],
+    )
+
+    assert response.status_code == 400
+    assert response.get_json()["attestationErrors"] == ["attestation_invalid", "attestation_signature_invalid"]
+    assert simple_storage == {}
+
+
 # --------------------------------------------------------------------------
 # POSITIVE -- a clean ceremony reports no errors and still succeeds.
 # --------------------------------------------------------------------------
@@ -108,6 +149,30 @@ def test_clean_simple_registration_reports_no_attestation_errors(simple_storage)
     checks = body["relyingParty"]["registrationData"]["attestationChecks"]
     assert checks["errors"] == []
     assert simple_storage["email"] == "user@example.com"
+
+
+def test_a_packed_self_attestation_registers_in_the_simple_tab_with_its_trust_findings_as_warnings(simple_storage):
+    response = _simple_complete(entry_app().test_client(), Authenticator(), attestation="packed")
+
+    assert response.status_code == 200, response.get_json()
+    body = response.get_json()
+    checks = body["relyingParty"]["registrationData"]["attestationChecks"]
+    assert checks["signature_valid"] is True
+    assert checks["errors"] == []
+    assert checks["warnings"] == ["metadata_not_available", "trust_path_missing"]
+    assert body["warnings"] == ["metadata_not_available", "trust_path_missing"]
+    stored = simple_storage["credentials"][-1]["properties"]
+    assert stored["attestationWarnings"] == ["metadata_not_available", "trust_path_missing"]
+
+
+def test_with_metadata_a_self_attestation_registers_with_no_root_as_a_warning(simple_storage, mds_fixture_snapshot):
+    response = _simple_complete(entry_app().test_client(), Authenticator(), attestation="packed")
+
+    assert response.status_code == 200, response.get_json()
+    checks = response.get_json()["relyingParty"]["registrationData"]["attestationChecks"]
+    assert checks["errors"] == []
+    assert checks["warnings"] == ["trust_path_missing", "No root found for Authenticator", "metadata_entry_missing"]
+    assert checks["root_valid"] is None
 
 
 # --------------------------------------------------------------------------

@@ -12,7 +12,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import json
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from typing import Any
 
 from cryptography.hazmat.primitives import hashes
@@ -175,6 +175,25 @@ def attestation_object(auth_data: bytes, *, fmt: str = "none", att_stmt: Mapping
     )
 
 
+def packed_statement(
+    authenticator: Authenticator,
+    signed: bytes,
+    *,
+    attestation_key: ec.EllipticCurvePrivateKey | None = None,
+    x5c: Sequence[bytes] = (),
+) -> dict[str, Any]:
+    """A packed attestation statement over ``signed`` (authData || SHA-256(clientDataJSON)).
+
+    Without ``attestation_key`` it is a self attestation, signed by the
+    credential's own key; with one, an ES256 signature by that key, whose
+    certificate comes first in ``x5c``.
+    """
+
+    if attestation_key is None:
+        return {"alg": authenticator.cose_key[3], "sig": authenticator.sign(signed)}
+    return {"alg": -7, "sig": attestation_key.sign(signed, ec.ECDSA(hashes.SHA256())), "x5c": list(x5c)}
+
+
 def registration_payload(
     authenticator: Authenticator,
     *,
@@ -184,8 +203,15 @@ def registration_payload(
     cross_origin: bool = False,
     cose_key_bytes: bytes | None = None,
     counter: int = 0,
+    attestation: str = "none",
+    attestation_key: ec.EllipticCurvePrivateKey | None = None,
+    x5c: Sequence[bytes] = (),
 ) -> dict[str, Any]:
-    """Build a complete, genuinely-signed registration response."""
+    """Build a complete, genuinely-signed registration response.
+
+    ``attestation`` is ``none`` or ``packed`` (``packed_statement``, with
+    ``attestation_key`` and ``x5c``).
+    """
 
     data = client_data(
         challenge=challenge, ceremony_type="webauthn.create", origin=origin,
@@ -194,13 +220,18 @@ def registration_payload(
     auth_data = authenticator.authenticator_data(
         rp_id=rp_id, cose_key_bytes=cose_key_bytes, counter=counter
     )
+    statement: dict[str, Any] = {}
+    if attestation == "packed":
+        statement = packed_statement(
+            authenticator, auth_data + hashlib.sha256(data).digest(), attestation_key=attestation_key, x5c=x5c
+        )
     return {
         "id": b64u(authenticator.credential_id),
         "rawId": b64u(authenticator.credential_id),
         "type": "public-key",
         "response": {
             "clientDataJSON": b64u(data),
-            "attestationObject": b64u(attestation_object(auth_data)),
+            "attestationObject": b64u(attestation_object(auth_data, fmt=attestation, att_stmt=statement)),
         },
         "clientExtensionResults": {},
     }
