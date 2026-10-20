@@ -1,6 +1,7 @@
 """The MDS metadata a registration's authenticator has: its entry, what the entry says, and whether its AAGUID matches."""
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import Any
 
 from fido2.webauthn import Aaguid
@@ -23,6 +24,19 @@ def _metadata_entry_by_aaguid(verifier: Any, credential_aaguid_bytes: bytes) -> 
         return verifier.find_entry_by_aaguid(aaguid_obj)
     except Exception:
         return None
+
+
+def _listed_algorithms(algorithms: Any) -> list[int]:
+    """The COSE algorithms an entry's getInfo lists: MDS writes each as ``{"type": "public-key", "alg": -7}``; a bare number is read too."""
+
+    if not isinstance(algorithms, (list, tuple)):
+        return []
+    listed: list[int] = []
+    for listed_algorithm in algorithms:
+        alg = listed_algorithm.get("alg") if isinstance(listed_algorithm, Mapping) else listed_algorithm
+        if isinstance(alg, int):
+            listed.append(alg)
+    return listed
 
 
 def _metadata_entry_facts(metadata_entry: Any, algorithm: Any) -> dict[str, Any]:
@@ -54,15 +68,10 @@ def _metadata_entry_facts(metadata_entry: Any, algorithm: Any) -> dict[str, Any]
         metadata_root_certificates_present = any(bool(cert) for cert in root_certs)
     elif root_certs:
         metadata_root_certificates_present = True
-    if (
-        isinstance(authenticator_info, dict)
-        and isinstance(algorithm, int)
-    ):
-        alg_list = authenticator_info.get("algorithms")
-        if isinstance(alg_list, (list, tuple)):
-            numeric_algs = [alg for alg in alg_list if isinstance(alg, int)]
-            if numeric_algs:
-                metadata_algorithm_supported = algorithm in numeric_algs
+    if isinstance(authenticator_info, dict) and isinstance(algorithm, int):
+        listed_algorithms = _listed_algorithms(authenticator_info.get("algorithms"))
+        if listed_algorithms:
+            metadata_algorithm_supported = algorithm in listed_algorithms
     # Reported, not compared with the credential's AAGUID: every entry here
     # was looked up by that AAGUID (fido2's ca_lookup whenever there is one,
     # the PQC path and the fallback above), so they cannot differ. The one

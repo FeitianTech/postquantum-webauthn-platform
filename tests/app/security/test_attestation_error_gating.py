@@ -9,6 +9,8 @@ The Advanced tab completes either way and reports every one as an error.
 """
 from __future__ import annotations
 
+import uuid
+
 from cryptography.hazmat.primitives.asymmetric import ec
 
 from tests.app.characterization import material
@@ -21,6 +23,9 @@ from .ceremony_helpers import (
     registration_payload,
     unb64u,
 )
+
+# The fixture snapshot's entry whose getInfo lists ES256 and EdDSA, and no other algorithm.
+ES256_AND_EDDSA_AAGUID = uuid.UUID("f1d0f1d0-0000-4000-8000-000000000001").bytes
 
 
 def _simple_complete(client, authenticator, **payload):
@@ -242,3 +247,43 @@ def test_advanced_register_complete_reports_verified_when_clean(advanced_storage
     assert payload["status"] == "OK"
     assert payload["attestationErrors"] == []
     assert payload["attestationVerified"] is True
+
+
+# --------------------------------------------------------------------------
+# An algorithm the authenticator's metadata does not list.
+# --------------------------------------------------------------------------
+
+
+def test_an_algorithm_the_metadata_does_not_list_is_a_simple_warning(simple_storage, mds_fixture_snapshot):
+    authenticator = Authenticator(key_type="es384", aaguid=ES256_AND_EDDSA_AAGUID)
+
+    response = _simple_complete(entry_app().test_client(), authenticator)
+
+    assert response.status_code == 200, response.get_json()
+    checks = response.get_json()["relyingParty"]["registrationData"]["attestationChecks"]
+    assert checks["metadata"]["algorithm_supported"] is False
+    assert checks["errors"] == []
+    assert checks["warnings"] == ["algorithm_not_in_metadata"]
+
+
+def test_an_algorithm_the_metadata_does_not_list_is_an_advanced_error(advanced_storage, mds_fixture_snapshot):
+    authenticator = Authenticator(key_type="es384", aaguid=ES256_AND_EDDSA_AAGUID)
+    client = entry_app().test_client()
+    options = {"challenge": b"\x53" * 32, "algorithms": (-35,)}
+
+    begin = client.post("/api/advanced/register/begin", json={"publicKey": advanced_public_key_options(**options)})
+    server_challenge = unb64u(begin.get_json()["publicKey"]["challenge"])
+    complete = client.post(
+        "/api/advanced/register/complete",
+        json={
+            "publicKey": advanced_public_key_options(**{**options, "challenge": server_challenge}),
+            "__credential_response": registration_payload(authenticator, challenge=server_challenge),
+        },
+        headers={"Origin": ORIGIN},
+    )
+
+    assert complete.status_code == 200, complete.get_json()
+    payload = complete.get_json()
+    assert payload["attestationErrors"] == ["algorithm_not_in_metadata"]
+    assert payload["attestationVerified"] is False
+    assert payload["attestationSummary"]["metadata"]["algorithm_supported"] is False

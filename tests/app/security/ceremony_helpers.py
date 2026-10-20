@@ -18,13 +18,16 @@ from typing import Any
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import ec, ed25519
 from fido2 import cbor
-from fido2.cose import ES256, EdDSA
+from fido2.cose import ES256, ES384, EdDSA
 
 from server.app.routes.simple import authentication as simple_authentication
 from server.app.routes.simple import parsing as simple_parsing
 
 RP_ID = "localhost"
 ORIGIN = "http://localhost"
+
+# The hash each ECDSA key type signs with.
+_ECDSA_HASHES = {"es256": hashes.SHA256, "es384": hashes.SHA384}
 
 FLAG_UP = 0x01
 FLAG_UV = 0x04
@@ -61,6 +64,9 @@ class Authenticator:
             self.cose_key: Mapping[int, Any] = ES256.from_cryptography_key(
                 self._private_key.public_key()
             )
+        elif key_type == "es384":
+            self._private_key = ec.generate_private_key(ec.SECP384R1())
+            self.cose_key = ES384.from_cryptography_key(self._private_key.public_key())
         elif key_type == "ed25519":
             self._private_key = ed25519.Ed25519PrivateKey.generate()
             self.cose_key = EdDSA.from_cryptography_key(self._private_key.public_key())
@@ -85,8 +91,8 @@ class Authenticator:
         return cbor.encode(mutated)
 
     def sign(self, message: bytes) -> bytes:
-        if self.key_type == "es256":
-            return self._private_key.sign(message, ec.ECDSA(hashes.SHA256()))
+        if self.key_type in _ECDSA_HASHES:
+            return self._private_key.sign(message, ec.ECDSA(_ECDSA_HASHES[self.key_type]()))
         return self._private_key.sign(message)
 
     # -- ceremony material ------------------------------------------------
@@ -279,6 +285,7 @@ def advanced_public_key_options(
     challenge: bytes,
     rp_id: str = RP_ID,
     username: str = "user@example.com",
+    algorithms: Sequence[int] = (-7,),
 ) -> dict[str, Any]:
     return {
         "rp": {"id": rp_id, "name": "FIDO2/WebAuthn PQC Developer Tools"},
@@ -288,7 +295,7 @@ def advanced_public_key_options(
             "displayName": "A. User",
         },
         "challenge": {"$base64url": b64u(challenge)},
-        "pubKeyCredParams": [{"type": "public-key", "alg": -7}],
+        "pubKeyCredParams": [{"type": "public-key", "alg": alg} for alg in algorithms],
     }
 
 

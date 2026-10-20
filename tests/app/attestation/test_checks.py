@@ -274,7 +274,7 @@ def test_perform_attestation_checks_flags_algorithm_not_in_metadata_when_root_is
         (),
         {
             "description": "Demo authenticator",
-            "authenticator_get_info": {"algorithms": [-257]},
+            "authenticator_get_info": {"algorithms": [{"alg": -257, "type": "public-key"}]},
             "attestation_root_certificates": [b"trusted-ca"],
         },
     )()
