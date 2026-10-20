@@ -268,7 +268,9 @@ its logic out here first.
   Simple tab's counter check against the stored record; the try blocks and the order of
   session reads are behaviour; a registration complete reads the attestation
   (`extract_attestation_details`) only once the state is consumed and fido2 accepted the
-  response); `routes/ceremony_session.py` (every begin: refused, the session kept as
+  response; the Simple tab refuses a registration only on an integrity error, every other
+  attestation finding its warning, while the Advanced tab completes and reports them all as
+  errors); `routes/ceremony_session.py` (every begin: refused, the session kept as
   it was, when its cookie would pass `MAX_COOKIE_SIZE`); `routes/json_body.py` (every route's
   JSON body: an object, or read as an empty one); `routes/mds.py` (the MDS routes and
   certificate decoding); `routes/codec.py` (`/api/codec`); `routes/web_export.py` (`/health`,
@@ -284,11 +286,16 @@ its logic out here first.
   evaluation for every algorithm, ML-DSA included, certificate serialisation; `chain.py` verifies certificate chains with
   `verify_directly_issued_by` (RSA-PSS, EdDSA and ML-DSA too, which fido2's `verify_x509_chain`
   does not); `evaluation.py` checks an attestation against the MDS metadata step by step;
-  `constants.py`'s `UNREADABLE_EXTENSIONS`, what cryptography raises reading a loaded
-  certificate's extensions, caught wherever they are read, and the limits both x5c readers,
-  `certificates.py` and `trust.py`, apply: a certificate of at most 64 KiB, a chain's first 10
-  entries; an x5c entry is read only from bytes, text or a certificate view, never with
-  `bytes(value)`), `webauthn/signature_algorithms.py`
+  a root is valid only once the chain verified to it (a date out of range fails the chain), and
+  one from the visitor's own uploaded metadata is valid with the warning
+  `metadata_not_fido_trusted`; `error_codes.py`, the codes the checks report (a reason after
+  `: ` only when the exception has one, so none is empty) and `INTEGRITY_ERRORS`, the ones that
+  say the ceremony did not hold, on which alone the Simple tab refuses; `constants.py`'s
+  `UNREADABLE_EXTENSIONS`, what cryptography raises reading a loaded certificate's extensions,
+  caught wherever they are read, and the limits both x5c readers, `certificates.py` and
+  `trust.py`, apply: a certificate of at most 64 KiB, a chain's first 10 entries; an x5c entry
+  is read only from bytes, text or a certificate view, never with `bytes(value)`),
+  `webauthn/signature_algorithms.py`
   (the one spelling of a signature algorithm), `webauthn/cose_algorithms.py` (a named COSE
   algorithm read, for both tabs), `webauthn/attachments.py` (the authenticator attachment
   hints), `webauthn/pqc.py` (the ML-DSA adapter), `webauthn/mldsa.py` (ML-DSA parameter sets,
