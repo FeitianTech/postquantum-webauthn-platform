@@ -58,6 +58,8 @@ def _register_complete(data: Mapping[str, Any], session_state: Any, state_trace:
         )
         if state_error is not None:
             return _with_challenge_source(state_error, state_trace)
+        # Read only now: the attestation's certificates are parsed for a ceremony fido2 accepted.
+        prepared = {**prepared, **registration_inputs.attestation_inputs(response)}
         return _record_verified_registration(prepared, state_ctx, state_trace)
     except Exception as exc:
         return jsonify({"error": str(exc), **state_trace}), 400

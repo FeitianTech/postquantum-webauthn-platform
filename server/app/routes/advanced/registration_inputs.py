@@ -1,10 +1,11 @@
 """Advanced registration complete: what the request carries, and fido2's verdict on it.
 
 ``prepare_register_complete_inputs`` reads the request (attachment hints, user,
-resident-key requirement, attestation and client data) and
-``resolve_state_and_registration_server`` picks the ceremony state and RP and
-has fido2 verify the registration. Both answer 400 for a request that cannot go
-further; the order of their session reads is part of the route's behaviour.
+resident-key requirement) and ``resolve_state_and_registration_server`` picks the
+ceremony state and RP and has fido2 verify the registration. Both answer 400 for
+a request that cannot go further; the order of their session reads is part of
+the route's behaviour. ``attestation_inputs`` reads the attestation and client
+data only after that: it parses every x5c certificate the response carries.
 """
 from __future__ import annotations
 
@@ -63,9 +64,11 @@ def _resident_key_requirement(public_key: Any) -> tuple[Any, bool]:
     return resident_key_requested, bool(resident_key_required)
 
 
-def _attestation_inputs(response: Any, credential_response: Mapping[str, Any]) -> dict[str, Any]:
+def attestation_inputs(response: Any) -> dict[str, Any]:
     """The attestation, client data and extension outputs the credential response carries."""
 
+    inner_response = response.get("response") if isinstance(response, Mapping) else None
+    credential_response = inner_response if isinstance(inner_response, Mapping) else {}
     (
         attestation_format,
         attestation_statement,
@@ -108,8 +111,6 @@ def prepare_register_complete_inputs(
     if not response:
         return None, (jsonify({"error": "Credential response is required"}), 400)
 
-    inner_response = response.get("response") if isinstance(response, Mapping) else None
-    credential_response = inner_response if isinstance(inner_response, Mapping) else {}
     original_request = {key: value for key, value in data.items() if not key.startswith("__")}
 
     original_public_key = original_request.get("publicKey") if isinstance(original_request, Mapping) else None
@@ -157,7 +158,6 @@ def prepare_register_complete_inputs(
         "allowedAttachments": allowed_attachments,
         "residentKeyRequested": resident_key_requested,
         "residentKeyRequired": resident_key_required,
-        **_attestation_inputs(response, credential_response),
     }, None
 
 
