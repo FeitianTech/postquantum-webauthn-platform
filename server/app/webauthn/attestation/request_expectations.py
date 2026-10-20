@@ -6,6 +6,10 @@ from typing import Any
 
 from ... import encoding
 
+# The members of a request the functions below read. A begin keeps these of its
+# request for complete's checks, and nothing else of it.
+CHECKED_REQUEST_MEMBERS = ("pubKeyCredParams", "authenticatorSelection", "userVerification", "challenge")
+
 
 def resolve_uv_required(
     state: Mapping[str, Any] | None,

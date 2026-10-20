@@ -11,6 +11,7 @@ from ... import json_values
 from ...challenge_registry import consume_ceremony_state, stamp_ceremony_state
 from ...mds import provisioning as mds_provisioning
 from ...webauthn.attachments import request_hints
+from ...webauthn.attestation import request_expectations
 from .. import ceremony_session, json_body
 from . import (
     algorithms,
@@ -155,12 +156,10 @@ def _with_challenge_source(
 # (attestation/checks.py), kept in the session as the request had them. Nothing
 # else: the request's other members, such as a 4 KB fake excludeCredentials ID,
 # would not fit a cookie.
-_CHECKED_REQUEST_MEMBERS = ("pubKeyCredParams", "authenticatorSelection", "userVerification", "challenge")
-
-
 def _what_the_checks_read(data: Mapping[str, Any]) -> dict[str, Any]:
     public_key = data["publicKey"]
-    return {"publicKey": {name: public_key[name] for name in _CHECKED_REQUEST_MEMBERS if name in public_key}}
+    members = request_expectations.CHECKED_REQUEST_MEMBERS
+    return {"publicKey": {name: public_key[name] for name in members if name in public_key}}
 
 
 @bp.route("/api/advanced/register/begin", methods=["POST"])
