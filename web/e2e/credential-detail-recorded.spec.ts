@@ -3,7 +3,7 @@ import { join, resolve } from 'node:path';
 
 import { shownLevel, shownSubViews, expectedFor, keep, report } from './credential-views';
 import { expect, test } from './fixtures';
-import type { ShownSection } from './recorded-words';
+import type { ExpectedDifference, ShownSection } from './recorded-words';
 import { recorded } from './recorded';
 
 // What a saved credential's details and its registration show (the dialog's
@@ -32,6 +32,30 @@ const RECORDS = ['es256', 'eddsa', 'mldsa65', 'x5c'].map((name, index) => ({
   email: `${name}@example.com`,
 })) as Record<string, unknown>[];
 
+// The first registration's challenge, and what was signed over it: the golden was
+// recorded again once a Simple registration's begin minted the visitor's namespace,
+// which is drawn before the challenge. The other three found the namespace set.
+const REDRAWN = 'the challenge the registration was recorded with, and what was signed over it: its begin now draws the namespace first';
+const RECORDED_CHALLENGE_WORDS = [
+  'eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIiwiY2hhbGxlbmdlIjoiLXlreE5WbUJLR3Rnc2k4cXZURHhBdmdaM2tSSUgzSGI0bmc3REthaVV4TSIsIm9yaWdpbiI6Imh0dHA6Ly9sb2NhbGhvc3QiLCJjcm9zc09yaWdpbiI6ZmFsc2V9',
+  '-ykxNVmBKGtgsi8qvTDxAvgZ3kRIH3Hb4ng7DKaiUxM',
+  'gNZu5o8IvaDoMI2cYeAqNhKPgnYMV5-xdzXblu_grGk',
+  'SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAAARIjNEVWZ3iJmqu8zd7v8AIE3yxLzP2fsk1wByrGgHi2k_jHPbMeV6R_Jc6NvrZ3x2pQECAyYgASFYIHjgut0P7KPc5dPLMuQFiRB8J3pm8YUfL0L96jeyRo9uIlgg7DNpO0zAIdR1fjqyHm6c7onziTYGc97mG72XAKwbKSqA1m7mjwi9oOgwjZxh4Co2Eo-CdgxXn7F3NduW7-CsaQ',
+];
+
+const quoted = (words: string[]) => new RegExp(`^"(${words.map((word) => word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})"$`);
+
+function redrawnFor(record: Record<string, unknown>): ExpectedDifference[] {
+  if (record !== RECORDS[0]) return [];
+  const checks = (record.relyingParty as { registrationData: { attestationChecks: Record<string, Record<string, string>> } })
+    .registrationData.attestationChecks;
+  const shown = [record.clientDataJSON as string, checks.client_data.challenge, checks.hash_binding.client_data_hash, checks.hash_binding.verification_data];
+  return [
+    { only: 'recorded', token: quoted(RECORDED_CHALLENGE_WORDS), reason: REDRAWN },
+    { only: 'shown', token: quoted(shown), reason: REDRAWN },
+  ];
+}
+
 test.describe('a saved credential\'s details, as recorded', () => {
   for (const record of RECORDS) {
     const name = record.userName as string;
@@ -48,7 +72,7 @@ test.describe('a saved credential\'s details, as recorded', () => {
       const registration = await shownLevel(page, 'registration', 'h4, [data-recorded-heading]');
       const shownSubs = await shownSubViews(page);
 
-      expect(report(legacy, [...detail, ...registration], expectedFor(name))).toEqual([]);
+      expect(report(legacy, [...detail, ...registration], [...expectedFor(name), ...redrawnFor(record)])).toEqual([]);
       expect(legacy.map((section) => section.heading)).toEqual(
         [...detail, ...registration].map((section) => section.heading).filter((heading) => heading && heading !== 'Registration Details'),
       );

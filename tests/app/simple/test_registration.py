@@ -9,7 +9,9 @@ import pytest
 
 from server.app.config import relying_party
 from server.app.routes.simple import account
+from server.app.storage import credentials as storage_credentials
 from server.app.webauthn.attestation import certificates as attestation_certificates
+from tests.app import visitor_namespace
 from tests.app.entry_app import entry_app
 from tests.app.security.ceremony_helpers import (
     ORIGIN,
@@ -100,6 +102,31 @@ def test_a_credential_whose_algorithm_was_not_offered_is_refused(credential_stor
         "attestationErrors": ["algorithm_not_allowed"],
     }
     assert list((tmp_path / "credentials").rglob("*.json")) == []
+
+
+def test_a_new_visitors_begin_mints_the_namespace_its_complete_stores_under(credential_store):
+    client = entry_app().test_client()
+    begin = client.post(f"/api/register/begin?email={EMAIL}", json={"credentials": []})
+    namespace = visitor_namespace.of(client)
+    complete = client.post(
+        f"/api/register/complete?email={EMAIL}",
+        json=registration_payload(Authenticator(), challenge=unb64u(begin.get_json()["publicKey"]["challenge"])),
+        headers={"Origin": ORIGIN},
+    )
+
+    assert len(visitor_namespace.cookies_set_by(begin)) == 1
+    assert complete.status_code == 200, complete.get_json()
+    assert visitor_namespace.cookies_set_by(complete) == []
+    assert len(storage_credentials.readkey(EMAIL, session_id=namespace)) == 1
+
+
+def test_a_returning_visitors_begin_keeps_their_namespace(credential_store):
+    client = entry_app().test_client()
+    visitor_namespace.give(client, "returning-visitor")
+    begin = client.post(f"/api/register/begin?email={EMAIL}", json={"credentials": []})
+
+    assert visitor_namespace.cookies_set_by(begin) == []
+    assert visitor_namespace.of(client) == "returning-visitor"
 
 
 def test_a_complete_body_that_is_no_object_finds_no_registration_state():

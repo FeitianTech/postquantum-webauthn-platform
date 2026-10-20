@@ -44,6 +44,16 @@
    ],
    "cookies": [
     {
+     "name": "fido.mds.session",
+     "attributes": [
+      "Max-Age=31536000",
+      "HttpOnly",
+      "Path=/",
+      "SameSite=Lax"
+     ],
+     "contents": "t0BITlumbN_CAx8C-loMVVe90EcnM7uSH8BwFLV0ZBQ"
+    },
+    {
      "name": "session",
      "attributes": [
       "HttpOnly",
@@ -59,7 +69,7 @@
         "residentKey": "discouraged",
         "userVerification": "discouraged"
        },
-       "challenge": "t0BITlumbN_CAx8C-loMVVe90EcnM7uSH8BwFLV0ZBQ",
+       "challenge": "UjIDwt7tId9E4NX8MIhjIBxOmkSN4ykfbImkS-FDBWU",
        "pubKeyCredParams": [
         {
          "alg": -50,
@@ -92,7 +102,7 @@
        ]
       },
       "simple_register_state": {
-       "challenge": "t0BITlumbN_CAx8C-loMVVe90EcnM7uSH8BwFLV0ZBQ",
+       "challenge": "UjIDwt7tId9E4NX8MIhjIBxOmkSN4ykfbImkS-FDBWU",
        "issued_at": 1790000000.0,
        "user_verification": "discouraged"
       },
@@ -102,7 +112,7 @@
      }
     }
    ],
-   "bodySha256": "ac1328846ae5dc7f575ef0edcc2e1faee1b21d7a0e8c352d9fed242c132e1538",
+   "bodySha256": "cfb91a23d462f30e1a7cd06dc45e2c465bd86ec4e3adf608d09261eea51c3532",
    "body": {
     "publicKey": {
      "authenticatorSelection": {
@@ -111,7 +121,7 @@
       "residentKey": "discouraged",
       "userVerification": "discouraged"
      },
-     "challenge": "t0BITlumbN_CAx8C-loMVVe90EcnM7uSH8BwFLV0ZBQ",
+     "challenge": "UjIDwt7tId9E4NX8MIhjIBxOmkSN4ykfbImkS-FDBWU",
      "excludeCredentials": [],
      "pubKeyCredParams": [
       {
@@ -197,16 +207,6 @@
     ]
    ],
    "cookies": [
-    {
-     "name": "fido.mds.session",
-     "attributes": [
-      "Max-Age=31536000",
-      "HttpOnly",
-      "Path=/",
-      "SameSite=Lax"
-     ],
-     "contents": "Wam7yqizmE9EWGSnAK2Zr6_KUyZw3-kxst1CnHYchmM"
-    },
     {
      "name": "session",
      "attributes": [

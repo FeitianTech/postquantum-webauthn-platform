@@ -133,10 +133,6 @@ def test_health_endpoint_sets_no_session_cookie():
 # The namespace id: the signed cookie, else a new one when asked for.
 
 
-def _namespace_cookies(response) -> list[str]:
-    return [value for value in response.headers.getlist("Set-Cookie") if value.startswith(f"{visitor_session.COOKIE_NAME}=")]
-
-
 def test_a_new_visitor_gets_a_signed_lax_cookie_once_secure_as_the_session_cookie(touches, monkeypatch):
     app = entry_app()
     monkeypatch.setitem(app.config, "SESSION_COOKIE_SECURE", True)
@@ -147,7 +143,7 @@ def test_a_new_visitor_gets_a_signed_lax_cookie_once_secure_as_the_session_cooki
         assert dict(session) == {}
         response = app.process_response(app.response_class("ok"))
 
-    (cookie,) = _namespace_cookies(response)
+    (cookie,) = visitor_namespace.cookies_set_by(response)
     assert "Secure" in cookie and "HttpOnly" in cookie and "SameSite=Lax" in cookie
     # The namespace name is signed with the application secret rather than sent
     # verbatim, so a caller cannot rewrite it to somebody else's.
@@ -183,7 +179,7 @@ def test_the_cookie_is_signed_again_once_it_is_a_day_old(touches, monkeypatch):
         with app.test_request_context("/", headers=cookie):
             assert visitor_session.current_id() == "cookie-session"
             response = app.process_response(app.response_class("ok"))
-        assert bool(_namespace_cookies(response)) is set_again
+        assert bool(visitor_namespace.cookies_set_by(response)) is set_again
 
 
 def test_a_visitor_without_a_namespace_gets_one_only_when_asked_and_keeps_it_for_the_request(touches):

@@ -35,3 +35,9 @@ def header(app: Any, identifier: str) -> dict[str, str]:
     """The request header naming ``identifier``, for ``app.test_request_context(headers=...)``."""
 
     return {"Cookie": f"{visitor_session.COOKIE_NAME}={sealed(app, identifier)}"}
+
+
+def cookies_set_by(response: Any) -> list[str]:
+    """The namespace cookies ``response`` sets, as Set-Cookie headers."""
+
+    return [value for value in response.headers.getlist("Set-Cookie") if value.startswith(f"{visitor_session.COOKIE_NAME}=")]

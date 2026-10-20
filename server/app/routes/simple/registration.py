@@ -12,7 +12,7 @@ from fido2.webauthn import (
 )
 from flask import Blueprint, jsonify, request, session
 
-from ... import json_values
+from ... import json_values, visitor_session
 from ...challenge_registry import (
     CHALLENGE_FRESH,
     CHALLENGE_REPLAYED,
@@ -278,6 +278,10 @@ def register_begin():
             existing_credentials_raw = raw_candidates
 
     credentials, _serialized = parsing._parse_client_credentials(existing_credentials_raw)
+
+    # The account lives in the visitor's namespace, minted here when they have
+    # none, so the ceremony's namespace is fixed from its begin.
+    visitor_session.ensure_id()
 
     rp_id = relying_party.determine_rp_id()
     server = relying_party.create_fido_server(rp_id=rp_id)
