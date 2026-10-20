@@ -102,11 +102,19 @@ def test_a_chain_whose_leaf_the_next_certificate_did_not_issue_does_not_verify(e
     # The MDS gives no verdict of its own, so the chain's own signatures decide.
     outcome = evaluate([LEAF, ROOT], chain_valid=None)
 
+    assert outcome["errors"] == ["certificate_chain_invalid"]
+    assert outcome["checks"]["chain"] is False
+
+
+def test_a_chain_failure_the_mds_evaluation_finds_again_is_listed_once(evaluate):
+    outcome = evaluate([LEAF, ROOT], chain_valid=False, mds_errors=["certificate_chain_invalid"])
+
+    assert outcome["errors"] == ["certificate_chain_invalid"]
     assert outcome["checks"]["chain"] is False
 
 
 def test_bytes_in_a_trust_path_that_are_not_a_certificate_are_reported(evaluate):
     outcome = evaluate([b"not a certificate"], chain_valid=None)
 
-    assert [error.split(":")[0] for error in outcome["errors"]] == ["certificate_chain_error", "certificate_parse_error"]
+    assert [error.split(":")[0] for error in outcome["errors"]] == ["certificate_chain_unreadable", "certificate_parse_error"]
     assert outcome["checks"]["chain"] is False

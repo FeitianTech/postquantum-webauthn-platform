@@ -4,7 +4,6 @@ from datetime import datetime
 from typing import Any, NamedTuple
 
 from cryptography import x509
-from fido2.attestation import InvalidSignature
 
 from ...mds import verifier as mds_verifier
 from . import error_codes, evaluation, trust
@@ -77,10 +76,8 @@ def _verify_trust_path(trust_path: list[Any], errors: list[str]) -> bool | None:
         return None
     try:
         verify_certificate_chain(trust_path)
-    except InvalidSignature:
-        return False
-    except Exception as exc:  # pragma: no cover - defensive
-        errors.append(f"certificate_chain_error: {exc}")
+    except Exception as exc:
+        errors.append(error_codes.chain_error(exc))
         return False
     return True
 
@@ -128,8 +125,9 @@ def _evaluate_with_metadata(
     # evaluate_attestation reads, and every other failure is in its trust path.
     outcome = evaluation.evaluate_attestation(verifier, attestation_object, client_data_hash)
     trust_details = outcome.trust_path
-    if trust_details.errors:
-        errors.extend(trust_details.errors)
+    # The evaluation checks the trust path's own links again, with the root: a
+    # failure the trust path already reported is not listed twice.
+    errors.extend(error for error in trust_details.errors if error not in errors)
     return _MetadataEvaluation(trust_details, outcome.metadata_entry, outcome.metadata_lookup_source, False)
 
 
