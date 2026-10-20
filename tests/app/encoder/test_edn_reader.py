@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import pytest
 
-from server.app.decoder import edn
+from server.app.decoder import edn, item_budget
 from server.app.decoder.decode import cbor_parser
 from server.app.decoder.edn import reader
 from server.app.decoder.encode.text import encode_payload_text
@@ -179,6 +179,20 @@ def test_edn_nested_deeper_than_the_decoder_reads_is_refused_with_its_offset(tex
     # Not a RecursionError (HTTP 500): a refusal, as the decoder refuses the bytes.
     with pytest.raises(ValueError, match=f"^EDN is not valid at offset {offset}: items are nested more than 64 deep"):
         edn.encode(text)
+
+
+def test_edn_of_as_many_items_as_the_budget_is_read_and_one_more_is_refused_at_its_offset():
+    # The map, its key, the array and the array's two items: five items.
+    text = '{"a": [1, 2]}'
+
+    with item_budget.limit(5) as budget:
+        assert edn.encode(text).hex() == "a16161820102"
+    assert budget.used == 5
+
+    with pytest.raises(item_budget.ItemLimitError) as refused, item_budget.limit(4):
+        edn.encode(text)
+    # The reader knows where it is in the text, and no path.
+    assert (refused.value.offset, refused.value.path) == (10, None)
 
 
 def test_the_codec_endpoint_refuses_a_lone_surrogate_with_its_offset(client):

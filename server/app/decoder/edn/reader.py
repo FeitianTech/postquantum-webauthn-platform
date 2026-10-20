@@ -19,6 +19,9 @@ one top-level item (a CBOR sequence), items nested more than 64 deep (the
 decoder's limit), and an integer beyond 64 bits -- which the
 EDN draft (section 2.2) reads as a bignum tag; here it must be written as one,
 ``2(h'..')``, so that the tag is visible in the text.
+
+Every item counts against the request's item budget (``item_budget``): past it,
+reading stops with ``ItemLimitError`` at that item's offset in the text.
 """
 from __future__ import annotations
 
@@ -28,6 +31,7 @@ import math
 import re
 from collections.abc import Callable
 
+from .. import item_budget
 from ..cbor_head import INDEFINITE, encode_head
 from . import errors, floats, strings
 
@@ -69,6 +73,7 @@ class _Reader:
         self.text = text
         self.position = 0
         self.depth = 0
+        self.budget = item_budget.current()
 
     # -- positions, blank space and comments ---------------------------------------
 
@@ -153,6 +158,8 @@ class _Reader:
     def item(self) -> bytes:
         if self.depth > _MAX_DEPTH:
             raise self.error(f"items are nested more than {_MAX_DEPTH} deep")
+        if self.budget is not None:
+            self.budget.charge(self.position, None)
         self.depth += 1
         try:
             return self._item()
