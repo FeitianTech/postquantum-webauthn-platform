@@ -25,6 +25,7 @@ from . import (
 from .constants import (
     EXTENSION_DISPLAY_METADATA,
     MAX_ATTESTATION_CERTIFICATE_BYTES,
+    MAX_ATTESTATION_CHAIN_LENGTH,
     UNREADABLE_EXTENSIONS,
 )
 
@@ -316,7 +317,11 @@ def _no_attestation_details() -> tuple[str, dict[str, Any], None, None, dict[str
 
 
 def _serialized_certificate_chain(attestation_statement: Any) -> list[dict[str, Any]]:
-    """Each x5c certificate serialised, or an error entry where it cannot be."""
+    """Each x5c certificate serialised, or an error entry where it cannot be.
+
+    A chain longer than ``MAX_ATTESTATION_CHAIN_LENGTH`` keeps its first
+    certificates, and one error entry says the rest were not read.
+    """
 
     attestation_certificates: list[dict[str, Any]] = []
     if not isinstance(attestation_statement, Mapping):
@@ -325,7 +330,7 @@ def _serialized_certificate_chain(attestation_statement: Any) -> list[dict[str, 
     if not (isinstance(cert_chain, (list, tuple)) and cert_chain):
         return attestation_certificates
 
-    for entry in cert_chain:
+    for entry in cert_chain[:MAX_ATTESTATION_CHAIN_LENGTH]:
         certificate_bytes = _coerce_attestation_certificate_bytes(entry)
         if certificate_bytes is None:
             attestation_certificates.append({
@@ -349,6 +354,10 @@ def _serialized_certificate_chain(attestation_statement: Any) -> list[dict[str, 
                 }
 
         attestation_certificates.append(certificate_details)
+    if len(cert_chain) > MAX_ATTESTATION_CHAIN_LENGTH:
+        attestation_certificates.append({
+            "error": f"Chain is longer than {MAX_ATTESTATION_CHAIN_LENGTH} certificates; the rest were not read.",
+        })
     return attestation_certificates
 
 

@@ -183,6 +183,12 @@ def test_a_trust_path_leaves_out_an_x5c_entry_over_the_size_limit():
     assert attestation_trust._collect_trust_path_entries(x5c) == [b"\x30" * limit, b"root"]
 
 
+def test_a_trust_path_keeps_at_most_the_first_ten_x5c_entries():
+    x5c = [bytes([index]) for index in range(1, 12)]
+
+    assert attestation_trust._collect_trust_path_entries(x5c) == x5c[:10]
+
+
 def _self_signed_cert_der() -> bytes:
     private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
     subject = issuer = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "attestation-test")])

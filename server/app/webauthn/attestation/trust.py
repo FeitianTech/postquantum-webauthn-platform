@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import itertools
 from collections.abc import Mapping, Sequence
 from typing import Any
 
@@ -12,6 +13,7 @@ from . import formatting
 from .constants import (
     AAGUID_EXTENSION_OID,
     MAX_ATTESTATION_CERTIFICATE_BYTES,
+    MAX_ATTESTATION_CHAIN_LENGTH,
     UNREADABLE_EXTENSIONS,
 )
 
@@ -65,14 +67,15 @@ def _is_trusted_ca_certificate(cert_bytes: bytes, *, allow_subject_parsing: bool
 def _collect_trust_path_entries(x5c: Any) -> list[bytes]:
     """Coerce an ``x5c`` attestation entry into a list of DER certificates.
 
-    An entry that is no byte string, or one larger than a certificate is read, is left out.
+    Only the chain's first ``MAX_ATTESTATION_CHAIN_LENGTH`` entries are read, and
+    one that is no byte string, or larger than a certificate is read, is left out.
     """
 
     if not isinstance(x5c, Sequence):
         return []
 
     trust_path: list[bytes] = []
-    for entry in x5c:
+    for entry in itertools.islice(x5c, MAX_ATTESTATION_CHAIN_LENGTH):
         data = json_values.as_bytes(entry)
         if data and len(data) <= MAX_ATTESTATION_CERTIFICATE_BYTES:
             trust_path.append(data)

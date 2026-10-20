@@ -19,6 +19,10 @@ AAGUID_EXTENSION_OID = ObjectIdentifier("1.3.6.1.4.1.45724.1.1.4")
 # Real ones sit well inside it (an ML-DSA-87 certificate is about 7.5 KB).
 MAX_ATTESTATION_CERTIFICATE_BYTES = 64 * 1024
 
+# The most x5c certificates read: a longer chain keeps its first ones. A real
+# one is a leaf, perhaps an intermediate or two, and a root.
+MAX_ATTESTATION_CHAIN_LENGTH = 10
+
 # What cryptography raises reading the extensions of a certificate it loaded,
 # which it parses only then: one malformed (ValueError), one given twice
 # (DuplicateExtension), a general name it does not represent (x400Address,

@@ -156,6 +156,15 @@ def test_a_certificate_one_byte_over_the_size_limit_is_refused_unparsed(monkeypa
     assert parsed == []
 
 
+def test_a_chain_over_the_length_limit_keeps_its_first_ten_certificates():
+    *_, chain = attestation_certificates.extract_attestation_details(_registration_with_x5c([CERTIFICATE] * 10 + [b"junk"]))
+
+    assert [entry["subject"] for entry in chain[:10]] == [
+        "CN=Leaf,OU=Authenticator Attestation,O=Characterization Test,C=SE"
+    ] * 10
+    assert chain[10:] == [{"error": "Chain is longer than 10 certificates; the rest were not read."}]
+
+
 @pytest.mark.parametrize("response", [["not-a-mapping"], {"not": "a registration"}])
 def test_a_response_that_is_no_registration_has_no_attestation_details(response):
     assert attestation_certificates.extract_attestation_details(response) == ("none", {}, None, None, {}, None, [])
