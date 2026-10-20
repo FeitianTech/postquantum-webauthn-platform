@@ -192,7 +192,6 @@ def register_complete():
     response = json_body.json_object()
     inner_response = response.get("response")
     credential_response = inner_response if isinstance(inner_response, Mapping) else {}
-    inputs = _complete_inputs(response, credential_response)
 
     # A client-supplied ``__session_state`` is stripped and ignored: accepting
     # it would let the caller choose the challenge it is verified against.
@@ -208,6 +207,8 @@ def register_complete():
     if error_response is not None:
         return error_response
 
+    # Read only now: the attestation's certificates are parsed for a ceremony fido2 accepted.
+    inputs = _complete_inputs(response, credential_response)
     reg = _registration_context(uname, response, credential_response, inputs, verified)
     error_response = _attestation_error_response(verified["attestation_checks"])
     if error_response is not None:
