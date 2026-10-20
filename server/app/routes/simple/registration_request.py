@@ -7,6 +7,8 @@ from typing import Any
 USER_VERIFICATION = "discouraged"
 AUTHENTICATOR_ATTACHMENT = "cross-platform"
 RESIDENT_KEY = "discouraged"
+# credProps, so the browser says whether the credential is discoverable.
+EXTENSIONS = {"credProps": True}
 
 
 def request_params() -> dict[str, Any]:
@@ -18,6 +20,6 @@ def request_params() -> dict[str, Any]:
         "authenticator_attachment": AUTHENTICATOR_ATTACHMENT,
         "attestation": "none",
         "resident_key": RESIDENT_KEY,
-        "extensions": {},
+        "extensions": dict(EXTENSIONS),
         "timeout": None,
     }

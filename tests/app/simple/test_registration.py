@@ -169,6 +169,21 @@ def test_the_record_says_what_the_begin_asked_for(credential_store):
     assert complete.get_json()["storedCredential"]["properties"]["residentKeyRequested"] == selection["residentKey"]
 
 
+def test_a_begin_asks_for_cred_props_and_complete_reports_its_rk(credential_store):
+    client = entry_app().test_client()
+    begin = client.post(f"/api/register/begin?email={EMAIL}", json={"credentials": []})
+    options = begin.get_json()["publicKey"]
+    payload = registration_payload(Authenticator(), challenge=unb64u(options["challenge"]))
+    payload["clientExtensionResults"] = {"credProps": {"rk": True}}
+    complete = client.post(f"/api/register/complete?email={EMAIL}", json=payload, headers={"Origin": ORIGIN})
+
+    assert options["extensions"] == {"credProps": True}
+    assert complete.status_code == 200, complete.get_json()
+    assert complete.get_json()["actualResidentKey"] is True
+    [record] = storage_credentials.readkey(EMAIL, session_id=visitor_namespace.of(client))
+    assert record["request_params"]["extensions"] == {"credProps": True}
+
+
 def test_a_complete_body_that_is_no_object_finds_no_registration_state():
     response = entry_app().test_client().post(
         f"/api/register/complete?email={EMAIL}", json=["not", "a", "registration"]

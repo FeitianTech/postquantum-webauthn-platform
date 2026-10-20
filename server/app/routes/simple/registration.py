@@ -311,6 +311,7 @@ def register_begin():
         resident_key_requirement=registration_request.RESIDENT_KEY,
         user_verification=registration_request.USER_VERIFICATION,
         authenticator_attachment=registration_request.AUTHENTICATOR_ATTACHMENT,
+        extensions=dict(registration_request.EXTENSIONS),
     )
 
     # Stamped so /complete can refuse a stale state replayed from an old cookie.

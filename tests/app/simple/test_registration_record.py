@@ -1,6 +1,7 @@
 """Tests for the record a verified simple registration builds."""
 from __future__ import annotations
 
+import pytest
 from fido2.webauthn import AuthenticatorData
 
 from server.app.encoding import encode_base64url
@@ -117,3 +118,32 @@ def test_the_record_says_how_many_credentials_begin_excluded():
     assert excluding.debug_info["excludeCredentialsUsed"] is True
     assert excluding_none.credential_properties["excludeCredentialsSentCount"] == 0
     assert excluding_none.debug_info["excludeCredentialsUsed"] is False
+
+
+def _debug_info(reg):
+    simple_registration_record.initialize_registration_context(reg)
+    simple_registration_record.populate_authenticator_data_context(reg)
+    simple_registration_record.populate_rp_debug_context(reg)
+    return reg.debug_info
+
+
+@pytest.mark.parametrize(
+    ("outputs", "resident"),
+    [
+        ({"credProps": {"rk": True}}, True),
+        ({"credProps": {"rk": False}}, False),
+        ({}, None),
+        ({"credProps": {}}, None),
+        ({"credProps": {"rk": "true"}}, None),
+        ({"credProps": True}, None),
+    ],
+)
+def test_the_resident_key_reported_is_the_browsers_cred_props_rk_or_none(outputs, resident):
+    assert _debug_info(_registration(client_extension_results=outputs))["actualResidentKey"] is resident
+
+
+def test_a_backup_eligible_credential_without_cred_props_reports_no_resident_key():
+    data = bytearray(Authenticator().authenticator_data(counter=3))
+    data[32] |= 0x08  # BE: backup eligible, which says nothing of discoverability.
+
+    assert _debug_info(_registration(auth_data=AuthenticatorData(bytes(data))))["actualResidentKey"] is None

@@ -11,7 +11,7 @@
     ],
     [
      "Content-Length",
-     "687"
+     "719"
     ],
     [
      "X-Content-Type-Options",
@@ -116,7 +116,7 @@
      }
     }
    ],
-   "bodySha256": "e5c89078aece09b79109589624f732fd3cd5640f7ae7a8c5eb26e864528c3a41",
+   "bodySha256": "3d02b7437a2ddfb1cea8a7483e765b24452f5a13f2f6ae5b6bf77349c9684343",
    "body": {
     "publicKey": {
      "authenticatorSelection": {
@@ -127,6 +127,9 @@
      },
      "challenge": "UjIDwt7tId9E4NX8MIhjIBxOmkSN4ykfbImkS-FDBWU",
      "excludeCredentials": [],
+     "extensions": {
+      "credProps": true
+     },
      "pubKeyCredParams": [
       {
        "alg": -50,

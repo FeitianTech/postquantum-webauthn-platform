@@ -271,6 +271,14 @@ def _relying_party_info(
     )
 
 
+def _reported_resident_key(client_extension_results: Mapping[str, Any]) -> bool | None:
+    """Whether the browser says the credential is discoverable (credProps.rk); None when it does not say."""
+
+    cred_props = client_extension_results.get("credProps")
+    resident_key = cred_props.get("rk") if isinstance(cred_props, Mapping) else None
+    return resident_key if isinstance(resident_key, bool) else None
+
+
 def _debug_info(reg: SimpleRegistration) -> dict[str, Any]:
     return {
         "attestationFormat": reg.attestation_format,
@@ -279,7 +287,7 @@ def _debug_info(reg: SimpleRegistration) -> dict[str, Any]:
         "hintsUsed": [],
         "credProtectUsed": "none",
         "enforceCredProtectUsed": False,
-        "actualResidentKey": bool(reg.flags_value & getattr(reg.auth_data.FLAG, "BE", 0)),
+        "actualResidentKey": _reported_resident_key(reg.client_extension_results),
         "attestationSummary": reg.attestation_summary,
         "rpIdHashValid": reg.attestation_rp_id_hash_valid,
         "rpIdHash": reg.rp_hash["hex"],

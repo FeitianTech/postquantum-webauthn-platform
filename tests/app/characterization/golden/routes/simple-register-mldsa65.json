@@ -11,7 +11,7 @@
     ],
     [
      "Content-Length",
-     "687"
+     "719"
     ],
     [
      "X-Content-Type-Options",
@@ -116,7 +116,7 @@
      }
     }
    ],
-   "bodySha256": "2a5a3d877e57780173087c76ea732be7578b86008dcc2c0cb589dc484fd0a682",
+   "bodySha256": "cb64f14664abdc152d89213a98be59381bde2373f5798819ecbe04b318eb999e",
    "body": {
     "publicKey": {
      "authenticatorSelection": {
@@ -127,6 +127,9 @@
      },
      "challenge": "AWi0ZpKxYRKmI4lIX04tMx8mCYjWIP2hBtLqyMPbPSY",
      "excludeCredentials": [],
+     "extensions": {
+      "credProps": true
+     },
      "pubKeyCredParams": [
       {
        "alg": -50,
@@ -179,7 +182,7 @@
     ],
     [
      "Content-Length",
-     "49062"
+     "49061"
     ],
     [
      "X-Content-Type-Options",
@@ -222,9 +225,9 @@
      "contents": null
     }
    ],
-   "bodySha256": "0d8c97dcafabd17460fde80551cb176f8ccacd10dc99c082d4c1bb806bdde880",
+   "bodySha256": "3b1c90552c178731ea783965b8445d6b6c4ff98abef725b89ceed9a5896d486c",
    "body": {
-    "actualResidentKey": false,
+    "actualResidentKey": null,
     "algo": "ML-DSA-65 (PQC)",
     "algorithmsUsed": [
      -49
@@ -575,7 +578,7 @@
    "stored": [
     {
      "file": "credentials/hbFtLAXC1PFrZkqVHkEOUItHroICPyv5YzSWAFG_3wI/user@example.com_credential_data.json",
-     "sha256": "d60c44e90ffd230f03cd4b24e58b4c32e0172a0851834cbacd7858d8c481d7b5",
+     "sha256": "e1ba140f0eed1f02573f87c5605c81ed12e877d239697d7db47d8a8b02212a47",
      "content": {
       "version": 1,
       "encoding": "base64url",
@@ -613,7 +616,9 @@
          "authenticator_attachment": "cross-platform",
          "attestation": "none",
          "resident_key": "discouraged",
-         "extensions": {},
+         "extensions": {
+          "credProps": true
+         },
          "timeout": null
         },
         "properties": {

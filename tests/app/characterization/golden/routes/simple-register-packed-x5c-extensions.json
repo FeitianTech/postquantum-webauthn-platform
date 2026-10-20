@@ -11,7 +11,7 @@
     ],
     [
      "Content-Length",
-     "687"
+     "719"
     ],
     [
      "X-Content-Type-Options",
@@ -116,7 +116,7 @@
      }
     }
    ],
-   "bodySha256": "51c23f666548be71525ea62d4a5fcc9da6c78ebd4c65b198bb62a2c0911e5be7",
+   "bodySha256": "16b78fd91cda97cf651b1c7b7c5c8b0a2c4a239f46c0ceafd5609c8a967d65fd",
    "body": {
     "publicKey": {
      "authenticatorSelection": {
@@ -127,6 +127,9 @@
      },
      "challenge": "uFM6UhsBmwG2NDQyIzVhklKUJxyQPL_0TB4vZ4BU1gw",
      "excludeCredentials": [],
+     "extensions": {
+      "credProps": true
+     },
      "pubKeyCredParams": [
       {
        "alg": -50,
@@ -179,7 +182,7 @@
     ],
     [
      "Content-Length",
-     "20773"
+     "20772"
     ],
     [
      "X-Content-Type-Options",
@@ -222,9 +225,9 @@
      "contents": null
     }
    ],
-   "bodySha256": "fbe7a7ff7504b644ad9d1074e6b641537b69549a9450eba7ae664c4cc2d1babe",
+   "bodySha256": "e72f22c00074c1de1e899b53a895809288670ce4cfd5d126485dd62b3cda157b",
    "body": {
-    "actualResidentKey": false,
+    "actualResidentKey": true,
     "algo": "ES256 (ECDSA)",
     "algorithmsUsed": [
      -7
@@ -755,7 +758,7 @@
    "stored": [
     {
      "file": "credentials/ccT_dSjTN9ZiSsHKl1NAshMTRTtU9Ucv-pYhVcD5NcU/user@example.com_credential_data.json",
-     "sha256": "f500f79f1d85137e295c5357be3cc9fff638af258019be16ba66ab3a17271fae",
+     "sha256": "95303e94f0e8ef1a20c7efdee5affd15f34d6fa64777dfcbc32212867172dd89",
      "content": {
       "version": 1,
       "encoding": "base64url",
@@ -975,7 +978,9 @@
          "authenticator_attachment": "cross-platform",
          "attestation": "none",
          "resident_key": "discouraged",
-         "extensions": {},
+         "extensions": {
+          "credProps": true
+         },
          "timeout": null
         },
         "properties": {

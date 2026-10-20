@@ -6,7 +6,7 @@ import { addVirtualAuthenticator } from './virtual-authenticator';
 // The ceremonies on the browser's own WebAuthn JSON in Chromium:
 // PublicKeyCredential.parseCreationOptionsFromJSON / parseRequestOptionsFromJSON
 // read the server's options, and credential.toJSON() writes what the server is
-// sent. The Simple tab's request is the server's (no hints, no extensions);
+// sent. The Simple tab's request is the server's (no hints; credProps its only extension);
 // the Advanced tab asks for hints, prf and largeBlob, answered by a CTAP 2.1
 // virtual authenticator. Without the methods, the page asks for an update and
 // runs nothing.
