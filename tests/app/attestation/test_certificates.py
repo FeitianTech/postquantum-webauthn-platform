@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import tracemalloc
 from types import SimpleNamespace
 
 import pytest
@@ -94,6 +95,27 @@ def test_each_x5c_entry_is_serialised_or_reported_as_what_went_wrong():
     assert chain[1] == {"error": "Unable to parse attestation certificate."}
     assert chain[2]["error"].startswith("Unable to parse attestation certificate: ")
     assert chain[3]["subject"] == "CN=Leaf,OU=Authenticator Attestation,O=Characterization Test,C=SE"
+
+
+@pytest.mark.parametrize("entry", [5, [0x30, 0x00], True], ids=["int", "list", "bool"])
+def test_an_x5c_entry_that_is_no_byte_string_text_or_view_is_undecodable(entry):
+    *_, chain = attestation_certificates.extract_attestation_details(_registration_with_x5c([entry]))
+
+    assert chain == [{"error": "Unable to decode attestation certificate bytes."}]
+
+
+def test_an_integer_x5c_entry_allocates_nothing_for_its_value():
+    payload = _registration_with_x5c([10**9])
+
+    tracemalloc.start()
+    try:
+        *_, chain = attestation_certificates.extract_attestation_details(payload)
+        _current, peak = tracemalloc.get_traced_memory()
+    finally:
+        tracemalloc.stop()
+
+    assert chain == [{"error": "Unable to decode attestation certificate bytes."}]
+    assert peak < 1_000_000
 
 
 @pytest.mark.parametrize("response", [["not-a-mapping"], {"not": "a registration"}])

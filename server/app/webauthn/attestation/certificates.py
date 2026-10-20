@@ -260,7 +260,12 @@ def _certificate_view(certificate: x509.Certificate, cert_bytes: bytes) -> dict[
 
 
 def _coerce_attestation_certificate_bytes(value: Any) -> bytes | None:
-    """Return raw certificate bytes for attestation payload *value*."""
+    """Return raw certificate bytes for attestation payload *value*.
+
+    Only a byte string, text (base64, then base64url) or a certificate view's own
+    fields are read. Anything else is ``None``: ``bytes(value)`` would turn an
+    integer N into N zero bytes.
+    """
 
     if value in (None, ""):
         return None
@@ -299,10 +304,7 @@ def _coerce_attestation_certificate_bytes(value: Any) -> bytes | None:
             except encoding.EncodingError:
                 pass
 
-    try:
-        return bytes(value)
-    except (TypeError, ValueError):
-        return None
+    return None
 
 
 def _no_attestation_details() -> tuple[str, dict[str, Any], None, None, dict[str, Any], None, list[dict[str, Any]]]:

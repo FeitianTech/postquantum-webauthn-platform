@@ -1910,23 +1910,7 @@
      "parseError": "error parsing asn1 value: ParseError { kind: ShortData { needed: 1 }, location: [\"Certificate::tbs_cert\"] }"
     },
     {
-     "error": "Unable to parse attestation certificate: error parsing asn1 value: ParseError { kind: UnexpectedTag { actual: Tag { value: 0, constructed: false, class: Universal } } }",
-     "derBase64": "AAAAAAA=",
-     "fingerprints": {
-      "sha256": "8855508aade16ec573d21e6a485dfd0a7624085c1a14b5ecdd6485de0c6839a4",
-      "sha1": "a10909c2cdcaf5adb7e6b092a4faba558b62bd96",
-      "md5": "ca9c491ac66b2c62500882e93f3719a8"
-     },
-     "pem": "-----BEGIN CERTIFICATE-----\nAAAAAAA=\n-----END CERTIFICATE-----",
-     "publicKeyInfo": {
-      "type": "Unknown",
-      "algorithm": {
-       "name": "Unknown"
-      }
-     },
-     "raw": "0000000000",
-     "summary": "Unable to parse attestation certificate using cryptography.x509.\nError: error parsing asn1 value: ParseError { kind: UnexpectedTag { actual: Tag { value: 0, constructed: false, class: Universal } } }\n\nDER length: 5 bytes\n\nFingerprints:\n    SHA256: 8855508aade16ec573d21e6a485dfd0a7624085c1a14b5ecdd6485de0c6839a4\n    SHA1: a10909c2cdcaf5adb7e6b092a4faba558b62bd96\n    MD5: ca9c491ac66b2c62500882e93f3719a8\n\nBest-effort public key details:\n    Type: Unknown",
-     "parseError": "error parsing asn1 value: ParseError { kind: UnexpectedTag { actual: Tag { value: 0, constructed: false, class: Universal } } }"
+     "error": "Unable to decode attestation certificate bytes."
     }
    ]
   ]
