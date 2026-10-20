@@ -19,7 +19,7 @@ def _app_settings(name: str) -> dict:
 
 def _register_begin(client, host: str):
     response = client.post(
-        "/api/register/begin",
+        "/api/register/begin?email=user@example.com",
         json={},
         base_url=f"https://{host}",
         headers={"Host": host},

@@ -2,7 +2,9 @@
 
 The store rejects a traversal name (``../x``) before touching a path; that
 used to surface as HTTP 500 with a full stack trace in the log. Every route
-that hands storage a caller's name now answers 400 without a traceback.
+that hands storage a caller's name now answers 400 without a traceback, and the
+Simple tab's begins refuse such a name before any options are issued
+(``routes/simple/account.py``), so it never reaches the store.
 """
 from __future__ import annotations
 
@@ -10,6 +12,7 @@ import logging
 
 import pytest
 
+from server.app.routes.simple import account
 from server.app.storage import credentials as storage_credentials
 from server.app.storage import github_mirror
 from server.app.storage.common import InvalidStorageIdentifier
@@ -18,9 +21,7 @@ from .ceremony_helpers import (
     ORIGIN,
     Authenticator,
     advanced_public_key_options,
-    assertion_payload,
     registration_payload,
-    simple_complete_body,
     unb64u,
 )
 
@@ -35,11 +36,10 @@ def store(monkeypatch, tmp_path):
     return tmp_path
 
 
-def _assert_refused_without_traceback(response, caplog):
+def _assert_refused_at_begin(response, caplog):
     assert response.status_code == 400, response.get_json()
-    assert response.get_json()["error"].startswith("Invalid credential name: ")
+    assert response.get_json() == {"error": account.USERNAME_RULES}
     assert [record for record in caplog.records if record.exc_info] == []
-    assert any("Refused a storage name" in record.getMessage() for record in caplog.records)
 
 
 def test_the_store_refuses_a_traversal_name_before_touching_a_path(store):
@@ -49,46 +49,22 @@ def test_the_store_refuses_a_traversal_name_before_touching_a_path(store):
     assert sorted(path.name for path in store.iterdir()) == []
 
 
-def test_simple_registration_refuses_a_traversal_name(client, caplog, store):
-    begin = client.post(f"/api/register/begin?email={TRAVERSAL}", json={"credentials": []})
-    challenge = unb64u(begin.get_json()["publicKey"]["challenge"])
-
+def test_simple_registration_refuses_a_traversal_name_at_its_begin(client, caplog, store):
     with caplog.at_level(logging.WARNING):
-        response = client.post(
-            f"/api/register/complete?email={TRAVERSAL}",
-            json=registration_payload(Authenticator(), challenge=challenge),
-            headers={"Origin": ORIGIN},
+        begin = client.post(f"/api/register/begin?email={TRAVERSAL}", json={"credentials": []})
+
+    _assert_refused_at_begin(begin, caplog)
+    assert sorted(path.name for path in store.iterdir()) == []
+
+
+def test_simple_authentication_refuses_a_traversal_name_at_its_begin(client, caplog, store):
+    with caplog.at_level(logging.WARNING):
+        begin = client.post(
+            f"/api/authenticate/begin?email={TRAVERSAL}", json={"credentials": [Authenticator().stored_credential_entry()]}
         )
 
-    _assert_refused_without_traceback(response, caplog)
-    assert not (store / "x_credential_data.json").exists()
-
-
-def test_simple_authentication_refuses_a_traversal_name(client, caplog, store):
-    authenticator = Authenticator()
-    begin = client.post("/api/register/begin?email=user@example.com", json={"credentials": []})
-    challenge = unb64u(begin.get_json()["publicKey"]["challenge"])
-    registered = client.post(
-        "/api/register/complete?email=user@example.com",
-        json=registration_payload(authenticator, challenge=challenge),
-        headers={"Origin": ORIGIN},
-    )
-    assert registered.status_code == 200, registered.get_json()
-
-    begin = client.post(
-        f"/api/authenticate/begin?email={TRAVERSAL}", json={"credentials": [authenticator.stored_credential_entry()]}
-    )
-    challenge = unb64u(begin.get_json()["publicKey"]["challenge"])
-    with caplog.at_level(logging.WARNING):
-        response = client.post(
-            f"/api/authenticate/complete?email={TRAVERSAL}",
-            json=simple_complete_body(
-                assertion_payload(authenticator, challenge=challenge, counter=1), [authenticator.stored_credential_entry()]
-            ),
-            headers={"Origin": ORIGIN},
-        )
-
-    _assert_refused_without_traceback(response, caplog)
+    _assert_refused_at_begin(begin, caplog)
+    assert sorted(path.name for path in store.iterdir()) == []
 
 
 @pytest.mark.parametrize("username", [TRAVERSAL, "team/alice"])

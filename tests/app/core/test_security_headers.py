@@ -351,7 +351,7 @@ def test_spoofed_forwarded_host_cannot_steer_the_rp_id_end_to_end(monkeypatch, m
     assert isinstance(hardened.wsgi_app, ProxyFix)
 
     response = hardened.test_client().post(
-        "/api/register/begin",
+        "/api/register/begin?email=user@example.com",
         json={},
         base_url="http://real.example",
         headers={

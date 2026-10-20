@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import time
+from urllib.parse import urlencode
 
 import pytest
 
 from server.app.config import relying_party
+from server.app.routes.simple import account
 from server.app.webauthn.attestation import certificates as attestation_certificates
 from tests.app.entry_app import entry_app
 from tests.app.security.ceremony_helpers import (
@@ -22,7 +24,7 @@ EMAIL = "user@example.com"
 
 
 def test_a_begin_body_that_is_no_object_excludes_no_credential():
-    response = entry_app().test_client().post("/api/register/begin", json=["not", "an", "object"])
+    response = entry_app().test_client().post(f"/api/register/begin?email={EMAIL}", json=["not", "an", "object"])
 
     assert response.status_code == 200
     assert response.get_json()["publicKey"]["excludeCredentials"] == []
@@ -31,13 +33,31 @@ def test_a_begin_body_that_is_no_object_excludes_no_credential():
 def test_a_begin_excludes_the_credentials_it_is_sent_and_keeps_none_in_the_session():
     client = entry_app().test_client()
     authenticator = Authenticator()
-    begin = client.post("/api/register/begin", json={"credentials": [authenticator.stored_credential_entry()]})
+    begin = client.post(f"/api/register/begin?email={EMAIL}", json={"credentials": [authenticator.stored_credential_entry()]})
 
     assert [entry["id"] for entry in begin.get_json()["publicKey"]["excludeCredentials"]] == [
         b64u(authenticator.credential_id)
     ]
     with client.session_transaction() as session:
         assert "simple_credentials" not in session
+
+
+@pytest.mark.parametrize(
+    ("query", "sentence"),
+    [
+        ({}, account.USERNAME_REQUIRED),
+        ({"email": "  "}, account.USERNAME_REQUIRED),
+        ({"email": "team/alice"}, account.USERNAME_RULES),
+        ({"email": "a" * 65}, account.USERNAME_RULES),
+    ],
+)
+def test_a_begin_for_a_username_that_cannot_be_one_issues_no_options(query, sentence):
+    begin = entry_app().test_client().post(f"/api/register/begin?{urlencode(query)}", json={"credentials": []})
+
+    assert begin.status_code == 400
+    assert begin.get_json() == {"error": sentence}
+    # Neither a ceremony in the session nor a namespace: no cookie at all.
+    assert begin.headers.getlist("Set-Cookie") == []
 
 
 def test_a_begin_keeps_only_what_the_checks_read_and_none_of_its_exclude_list():

@@ -173,8 +173,10 @@ def _(r: Recorder) -> None:
         json=m.registration_payload(authenticator, challenge=challenge, cross_origin=True),
         headers=HEADERS,
     )
-    # A name the store refuses.
-    _simple_register(r, client, authenticator, email="../escape")
+    # A name the store refuses, refused at begin: no options, so no credential is made.
+    r.post(client, "/api/register/begin?email=../escape", json={"credentials": []})
+    # No username at all.
+    r.post(client, "/api/register/begin", json={"credentials": []})
 
 
 @scenario("simple-authenticate")
@@ -187,6 +189,8 @@ def _(r: Recorder) -> None:
     _simple_authenticate(r, client, authenticator, counter=9, valid=False)
     r.post(client, f"/api/authenticate/begin?email={EMAIL}", json={"credentials": []})
     r.post(client, f"/api/authenticate/complete?email={EMAIL}", json={}, headers=HEADERS)
+    # A name the store refuses, refused at begin.
+    r.post(client, "/api/authenticate/begin?email=../escape", json={"credentials": [authenticator.stored_credential_entry()]})
 
 
 @scenario("simple-authenticate-mldsa44")

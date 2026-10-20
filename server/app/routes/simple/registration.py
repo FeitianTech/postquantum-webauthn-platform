@@ -26,7 +26,7 @@ from ...webauthn.attestation import aaguid as attestation_aaguid
 from ...webauthn.attestation import certificates as attestation_certificates
 from ...webauthn.attestation import checks, error_codes, request_expectations
 from .. import ceremony_session, json_body
-from . import parsing, registration_persistence, registration_record
+from . import account, parsing, registration_persistence, registration_record
 
 bp = Blueprint("simple_registration", __name__)
 
@@ -244,6 +244,9 @@ _SIMPLE_ALLOWED_ALGORITHMS: tuple[int, ...] = tuple(
 @bp.route("/api/register/begin", methods=["POST"])
 @ceremony_session.ceremony_begin
 def register_begin():
+    _username, refusal = account.read_username(request.args.get("email"))
+    if refusal is not None:
+        return jsonify({"error": refusal}), 400
     payload = json_body.json_object()
 
     existing_credentials_raw: list[Any] = []

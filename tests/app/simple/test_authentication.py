@@ -7,10 +7,12 @@ store is the real one, in this test's directory.
 from __future__ import annotations
 
 from types import SimpleNamespace
+from urllib.parse import urlencode
 
 import pytest
 
 from server.app.config import relying_party
+from server.app.routes.simple import account
 from server.app.routes.simple import authentication as simple_authentication
 from server.app.storage import credentials as storage_credentials
 from tests.app.characterization import material
@@ -98,7 +100,7 @@ def test_a_complete_for_another_email_than_its_begin_is_refused(credential_store
 
 
 def test_a_begin_body_that_is_no_object_offers_no_credential():
-    response = entry_app().test_client().post("/api/authenticate/begin", json=["not", "an", "object"])
+    response = entry_app().test_client().post(f"/api/authenticate/begin?email={EMAIL}", json=["not", "an", "object"])
 
     assert response.status_code == 404
 
@@ -119,18 +121,17 @@ def test_an_assertion_body_that_is_no_object_fails_without_naming_a_credential(c
     assert "failedCredentialId" not in response.get_json()
 
 
-def test_without_an_email_the_counter_is_checked_against_the_browsers_copy(credential_store):
-    authenticator = Authenticator()
-    client = entry_app().test_client()
+@pytest.mark.parametrize(
+    ("query", "sentence"),
+    [({}, account.USERNAME_REQUIRED), ({"email": "../escape"}, account.USERNAME_RULES)],
+)
+def test_a_begin_for_a_username_that_cannot_be_one_issues_no_options(query, sentence):
+    stored = [Authenticator().stored_credential_entry()]
+    begin = entry_app().test_client().post(f"/api/authenticate/begin?{urlencode(query)}", json={"credentials": stored})
 
-    lower = authenticate_simple(client, authenticator, counter=3, email=None, client_sign_count=5)
-    higher = authenticate_simple(client, authenticator, counter=6, email=None, client_sign_count=5)
-
-    assert lower.status_code == 400
-    assert lower.get_json()["signCountStatus"] == "regressed"
-    assert "stored 5, received 3" in lower.get_json()["error"]
-    assert higher.status_code == 200
-    assert higher.get_json()["signCount"] == 6
+    assert begin.status_code == 400
+    assert begin.get_json() == {"error": sentence}
+    assert begin.headers.getlist("Set-Cookie") == []
 
 
 def test_a_credential_the_server_holds_no_record_of_is_checked_against_the_browsers_copy(credential_store):

@@ -14,7 +14,7 @@ from tests.app.storage.credential_seed import sample_public_key_bytes
 def _begin_registration(credentials):
     """What register begin excludes, and the copy of each credential authenticate keeps a digest of."""
 
-    response = entry_app().test_client().post("/api/register/begin", json={"credentials": credentials})
+    response = entry_app().test_client().post("/api/register/begin?email=user@example.com", json={"credentials": credentials})
     assert response.status_code == 200
     _attested, kept = parsing._parse_client_credentials(credentials)
     return response.get_json()["publicKey"]["excludeCredentials"], kept

@@ -1773,157 +1773,6 @@
   },
   {
    "request": "POST /api/register/begin?email=../escape",
-   "status": 200,
-   "headers": [
-    [
-     "Content-Type",
-     "application/json"
-    ],
-    [
-     "Content-Length",
-     "635"
-    ],
-    [
-     "X-Content-Type-Options",
-     "nosniff"
-    ],
-    [
-     "X-Frame-Options",
-     "DENY"
-    ],
-    [
-     "Referrer-Policy",
-     "no-referrer"
-    ],
-    [
-     "Content-Security-Policy",
-     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; require-trusted-types-for 'script'; trusted-types nextjs nextjs#bundler; report-uri /api/csp-report; report-to csp"
-    ],
-    [
-     "Reporting-Endpoints",
-     "csp=\"/api/csp-report\""
-    ],
-    [
-     "Permissions-Policy",
-     "accelerometer=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-create=(self), publickey-credentials-get=(self), screen-wake-lock=(), usb=(), xr-spatial-tracking=()"
-    ],
-    [
-     "Vary",
-     "Cookie"
-    ]
-   ],
-   "cookies": [
-    {
-     "name": "session",
-     "attributes": [
-      "HttpOnly",
-      "Path=/",
-      "SameSite=Lax"
-     ],
-     "contents": {
-      "register_rp_id": "localhost",
-      "simple_register_public_key": {
-       "authenticatorSelection": {
-        "authenticatorAttachment": "cross-platform",
-        "requireResidentKey": false,
-        "residentKey": "discouraged",
-        "userVerification": "discouraged"
-       },
-       "challenge": "Nn_pxqdLH64zLsuX5ShdQH1FtuLj9fQdVYXHxDbw_Ok",
-       "pubKeyCredParams": [
-        {
-         "alg": -50,
-         "type": "public-key"
-        },
-        {
-         "alg": -49,
-         "type": "public-key"
-        },
-        {
-         "alg": -48,
-         "type": "public-key"
-        },
-        {
-         "alg": -8,
-         "type": "public-key"
-        },
-        {
-         "alg": -7,
-         "type": "public-key"
-        },
-        {
-         "alg": -257,
-         "type": "public-key"
-        },
-        {
-         "alg": -35,
-         "type": "public-key"
-        }
-       ]
-      },
-      "simple_register_state": {
-       "challenge": "Nn_pxqdLH64zLsuX5ShdQH1FtuLj9fQdVYXHxDbw_Ok",
-       "issued_at": 1790000000.0,
-       "user_verification": "discouraged"
-      }
-     }
-    }
-   ],
-   "bodySha256": "e3db8bb7570c77b110b79333fe13d369c4b35ccc36b74ef745c224c6fb30a624",
-   "body": {
-    "publicKey": {
-     "authenticatorSelection": {
-      "authenticatorAttachment": "cross-platform",
-      "requireResidentKey": false,
-      "residentKey": "discouraged",
-      "userVerification": "discouraged"
-     },
-     "challenge": "Nn_pxqdLH64zLsuX5ShdQH1FtuLj9fQdVYXHxDbw_Ok",
-     "excludeCredentials": [],
-     "pubKeyCredParams": [
-      {
-       "alg": -50,
-       "type": "public-key"
-      },
-      {
-       "alg": -49,
-       "type": "public-key"
-      },
-      {
-       "alg": -48,
-       "type": "public-key"
-      },
-      {
-       "alg": -8,
-       "type": "public-key"
-      },
-      {
-       "alg": -7,
-       "type": "public-key"
-      },
-      {
-       "alg": -257,
-       "type": "public-key"
-      },
-      {
-       "alg": -35,
-       "type": "public-key"
-      }
-     ],
-     "rp": {
-      "id": "localhost",
-      "name": "FIDO2/WebAuthn PQC Developer Tools"
-     },
-     "user": {
-      "displayName": "A. User",
-      "id": "dXNlcl9pZA",
-      "name": "a_user"
-     }
-    }
-   }
-  },
-  {
-   "request": "POST /api/register/complete?email=../escape",
    "status": 400,
    "headers": [
     [
@@ -1932,7 +1781,7 @@
     ],
     [
      "Content-Length",
-     "83"
+     "145"
     ],
     [
      "X-Content-Type-Options",
@@ -1963,21 +1812,57 @@
      "Cookie"
     ]
    ],
-   "cookies": [
-    {
-     "name": "session",
-     "attributes": [
-      "Max-Age=0",
-      "HttpOnly",
-      "Path=/",
-      "SameSite=Lax"
-     ],
-     "contents": null
-    }
-   ],
-   "bodySha256": "57161eadb768899a3c4f50c354e94608d30cf0eef5e8d2e8c800f427d261b9a7",
+   "cookies": [],
+   "bodySha256": "d69c16b57fa08051ee341ceb2eb4a54594c2f3f1d7247bb1c1e480f2091a9842",
    "body": {
-    "error": "Invalid credential name: Storage identifier contains a path separator."
+    "error": "A username is at most 64 bytes long, does not start with a dot, and has no slash, backslash, control character or two dots in a row."
+   }
+  },
+  {
+   "request": "POST /api/register/begin",
+   "status": 400,
+   "headers": [
+    [
+     "Content-Type",
+     "application/json"
+    ],
+    [
+     "Content-Length",
+     "37"
+    ],
+    [
+     "X-Content-Type-Options",
+     "nosniff"
+    ],
+    [
+     "X-Frame-Options",
+     "DENY"
+    ],
+    [
+     "Referrer-Policy",
+     "no-referrer"
+    ],
+    [
+     "Content-Security-Policy",
+     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; require-trusted-types-for 'script'; trusted-types nextjs nextjs#bundler; report-uri /api/csp-report; report-to csp"
+    ],
+    [
+     "Reporting-Endpoints",
+     "csp=\"/api/csp-report\""
+    ],
+    [
+     "Permissions-Policy",
+     "accelerometer=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-create=(self), publickey-credentials-get=(self), screen-wake-lock=(), usb=(), xr-spatial-tracking=()"
+    ],
+    [
+     "Vary",
+     "Cookie"
+    ]
+   ],
+   "cookies": [],
+   "bodySha256": "469b97a018c39ff1489a7b0ec94deaf2adf3009d8dd98fc7e1fa3bce0689e27a",
+   "body": {
+    "error": "Please enter a username."
    }
   }
  ]

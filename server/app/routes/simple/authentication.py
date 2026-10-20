@@ -22,7 +22,7 @@ from ...config import relying_party
 from ...encoding import encode_base64url
 from ...webauthn import client_binary
 from .. import ceremony_session, json_body
-from . import parsing, stored_sign_count
+from . import account, parsing, stored_sign_count
 
 bp = Blueprint("simple_authentication", __name__)
 
@@ -45,6 +45,9 @@ def credentials_digest(serialized: list[dict[str, Any]]) -> str:
 @ceremony_session.ceremony_begin
 def authenticate_begin():
     uname = request.args.get("email")
+    _username, refusal = account.read_username(uname)
+    if refusal is not None:
+        return jsonify({"error": refusal}), 400
     payload = json_body.json_object()
 
     raw_credentials: list[Any] = []
