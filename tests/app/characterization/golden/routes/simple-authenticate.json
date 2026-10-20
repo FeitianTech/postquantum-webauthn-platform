@@ -153,7 +153,7 @@
         "name": "a_user"
        }
       },
-      "state": {
+      "simple_register_state": {
        "challenge": "SyAu1EEVzf_I1Ms-nhHxHwVpP9VGZMN8nwYQKiVy0HI",
        "issued_at": 1790000000.0,
        "user_verification": "discouraged"
@@ -939,13 +939,13 @@
      ],
      "contents": {
       "authenticate_rp_id": "localhost",
-      "simple_credentials_digest": "BU7y-j8AwULNooYSw8dvea-BFMg-9Hn9rkhTCewiVDE",
-      "simple_credentials_email": "user@example.com",
-      "state": {
+      "simple_authenticate_state": {
        "challenge": "e7FoxsevCIziKUviZ3-YmzTAOdMxa3jxHJ5F5SNXxdA",
        "issued_at": 1790000000.0,
        "user_verification": "discouraged"
-      }
+      },
+      "simple_credentials_digest": "BU7y-j8AwULNooYSw8dvea-BFMg-9Hn9rkhTCewiVDE",
+      "simple_credentials_email": "user@example.com"
      }
     }
    ],
@@ -1318,13 +1318,13 @@
      ],
      "contents": {
       "authenticate_rp_id": "localhost",
-      "simple_credentials_digest": "BU7y-j8AwULNooYSw8dvea-BFMg-9Hn9rkhTCewiVDE",
-      "simple_credentials_email": "user@example.com",
-      "state": {
+      "simple_authenticate_state": {
        "challenge": "VmG-5rO1v-ANquzpBMllHqEAuvmYaSVeI8pgp83RpmE",
        "issued_at": 1790000000.0,
        "user_verification": "discouraged"
-      }
+      },
+      "simple_credentials_digest": "BU7y-j8AwULNooYSw8dvea-BFMg-9Hn9rkhTCewiVDE",
+      "simple_credentials_email": "user@example.com"
      }
     }
    ],
@@ -1454,13 +1454,13 @@
      ],
      "contents": {
       "authenticate_rp_id": "localhost",
-      "simple_credentials_digest": "BU7y-j8AwULNooYSw8dvea-BFMg-9Hn9rkhTCewiVDE",
-      "simple_credentials_email": "user@example.com",
-      "state": {
+      "simple_authenticate_state": {
        "challenge": "2XdPgXup1_HtE5HLE4dTZpR2FtdQ-9AFjkZwYER5rms",
        "issued_at": 1790000000.0,
        "user_verification": "discouraged"
-      }
+      },
+      "simple_credentials_digest": "BU7y-j8AwULNooYSw8dvea-BFMg-9Hn9rkhTCewiVDE",
+      "simple_credentials_email": "user@example.com"
      }
     }
    ],

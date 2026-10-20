@@ -69,7 +69,7 @@ def authenticate_begin():
         user_verification="discouraged",
     )
     # Stamped so /complete can refuse a stale state replayed from an old cookie.
-    session["state"] = stamp_ceremony_state(dict(state))
+    session["simple_authenticate_state"] = stamp_ceremony_state(dict(state))
     session["authenticate_rp_id"] = rp_id
 
     options_payload = dict(options)
@@ -101,7 +101,7 @@ def _consume_authentication_state(
     # cookie, so an earlier copy that still holds this state can be resent.
     # Consuming the challenge server-side -- before anything can fail -- is
     # what makes it single-use.
-    state = session.pop("state", None)
+    state = session.pop("simple_authenticate_state", None)
     challenge_verdict = (
         consume_ceremony_state(state) if state is not None else None
     )

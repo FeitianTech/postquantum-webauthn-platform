@@ -153,7 +153,7 @@
         "name": "a_user"
        }
       },
-      "state": {
+      "simple_register_state": {
        "challenge": "t0BITlumbN_CAx8C-loMVVe90EcnM7uSH8BwFLV0ZBQ",
        "issued_at": 1790000000.0,
        "user_verification": "discouraged"

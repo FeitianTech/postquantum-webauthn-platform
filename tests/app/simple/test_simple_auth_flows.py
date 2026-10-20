@@ -209,4 +209,4 @@ def test_simple_register_complete_rejects_request_state_fallback(monkeypatch):
         assert saved == {}
 
         with client.session_transaction() as session_state:
-            assert "state" not in session_state
+            assert "simple_register_state" not in session_state

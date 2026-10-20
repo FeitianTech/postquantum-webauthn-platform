@@ -25,7 +25,12 @@ from server.app.storage import credentials as storage_credentials
 
 from .. import visitor_namespace
 from ..storage import fake_gcs
-from .ceremony_helpers import ORIGIN, Authenticator, registration_payload, unb64u
+from .ceremony_helpers import (
+    ORIGIN,
+    Authenticator,
+    begin_simple_registration,
+    registration_payload,
+)
 
 EMAIL = "user@example.com"
 WRITERS = 8
@@ -44,12 +49,6 @@ def credential_store(request, monkeypatch, tmp_path):
         fake_gcs.install(monkeypatch, storage_credentials)
 
 
-def _begin(client) -> bytes:
-    begin = client.post(f"/api/register/begin?email={EMAIL}", json={"credentials": []})
-    assert begin.status_code == 200, begin.get_json()
-    return unb64u(begin.get_json()["publicKey"]["challenge"])
-
-
 def _complete(client, authenticator, challenge):
     return client.post(
         f"/api/register/complete?email={EMAIL}",
@@ -59,7 +58,7 @@ def _complete(client, authenticator, challenge):
 
 
 def _register(client, authenticator):
-    response = _complete(client, authenticator, _begin(client))
+    response = _complete(client, authenticator, begin_simple_registration(client))
     assert response.status_code == 200, response.get_json()
     return response
 
@@ -81,7 +80,7 @@ def test_eight_registrations_for_one_user_at_once_all_keep_their_credential(app,
         client = app.test_client()
         visitor_namespace.give(client, namespace)
         clients.append(client)
-    challenges = [_begin(client) for client in clients]
+    challenges = [begin_simple_registration(client) for client in clients]
 
     all_have_read = threading.Barrier(WRITERS, timeout=10)
     held = threading.local()
@@ -122,7 +121,7 @@ def test_losing_every_race_rejects_the_registration_and_stores_nothing(app, monk
 
     monkeypatch.setattr(storage_credentials, "save_if_unchanged", _always_lose)
     client = app.test_client()
-    response = _complete(client, Authenticator(), _begin(client))
+    response = _complete(client, Authenticator(), begin_simple_registration(client))
 
     assert response.status_code == 409
     assert response.get_json()["error"].startswith("The stored credentials changed while this one was being saved")
@@ -168,7 +167,7 @@ def test_a_save_that_failed_before_it_landed_is_an_error(app, monkeypatch, crede
 
     monkeypatch.setattr(storage_credentials, "save_if_unchanged", _fails)
     client = app.test_client()
-    response = _complete(client, Authenticator(), _begin(client))
+    response = _complete(client, Authenticator(), begin_simple_registration(client))
 
     assert response.status_code == 500
     assert response.get_json() == {"error": "Unable to persist registered credential."}
@@ -180,7 +179,7 @@ def test_a_save_that_failed_and_cannot_be_checked_is_an_error(app, monkeypatch, 
         raise OSError("bucket unreachable")
 
     client = app.test_client()
-    begun = _begin(client)
+    begun = begin_simple_registration(client)
     monkeypatch.setattr(storage_credentials, "save_if_unchanged", _fails)
     # The read that would tell a save that landed from one that did not fails too.
     monkeypatch.setattr(storage_credentials, "readkey", _fails)
@@ -199,7 +198,7 @@ def test_a_failed_read_is_an_error_not_an_empty_list_to_overwrite(app, monkeypat
         raise OSError("transient read failure")
 
     monkeypatch.setattr(storage_credentials, "read_for_update", _unreadable)
-    response = _complete(client, Authenticator(credential_id=b"\x02" * 32), _begin(client))
+    response = _complete(client, Authenticator(credential_id=b"\x02" * 32), begin_simple_registration(client))
 
     assert response.status_code == 500
     assert response.get_json() == {"error": "Unable to persist registered credential."}
@@ -261,7 +260,7 @@ def test_a_store_that_cannot_be_read_answers_503_and_saves_nothing(app, caplog, 
     client = app.test_client()
     first = Authenticator(credential_id=b"\x01" * 32)
     _register(client, first)
-    challenge = _begin(client)
+    challenge = begin_simple_registration(client)
     repair = _break_the_current_copy(client, how)
 
     with caplog.at_level(logging.INFO, logger="server.app"):

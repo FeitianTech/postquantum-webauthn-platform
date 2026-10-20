@@ -306,6 +306,14 @@ def _simple_query(email: str | None) -> str:
     return f"?email={email}" if email else ""
 
 
+def begin_simple_registration(client: Any, *, email: str = SIMPLE_EMAIL) -> bytes:
+    """Begin a Simple registration for ``email``; asserts it began, returns its challenge."""
+
+    begin = client.post(f"/api/register/begin?email={email}", json={"credentials": []})
+    assert begin.status_code == 200, begin.get_json()
+    return unb64u(begin.get_json()["publicKey"]["challenge"])
+
+
 def complete_simple_registration(client: Any, authenticator: Authenticator, **payload: Any) -> Any:
     """Begin and complete a Simple registration of ``authenticator``; complete's answer, whatever it is.
 

@@ -30,7 +30,7 @@ from .ceremony_helpers import (
 )
 
 EMAIL = "user@example.com"
-_CEREMONY_KEYS = {"state", "simple_credentials_digest", "authenticate_rp_id", "simple_credentials_email"}
+_CEREMONY_KEYS = {"simple_authenticate_state", "simple_credentials_digest", "authenticate_rp_id", "simple_credentials_email"}
 
 
 @pytest.fixture

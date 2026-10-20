@@ -153,7 +153,7 @@
         "name": "a_user"
        }
       },
-      "state": {
+      "simple_register_state": {
        "challenge": "-ykxNVmBKGtgsi8qvTDxAvgZ3kRIH3Hb4ng7DKaiUxM",
        "issued_at": 1790000000.0,
        "user_verification": "discouraged"
@@ -1040,7 +1040,7 @@
         "name": "a_user"
        }
       },
-      "state": {
+      "simple_register_state": {
        "challenge": "Hw0Z30FvRCpLXXHDOcefdxu3ZrIxrW3EuhySYTDIaJQ",
        "issued_at": 1790000000.0,
        "user_verification": "discouraged"
@@ -2145,7 +2145,7 @@
         "name": "a_user"
        }
       },
-      "state": {
+      "simple_register_state": {
        "challenge": "pw9QzpCmBm-XmpGg2k9B5lN8YLv55Km1UYBivvHY5R0",
        "issued_at": 1790000000.0,
        "user_verification": "discouraged"
@@ -3478,7 +3478,7 @@
         "name": "a_user"
        }
       },
-      "state": {
+      "simple_register_state": {
        "challenge": "ilPZHmcJBng1iukC-ueN-8Jib2yg0US40LGqG-FO4eM",
        "issued_at": 1790000000.0,
        "user_verification": "discouraged"

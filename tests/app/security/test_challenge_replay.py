@@ -149,7 +149,7 @@ def test_simple_state_older_than_the_ttl_is_rejected(simple_storage, monkeypatch
     with client.session_transaction() as session:
         keep_simple_credentials(session, [authenticator.stored_credential_entry()])
         session["authenticate_rp_id"] = "localhost"
-        session["state"] = {
+        session["simple_authenticate_state"] = {
             "challenge": b64u(challenge),
             "user_verification": "discouraged",
             "issued_at": time.time() - 61,
@@ -174,7 +174,7 @@ def test_simple_state_without_issued_at_stamp_is_rejected(simple_storage):
     with client.session_transaction() as session:
         keep_simple_credentials(session, [authenticator.stored_credential_entry()])
         session["authenticate_rp_id"] = "localhost"
-        session["state"] = {"challenge": b64u(challenge), "user_verification": "discouraged"}
+        session["simple_authenticate_state"] = {"challenge": b64u(challenge), "user_verification": "discouraged"}
 
     response = _complete_simple_authentication(
         client, authenticator, assertion_payload(authenticator, challenge=challenge, counter=1)
@@ -202,7 +202,7 @@ def test_simple_ceremonies_succeed_back_to_back_and_clear_session_state(simple_s
         assert response.get_json()["status"] == "OK"
 
         with client.session_transaction() as session:
-            assert "state" not in session
+            assert "simple_authenticate_state" not in session
             assert "authenticate_rp_id" not in session
             assert "simple_credentials_digest" not in session
 

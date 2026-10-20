@@ -153,7 +153,7 @@
         "name": "a_user"
        }
       },
-      "state": {
+      "simple_register_state": {
        "challenge": "P4X8qFxsv73Bgn0tZhTZ2Temr2GK5vypdeLVMitsrnw",
        "issued_at": 1790000000.0,
        "user_verification": "discouraged"
@@ -937,13 +937,13 @@
      ],
      "contents": {
       "authenticate_rp_id": "localhost",
-      "simple_credentials_digest": "QqzvwkjPRN86RcKbohOAMVcz9t7jS1XunF9wCW0wJSk",
-      "simple_credentials_email": "user@example.com",
-      "state": {
+      "simple_authenticate_state": {
        "challenge": "4L1frHh-5eGcfX77b2gs6HMQbswToIFZBcPnmcTsU3g",
        "issued_at": 1790000000.0,
        "user_verification": "discouraged"
-      }
+      },
+      "simple_credentials_digest": "QqzvwkjPRN86RcKbohOAMVcz9t7jS1XunF9wCW0wJSk",
+      "simple_credentials_email": "user@example.com"
      }
     }
    ],

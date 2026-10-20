@@ -76,7 +76,7 @@ def _consume_registration_state() -> tuple[Any, Any]:
     # Popping the state is not enough on its own: the session is a client-side
     # cookie, so an earlier copy that still holds this state can be resent.
     # Consuming the challenge server-side is what makes it single-use.
-    state = session.pop("state", None)
+    state = session.pop("simple_register_state", None)
     if state is None:
         # Drop any stale ceremony leftovers so the next attempt starts clean.
         session.pop("register_rp_id", None)
@@ -293,7 +293,7 @@ def register_begin():
     )
 
     # Stamped so /complete can refuse a stale state replayed from an old cookie.
-    session["state"] = stamp_ceremony_state(dict(state))
+    session["simple_register_state"] = stamp_ceremony_state(dict(state))
     session["register_rp_id"] = rp_id
 
     options_dict = dict(options)

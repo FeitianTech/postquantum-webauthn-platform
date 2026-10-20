@@ -64,7 +64,7 @@ def test_a_registration_challenge_past_its_lifetime_is_refused_as_expired():
     begin = client.post(f"/api/register/begin?email={EMAIL}", json={"credentials": []})
     challenge = unb64u(begin.get_json()["publicKey"]["challenge"])
     with client.session_transaction() as session:
-        session["state"] = {**session["state"], "issued_at": time.time() - 24 * 3600}
+        session["simple_register_state"] = {**session["simple_register_state"], "issued_at": time.time() - 24 * 3600}
 
     response = client.post(
         f"/api/register/complete?email={EMAIL}",
@@ -109,7 +109,7 @@ def test_simple_register_complete_returns_400_and_cleans_state_when_verification
 
     with entry_app().test_client() as client:
         with client.session_transaction() as session_state:
-            session_state["state"] = {"challenge": "session-state", "issued_at": time.time()}
+            session_state["simple_register_state"] = {"challenge": "session-state", "issued_at": time.time()}
             session_state["register_rp_id"] = "example.com"
             session_state["simple_register_public_key"] = {"challenge": "saved"}
 
@@ -122,7 +122,7 @@ def test_simple_register_complete_returns_400_and_cleans_state_when_verification
         assert response.get_json() == {"error": "register verification failed"}
 
         with client.session_transaction() as session_state:
-            assert "state" not in session_state
+            assert "simple_register_state" not in session_state
             assert "register_rp_id" not in session_state
             assert "simple_register_public_key" not in session_state
 
@@ -195,8 +195,8 @@ def test_simple_register_begin_accepts_existing_credentials_alias(monkeypatch):
         assert captured["credential_count"] == 1
 
         with client.session_transaction() as session_state:
-            assert session_state["state"]["challenge"] == "simple-register-state"
-            assert isinstance(session_state["state"]["issued_at"], float)
+            assert session_state["simple_register_state"]["challenge"] == "simple-register-state"
+            assert isinstance(session_state["simple_register_state"]["issued_at"], float)
 
         with client.session_transaction() as session_state:
             assert "simple_credentials" not in session_state
