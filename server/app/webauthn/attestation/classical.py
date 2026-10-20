@@ -7,7 +7,7 @@ from cryptography import x509
 from fido2.attestation import InvalidSignature
 
 from ...mds import verifier as mds_verifier
-from . import evaluation, trust
+from . import error_codes, evaluation, trust
 from .chain import verify_certificate_chain
 
 
@@ -91,7 +91,7 @@ def _trust_path_dates_valid(trust_path: list[Any], now: datetime, errors: list[s
         try:
             cert = x509.load_der_x509_certificate(cert_der)
         except Exception as exc:
-            errors.append(f"certificate_parse_error: {exc}")
+            errors.append(error_codes.with_reason("certificate_parse_error", exc))
             chain_valid_dates = False
             continue
 

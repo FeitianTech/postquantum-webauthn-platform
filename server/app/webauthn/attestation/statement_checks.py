@@ -5,15 +5,10 @@ from collections.abc import Mapping
 from datetime import datetime, timezone
 from typing import Any
 
-from fido2.attestation import (
-    Attestation,
-    InvalidData,
-    InvalidSignature,
-    UnsupportedType,
-)
+from fido2.attestation import Attestation
 
 from ...mds import verifier as mds_verifier
-from . import classical, trust
+from . import classical, error_codes, trust
 
 
 def resolve_signature_validation(
@@ -36,14 +31,8 @@ def resolve_signature_validation(
                 client_data_hash,
             )
             signature_valid = True
-        except UnsupportedType as exc:
-            attestation_errors.append(f"unsupported_attestation: {exc}")
-            signature_valid = False
-        except (InvalidSignature, InvalidData) as exc:
-            attestation_errors.append(f"attestation_invalid: {exc}")
-            signature_valid = False
         except Exception as exc:
-            attestation_errors.append(f"attestation_error: {exc}")
+            attestation_errors.append(error_codes.statement_error(exc))
             signature_valid = False
 
     return {

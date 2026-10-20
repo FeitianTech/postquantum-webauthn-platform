@@ -8,7 +8,8 @@ trust path and root) and ``metadata_checks`` (the MDS entry); ``classical`` and
 verifies certificate chains, ``trust`` holds the trust anchors and roots, and
 ``certificates`` (with ``certificate_names``, ``certificate_extensions``,
 ``certificate_public_keys`` and ``certificate_summary``) serialises a
-certificate for the page. ``aaguid`` reads the AAGUID and the extension outputs,
-``formatting`` spells hex, and ``constants`` holds the OIDs. Importers name the
-module they need; this package re-exports nothing.
+certificate for the page. ``error_codes`` writes the codes the checks report,
+``aaguid`` reads the AAGUID and the extension outputs, ``formatting`` spells hex,
+and ``constants`` holds the OIDs. Importers name the module they need; this
+package re-exports nothing.
 """

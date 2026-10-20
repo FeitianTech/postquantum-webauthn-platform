@@ -199,7 +199,7 @@
    "verification_data": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAMD_7gDA_-4AwP_uAMD_7gAAIFe7B3S249tt86MTnSoI7n_hOaR60rVNauxUAtnOTbOspQECAyYgASFYIHFImSUu18Zf05W4dHSKxKdRFqiEruiu3SxkrTcE79E3IlggeH3t6Sv-JJH14a0gvermjvbV4Oamh95pY2wf4Jm7cUg-NsGWwNxeVICP5_YT78BYgHzkSNduvIQKpt0XQqMneg"
   },
   "errors": [
-   "attestation_invalid: ",
+   "attestation_invalid",
    "attestation_signature_invalid"
   ],
   "warnings": []

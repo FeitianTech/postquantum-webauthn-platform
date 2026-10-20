@@ -8,7 +8,13 @@ from typing import Any
 
 from fido2.webauthn import AuthenticatorData, RegistrationResponse
 
-from . import metadata_checks, request_expectations, response_checks, statement_checks
+from . import (
+    error_codes,
+    metadata_checks,
+    request_expectations,
+    response_checks,
+    statement_checks,
+)
 
 
 def _empty_results() -> dict[str, Any]:
@@ -36,7 +42,7 @@ def _parse_registration(response: Any, results: dict[str, Any]) -> RegistrationR
     try:
         return RegistrationResponse.from_dict(response)
     except Exception as exc:
-        results["errors"].append(f"registration_parse_error: {exc}")
+        results["errors"].append(error_codes.with_reason("registration_parse_error", exc))
         return None
 
 

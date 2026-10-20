@@ -144,7 +144,7 @@
    "verification_data": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAAABAgMEBQYHCAkKCwwNDg8AIDJIPdOx23LT_p1zXRVUhW1lC0epx4b3A1qG5iA3HvMepQECAyYgASFYIBYI3vJ8zBN8_1BXPnaJmNa4PXp_UfAlb1HChvIyOYePIlggoCKBPpHnrHJXul_DCL_k-x5DssSXZHm3pa7Gv-8SQSvn5acm5j7TiO_MEazXOcPBZas0TxerRKovlisMF_V9zg"
   },
   "errors": [
-   "attestation_invalid: ",
+   "attestation_invalid",
    "attestation_signature_invalid"
   ],
   "warnings": []
@@ -295,7 +295,7 @@
    "verification_data": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAAABAgMEBQYHCAkKCwwNDg8AIDJIPdOx23LT_p1zXRVUhW1lC0epx4b3A1qG5iA3HvMepQECAyYgASFYIBYI3vJ8zBN8_1BXPnaJmNa4PXp_UfAlb1HChvIyOYePIlggoCKBPpHnrHJXul_DCL_k-x5DssSXZHm3pa7Gv-8SQSvn5acm5j7TiO_MEazXOcPBZas0TxerRKovlisMF_V9zg"
   },
   "errors": [
-   "attestation_invalid: ",
+   "attestation_invalid",
    "attestation_signature_invalid"
   ],
   "warnings": []
@@ -399,7 +399,7 @@
    "verification_data": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAAAAAAAAAAAAAAAAAAAAAAAAILrsWgviIWNrEO8X50i6qz39xgvWOtQQls3HFYVKDpJoowEHAzgvIFkFILW9Tfhdiqq3TlCDZeEjChX9svIdlaYtGXkJcQPX_qzTPb2NWFLBrt7qPb4aSVEm3IyDu_OR-kvV1X0AwYzQJ5-E5Z4CmRNK6nExoavyOqb1VRRtGVTieAxnzbFWAnXu1YhAUElo_SmwEbDMjlbrQHhnYoaYW1aqz1wy9wDOXjaNX9ucWy3bBy0KGlMxbaWrKeq0A-DjTiWVfUE968PRV6lXwvT-BN9nq963WCj3fNaP1OALI78SQKkYPbz7g706_-CzNNmIgxecHFDzG__iviqgwk5zOP6DE5-6k7SPTpH4lclKnx36UEWtn9VBDpxTCqszIM7cwauAFQ-Eh9sOri7gKbPoyfOBHjyVt65e60f2kIipdxTjVZquoq7Rn9GB4Oi3s23Qce9go2Ml1ZbbGjQdR5mRscswkkJjauqryxSISwoWDnMhaO9cmrwbIoLPnqrbL_2X8uUJ83RJIIGL3-aOimCslLdPGFHyb63xghdgid6rktUd0dJj42uGz9x3METiKmBaS30GlSNLXDtfAgDn33QePNd6lwp2Cbqk_OsAI6bwM9eKMe37c75yheJBedFhict95F9g8eqAaJtBzDsouU2ntGyBfzbp1nCt9ttPzAvTYHQZb7WnhFVvcJ18mO3EqqmBA9_eif5PwugAjACIXuTnMnHDxqV1yU_7H3BD1gwTAN2CwkbJDu0kFbKwGxNlBec_R_kBNP2jBFYQoGizdyH14sOFOTYbW4ivLWhx3BFJIuP7iVInQyLoooa3G3-03UjcK49XQBgCbVNHqG5Mo53vdvzJjHnJROWjOjy46T6u0_skoOVr5QlxXtxMo8KXHwsjb0hzislW0CFuSek7yXdzUnjmLeE-HhXrzrOflmCWtVFXPyL36rS39bXH7cLF1EOmyKozXAjQ1UYkluam_vH1ukOb4SYt0WXoRXU-SgMwf9dl09zZT_3Y85AGQZWxfE6p8hWpV5uHU7hRlk7jdrYEbN2-Bm6eMXRrA94gieXhbTW0MJUTnAcTXlh_xloIDPMySL_aMKIcoFcKdcSDFMpd-c3BIaQp-RimFvpOKSWNAWDjETdm-OCgKJBH6moKQl-z4OC-FUm8cWgdLcfvnxQ3rxD6s8fwYT70I5-vHh8NLD22BZ7jJd-4v46cgyWvwVqRomeFCKqdYL4Z9XM4dcsvQOoyzZKUy9zWWTcucL52QVr8oreU6af-nyz4ALEkGDhry1ODEnCnqI7ERTZgGRK0Q0L57FIMj6Mud904QgJ8bltEROTBI0ewFJAUKPaTDrjfVo1BrDodx-4Fkp24CkdT47D0ZujskWV30GXd6qBAPL4V9tgdjI9iY_qzVOK3C0B8ke_E9wh_sEyHxnISNdfTTlz4X6mVPPS1qrKd3aNAApOxV0gruXb6jbEsrha9Mtg1byvIC2KnUIoN_GoWBb4lPD5YQ_8nS6UE8LiTp5TWCG8n3bMXYE07f-KScxAfBQbhvA3YgIIkNhcNRiZx0fDzzFXjjaB63YmnG2tG0L85Tx0l2QoR0voI2cTGpu1cucn0X-LLT2VLFbl1DVzmdhcC8Jqpyj7bTmvQj5Ko__6II9aPKtVyDUD5xDY8xAqZjr9JBdzP9CARIY50Se3-D_VFHixeOcnnFsfhBPHsbLk1UuGzoZJ42fJd_duDwW6sbqtBMxxUOONH9szNwhnlqr6Fez1aN-c7Jk9GK5oC0jA0rYm8Ssicicb6w_OSZrYrdotMk8huktqT9-W7Vnvn5acm5j7TiO_MEazXOcPBZas0TxerRKovlisMF_V9zg"
   },
   "errors": [
-   "attestation_invalid: ",
+   "attestation_invalid",
    "attestation_signature_invalid"
   ],
   "warnings": []
@@ -1543,7 +1543,7 @@
   },
   "errors": [
    "rp_id_hash_mismatch",
-   "attestation_invalid: ",
+   "attestation_invalid",
    "attestation_signature_invalid"
   ],
   "warnings": []
@@ -1593,7 +1593,7 @@
   },
   "errors": [
    "rp_id_hash_mismatch",
-   "attestation_invalid: ",
+   "attestation_invalid",
    "attestation_signature_invalid"
   ],
   "warnings": []
@@ -1793,7 +1793,7 @@
   },
   "errors": [
    "rp_id_hash_mismatch",
-   "attestation_invalid: ",
+   "attestation_invalid",
    "attestation_signature_invalid"
   ],
   "warnings": []

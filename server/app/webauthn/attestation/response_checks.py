@@ -9,7 +9,7 @@ from fido2.cose import CoseKey
 from fido2.webauthn import AuthenticatorData, CollectedClientData
 
 from ... import encoding
-from . import request_expectations
+from . import error_codes, request_expectations
 
 
 def populate_client_data_results(
@@ -111,7 +111,7 @@ def _credential_facts(results: dict[str, Any], credential_data: Any) -> dict[str
                     algorithm = credential_data.public_key.get(3)
                 except Exception:
                     algorithm = None
-            results["errors"].append(f"cose_key_error: {exc}")
+            results["errors"].append(error_codes.with_reason("cose_key_error", exc))
 
         try:
             credential_aaguid_bytes = bytes(credential_data.aaguid)
