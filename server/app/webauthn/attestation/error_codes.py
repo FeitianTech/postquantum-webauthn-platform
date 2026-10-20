@@ -24,3 +24,11 @@ def statement_error(exc: Exception) -> str:
     if isinstance(exc, (InvalidSignature, InvalidData)):
         return with_reason("attestation_invalid", exc)
     return with_reason("attestation_error", exc)
+
+
+def chain_error(exc: Exception) -> str:
+    """The code of a certificate chain that did not verify: one certificate not issued by the next, or one that does not read."""
+
+    if isinstance(exc, InvalidSignature):
+        return "certificate_chain_invalid"
+    return with_reason("certificate_chain_unreadable", exc)

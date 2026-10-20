@@ -27,3 +27,14 @@ def test_an_exception_without_a_message_gives_the_bare_code(exc):
 )
 def test_a_statement_fido2_refuses_is_named_for_why(exc, finding):
     assert error_codes.statement_error(exc) == finding
+
+
+@pytest.mark.parametrize(
+    ("exc", "finding"),
+    [
+        (InvalidSignature(), "certificate_chain_invalid"),
+        (ValueError("error parsing asn1 value"), "certificate_chain_unreadable: error parsing asn1 value"),
+    ],
+)
+def test_a_chain_that_does_not_verify_is_named_for_why(exc, finding):
+    assert error_codes.chain_error(exc) == finding

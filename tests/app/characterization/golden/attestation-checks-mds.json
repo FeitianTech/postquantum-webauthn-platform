@@ -304,7 +304,7 @@
    "verification_data": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAMD_7pnA_-6ZwP_umcD_7pkAIJQr5CAqCjD-hlz7JwTlSIG1Yx9x2H4GgifSOahkT2nSpQECAyYgASFYIH4IsBob_jmUhmePSBD6zy5JXKrpRfZ-Gm01RamRqMOwIlggFXWJMWxK6dV_aF5w-oPuYgIOx2jtgvVXsQ73UgaBrs4-NsGWwNxeVICP5_YT78BYgHzkSNduvIQKpt0XQqMneg"
   },
   "errors": [
-   ""
+   "certificate_chain_invalid"
   ],
   "warnings": [],
   "root_checks": {

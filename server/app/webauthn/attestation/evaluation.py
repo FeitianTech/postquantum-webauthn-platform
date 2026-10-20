@@ -17,6 +17,7 @@ from cryptography import x509
 from fido2.attestation import Attestation, AttestationResult, UnsupportedType
 from fido2.mds3 import MdsAttestationVerifier, filter_attestation_key_compromised
 
+from . import error_codes
 from .chain import verify_certificate_chain
 
 __all__ = ["MdsEvaluation", "TrustPathEvaluation", "evaluate_attestation"]
@@ -108,7 +109,7 @@ def evaluate_attestation(
     """Each step of verifying ``attestation_object`` against ``verifier``'s metadata.
 
     An unsupported format raises ``UnsupportedType``; every other failure is
-    reported in the trust path's ``errors``.
+    reported in the trust path's ``errors`` by its code (``error_codes``).
     """
 
     errors: list[str] = []
@@ -117,14 +118,14 @@ def evaluate_attestation(
     except UnsupportedType:
         raise
     except Exception as exc:
-        errors.append(str(exc))
+        errors.append(error_codes.statement_error(exc))
         return MdsEvaluation(TrustPathEvaluation(None, None, False, errors), None, None)
 
     lookup = _Lookup()
     try:
         _find_root(verifier, result, attestation_object.auth_data, lookup)
     except Exception as exc:
-        errors.append(str(exc))
+        errors.append(error_codes.with_reason("metadata_lookup_failed", exc))
         return MdsEvaluation(TrustPathEvaluation(result, None, False, errors), None, lookup.source)
 
     if not lookup.root:
@@ -134,7 +135,7 @@ def evaluate_attestation(
     try:
         verify_certificate_chain(list(result.trust_path or []) + [lookup.root])
     except Exception as exc:
-        errors.append(str(exc))
+        errors.append(error_codes.chain_error(exc))
         chain_valid = False
     else:
         chain_valid = True

@@ -13,6 +13,7 @@ import json
 
 import pytest
 from cryptography import x509
+from fido2 import cbor
 from fido2.attestation import UnsupportedType
 from fido2.mds3 import MdsAttestationVerifier, MetadataBlobPayload
 from fido2.webauthn import RegistrationResponse
@@ -23,6 +24,7 @@ from tests.app.characterization import (
     test_attestation_mds_characterization as mds_record,
 )
 from tests.app.metadata import mds_fixture
+from tests.app.security.ceremony_helpers import b64u
 
 
 def _attestation(name: str):
@@ -59,7 +61,7 @@ def test_a_root_of_the_same_name_with_another_key_does_not():
     outcome = _evaluate("x5c-wrong-root")
 
     assert outcome.trust_path.chain_valid is False
-    assert outcome.trust_path.errors == [""]
+    assert outcome.trust_path.errors == ["certificate_chain_invalid"]
     assert outcome.metadata_lookup_source == "aaguid"
 
 
@@ -97,7 +99,7 @@ def test_a_statement_that_does_not_verify_stops_before_the_metadata():
 
     assert outcome.trust_path.attestation_result is None
     assert outcome.trust_path.chain_valid is False
-    assert len(outcome.trust_path.errors) == 1
+    assert outcome.trust_path.errors == ["attestation_invalid"]
     assert (outcome.metadata_entry, outcome.metadata_lookup_source) == (None, None)
 
 
@@ -108,9 +110,28 @@ def test_a_lookup_that_fails_is_reported_as_an_error():
 
     outcome = _evaluate("x5c-listed", _Unreachable())
 
-    assert outcome.trust_path.errors == ["metadata unreachable"]
+    assert outcome.trust_path.errors == ["metadata_lookup_failed: metadata unreachable"]
     assert outcome.trust_path.attestation_result is not None
     assert outcome.metadata_lookup_source is None
+
+
+def test_a_trust_path_with_a_certificate_that_does_not_parse_is_unreadable():
+    leaf = mds_record._leaf(mds_record.AAGUID)
+    payload = mds_record._cases()["x5c-listed"]
+    attestation_object = cbor.decode(base64.urlsafe_b64decode(payload["response"]["attestationObject"] + "=="))
+    attestation_object["attStmt"]["x5c"] = [leaf, b"not a certificate", leaf]
+    registration = RegistrationResponse.from_dict(
+        {**payload, "response": {**payload["response"], "attestationObject": b64u(cbor.encode(attestation_object))}}
+    )
+
+    outcome = evaluation.evaluate_attestation(
+        mds_record._verifier(),
+        registration.response.attestation_object,
+        hashlib.sha256(registration.response.client_data).digest(),
+    )
+
+    assert outcome.trust_path.chain_valid is False
+    assert [error.split(": ")[0] for error in outcome.trust_path.errors] == ["certificate_chain_unreadable"]
 
 
 def test_roots_that_do_not_parse_are_passed_over():
