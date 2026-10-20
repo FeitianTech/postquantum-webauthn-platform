@@ -56,7 +56,8 @@ describe('registering a passkey', () => {
     expect(answer).toEqual(REGISTER[1].body);
     expect(sent(0).url).toBe('/api/register/begin?email=alice%40example.com');
     expect(sent(0).init).toMatchObject({ method: 'POST', headers: { 'Content-Type': 'application/json' } });
-    expect(sent(0).body).toEqual({});
+    // This browser keeps no passkey for the name: none to exclude.
+    expect(sent(0).body).toEqual({ credentials: [] });
     expect(sent(1).url).toBe('/api/register/complete?email=alice%40example.com');
     expect(sent(1).body).toMatchObject({
       type: 'public-key',
@@ -64,6 +65,13 @@ describe('registering a passkey', () => {
       rawId: 'AQIDBA',
       response: { attestationObject: 'oA', transports: ['usb'] },
     });
+  });
+
+  it('sends the passkeys this browser keeps for the name, which the server excludes', async () => {
+    answering(REGISTER[0], REGISTER[1]);
+    await registerSimplePasskey('alice');
+
+    expect(sent(0).body).toEqual({ credentials: [{ credentialId: 'AQIDBA', aaguid: null, publicKey: 'pQE', signCount: 0 }] });
   });
 
   it('hands the authenticator the server\'s options as bytes', async () => {

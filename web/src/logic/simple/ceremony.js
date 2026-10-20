@@ -106,7 +106,9 @@ function postJson(path, email, body) {
 
 /**
  * Registers a passkey for `email`: the server's options, the authenticator's
- * credential, the server's verdict. Says each step through onProgress. Gives the
+ * credential, the server's verdict. Sends the server what this browser keeps of
+ * the passkeys saved for `email`, which it excludes: an authenticator that holds
+ * one refuses with an InvalidStateError. Says each step through onProgress. Gives the
  * server's answer (its storedCredential is what the browser keeps); throws a
  * FailedResponseError for a refused request, or the browser's error. A browser
  * without WebAuthn's JSON methods (shared/native-json.js) is asked
@@ -118,7 +120,8 @@ function postJson(path, email, body) {
 export async function registerSimplePasskey(email, { onProgress = () => {} } = {}) {
     requireNativeJson();
     onProgress(SIMPLE_CEREMONY_TEXT.registrationStarting);
-    const response = await postJson('/api/register/begin', email, {});
+    const credentials = prepareCredentialsForServer(getSimpleCredentialsForEmail(email));
+    const response = await postJson('/api/register/begin', email, { credentials });
     if (!response.ok) {
         throw new FailedResponseError(await readFailedResponse(response), 'Registration could not start');
     }

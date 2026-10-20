@@ -89,6 +89,25 @@ test.describe('/#simple', () => {
     expect(handles[0]).not.toBe(handles[1]);
   });
 
+  test('refuses to register one authenticator twice for one username, and says it is already registered', async ({ page }) => {
+    const authenticator = await addVirtualAuthenticator(page);
+    await openPage(page);
+    const name = username();
+    await registerPasskey(page, name);
+    const [saved] = await authenticator.credentials();
+
+    const [begin] = await Promise.all([
+      page.waitForRequest((sent) => new URL(sent.url()).pathname === '/api/register/begin'),
+      section(page).getByRole('button', { name: 'Register Passkey' }).click(),
+    ]);
+    await expect(section(page).getByRole('alert')).toHaveText('Authenticator is already registered for this account');
+    // The DevTools domain gives the credential ID in standard base64; the page sends base64url.
+    const excluded = begin.postDataJSON().credentials.map(({ credentialId }: { credentialId: string }) => credentialId);
+    expect(excluded).toEqual([Buffer.from(saved.credentialId, 'base64').toString('base64url')]);
+    await expect(rows(page).filter({ hasText: name })).toHaveCount(1);
+    expect(await authenticator.credentials()).toHaveLength(1);
+  });
+
   test('authenticates beside two ML-DSA-65 passkeys saved under the same name', async ({ page }) => {
     // Their public keys are too large for the session cookie to hold (5,780 bytes for
     // the two), so begin keeps a digest of the list, and complete is sent it again.
