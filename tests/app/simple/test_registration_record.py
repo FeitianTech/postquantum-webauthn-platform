@@ -3,8 +3,11 @@ from __future__ import annotations
 
 from fido2.webauthn import AuthenticatorData
 
+from server.app.encoding import encode_base64url
 from server.app.routes.simple import registration_record as simple_registration_record
 from tests.app.security.ceremony_helpers import RP_ID, Authenticator
+
+USER_ID = bytes(range(32))
 
 
 class _AuthenticatorDataWithoutBytes(AuthenticatorData):
@@ -15,6 +18,7 @@ class _AuthenticatorDataWithoutBytes(AuthenticatorData):
 def _registration(*, auth_data_class=AuthenticatorData, **changes):
     fields = {
         "uname": "user@example.com",
+        "user_id": USER_ID,
         "response": {},
         "attestation_format": "none",
         "attestation_statement": {},
@@ -81,7 +85,19 @@ def test_authenticator_data_without_bytes_leave_their_fields_empty():
     assert reg.algoname == "ES256 (ECDSA)"
 
 
-def test_a_user_handle_given_as_text_is_its_utf8_bytes():
-    assert simple_registration_record._user_handle_bytes({"user_handle": "user"}) == b"user"
-    assert simple_registration_record._user_handle_bytes({"user_handle": memoryview(b"\x01")}) == b"\x01"
-    assert simple_registration_record._user_handle_bytes({}) == b""
+def test_the_record_keeps_the_accounts_user_handle_and_names_it_by_its_username():
+    reg = _registration()
+
+    simple_registration_record.initialize_registration_context(reg)
+    simple_registration_record.populate_authenticator_data_context(reg)
+    simple_registration_record.populate_rp_debug_context(reg)
+    simple_registration_record.build_stored_credential_context(reg)
+
+    assert reg.credential_info["user_info"] == {
+        "name": "user@example.com",
+        "display_name": "user@example.com",
+        "user_handle": USER_ID,
+    }
+    assert reg.rp_info["userHandle"]["hex"] == USER_ID.hex()
+    assert reg.stored_credential["userHandle"] == encode_base64url(USER_ID)
+    assert (reg.stored_credential["userName"], reg.stored_credential["displayName"]) == ("user@example.com", "user@example.com")

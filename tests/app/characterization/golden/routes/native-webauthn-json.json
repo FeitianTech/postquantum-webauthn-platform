@@ -11,7 +11,7 @@
     ],
     [
      "Content-Length",
-     "635"
+     "687"
     ],
     [
      "X-Content-Type-Options",
@@ -107,12 +107,15 @@
        "user_verification": "discouraged"
       },
       "simple_register_user": {
+       "id": {
+        "$bytes": "ae375b3f82d36ca5ab34b30d6bba6f3ac990b92d4684f11f0e4c999d2dcbad2a"
+       },
        "name": "user@example.com"
       }
      }
     }
    ],
-   "bodySha256": "2df2af1ae85a55732e46348cfce03c219960a5cd49127d12ff5d7bfb3b4c627e",
+   "bodySha256": "6444ac348ffb950438079b649bf2e4cd8860ac699383d2c586ca45a89e69e9b2",
    "body": {
     "publicKey": {
      "authenticatorSelection": {
@@ -158,9 +161,9 @@
       "name": "FIDO2/WebAuthn PQC Developer Tools"
      },
      "user": {
-      "displayName": "A. User",
-      "id": "dXNlcl9pZA",
-      "name": "a_user"
+      "displayName": "user@example.com",
+      "id": "rjdbP4LTbKWrNLMNa7pvOsmQuS1GhPEfDkyZnS3LrSo",
+      "name": "user@example.com"
      }
     }
    }
@@ -175,7 +178,7 @@
     ],
     [
      "Content-Length",
-     "13047"
+     "13214"
     ],
     [
      "X-Content-Type-Options",
@@ -218,7 +221,7 @@
      "contents": null
     }
    ],
-   "bodySha256": "66237c843a0a132637df6be0e9108fd68a4fbb5fb7ec39e25140f43c2dbf820f",
+   "bodySha256": "eab5e4b7a63d3b3bd7726b9c0650560be03ebb4388929243257d39d9418fddb7",
    "body": {
     "actualResidentKey": false,
     "algo": "ES256 (ECDSA)",
@@ -339,9 +342,9 @@
      "rpIdHashExpectedBase64": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2M",
      "rpIdHashMatch": true,
      "userHandle": {
-      "base64": "dXNlckBleGFtcGxlLmNvbQ==",
-      "base64url": "dXNlckBleGFtcGxlLmNvbQ",
-      "hex": "75736572406578616d706c652e636f6d"
+      "base64": "rjdbP4LTbKWrNLMNa7pvOsmQuS1GhPEfDkyZnS3LrSo=",
+      "base64url": "rjdbP4LTbKWrNLMNa7pvOsmQuS1GhPEfDkyZnS3LrSo",
+      "hex": "ae375b3f82d36ca5ab34b30d6bba6f3ac990b92d4684f11f0e4c999d2dcbad2a"
      }
     },
     "rpIdHash": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763",
@@ -585,21 +588,21 @@
       "rpIdHashExpectedBase64": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2M",
       "rpIdHashMatch": true,
       "userHandle": {
-       "base64": "dXNlckBleGFtcGxlLmNvbQ==",
-       "base64url": "dXNlckBleGFtcGxlLmNvbQ",
-       "hex": "75736572406578616d706c652e636f6d"
+       "base64": "rjdbP4LTbKWrNLMNa7pvOsmQuS1GhPEfDkyZnS3LrSo=",
+       "base64url": "rjdbP4LTbKWrNLMNa7pvOsmQuS1GhPEfDkyZnS3LrSo",
+       "hex": "ae375b3f82d36ca5ab34b30d6bba6f3ac990b92d4684f11f0e4c999d2dcbad2a"
       }
      },
      "signCount": 0,
      "type": "simple",
-     "userHandle": "dXNlckBleGFtcGxlLmNvbQ",
+     "userHandle": "rjdbP4LTbKWrNLMNa7pvOsmQuS1GhPEfDkyZnS3LrSo",
      "userName": "user@example.com"
     }
    },
    "stored": [
     {
      "file": "credentials/OiCtZ_OoWGuo9RiesCHMbTh5TJTbSdiGbnyVqb8n1CI/user@example.com_credential_data.json",
-     "sha256": "483a7b74f08d93e18e4cac2d1ce16b7a9b382d97b0bb5bda21652212de10ac47",
+     "sha256": "a970991b812147103188ea451e353237c1fdc41ffa63d9c5e2d7ab0b8eb3b637",
      "content": {
       "version": 1,
       "encoding": "base64url",
@@ -619,7 +622,7 @@
          "display_name": "user@example.com",
          "user_handle": {
           "__t": "bytes",
-          "__v": "dXNlckBleGFtcGxlLmNvbQ"
+          "__v": "rjdbP4LTbKWrNLMNa7pvOsmQuS1GhPEfDkyZnS3LrSo"
          }
         },
         "registration_time": 1790000000.0,
@@ -824,9 +827,9 @@
           }
          },
          "userHandle": {
-          "base64": "dXNlckBleGFtcGxlLmNvbQ==",
-          "base64url": "dXNlckBleGFtcGxlLmNvbQ",
-          "hex": "75736572406578616d706c652e636f6d"
+          "base64": "rjdbP4LTbKWrNLMNa7pvOsmQuS1GhPEfDkyZnS3LrSo=",
+          "base64url": "rjdbP4LTbKWrNLMNa7pvOsmQuS1GhPEfDkyZnS3LrSo",
+          "hex": "ae375b3f82d36ca5ab34b30d6bba6f3ac990b92d4684f11f0e4c999d2dcbad2a"
          }
         },
         "registration_response": {
@@ -1017,7 +1020,7 @@
    "stored": [
     {
      "file": "credentials/OiCtZ_OoWGuo9RiesCHMbTh5TJTbSdiGbnyVqb8n1CI/user@example.com_credential_data.json",
-     "sha256": "89df89b99627d13884e617be9cc3d6ba3236bd13065585d32cbc2175f4d6c57c",
+     "sha256": "aa330e5627e2e42b98ae99f59f698510c8df4aae00ffbd4a47b456d8121d6d83",
      "content": {
       "version": 1,
       "encoding": "base64url",
@@ -1037,7 +1040,7 @@
          "display_name": "user@example.com",
          "user_handle": {
           "__t": "bytes",
-          "__v": "dXNlckBleGFtcGxlLmNvbQ"
+          "__v": "rjdbP4LTbKWrNLMNa7pvOsmQuS1GhPEfDkyZnS3LrSo"
          }
         },
         "registration_time": 1790000000.0,
@@ -1242,9 +1245,9 @@
           }
          },
          "userHandle": {
-          "base64": "dXNlckBleGFtcGxlLmNvbQ==",
-          "base64url": "dXNlckBleGFtcGxlLmNvbQ",
-          "hex": "75736572406578616d706c652e636f6d"
+          "base64": "rjdbP4LTbKWrNLMNa7pvOsmQuS1GhPEfDkyZnS3LrSo=",
+          "base64url": "rjdbP4LTbKWrNLMNa7pvOsmQuS1GhPEfDkyZnS3LrSo",
+          "hex": "ae375b3f82d36ca5ab34b30d6bba6f3ac990b92d4684f11f0e4c999d2dcbad2a"
          }
         },
         "registration_response": {

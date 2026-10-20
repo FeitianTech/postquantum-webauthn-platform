@@ -45,6 +45,23 @@ const RECORDED_CHALLENGE_WORDS = [
 
 const quoted = (words: string[]) => new RegExp(`^"(${words.map((word) => word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})"$`);
 
+// The user handle: the recording shows the username's bytes, which Simple
+// registrations once stored as it; the page shows the account's own id, one for
+// all four (one username, one namespace).
+const NEW_HANDLE = 'the user handle is the account\'s own id now, no longer the username\'s bytes';
+const RECORDED_HANDLE_WORDS = ['dXNlckBleGFtcGxlLmNvbQ==', 'dXNlckBleGFtcGxlLmNvbQ', '75736572406578616d706c652e636f6d'];
+
+const exactly = (words: string[]) => new RegExp(`^(${words.map((word) => word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})$`);
+
+function handleFor(record: Record<string, unknown>): ExpectedDifference[] {
+  const handle = Buffer.from(record.userHandle as string, 'base64url');
+  const shown = [handle.toString('base64'), record.userHandle as string, handle.toString('hex')];
+  return [
+    { only: 'recorded', token: exactly(RECORDED_HANDLE_WORDS), section: 'User info at creation', reason: NEW_HANDLE },
+    { only: 'shown', token: exactly(shown), section: 'User info at creation', reason: NEW_HANDLE },
+  ];
+}
+
 function redrawnFor(record: Record<string, unknown>): ExpectedDifference[] {
   if (record !== RECORDS[0]) return [];
   const checks = (record.relyingParty as { registrationData: { attestationChecks: Record<string, Record<string, string>> } })
@@ -72,7 +89,8 @@ test.describe('a saved credential\'s details, as recorded', () => {
       const registration = await shownLevel(page, 'registration', 'h4, [data-recorded-heading]');
       const shownSubs = await shownSubViews(page);
 
-      expect(report(legacy, [...detail, ...registration], [...expectedFor(name), ...redrawnFor(record)])).toEqual([]);
+      const expected = [...expectedFor(name), ...redrawnFor(record), ...handleFor(record)];
+      expect(report(legacy, [...detail, ...registration], expected)).toEqual([]);
       expect(legacy.map((section) => section.heading)).toEqual(
         [...detail, ...registration].map((section) => section.heading).filter((heading) => heading && heading !== 'Registration Details'),
       );

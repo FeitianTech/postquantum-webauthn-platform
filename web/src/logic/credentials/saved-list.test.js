@@ -27,8 +27,8 @@ vi.mock('./storage/local/advanced-sync.js', () => ({
 }));
 
 const STORED = goldenAnswers('simple-register-es256')[1].body.storedCredential;
-// The golden's user handle, "user@example.com", in hex.
-const USER_HANDLE_HEX = '75736572406578616d706c652e636f6d';
+// The golden's user handle, the account's own 32 bytes, in hex.
+const USER_HANDLE_HEX = Buffer.from(STORED.userHandle, 'base64url').toString('hex');
 const AAGUID = '00112233-4455-6677-8899-AABBCCDDEEFF';
 
 const INDICATORS = {

@@ -11,7 +11,7 @@
     ],
     [
      "Content-Length",
-     "635"
+     "687"
     ],
     [
      "X-Content-Type-Options",
@@ -107,12 +107,15 @@
        "user_verification": "discouraged"
       },
       "simple_register_user": {
+       "id": {
+        "$bytes": "6de00c5cb0cc3e8cbc9c18257bb89e0d5458463ae81431eb32c7565537335bae"
+       },
        "name": "user@example.com"
       }
      }
     }
    ],
-   "bodySha256": "cfb91a23d462f30e1a7cd06dc45e2c465bd86ec4e3adf608d09261eea51c3532",
+   "bodySha256": "e5c89078aece09b79109589624f732fd3cd5640f7ae7a8c5eb26e864528c3a41",
    "body": {
     "publicKey": {
      "authenticatorSelection": {
@@ -158,9 +161,9 @@
       "name": "FIDO2/WebAuthn PQC Developer Tools"
      },
      "user": {
-      "displayName": "A. User",
-      "id": "dXNlcl9pZA",
-      "name": "a_user"
+      "displayName": "user@example.com",
+      "id": "beAMXLDMPoy8nBgle7ieDVRYRjroFDHrMsdWVTczW64",
+      "name": "user@example.com"
      }
     }
    }

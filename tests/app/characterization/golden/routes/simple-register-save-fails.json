@@ -11,7 +11,7 @@
     ],
     [
      "Content-Length",
-     "635"
+     "687"
     ],
     [
      "X-Content-Type-Options",
@@ -107,12 +107,15 @@
        "user_verification": "discouraged"
       },
       "simple_register_user": {
+       "id": {
+        "$bytes": "ae0e8a41ab3d57d39628fbf02518588493466f32230b93015034d6773c9077a8"
+       },
        "name": "user@example.com"
       }
      }
     }
    ],
-   "bodySha256": "a9a0441ea5b00eb141931b86d1cd669d7d979c7c409dca61bb8d06b9120bf33b",
+   "bodySha256": "a8dd167f069a697f034d58388effa68eb818741e7387022165854920ef5a7455",
    "body": {
     "publicKey": {
      "authenticatorSelection": {
@@ -158,9 +161,9 @@
       "name": "FIDO2/WebAuthn PQC Developer Tools"
      },
      "user": {
-      "displayName": "A. User",
-      "id": "dXNlcl9pZA",
-      "name": "a_user"
+      "displayName": "user@example.com",
+      "id": "rg6KQas9V9OWKPvwJRhYhJNGbzIjC5MBUDTWdzyQd6g",
+      "name": "user@example.com"
      }
     }
    }
@@ -175,7 +178,7 @@
     ],
     [
      "Content-Length",
-     "12443"
+     "12610"
     ],
     [
      "X-Content-Type-Options",
@@ -218,7 +221,7 @@
      "contents": null
     }
    ],
-   "bodySha256": "b016d2ba032d4b93904f4ca09284927fc256039facce46cc886aa033df9d4d02",
+   "bodySha256": "0a94eb93b9c79c863004d3ad0a45ab9d7074752c7df540ce3cbc3a48701da3c0",
    "body": {
     "actualResidentKey": false,
     "algo": "ES256 (ECDSA)",
@@ -335,9 +338,9 @@
      "rpIdHashExpectedBase64": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2M",
      "rpIdHashMatch": true,
      "userHandle": {
-      "base64": "dXNlckBleGFtcGxlLmNvbQ==",
-      "base64url": "dXNlckBleGFtcGxlLmNvbQ",
-      "hex": "75736572406578616d706c652e636f6d"
+      "base64": "rg6KQas9V9OWKPvwJRhYhJNGbzIjC5MBUDTWdzyQd6g=",
+      "base64url": "rg6KQas9V9OWKPvwJRhYhJNGbzIjC5MBUDTWdzyQd6g",
+      "hex": "ae0e8a41ab3d57d39628fbf02518588493466f32230b93015034d6773c9077a8"
      }
     },
     "rpIdHash": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763",
@@ -559,21 +562,21 @@
       "rpIdHashExpectedBase64": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2M",
       "rpIdHashMatch": true,
       "userHandle": {
-       "base64": "dXNlckBleGFtcGxlLmNvbQ==",
-       "base64url": "dXNlckBleGFtcGxlLmNvbQ",
-       "hex": "75736572406578616d706c652e636f6d"
+       "base64": "rg6KQas9V9OWKPvwJRhYhJNGbzIjC5MBUDTWdzyQd6g=",
+       "base64url": "rg6KQas9V9OWKPvwJRhYhJNGbzIjC5MBUDTWdzyQd6g",
+       "hex": "ae0e8a41ab3d57d39628fbf02518588493466f32230b93015034d6773c9077a8"
       }
      },
      "signCount": 0,
      "type": "simple",
-     "userHandle": "dXNlckBleGFtcGxlLmNvbQ",
+     "userHandle": "rg6KQas9V9OWKPvwJRhYhJNGbzIjC5MBUDTWdzyQd6g",
      "userName": "user@example.com"
     }
    },
    "stored": [
     {
      "file": "credentials/BS3WXrQ94yu1IM0gQyuuGVDMRL20RXOIgCxVGSl2mVs/user@example.com_credential_data.json",
-     "sha256": "63f85b33c50225e9a4a0f8c8a5d927fda03210bd8a0c1fd923508c1c7aad44ad",
+     "sha256": "7cfe58de564d99e226f788cec9ae2b95522c1b4e6a161d3dc5efba042e9126d3",
      "content": {
       "version": 1,
       "encoding": "base64url",
@@ -593,7 +596,7 @@
          "display_name": "user@example.com",
          "user_handle": {
           "__t": "bytes",
-          "__v": "dXNlckBleGFtcGxlLmNvbQ"
+          "__v": "rg6KQas9V9OWKPvwJRhYhJNGbzIjC5MBUDTWdzyQd6g"
          }
         },
         "registration_time": 1790000000.0,
@@ -790,9 +793,9 @@
           }
          },
          "userHandle": {
-          "base64": "dXNlckBleGFtcGxlLmNvbQ==",
-          "base64url": "dXNlckBleGFtcGxlLmNvbQ",
-          "hex": "75736572406578616d706c652e636f6d"
+          "base64": "rg6KQas9V9OWKPvwJRhYhJNGbzIjC5MBUDTWdzyQd6g=",
+          "base64url": "rg6KQas9V9OWKPvwJRhYhJNGbzIjC5MBUDTWdzyQd6g",
+          "hex": "ae0e8a41ab3d57d39628fbf02518588493466f32230b93015034d6773c9077a8"
          }
         },
         "registration_response": {
@@ -839,7 +842,7 @@
     ],
     [
      "Content-Length",
-     "635"
+     "687"
     ],
     [
      "X-Content-Type-Options",
@@ -925,12 +928,15 @@
        "user_verification": "discouraged"
       },
       "simple_register_user": {
+       "id": {
+        "$bytes": "ae0e8a41ab3d57d39628fbf02518588493466f32230b93015034d6773c9077a8"
+       },
        "name": "user@example.com"
       }
      }
     }
    ],
-   "bodySha256": "3cb055c252846d0b1cb0319327d8799d9141f8797af14d57bde80c8d65f2cc2c",
+   "bodySha256": "e1a0cca5e2a77309370c5dfdd8604b141a2c79f9b8336bd464c0b4d6c20fc9a2",
    "body": {
     "publicKey": {
      "authenticatorSelection": {
@@ -976,9 +982,9 @@
       "name": "FIDO2/WebAuthn PQC Developer Tools"
      },
      "user": {
-      "displayName": "A. User",
-      "id": "dXNlcl9pZA",
-      "name": "a_user"
+      "displayName": "user@example.com",
+      "id": "rg6KQas9V9OWKPvwJRhYhJNGbzIjC5MBUDTWdzyQd6g",
+      "name": "user@example.com"
      }
     }
    }
@@ -1051,7 +1057,7 @@
     ],
     [
      "Content-Length",
-     "635"
+     "687"
     ],
     [
      "X-Content-Type-Options",
@@ -1137,12 +1143,15 @@
        "user_verification": "discouraged"
       },
       "simple_register_user": {
+       "id": {
+        "$bytes": "ae0e8a41ab3d57d39628fbf02518588493466f32230b93015034d6773c9077a8"
+       },
        "name": "user@example.com"
       }
      }
     }
    ],
-   "bodySha256": "fe50ad4397347b8d559aab62786338b69feffd7d30c6c1cb704259c42fa2c023",
+   "bodySha256": "59190b9eb7db0ac0e19ba56930e656cbd0d3a2352db483e48eb1598f97f61404",
    "body": {
     "publicKey": {
      "authenticatorSelection": {
@@ -1188,9 +1197,9 @@
       "name": "FIDO2/WebAuthn PQC Developer Tools"
      },
      "user": {
-      "displayName": "A. User",
-      "id": "dXNlcl9pZA",
-      "name": "a_user"
+      "displayName": "user@example.com",
+      "id": "rg6KQas9V9OWKPvwJRhYhJNGbzIjC5MBUDTWdzyQd6g",
+      "name": "user@example.com"
      }
     }
    }
@@ -1205,7 +1214,7 @@
     ],
     [
      "Content-Length",
-     "12443"
+     "12610"
     ],
     [
      "X-Content-Type-Options",
@@ -1248,7 +1257,7 @@
      "contents": null
     }
    ],
-   "bodySha256": "7c6d7a2e194d7cfa0f79ad92e96dc0173612c7aa1b13d1a7d78dfa5008f3ab07",
+   "bodySha256": "362e54f67f1b61f1a1fe6696568d47422aa35ec2d1738902088a1022ac54ef20",
    "body": {
     "actualResidentKey": false,
     "algo": "ES256 (ECDSA)",
@@ -1365,9 +1374,9 @@
      "rpIdHashExpectedBase64": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2M",
      "rpIdHashMatch": true,
      "userHandle": {
-      "base64": "dXNlckBleGFtcGxlLmNvbQ==",
-      "base64url": "dXNlckBleGFtcGxlLmNvbQ",
-      "hex": "75736572406578616d706c652e636f6d"
+      "base64": "rg6KQas9V9OWKPvwJRhYhJNGbzIjC5MBUDTWdzyQd6g=",
+      "base64url": "rg6KQas9V9OWKPvwJRhYhJNGbzIjC5MBUDTWdzyQd6g",
+      "hex": "ae0e8a41ab3d57d39628fbf02518588493466f32230b93015034d6773c9077a8"
      }
     },
     "rpIdHash": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763",
@@ -1589,21 +1598,21 @@
       "rpIdHashExpectedBase64": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2M",
       "rpIdHashMatch": true,
       "userHandle": {
-       "base64": "dXNlckBleGFtcGxlLmNvbQ==",
-       "base64url": "dXNlckBleGFtcGxlLmNvbQ",
-       "hex": "75736572406578616d706c652e636f6d"
+       "base64": "rg6KQas9V9OWKPvwJRhYhJNGbzIjC5MBUDTWdzyQd6g=",
+       "base64url": "rg6KQas9V9OWKPvwJRhYhJNGbzIjC5MBUDTWdzyQd6g",
+       "hex": "ae0e8a41ab3d57d39628fbf02518588493466f32230b93015034d6773c9077a8"
       }
      },
      "signCount": 0,
      "type": "simple",
-     "userHandle": "dXNlckBleGFtcGxlLmNvbQ",
+     "userHandle": "rg6KQas9V9OWKPvwJRhYhJNGbzIjC5MBUDTWdzyQd6g",
      "userName": "user@example.com"
     }
    },
    "stored": [
     {
      "file": "credentials/BS3WXrQ94yu1IM0gQyuuGVDMRL20RXOIgCxVGSl2mVs/user@example.com_credential_data.json",
-     "sha256": "fbbfe1eb4625b900dfa40136ba005c472a2c84686e7319b7791b10d0bf277c56",
+     "sha256": "401960ecaef5c32c71d965160fab05abb89f84ea5a1d4b6b7aadc0b56608552b",
      "content": {
       "version": 1,
       "encoding": "base64url",
@@ -1623,7 +1632,7 @@
          "display_name": "user@example.com",
          "user_handle": {
           "__t": "bytes",
-          "__v": "dXNlckBleGFtcGxlLmNvbQ"
+          "__v": "rg6KQas9V9OWKPvwJRhYhJNGbzIjC5MBUDTWdzyQd6g"
          }
         },
         "registration_time": 1790000000.0,
@@ -1820,9 +1829,9 @@
           }
          },
          "userHandle": {
-          "base64": "dXNlckBleGFtcGxlLmNvbQ==",
-          "base64url": "dXNlckBleGFtcGxlLmNvbQ",
-          "hex": "75736572406578616d706c652e636f6d"
+          "base64": "rg6KQas9V9OWKPvwJRhYhJNGbzIjC5MBUDTWdzyQd6g=",
+          "base64url": "rg6KQas9V9OWKPvwJRhYhJNGbzIjC5MBUDTWdzyQd6g",
+          "hex": "ae0e8a41ab3d57d39628fbf02518588493466f32230b93015034d6773c9077a8"
          }
         },
         "registration_response": {
@@ -1852,7 +1861,7 @@
          "display_name": "user@example.com",
          "user_handle": {
           "__t": "bytes",
-          "__v": "dXNlckBleGFtcGxlLmNvbQ"
+          "__v": "rg6KQas9V9OWKPvwJRhYhJNGbzIjC5MBUDTWdzyQd6g"
          }
         },
         "registration_time": 1790000000.0,
@@ -2049,9 +2058,9 @@
           }
          },
          "userHandle": {
-          "base64": "dXNlckBleGFtcGxlLmNvbQ==",
-          "base64url": "dXNlckBleGFtcGxlLmNvbQ",
-          "hex": "75736572406578616d706c652e636f6d"
+          "base64": "rg6KQas9V9OWKPvwJRhYhJNGbzIjC5MBUDTWdzyQd6g=",
+          "base64url": "rg6KQas9V9OWKPvwJRhYhJNGbzIjC5MBUDTWdzyQd6g",
+          "hex": "ae0e8a41ab3d57d39628fbf02518588493466f32230b93015034d6773c9077a8"
          }
         },
         "registration_response": {

@@ -123,10 +123,13 @@ describe('describeUserInfo', () => {
     const section = describeUserInfo(record);
     expect(section).toMatchObject({ title: 'User info at creation', name: 'user@example.com', displayName: 'user@example.com' });
     expect(section.identifiers.map(({ title }) => title)).toEqual([DETAIL_TEXT.userHandle, DETAIL_TEXT.credentialId]);
+    // The account's own 32 bytes, as the golden registration stored them.
+    const handle = Buffer.from(record.userHandle, 'base64url');
+    expect(handle).toHaveLength(32);
     expect(section.identifiers[0].spellings).toEqual([
-      { label: 'b64', value: 'dXNlckBleGFtcGxlLmNvbQ==' },
-      { label: 'b64u', value: 'dXNlckBleGFtcGxlLmNvbQ' },
-      { label: 'hex', value: Array.from(new TextEncoder().encode('user@example.com'), (byte) => byte.toString(16).padStart(2, '0')).join('') },
+      { label: 'b64', value: handle.toString('base64') },
+      { label: 'b64u', value: record.userHandle },
+      { label: 'hex', value: handle.toString('hex') },
     ]);
     expect(section.identifiers[1].spellings.find(({ label }) => label === 'hex').value).toBe(record.credentialIdHex);
   });

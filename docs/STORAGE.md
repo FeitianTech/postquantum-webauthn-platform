@@ -63,8 +63,11 @@ Two cookies, both signed with the app's secret, `HttpOnly`, `SameSite=Lax`, and
 - `fido.mds.session` names the visitor's namespace, under which every store keeps
   their records: locally `<store dir>/<namespace>/`, on Cloud Storage
   `user-data/<namespace>/<store>/`. A route that stores something for the visitor
-  mints it (`visitor_session.ensure_id`); a route that only reads mints none. It
-  lasts a year and is signed again once a day old. A namespace idle for 14 days is
+  mints it (`visitor_session.ensure_id`), and so does the Simple registration's
+  begin, whose user handle is derived from it (`routes/simple/account.py`); a route
+  that only reads mints none. A namespace holds nothing until a store writes in it,
+  so one minted by a begin that goes no further stores nothing. It lasts a year and
+  is signed again once a day old. A namespace idle for 14 days is
   removed whole, on both backends, by one sweep at most every 6 hours
   (`visitor_session.schedule_cleanup`). Deleting a visitor's last upload removes only
   the local uploads folder, never their credentials or artifacts.

@@ -33,8 +33,10 @@ class SimpleRegistration:
     view; ``build_stored_credential_context`` the record the browser keeps.
     """
 
-    # What the request carried and fido2 verified.
+    # The account begin issued the options for: its username and user handle.
     uname: Any
+    user_id: bytes
+    # What the request carried and fido2 verified.
     response: Any
     attestation_format: Any
     attestation_statement: Any
@@ -119,7 +121,7 @@ def _credential_info(reg: SimpleRegistration) -> dict[str, Any]:
         "user_info": {
             "name": reg.uname,
             "display_name": reg.uname,
-            "user_handle": reg.uname.encode("utf-8"),
+            "user_handle": reg.user_id,
         },
         "registration_time": time.time(),
         "client_data_json": reg.client_data_json or "",
@@ -238,13 +240,6 @@ def populate_authenticator_data_context(reg: SimpleRegistration) -> None:
     reg.rp_hash = rp_hash
 
 
-def _user_handle_bytes(user_info: Mapping[str, Any]) -> bytes:
-    user_handle_value = user_info.get("user_handle")
-    if isinstance(user_handle_value, (bytes, bytearray, memoryview)):
-        return bytes(user_handle_value)
-    return str(user_handle_value or "").encode("utf-8")
-
-
 def _relying_party_info(
     reg: SimpleRegistration,
     *,
@@ -252,7 +247,6 @@ def _relying_party_info(
     credential_id_forms: Mapping[str, str],
     aaguid: tuple[bytes, str | None, str | None],
     large_blob_result: bool,
-    user_handle_bytes: bytes,
 ) -> dict[str, Any]:
     """The relying party's view of the registration, as the answer reports it."""
 
@@ -277,7 +271,7 @@ def _relying_party_info(
             attestation_summary=reg.attestation_summary,
             warnings=reg.warnings,
         ),
-        user_handle=user_handle_bytes,
+        user_handle=reg.user_id,
     )
 
 
@@ -310,7 +304,6 @@ def populate_rp_debug_context(reg: SimpleRegistration) -> None:
 
     cose_public_key = dict(getattr(reg.auth_data.credential_data, "public_key", {}))
     public_key_bytes = cbor.encode(cose_public_key)
-    user_handle_bytes = _user_handle_bytes(reg.credential_info["user_info"])
 
     rp_info = _relying_party_info(
         reg,
@@ -318,7 +311,6 @@ def populate_rp_debug_context(reg: SimpleRegistration) -> None:
         credential_id_forms=credential_id_forms,
         aaguid=(aaguid_bytes, aaguid_hex, aaguid_guid),
         large_blob_result=large_blob_result,
-        user_handle_bytes=user_handle_bytes,
     )
     reg.credential_info["relying_party"] = json_values.make_json_safe(rp_info)
     debug_info = _debug_info(reg)
@@ -328,7 +320,7 @@ def populate_rp_debug_context(reg: SimpleRegistration) -> None:
     reg.aaguid_bytes = aaguid_bytes
     reg.cose_public_key = cose_public_key
     reg.public_key_bytes = public_key_bytes
-    reg.user_handle_b64u = encode_base64url(user_handle_bytes)
+    reg.user_handle_b64u = encode_base64url(reg.user_id)
     reg.rp_info = rp_info
     reg.debug_info = debug_info
 

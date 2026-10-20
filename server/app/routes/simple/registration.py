@@ -108,8 +108,9 @@ def _consume_registration_state() -> tuple[Any, Any]:
     return state, None
 
 
-def _begun_username() -> tuple[str | None, Any]:
-    """The username begin issued the options for, which complete's must be; or the 400 when it is another."""
+def _begun_user() -> tuple[Mapping[str, Any] | None, Any]:
+    """The account begin issued the options for, its user handle and username; or the
+    400 when complete's username is another."""
 
     begun = session.pop("simple_register_user", None)
     username = begun.get("name") if isinstance(begun, Mapping) else None
@@ -119,7 +120,7 @@ def _begun_username() -> tuple[str | None, Any]:
             jsonify({"error": "This registration began for another username. Please restart the registration process."}),
             400,
         )
-    return username, None
+    return begun, None
 
 
 def _verify_registration(
@@ -163,11 +164,12 @@ def _verify_registration(
 
 
 def _registration_context(
-    uname: Any, response: Any, credential_response: Mapping[str, Any], inputs: Mapping[str, Any], verified: Mapping[str, Any]
+    user: Mapping[str, Any], response: Any, credential_response: Mapping[str, Any], inputs: Mapping[str, Any], verified: Mapping[str, Any]
 ) -> registration_record.SimpleRegistration:
     attestation_checks = verified["attestation_checks"]
     return registration_record.SimpleRegistration(
-        uname=uname,
+        uname=user["name"],
+        user_id=user["id"],
         response=response,
         **inputs,
         auth_data=verified["auth_data"],
@@ -223,7 +225,7 @@ def register_complete():
         return error_response
 
     # Refused before fido2 runs: once it has accepted, nothing about the name may fail.
-    username, error_response = _begun_username()
+    user, error_response = _begun_user()
     if error_response is not None:
         return error_response
 
@@ -233,7 +235,7 @@ def register_complete():
 
     # Read only now: the attestation's certificates are parsed for a ceremony fido2 accepted.
     inputs = _complete_inputs(response, credential_response)
-    reg = _registration_context(username, response, credential_response, inputs, verified)
+    reg = _registration_context(user, response, credential_response, inputs, verified)
     error_response = _attestation_error_response(verified["attestation_checks"])
     if error_response is not None:
         return error_response
@@ -280,8 +282,8 @@ def register_begin():
     credentials, _serialized = parsing._parse_client_credentials(existing_credentials_raw)
 
     # The account lives in the visitor's namespace, minted here when they have
-    # none, so the ceremony's namespace is fixed from its begin.
-    visitor_session.ensure_id()
+    # none: its user handle is bound to it.
+    user_id = account.user_handle(visitor_session.ensure_id(), username)
 
     rp_id = relying_party.determine_rp_id()
     server = relying_party.create_fido_server(rp_id=rp_id)
@@ -291,11 +293,7 @@ def register_begin():
     ]
 
     options, state = server.register_begin(
-        PublicKeyCredentialUserEntity(
-            id=b"user_id",
-            name="a_user",
-            display_name="A. User",
-        ),
+        PublicKeyCredentialUserEntity(id=user_id, name=username, display_name=username),
         credentials,
         user_verification="discouraged",
         authenticator_attachment="cross-platform",
@@ -304,7 +302,7 @@ def register_begin():
     # Stamped so /complete can refuse a stale state replayed from an old cookie.
     session["simple_register_state"] = stamp_ceremony_state(dict(state))
     session["register_rp_id"] = rp_id
-    session["simple_register_user"] = {"name": username}
+    session["simple_register_user"] = {"id": user_id, "name": username}
 
     options_dict = dict(options)
     # The ceremony state (and therefore the challenge) is deliberately NOT

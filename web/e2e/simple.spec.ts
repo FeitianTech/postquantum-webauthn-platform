@@ -68,6 +68,27 @@ test.describe('/#simple', () => {
     expect(used.signCount).toBeGreaterThan(registered.signCount);
   });
 
+  test('registers each username under a user handle of its own, which the saved credential keeps', async ({ page }) => {
+    await addVirtualAuthenticator(page);
+    await openPage(page);
+    const handles: string[] = [];
+    for (const name of [username(), username()]) {
+      const [begin] = await Promise.all([
+        page.waitForResponse((answer) => new URL(answer.url()).pathname === '/api/register/begin'),
+        registerPasskey(page, name),
+      ]);
+      const { user } = (await begin.json()).publicKey;
+      expect([user.name, user.displayName]).toEqual([name, name]);
+      const id = Buffer.from(user.id, 'base64url');
+      expect(id).toHaveLength(32);
+      expect(id.toString('latin1')).not.toContain(name);
+      const saved = await page.evaluate((key) => JSON.parse(window.localStorage.getItem(key) ?? '[]'), STORAGE_KEY);
+      expect(saved.find((record: { email: string }) => record.email === name).userHandle).toBe(user.id);
+      handles.push(user.id);
+    }
+    expect(handles[0]).not.toBe(handles[1]);
+  });
+
   test('authenticates beside two ML-DSA-65 passkeys saved under the same name', async ({ page }) => {
     // Their public keys are too large for the session cookie to hold (5,780 bytes for
     // the two), so begin keeps a digest of the list, and complete is sent it again.
