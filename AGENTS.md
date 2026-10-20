@@ -266,7 +266,9 @@ its logic out here first.
 - Routes: `routes/simple/` and `routes/advanced/` (begin/complete; the bodies are short
   orchestrators over modules named for their stage, `routes/simple/stored_sign_count.py` the
   Simple tab's counter check against the stored record; the try blocks and the order of
-  session reads are behaviour); `routes/ceremony_session.py` (every begin: refused, the session kept as
+  session reads are behaviour; a registration complete reads the attestation
+  (`extract_attestation_details`) only once the state is consumed and fido2 accepted the
+  response); `routes/ceremony_session.py` (every begin: refused, the session kept as
   it was, when its cookie would pass `MAX_COOKIE_SIZE`); `routes/json_body.py` (every route's
   JSON body: an object, or read as an empty one); `routes/mds.py` (the MDS routes and
   certificate decoding); `routes/codec.py` (`/api/codec`); `routes/web_export.py` (`/health`,
@@ -283,7 +285,10 @@ its logic out here first.
   `verify_directly_issued_by` (RSA-PSS, EdDSA and ML-DSA too, which fido2's `verify_x509_chain`
   does not); `evaluation.py` checks an attestation against the MDS metadata step by step;
   `constants.py`'s `UNREADABLE_EXTENSIONS`, what cryptography raises reading a loaded
-  certificate's extensions, caught wherever they are read), `webauthn/signature_algorithms.py`
+  certificate's extensions, caught wherever they are read, and the limits both x5c readers,
+  `certificates.py` and `trust.py`, apply: a certificate of at most 64 KiB, a chain's first 10
+  entries; an x5c entry is read only from bytes, text or a certificate view, never with
+  `bytes(value)`), `webauthn/signature_algorithms.py`
   (the one spelling of a signature algorithm), `webauthn/cose_algorithms.py` (a named COSE
   algorithm read, for both tabs), `webauthn/attachments.py` (the authenticator attachment
   hints), `webauthn/pqc.py` (the ML-DSA adapter), `webauthn/mldsa.py` (ML-DSA parameter sets,
