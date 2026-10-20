@@ -60,7 +60,6 @@
         "userVerification": "discouraged"
        },
        "challenge": "XmkoQKxuQ2IZM0XqQx3IA4mCHTY8Fh8jaccf7DVJAO4",
-       "excludeCredentials": [],
        "pubKeyCredParams": [
         {
          "alg": -48,
@@ -142,16 +141,7 @@
          "alg": -65535,
          "type": "public-key"
         }
-       ],
-       "rp": {
-        "id": "localhost",
-        "name": "FIDO2/WebAuthn PQC Developer Tools"
-       },
-       "user": {
-        "displayName": "A. User",
-        "id": "dXNlcl9pZA",
-        "name": "a_user"
-       }
+       ]
       },
       "simple_register_state": {
        "challenge": "XmkoQKxuQ2IZM0XqQx3IA4mCHTY8Fh8jaccf7DVJAO4",

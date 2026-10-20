@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import copy
 import logging
 from collections.abc import Mapping, MutableMapping
 from typing import Any
@@ -25,7 +24,7 @@ from ...mds import provisioning as mds_provisioning
 from ...webauthn.attachments import normalize_attachment
 from ...webauthn.attestation import aaguid as attestation_aaguid
 from ...webauthn.attestation import certificates as attestation_certificates
-from ...webauthn.attestation import checks, error_codes
+from ...webauthn.attestation import checks, error_codes, request_expectations
 from .. import ceremony_session, json_body
 from . import parsing, registration_persistence, registration_record
 
@@ -301,8 +300,13 @@ def register_begin():
     # returned to the client: the simple flow binds the challenge to the
     # server-side session only. fido2 gives publicKey as a dict.
     public_key_options = options_dict["publicKey"]
-    # A copy: the parameters below are replaced.
-    session["simple_register_public_key"] = copy.deepcopy(public_key_options)
+    # What complete's attestation checks read of the options, and nothing else of
+    # them: an exclude list would not fit a cookie.
+    session["simple_register_public_key"] = {
+        name: public_key_options[name]
+        for name in request_expectations.CHECKED_REQUEST_MEMBERS
+        if name in public_key_options
+    }
     public_key_options["pubKeyCredParams"] = _offered_parameters(public_key_options.get("pubKeyCredParams"))
 
     return jsonify(options_dict)

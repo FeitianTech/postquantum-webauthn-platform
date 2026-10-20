@@ -107,7 +107,6 @@
         "userVerification": "discouraged"
        },
        "challenge": "UMtYVPZxSABexvUOg3q1Ms9eSJMUObAoHAoRxI70vYk",
-       "excludeCredentials": [],
        "pubKeyCredParams": [
         {
          "alg": -48,
@@ -189,16 +188,7 @@
          "alg": -65535,
          "type": "public-key"
         }
-       ],
-       "rp": {
-        "id": "localhost",
-        "name": "FIDO2/WebAuthn PQC Developer Tools"
-       },
-       "user": {
-        "displayName": "A. User",
-        "id": "dXNlcl9pZA",
-        "name": "a_user"
-       }
+       ]
       },
       "simple_register_state": {
        "challenge": "UMtYVPZxSABexvUOg3q1Ms9eSJMUObAoHAoRxI70vYk",
@@ -1052,7 +1042,6 @@
         "userVerification": "discouraged"
        },
        "challenge": "Hm6FEe65YsXmuEl9txkeWqfk3nXSJjjPxKs2ioo4aRQ",
-       "excludeCredentials": [],
        "pubKeyCredParams": [
         {
          "alg": -48,
@@ -1134,16 +1123,7 @@
          "alg": -65535,
          "type": "public-key"
         }
-       ],
-       "rp": {
-        "id": "localhost",
-        "name": "FIDO2/WebAuthn PQC Developer Tools"
-       },
-       "user": {
-        "displayName": "A. User",
-        "id": "dXNlcl9pZA",
-        "name": "a_user"
-       }
+       ]
       },
       "simple_register_state": {
        "challenge": "Hm6FEe65YsXmuEl9txkeWqfk3nXSJjjPxKs2ioo4aRQ",
@@ -1323,7 +1303,6 @@
         "userVerification": "discouraged"
        },
        "challenge": "LkBxVVMn44OGxvuv6TiKMxF0uc9xogtbDNisuBd2N84",
-       "excludeCredentials": [],
        "pubKeyCredParams": [
         {
          "alg": -48,
@@ -1405,16 +1384,7 @@
          "alg": -65535,
          "type": "public-key"
         }
-       ],
-       "rp": {
-        "id": "localhost",
-        "name": "FIDO2/WebAuthn PQC Developer Tools"
-       },
-       "user": {
-        "displayName": "A. User",
-        "id": "dXNlcl9pZA",
-        "name": "a_user"
-       }
+       ]
       },
       "simple_register_state": {
        "challenge": "LkBxVVMn44OGxvuv6TiKMxF0uc9xogtbDNisuBd2N84",
@@ -1594,7 +1564,6 @@
         "userVerification": "discouraged"
        },
        "challenge": "uW-YlKUw-IMGcmMawegXutnr-w5VDLRBv6Fc7maqrEo",
-       "excludeCredentials": [],
        "pubKeyCredParams": [
         {
          "alg": -48,
@@ -1676,16 +1645,7 @@
          "alg": -65535,
          "type": "public-key"
         }
-       ],
-       "rp": {
-        "id": "localhost",
-        "name": "FIDO2/WebAuthn PQC Developer Tools"
-       },
-       "user": {
-        "displayName": "A. User",
-        "id": "dXNlcl9pZA",
-        "name": "a_user"
-       }
+       ]
       },
       "simple_register_state": {
        "challenge": "uW-YlKUw-IMGcmMawegXutnr-w5VDLRBv6Fc7maqrEo",
@@ -1865,7 +1825,6 @@
         "userVerification": "discouraged"
        },
        "challenge": "ZSss6XsmcLS5IovM_q76pQPfW0pxduWIOLeMX1ebm-4",
-       "excludeCredentials": [],
        "pubKeyCredParams": [
         {
          "alg": -48,
@@ -1947,16 +1906,7 @@
          "alg": -65535,
          "type": "public-key"
         }
-       ],
-       "rp": {
-        "id": "localhost",
-        "name": "FIDO2/WebAuthn PQC Developer Tools"
-       },
-       "user": {
-        "displayName": "A. User",
-        "id": "dXNlcl9pZA",
-        "name": "a_user"
-       }
+       ]
       },
       "simple_register_state": {
        "challenge": "ZSss6XsmcLS5IovM_q76pQPfW0pxduWIOLeMX1ebm-4",
@@ -2140,7 +2090,6 @@
         "userVerification": "discouraged"
        },
        "challenge": "Nn_pxqdLH64zLsuX5ShdQH1FtuLj9fQdVYXHxDbw_Ok",
-       "excludeCredentials": [],
        "pubKeyCredParams": [
         {
          "alg": -48,
@@ -2222,16 +2171,7 @@
          "alg": -65535,
          "type": "public-key"
         }
-       ],
-       "rp": {
-        "id": "localhost",
-        "name": "FIDO2/WebAuthn PQC Developer Tools"
-       },
-       "user": {
-        "displayName": "A. User",
-        "id": "dXNlcl9pZA",
-        "name": "a_user"
-       }
+       ]
       },
       "simple_register_state": {
        "challenge": "Nn_pxqdLH64zLsuX5ShdQH1FtuLj9fQdVYXHxDbw_Ok",

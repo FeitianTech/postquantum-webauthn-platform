@@ -60,7 +60,6 @@
         "userVerification": "discouraged"
        },
        "challenge": "BS3WXrQ94yu1IM0gQyuuGVDMRL20RXOIgCxVGSl2mVs",
-       "excludeCredentials": [],
        "pubKeyCredParams": [
         {
          "alg": -48,
@@ -142,16 +141,7 @@
          "alg": -65535,
          "type": "public-key"
         }
-       ],
-       "rp": {
-        "id": "localhost",
-        "name": "FIDO2/WebAuthn PQC Developer Tools"
-       },
-       "user": {
-        "displayName": "A. User",
-        "id": "dXNlcl9pZA",
-        "name": "a_user"
-       }
+       ]
       },
       "simple_register_state": {
        "challenge": "BS3WXrQ94yu1IM0gQyuuGVDMRL20RXOIgCxVGSl2mVs",
@@ -947,7 +937,6 @@
         "userVerification": "discouraged"
        },
        "challenge": "ASxcMRNc9WT5ue_-sGLB9YQ43CTA2PY5WJQZ9c94GoE",
-       "excludeCredentials": [],
        "pubKeyCredParams": [
         {
          "alg": -48,
@@ -1029,16 +1018,7 @@
          "alg": -65535,
          "type": "public-key"
         }
-       ],
-       "rp": {
-        "id": "localhost",
-        "name": "FIDO2/WebAuthn PQC Developer Tools"
-       },
-       "user": {
-        "displayName": "A. User",
-        "id": "dXNlcl9pZA",
-        "name": "a_user"
-       }
+       ]
       },
       "simple_register_state": {
        "challenge": "ASxcMRNc9WT5ue_-sGLB9YQ43CTA2PY5WJQZ9c94GoE",
@@ -1218,7 +1198,6 @@
         "userVerification": "discouraged"
        },
        "challenge": "DbIlkobG_ZD7Pzl2zm3ImosMgSDlxJrDB2RI45E8FRk",
-       "excludeCredentials": [],
        "pubKeyCredParams": [
         {
          "alg": -48,
@@ -1300,16 +1279,7 @@
          "alg": -65535,
          "type": "public-key"
         }
-       ],
-       "rp": {
-        "id": "localhost",
-        "name": "FIDO2/WebAuthn PQC Developer Tools"
-       },
-       "user": {
-        "displayName": "A. User",
-        "id": "dXNlcl9pZA",
-        "name": "a_user"
-       }
+       ]
       },
       "simple_register_state": {
        "challenge": "DbIlkobG_ZD7Pzl2zm3ImosMgSDlxJrDB2RI45E8FRk",

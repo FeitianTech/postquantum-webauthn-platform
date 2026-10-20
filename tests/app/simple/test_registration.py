@@ -40,6 +40,15 @@ def test_a_begin_excludes_the_credentials_it_is_sent_and_keeps_none_in_the_sessi
         assert "simple_credentials" not in session
 
 
+def test_a_begin_keeps_only_what_the_checks_read_and_none_of_its_exclude_list():
+    client = entry_app().test_client()
+    begin = client.post(f"/api/register/begin?email={EMAIL}", json={"credentials": [Authenticator().stored_credential_entry()]})
+
+    assert len(begin.get_json()["publicKey"]["excludeCredentials"]) == 1
+    with client.session_transaction() as session:
+        assert sorted(session["simple_register_public_key"]) == ["authenticatorSelection", "challenge", "pubKeyCredParams"]
+
+
 def test_a_complete_body_that_is_no_object_finds_no_registration_state():
     response = entry_app().test_client().post(
         f"/api/register/complete?email={EMAIL}", json=["not", "a", "registration"]

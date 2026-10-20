@@ -60,7 +60,6 @@
         "userVerification": "discouraged"
        },
        "challenge": "-ykxNVmBKGtgsi8qvTDxAvgZ3kRIH3Hb4ng7DKaiUxM",
-       "excludeCredentials": [],
        "pubKeyCredParams": [
         {
          "alg": -48,
@@ -142,16 +141,7 @@
          "alg": -65535,
          "type": "public-key"
         }
-       ],
-       "rp": {
-        "id": "localhost",
-        "name": "FIDO2/WebAuthn PQC Developer Tools"
-       },
-       "user": {
-        "displayName": "A. User",
-        "id": "dXNlcl9pZA",
-        "name": "a_user"
-       }
+       ]
       },
       "simple_register_state": {
        "challenge": "-ykxNVmBKGtgsi8qvTDxAvgZ3kRIH3Hb4ng7DKaiUxM",
@@ -947,7 +937,6 @@
         "userVerification": "discouraged"
        },
        "challenge": "Hw0Z30FvRCpLXXHDOcefdxu3ZrIxrW3EuhySYTDIaJQ",
-       "excludeCredentials": [],
        "pubKeyCredParams": [
         {
          "alg": -48,
@@ -1029,16 +1018,7 @@
          "alg": -65535,
          "type": "public-key"
         }
-       ],
-       "rp": {
-        "id": "localhost",
-        "name": "FIDO2/WebAuthn PQC Developer Tools"
-       },
-       "user": {
-        "displayName": "A. User",
-        "id": "dXNlcl9pZA",
-        "name": "a_user"
-       }
+       ]
       },
       "simple_register_state": {
        "challenge": "Hw0Z30FvRCpLXXHDOcefdxu3ZrIxrW3EuhySYTDIaJQ",
@@ -2052,7 +2032,6 @@
         "userVerification": "discouraged"
        },
        "challenge": "pw9QzpCmBm-XmpGg2k9B5lN8YLv55Km1UYBivvHY5R0",
-       "excludeCredentials": [],
        "pubKeyCredParams": [
         {
          "alg": -48,
@@ -2134,16 +2113,7 @@
          "alg": -65535,
          "type": "public-key"
         }
-       ],
-       "rp": {
-        "id": "localhost",
-        "name": "FIDO2/WebAuthn PQC Developer Tools"
-       },
-       "user": {
-        "displayName": "A. User",
-        "id": "dXNlcl9pZA",
-        "name": "a_user"
-       }
+       ]
       },
       "simple_register_state": {
        "challenge": "pw9QzpCmBm-XmpGg2k9B5lN8YLv55Km1UYBivvHY5R0",
@@ -3385,7 +3355,6 @@
         "userVerification": "discouraged"
        },
        "challenge": "ilPZHmcJBng1iukC-ueN-8Jib2yg0US40LGqG-FO4eM",
-       "excludeCredentials": [],
        "pubKeyCredParams": [
         {
          "alg": -48,
@@ -3467,16 +3436,7 @@
          "alg": -65535,
          "type": "public-key"
         }
-       ],
-       "rp": {
-        "id": "localhost",
-        "name": "FIDO2/WebAuthn PQC Developer Tools"
-       },
-       "user": {
-        "displayName": "A. User",
-        "id": "dXNlcl9pZA",
-        "name": "a_user"
-       }
+       ]
       },
       "simple_register_state": {
        "challenge": "ilPZHmcJBng1iukC-ueN-8Jib2yg0US40LGqG-FO4eM",
