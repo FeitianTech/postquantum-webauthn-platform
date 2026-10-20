@@ -68,15 +68,24 @@ def test_a_root_the_mds_trusts_makes_the_attestation_valid(evaluate):
     assert outcome["metadata_lookup_source"] == "aaguid"
 
 
-def test_an_expired_leaf_makes_the_chain_invalid_and_an_untrusted_entry_is_reported(evaluate):
+def test_an_expired_leaf_makes_the_chain_invalid_and_an_uploaded_entry_is_a_warning(evaluate):
     outcome = evaluate([LEAF], fido_trusted=False, now=AFTER_EXPIRY)
 
     assert outcome["errors"] == [
         "certificate_out_of_validity: CN=Classical Leaf,OU=Authenticator Attestation,O=Characterization Test,C=SE",
-        "metadata_not_fido_trusted",
     ]
+    assert outcome["warnings"] == ["metadata_not_fido_trusted"]
     assert outcome["checks"] == {"trusted_ca": True, "chain": False, "fido_mds": False}
     assert outcome["root_valid"] is False
+
+
+def test_a_root_from_the_visitors_own_metadata_is_valid_with_a_warning(evaluate):
+    outcome = evaluate([LEAF], fido_trusted=False)
+
+    assert outcome["errors"] == []
+    assert outcome["warnings"] == ["metadata_not_fido_trusted"]
+    assert outcome["checks"] == {"trusted_ca": True, "chain": True, "fido_mds": False}
+    assert outcome["root_valid"] is True
 
 
 def test_an_expired_leaf_whose_subject_cryptography_will_not_read_is_reported(evaluate):

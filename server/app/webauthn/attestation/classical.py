@@ -27,7 +27,8 @@ def _evaluate_classical_attestation_root(
     """Evaluate attestation trust using classical x509 verification.
 
     Each stage adds its errors in turn: the chain's signatures, the
-    certificates' dates, the metadata evaluation, then the root and FIDO trust.
+    certificates' dates, the metadata evaluation, then the root. A root from
+    the visitor's own uploaded metadata is a warning, not an error.
     """
 
     warnings: list[str] = []
@@ -51,8 +52,10 @@ def _evaluate_classical_attestation_root(
         if fido_status is True:
             checks["fido_mds"] = True
         elif fido_status is False:
+            # The visitor's own upload vouches for the root, as it does for a
+            # prototype authenticator under test; FIDO's metadata does not.
             checks["fido_mds"] = False
-            errors.append("metadata_not_fido_trusted")
+            warnings.append("metadata_not_fido_trusted")
 
     chain_valid = _chain_valid(metadata.trust_details, manual_chain_valid, chain_valid_dates)
     if trusted_ca is True:
