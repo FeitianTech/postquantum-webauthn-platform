@@ -15,6 +15,7 @@ from tests.app.security.ceremony_helpers import (
     ORIGIN,
     Authenticator,
     b64u,
+    begin_simple_registration,
     registration_payload,
     unb64u,
 )
@@ -140,6 +141,45 @@ def test_a_registration_challenge_past_its_lifetime_is_refused_as_expired():
     with client.session_transaction() as session:
         assert "register_rp_id" not in session
         assert "simple_register_public_key" not in session
+        assert "simple_register_user" not in session
+
+
+def test_a_complete_for_another_username_than_its_begin_is_refused_before_fido2(credential_store, monkeypatch, tmp_path):
+    client = entry_app().test_client()
+    challenge = begin_simple_registration(client)
+    servers = []
+    monkeypatch.setattr(relying_party, "create_fido_server", lambda **kwargs: servers.append(kwargs))
+
+    complete = client.post(
+        "/api/register/complete?email=other@example.com",
+        json=registration_payload(Authenticator(), challenge=challenge),
+        headers={"Origin": ORIGIN},
+    )
+
+    assert complete.status_code == 400
+    assert complete.get_json() == {
+        "error": "This registration began for another username. Please restart the registration process."
+    }
+    assert servers == []
+    assert list((tmp_path / "credentials").rglob("*.json")) == []
+    with client.session_transaction() as session:
+        assert not {"register_rp_id", "simple_register_public_key", "simple_register_user"} & set(session)
+
+
+def test_a_username_with_spaces_around_it_names_the_same_account(credential_store):
+    client = entry_app().test_client()
+    padded = urlencode({"email": f"  {EMAIL} "})
+    begin = client.post(f"/api/register/begin?{padded}", json={"credentials": []})
+    challenge = unb64u(begin.get_json()["publicKey"]["challenge"])
+
+    complete = client.post(
+        f"/api/register/complete?{padded}",
+        json=registration_payload(Authenticator(), challenge=challenge),
+        headers={"Origin": ORIGIN},
+    )
+
+    assert complete.status_code == 200, complete.get_json()
+    assert complete.get_json()["storedCredential"]["email"] == EMAIL
 
 
 def _register_complete_payload(*, state=None):
@@ -173,6 +213,7 @@ def test_simple_register_complete_returns_400_and_cleans_state_when_verification
             session_state["simple_register_state"] = {"challenge": "session-state", "issued_at": time.time()}
             session_state["register_rp_id"] = "example.com"
             session_state["simple_register_public_key"] = {"challenge": "saved"}
+            session_state["simple_register_user"] = {"name": "user@example.com"}
 
         response = client.post(
             "/api/register/complete?email=user@example.com",

@@ -95,6 +95,9 @@
        "challenge": "SyAu1EEVzf_I1Ms-nhHxHwVpP9VGZMN8nwYQKiVy0HI",
        "issued_at": 1790000000.0,
        "user_verification": "discouraged"
+      },
+      "simple_register_user": {
+       "name": "user@example.com"
       }
      }
     }

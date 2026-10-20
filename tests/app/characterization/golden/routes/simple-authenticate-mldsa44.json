@@ -95,6 +95,9 @@
        "challenge": "P4X8qFxsv73Bgn0tZhTZ2Temr2GK5vypdeLVMitsrnw",
        "issued_at": 1790000000.0,
        "user_verification": "discouraged"
+      },
+      "simple_register_user": {
+       "name": "user@example.com"
       }
      }
     }

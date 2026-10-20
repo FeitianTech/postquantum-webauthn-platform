@@ -177,6 +177,14 @@ def _(r: Recorder) -> None:
     r.post(client, "/api/register/begin?email=../escape", json={"credentials": []})
     # No username at all.
     r.post(client, "/api/register/begin", json={"credentials": []})
+    # A complete for another username than its begin's.
+    challenge = _simple_begin(r, client)
+    r.post(
+        client,
+        "/api/register/complete?email=other@example.com",
+        json=m.registration_payload(authenticator, challenge=challenge),
+        headers=HEADERS,
+    )
 
 
 @scenario("simple-authenticate")

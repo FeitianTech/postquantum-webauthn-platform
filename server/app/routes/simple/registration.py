@@ -69,6 +69,13 @@ def _complete_inputs(response: Any, credential_response: Mapping[str, Any]) -> d
     }
 
 
+def _drop_begun_registration() -> None:
+    """Drop what begin kept beside the ceremony's state, so the next attempt starts clean."""
+
+    for key in ("register_rp_id", "simple_register_public_key", "simple_register_user"):
+        session.pop(key, None)
+
+
 def _consume_registration_state() -> tuple[Any, Any]:
     """The session's ceremony state, consumed; or the 400 when it is missing, replayed or stale."""
 
@@ -77,9 +84,7 @@ def _consume_registration_state() -> tuple[Any, Any]:
     # Consuming the challenge server-side is what makes it single-use.
     state = session.pop("simple_register_state", None)
     if state is None:
-        # Drop any stale ceremony leftovers so the next attempt starts clean.
-        session.pop("register_rp_id", None)
-        session.pop("simple_register_public_key", None)
+        _drop_begun_registration()
         return None, (
             jsonify(
                 {
@@ -91,8 +96,7 @@ def _consume_registration_state() -> tuple[Any, Any]:
 
     challenge_verdict = consume_ceremony_state(state)
     if challenge_verdict != CHALLENGE_FRESH:
-        session.pop("register_rp_id", None)
-        session.pop("simple_register_public_key", None)
+        _drop_begun_registration()
         if challenge_verdict == CHALLENGE_REPLAYED:
             message = (
                 "This registration challenge has already been used. "
@@ -102,6 +106,20 @@ def _consume_registration_state() -> tuple[Any, Any]:
             message = "Registration challenge has expired. Please restart the registration process."
         return None, (jsonify({"error": message}), 400)
     return state, None
+
+
+def _begun_username() -> tuple[str | None, Any]:
+    """The username begin issued the options for, which complete's must be; or the 400 when it is another."""
+
+    begun = session.pop("simple_register_user", None)
+    username = begun.get("name") if isinstance(begun, Mapping) else None
+    if username is None or username != account.read_username(request.args.get("email"))[0]:
+        _drop_begun_registration()
+        return None, (
+            jsonify({"error": "This registration began for another username. Please restart the registration process."}),
+            400,
+        )
+    return username, None
 
 
 def _verify_registration(
@@ -190,7 +208,6 @@ def _attestation_error_response(attestation_checks: Mapping[str, Any]) -> Any:
 @bp.route("/api/register/complete", methods=["POST"])
 @mds_provisioning.waits_for_the_snapshot
 def register_complete():
-    uname = request.args.get("email")
     response = json_body.json_object()
     inner_response = response.get("response")
     credential_response = inner_response if isinstance(inner_response, Mapping) else {}
@@ -205,13 +222,18 @@ def register_complete():
     if error_response is not None:
         return error_response
 
+    # Refused before fido2 runs: once it has accepted, nothing about the name may fail.
+    username, error_response = _begun_username()
+    if error_response is not None:
+        return error_response
+
     verified, error_response = _verify_registration(state, response, credential_response, rp_id)
     if error_response is not None:
         return error_response
 
     # Read only now: the attestation's certificates are parsed for a ceremony fido2 accepted.
     inputs = _complete_inputs(response, credential_response)
-    reg = _registration_context(uname, response, credential_response, inputs, verified)
+    reg = _registration_context(username, response, credential_response, inputs, verified)
     error_response = _attestation_error_response(verified["attestation_checks"])
     if error_response is not None:
         return error_response
@@ -244,7 +266,7 @@ _SIMPLE_ALLOWED_ALGORITHMS: tuple[int, ...] = tuple(
 @bp.route("/api/register/begin", methods=["POST"])
 @ceremony_session.ceremony_begin
 def register_begin():
-    _username, refusal = account.read_username(request.args.get("email"))
+    username, refusal = account.read_username(request.args.get("email"))
     if refusal is not None:
         return jsonify({"error": refusal}), 400
     payload = json_body.json_object()
@@ -278,6 +300,7 @@ def register_begin():
     # Stamped so /complete can refuse a stale state replayed from an old cookie.
     session["simple_register_state"] = stamp_ceremony_state(dict(state))
     session["register_rp_id"] = rp_id
+    session["simple_register_user"] = {"name": username}
 
     options_dict = dict(options)
     # The ceremony state (and therefore the challenge) is deliberately NOT

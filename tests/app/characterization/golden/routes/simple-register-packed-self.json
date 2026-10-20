@@ -95,6 +95,9 @@
        "challenge": "F8bM5R6_E6SdKuPGRNPSkds6JHf8gtzqObSg5AXjh5I",
        "issued_at": 1790000000.0,
        "user_verification": "discouraged"
+      },
+      "simple_register_user": {
+       "name": "user@example.com"
       }
      }
     }

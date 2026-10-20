@@ -95,6 +95,9 @@
        "challenge": "BS3WXrQ94yu1IM0gQyuuGVDMRL20RXOIgCxVGSl2mVs",
        "issued_at": 1790000000.0,
        "user_verification": "discouraged"
+      },
+      "simple_register_user": {
+       "name": "user@example.com"
       }
      }
     }
@@ -920,6 +923,9 @@
        "challenge": "ASxcMRNc9WT5ue_-sGLB9YQ43CTA2PY5WJQZ9c94GoE",
        "issued_at": 1790000000.0,
        "user_verification": "discouraged"
+      },
+      "simple_register_user": {
+       "name": "user@example.com"
       }
      }
     }
@@ -1129,6 +1135,9 @@
        "challenge": "DbIlkobG_ZD7Pzl2zm3ImosMgSDlxJrDB2RI45E8FRk",
        "issued_at": 1790000000.0,
        "user_verification": "discouraged"
+      },
+      "simple_register_user": {
+       "name": "user@example.com"
       }
      }
     }

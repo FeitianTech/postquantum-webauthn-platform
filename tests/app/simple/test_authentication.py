@@ -99,6 +99,25 @@ def test_a_complete_for_another_email_than_its_begin_is_refused(credential_store
     assert complete.get_json()["error"].startswith("This authentication began for another email.")
 
 
+def test_a_complete_checks_the_stored_counter_of_the_username_its_begin_checked(credential_store):
+    client = entry_app().test_client()
+    authenticator = Authenticator()
+    register_simple(client, authenticator, counter=5)
+    stored = [authenticator.stored_credential_entry()]
+
+    # The same account with spaces around its name: the record stored under it holds counter 5.
+    begin = client.post(f"/api/authenticate/begin?{urlencode({'email': f' {EMAIL} '})}", json={"credentials": stored})
+    challenge = unb64u(begin.get_json()["publicKey"]["challenge"])
+    complete = client.post(
+        f"/api/authenticate/complete?email={EMAIL}",
+        json=simple_complete_body(assertion_payload(authenticator, challenge=challenge, counter=4), stored),
+        headers={"Origin": ORIGIN},
+    )
+
+    assert complete.status_code == 400
+    assert "stored 5, received 4" in complete.get_json()["error"]
+
+
 def test_a_begin_body_that_is_no_object_offers_no_credential():
     response = entry_app().test_client().post(f"/api/authenticate/begin?email={EMAIL}", json=["not", "an", "object"])
 

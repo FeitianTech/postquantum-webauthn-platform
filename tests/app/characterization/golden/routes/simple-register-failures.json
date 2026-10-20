@@ -142,6 +142,9 @@
        "challenge": "UMtYVPZxSABexvUOg3q1Ms9eSJMUObAoHAoRxI70vYk",
        "issued_at": 1790000000.0,
        "user_verification": "discouraged"
+      },
+      "simple_register_user": {
+       "name": "user@example.com"
       }
      }
     }
@@ -1025,6 +1028,9 @@
        "challenge": "Hm6FEe65YsXmuEl9txkeWqfk3nXSJjjPxKs2ioo4aRQ",
        "issued_at": 1790000000.0,
        "user_verification": "discouraged"
+      },
+      "simple_register_user": {
+       "name": "user@example.com"
       }
      }
     }
@@ -1234,6 +1240,9 @@
        "challenge": "LkBxVVMn44OGxvuv6TiKMxF0uc9xogtbDNisuBd2N84",
        "issued_at": 1790000000.0,
        "user_verification": "discouraged"
+      },
+      "simple_register_user": {
+       "name": "user@example.com"
       }
      }
     }
@@ -1443,6 +1452,9 @@
        "challenge": "uW-YlKUw-IMGcmMawegXutnr-w5VDLRBv6Fc7maqrEo",
        "issued_at": 1790000000.0,
        "user_verification": "discouraged"
+      },
+      "simple_register_user": {
+       "name": "user@example.com"
       }
      }
     }
@@ -1652,6 +1664,9 @@
        "challenge": "ZSss6XsmcLS5IovM_q76pQPfW0pxduWIOLeMX1ebm-4",
        "issued_at": 1790000000.0,
        "user_verification": "discouraged"
+      },
+      "simple_register_user": {
+       "name": "user@example.com"
       }
      }
     }
@@ -1863,6 +1878,218 @@
    "bodySha256": "469b97a018c39ff1489a7b0ec94deaf2adf3009d8dd98fc7e1fa3bce0689e27a",
    "body": {
     "error": "Please enter a username."
+   }
+  },
+  {
+   "request": "POST /api/register/begin?email=user@example.com",
+   "status": 200,
+   "headers": [
+    [
+     "Content-Type",
+     "application/json"
+    ],
+    [
+     "Content-Length",
+     "635"
+    ],
+    [
+     "X-Content-Type-Options",
+     "nosniff"
+    ],
+    [
+     "X-Frame-Options",
+     "DENY"
+    ],
+    [
+     "Referrer-Policy",
+     "no-referrer"
+    ],
+    [
+     "Content-Security-Policy",
+     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; require-trusted-types-for 'script'; trusted-types nextjs nextjs#bundler; report-uri /api/csp-report; report-to csp"
+    ],
+    [
+     "Reporting-Endpoints",
+     "csp=\"/api/csp-report\""
+    ],
+    [
+     "Permissions-Policy",
+     "accelerometer=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-create=(self), publickey-credentials-get=(self), screen-wake-lock=(), usb=(), xr-spatial-tracking=()"
+    ],
+    [
+     "Vary",
+     "Cookie"
+    ]
+   ],
+   "cookies": [
+    {
+     "name": "session",
+     "attributes": [
+      "HttpOnly",
+      "Path=/",
+      "SameSite=Lax"
+     ],
+     "contents": {
+      "register_rp_id": "localhost",
+      "simple_register_public_key": {
+       "authenticatorSelection": {
+        "authenticatorAttachment": "cross-platform",
+        "requireResidentKey": false,
+        "residentKey": "discouraged",
+        "userVerification": "discouraged"
+       },
+       "challenge": "NcgT805QNRd50mXTGtUrYTNo6iByRpgiJXVyZmB8g4g",
+       "pubKeyCredParams": [
+        {
+         "alg": -50,
+         "type": "public-key"
+        },
+        {
+         "alg": -49,
+         "type": "public-key"
+        },
+        {
+         "alg": -48,
+         "type": "public-key"
+        },
+        {
+         "alg": -8,
+         "type": "public-key"
+        },
+        {
+         "alg": -7,
+         "type": "public-key"
+        },
+        {
+         "alg": -257,
+         "type": "public-key"
+        },
+        {
+         "alg": -35,
+         "type": "public-key"
+        }
+       ]
+      },
+      "simple_register_state": {
+       "challenge": "NcgT805QNRd50mXTGtUrYTNo6iByRpgiJXVyZmB8g4g",
+       "issued_at": 1790000000.0,
+       "user_verification": "discouraged"
+      },
+      "simple_register_user": {
+       "name": "user@example.com"
+      }
+     }
+    }
+   ],
+   "bodySha256": "33d05cc2961a1451b3edea2a3d46db443097997320fc55c4280c895329d1bf2a",
+   "body": {
+    "publicKey": {
+     "authenticatorSelection": {
+      "authenticatorAttachment": "cross-platform",
+      "requireResidentKey": false,
+      "residentKey": "discouraged",
+      "userVerification": "discouraged"
+     },
+     "challenge": "NcgT805QNRd50mXTGtUrYTNo6iByRpgiJXVyZmB8g4g",
+     "excludeCredentials": [],
+     "pubKeyCredParams": [
+      {
+       "alg": -50,
+       "type": "public-key"
+      },
+      {
+       "alg": -49,
+       "type": "public-key"
+      },
+      {
+       "alg": -48,
+       "type": "public-key"
+      },
+      {
+       "alg": -8,
+       "type": "public-key"
+      },
+      {
+       "alg": -7,
+       "type": "public-key"
+      },
+      {
+       "alg": -257,
+       "type": "public-key"
+      },
+      {
+       "alg": -35,
+       "type": "public-key"
+      }
+     ],
+     "rp": {
+      "id": "localhost",
+      "name": "FIDO2/WebAuthn PQC Developer Tools"
+     },
+     "user": {
+      "displayName": "A. User",
+      "id": "dXNlcl9pZA",
+      "name": "a_user"
+     }
+    }
+   }
+  },
+  {
+   "request": "POST /api/register/complete?email=other@example.com",
+   "status": 400,
+   "headers": [
+    [
+     "Content-Type",
+     "application/json"
+    ],
+    [
+     "Content-Length",
+     "99"
+    ],
+    [
+     "X-Content-Type-Options",
+     "nosniff"
+    ],
+    [
+     "X-Frame-Options",
+     "DENY"
+    ],
+    [
+     "Referrer-Policy",
+     "no-referrer"
+    ],
+    [
+     "Content-Security-Policy",
+     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; require-trusted-types-for 'script'; trusted-types nextjs nextjs#bundler; report-uri /api/csp-report; report-to csp"
+    ],
+    [
+     "Reporting-Endpoints",
+     "csp=\"/api/csp-report\""
+    ],
+    [
+     "Permissions-Policy",
+     "accelerometer=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-create=(self), publickey-credentials-get=(self), screen-wake-lock=(), usb=(), xr-spatial-tracking=()"
+    ],
+    [
+     "Vary",
+     "Cookie"
+    ]
+   ],
+   "cookies": [
+    {
+     "name": "session",
+     "attributes": [
+      "Max-Age=0",
+      "HttpOnly",
+      "Path=/",
+      "SameSite=Lax"
+     ],
+     "contents": null
+    }
+   ],
+   "bodySha256": "29da8c43d16a71f1250b616b0ec6ed3701d970ffca084fc29f0d976127445cc8",
+   "body": {
+    "error": "This registration began for another username. Please restart the registration process."
    }
   }
  ]

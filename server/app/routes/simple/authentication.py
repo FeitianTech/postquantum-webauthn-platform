@@ -44,8 +44,7 @@ def credentials_digest(serialized: list[dict[str, Any]]) -> str:
 @bp.route("/api/authenticate/begin", methods=["POST"])
 @ceremony_session.ceremony_begin
 def authenticate_begin():
-    uname = request.args.get("email")
-    _username, refusal = account.read_username(uname)
+    username, refusal = account.read_username(request.args.get("email"))
     if refusal is not None:
         return jsonify({"error": refusal}), 400
     payload = json_body.json_object()
@@ -62,7 +61,7 @@ def authenticate_begin():
         abort(404)
 
     session[_CREDENTIALS_DIGEST_KEY] = credentials_digest(serialized)
-    session["simple_credentials_email"] = uname
+    session["simple_credentials_email"] = username
 
     rp_id = relying_party.determine_rp_id()
     server = relying_party.create_fido_server(rp_id=rp_id)
@@ -145,7 +144,8 @@ def _consume_authentication_state(
             400,
         )
     # The email names whose stored records the counter is checked against: the one begin was for.
-    if session.get("simple_credentials_email") != request.args.get("email"):
+    begun_email = session.get("simple_credentials_email")
+    if begun_email is None or begun_email != account.read_username(request.args.get("email"))[0]:
         session.pop("simple_credentials_email", None)
         return None, (
             jsonify({"error": "This authentication began for another email. Please restart the authentication flow."}),
@@ -250,8 +250,7 @@ def authenticate_complete():
     )
     sign_count = _asserted_sign_count(response_mapping)
 
-    uname = request.args.get("email")
-    session.pop("simple_credentials_email", None)
+    username = session.pop("simple_credentials_email", None)
 
     if sign_count is None or not authenticated_id_bytes:
         return (
@@ -267,7 +266,7 @@ def authenticate_complete():
         )
 
     rejection, sign_count_verdict = stored_sign_count.enforce_sign_count(
-        uname,
+        username,
         authenticated_id_bytes,
         sign_count,
         stored_sign_count.client_supplied_sign_count(session_credentials, authenticated_id_bytes),

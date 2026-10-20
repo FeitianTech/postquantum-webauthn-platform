@@ -95,6 +95,9 @@
        "challenge": "ccT_dSjTN9ZiSsHKl1NAshMTRTtU9Ucv-pYhVcD5NcU",
        "issued_at": 1790000000.0,
        "user_verification": "discouraged"
+      },
+      "simple_register_user": {
+       "name": "user@example.com"
       }
      }
     }
