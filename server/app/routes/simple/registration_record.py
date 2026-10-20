@@ -33,9 +33,11 @@ class SimpleRegistration:
     view; ``build_stored_credential_context`` the record the browser keeps.
     """
 
-    # The account begin issued the options for: its username and user handle.
+    # The account begin issued the options for, its username and user handle,
+    # and how many credentials those options excluded.
     uname: Any
     user_id: bytes
+    exclude_credentials_count: int
     # What the request carried and fido2 verified.
     response: Any
     attestation_format: Any
@@ -142,7 +144,7 @@ def _credential_info(reg: SimpleRegistration) -> dict[str, Any]:
             "timeout": 90000,
         },
         "properties": {
-            "excludeCredentialsSentCount": 0,
+            "excludeCredentialsSentCount": reg.exclude_credentials_count,
             "excludeCredentialsUsed": False,
             "credentialIdLength": len(reg.auth_data.credential_data.credential_id),
             "fakeCredentialIdLengthRequested": None,
@@ -279,7 +281,7 @@ def _debug_info(reg: SimpleRegistration) -> dict[str, Any]:
     return {
         "attestationFormat": reg.attestation_format,
         "algorithmsUsed": [reg.algo],
-        "excludeCredentialsUsed": False,
+        "excludeCredentialsUsed": reg.exclude_credentials_count > 0,
         "hintsUsed": [],
         "credProtectUsed": "none",
         "enforceCredProtectUsed": False,

@@ -72,7 +72,7 @@ def _complete_inputs(response: Any, credential_response: Mapping[str, Any]) -> d
 def _drop_begun_registration() -> None:
     """Drop what begin kept beside the ceremony's state, so the next attempt starts clean."""
 
-    for key in ("register_rp_id", "simple_register_public_key", "simple_register_user"):
+    for key in ("register_rp_id", "simple_register_public_key", "simple_register_user", "simple_register_excluded"):
         session.pop(key, None)
 
 
@@ -164,12 +164,18 @@ def _verify_registration(
 
 
 def _registration_context(
-    user: Mapping[str, Any], response: Any, credential_response: Mapping[str, Any], inputs: Mapping[str, Any], verified: Mapping[str, Any]
+    user: Mapping[str, Any],
+    excluded: int,
+    response: Any,
+    credential_response: Mapping[str, Any],
+    inputs: Mapping[str, Any],
+    verified: Mapping[str, Any],
 ) -> registration_record.SimpleRegistration:
     attestation_checks = verified["attestation_checks"]
     return registration_record.SimpleRegistration(
         uname=user["name"],
         user_id=user["id"],
+        exclude_credentials_count=excluded,
         response=response,
         **inputs,
         auth_data=verified["auth_data"],
@@ -228,6 +234,7 @@ def register_complete():
     user, error_response = _begun_user()
     if error_response is not None:
         return error_response
+    excluded = session.pop("simple_register_excluded", 0)
 
     verified, error_response = _verify_registration(state, response, credential_response, rp_id)
     if error_response is not None:
@@ -235,7 +242,7 @@ def register_complete():
 
     # Read only now: the attestation's certificates are parsed for a ceremony fido2 accepted.
     inputs = _complete_inputs(response, credential_response)
-    reg = _registration_context(user, response, credential_response, inputs, verified)
+    reg = _registration_context(user, excluded, response, credential_response, inputs, verified)
     error_response = _attestation_error_response(verified["attestation_checks"])
     if error_response is not None:
         return error_response
@@ -316,5 +323,7 @@ def register_begin():
         for name in request_expectations.CHECKED_REQUEST_MEMBERS
         if name in public_key_options
     }
+    # Their number only: the record says how many were excluded.
+    session["simple_register_excluded"] = len(public_key_options.get("excludeCredentials") or [])
 
     return jsonify(options_dict)

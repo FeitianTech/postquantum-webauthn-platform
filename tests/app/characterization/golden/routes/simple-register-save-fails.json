@@ -62,6 +62,7 @@
      ],
      "contents": {
       "register_rp_id": "localhost",
+      "simple_register_excluded": 0,
       "simple_register_public_key": {
        "authenticatorSelection": {
         "authenticatorAttachment": "cross-platform",
@@ -883,6 +884,7 @@
      ],
      "contents": {
       "register_rp_id": "localhost",
+      "simple_register_excluded": 0,
       "simple_register_public_key": {
        "authenticatorSelection": {
         "authenticatorAttachment": "cross-platform",
@@ -1098,6 +1100,7 @@
      ],
      "contents": {
       "register_rp_id": "localhost",
+      "simple_register_excluded": 0,
       "simple_register_public_key": {
        "authenticatorSelection": {
         "authenticatorAttachment": "cross-platform",

@@ -19,6 +19,7 @@ def _registration(*, auth_data_class=AuthenticatorData, **changes):
     fields = {
         "uname": "user@example.com",
         "user_id": USER_ID,
+        "exclude_credentials_count": 0,
         "response": {},
         "attestation_format": "none",
         "attestation_statement": {},
@@ -101,3 +102,18 @@ def test_the_record_keeps_the_accounts_user_handle_and_names_it_by_its_username(
     assert reg.rp_info["userHandle"]["hex"] == USER_ID.hex()
     assert reg.stored_credential["userHandle"] == encode_base64url(USER_ID)
     assert (reg.stored_credential["userName"], reg.stored_credential["displayName"]) == ("user@example.com", "user@example.com")
+
+
+def test_the_record_says_how_many_credentials_begin_excluded():
+    excluding = _registration(exclude_credentials_count=2)
+    excluding_none = _registration()
+
+    for reg in (excluding, excluding_none):
+        simple_registration_record.initialize_registration_context(reg)
+        simple_registration_record.populate_authenticator_data_context(reg)
+        simple_registration_record.populate_rp_debug_context(reg)
+
+    assert excluding.credential_properties["excludeCredentialsSentCount"] == 2
+    assert excluding.debug_info["excludeCredentialsUsed"] is True
+    assert excluding_none.credential_properties["excludeCredentialsSentCount"] == 0
+    assert excluding_none.debug_info["excludeCredentialsUsed"] is False

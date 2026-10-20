@@ -129,6 +129,22 @@ def test_a_returning_visitors_begin_keeps_their_namespace(credential_store):
     assert visitor_namespace.of(client) == "returning-visitor"
 
 
+def test_a_registration_records_how_many_credentials_its_begin_excluded(credential_store):
+    client = entry_app().test_client()
+    saved = [Authenticator(credential_id=bytes([index]) * 32).stored_credential_entry() for index in (1, 2)]
+    begin = client.post(f"/api/register/begin?email={EMAIL}", json={"credentials": saved})
+    complete = client.post(
+        f"/api/register/complete?email={EMAIL}",
+        json=registration_payload(Authenticator(credential_id=b"\x03" * 32), challenge=unb64u(begin.get_json()["publicKey"]["challenge"])),
+        headers={"Origin": ORIGIN},
+    )
+
+    assert len(begin.get_json()["publicKey"]["excludeCredentials"]) == 2
+    assert complete.status_code == 200, complete.get_json()
+    assert complete.get_json()["storedCredential"]["properties"]["excludeCredentialsSentCount"] == 2
+    assert complete.get_json()["excludeCredentialsUsed"] is True
+
+
 def test_a_complete_body_that_is_no_object_finds_no_registration_state():
     response = entry_app().test_client().post(
         f"/api/register/complete?email={EMAIL}", json=["not", "a", "registration"]
