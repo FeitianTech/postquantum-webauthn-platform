@@ -70,13 +70,14 @@ def extract_certificate(att_stmt: Mapping[str, Any]) -> dict[str, Any] | None:
     first_entry = chain[0]
     cert_bytes: bytes | None
 
+    # Bytes, or text holding base64; nothing else is read as bytes: an integer N
+    # would be N zero bytes, a few bytes of input asking for gigabytes.
     if isinstance(first_entry, str):
         cert_bytes = try_decode_base64(first_entry)
+    elif isinstance(first_entry, (bytes, bytearray, memoryview)):
+        cert_bytes = bytes(first_entry)
     else:
-        try:
-            cert_bytes = bytes(first_entry)
-        except Exception:
-            cert_bytes = None
+        cert_bytes = None
 
     if not cert_bytes:
         return None
