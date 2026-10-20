@@ -49,6 +49,38 @@ def test_a_begin_keeps_only_what_the_checks_read_and_none_of_its_exclude_list():
         assert sorted(session["simple_register_public_key"]) == ["authenticatorSelection", "challenge", "pubKeyCredParams"]
 
 
+def test_a_begin_keeps_the_algorithms_it_offers_for_complete():
+    client = entry_app().test_client()
+    begin = client.post(f"/api/register/begin?email={EMAIL}", json={"credentials": []})
+
+    offered = [param["alg"] for param in begin.get_json()["publicKey"]["pubKeyCredParams"]]
+    with client.session_transaction() as session:
+        kept = [param["alg"] for param in session["simple_register_public_key"]["pubKeyCredParams"]]
+    assert kept == offered
+    assert -36 not in kept and -65535 not in kept
+
+
+def test_a_credential_whose_algorithm_was_not_offered_is_refused(credential_store, tmp_path):
+    client = entry_app().test_client()
+    begin = client.post(f"/api/register/begin?email={EMAIL}", json={"credentials": []})
+    challenge = unb64u(begin.get_json()["publicKey"]["challenge"])
+
+    # ES512: this server verifies it, but the begin did not offer it.
+    complete = client.post(
+        f"/api/register/complete?email={EMAIL}",
+        json=registration_payload(Authenticator(key_type="es512"), challenge=challenge),
+        headers={"Origin": ORIGIN},
+    )
+
+    assert complete.status_code == 400
+    assert complete.get_json() == {
+        "error": "Registration verification failed.",
+        "verified": False,
+        "attestationErrors": ["algorithm_not_allowed"],
+    }
+    assert list((tmp_path / "credentials").rglob("*.json")) == []
+
+
 def test_a_complete_body_that_is_no_object_finds_no_registration_state():
     response = entry_app().test_client().post(
         f"/api/register/complete?email={EMAIL}", json=["not", "a", "registration"]

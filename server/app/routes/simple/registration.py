@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Mapping, MutableMapping
+from collections.abc import Mapping
 from typing import Any
 
 from fido2.cose import CoseKey
@@ -231,33 +231,14 @@ def register_complete():
     return jsonify(registration_record.build_register_complete_response_payload(reg))
 
 
+# The algorithms the browser is offered, ML-DSA first, of those this server
+# verifies. Begin keeps them in the session, and complete's checks hold the new
+# credential's algorithm to them.
 _SIMPLE_ALLOWED_ALGORITHMS: tuple[int, ...] = tuple(
     alg
     for alg in (-50, -49, -48, -8, -7, -257, -35)
     if alg in set(CoseKey.supported_algorithms())
 )
-
-# The request's algorithms as begin keeps them in the session, which complete
-# checks the new credential's algorithm against: every one this server verifies,
-# ML-DSA first. The browser is offered _SIMPLE_ALLOWED_ALGORITHMS instead.
-_SIMPLE_REQUEST_ALGORITHMS: tuple[int, ...] = (
-    -48, -49, -50, -7, -9, -8, -19, -53, -35, -36, -51, -52, -47, -37, -38, -39, -257, -258, -259, -65535,
-)
-
-
-def _offered_parameters(params: Any) -> list[dict[str, Any]]:
-    """The algorithms the browser is offered: _SIMPLE_ALLOWED_ALGORITHMS, in its order, as fido2 wrote them."""
-
-    existing_param_map: dict[int, dict[str, Any]] = {}
-    if isinstance(params, list):
-        for param in params:
-            if isinstance(param, MutableMapping):
-                alg_value = param.get("alg")
-                if isinstance(alg_value, int) and alg_value in _SIMPLE_ALLOWED_ALGORITHMS:
-                    cloned = dict(param)
-                    cloned["type"] = "public-key"
-                    existing_param_map[alg_value] = cloned
-    return [existing_param_map.get(alg, {"type": "public-key", "alg": alg}) for alg in _SIMPLE_ALLOWED_ALGORITHMS]
 
 
 @bp.route("/api/register/begin", methods=["POST"])
@@ -277,7 +258,7 @@ def register_begin():
     server = relying_party.create_fido_server(rp_id=rp_id)
     server.allowed_algorithms = [
         PublicKeyCredentialParameters(type=PublicKeyCredentialType.PUBLIC_KEY, alg=alg)
-        for alg in _SIMPLE_REQUEST_ALGORITHMS
+        for alg in _SIMPLE_ALLOWED_ALGORITHMS
     ]
 
     options, state = server.register_begin(
@@ -307,6 +288,5 @@ def register_begin():
         for name in request_expectations.CHECKED_REQUEST_MEMBERS
         if name in public_key_options
     }
-    public_key_options["pubKeyCredParams"] = _offered_parameters(public_key_options.get("pubKeyCredParams"))
 
     return jsonify(options_dict)

@@ -18,7 +18,7 @@ from typing import Any
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import ec, ed25519
 from fido2 import cbor
-from fido2.cose import ES256, ES384, EdDSA
+from fido2.cose import ES256, ES384, ES512, EdDSA
 
 from server.app.routes.simple import authentication as simple_authentication
 from server.app.routes.simple import parsing as simple_parsing
@@ -27,7 +27,7 @@ RP_ID = "localhost"
 ORIGIN = "http://localhost"
 
 # The hash each ECDSA key type signs with.
-_ECDSA_HASHES = {"es256": hashes.SHA256, "es384": hashes.SHA384}
+_ECDSA_HASHES = {"es256": hashes.SHA256, "es384": hashes.SHA384, "es512": hashes.SHA512}
 
 FLAG_UP = 0x01
 FLAG_UV = 0x04
@@ -67,6 +67,9 @@ class Authenticator:
         elif key_type == "es384":
             self._private_key = ec.generate_private_key(ec.SECP384R1())
             self.cose_key = ES384.from_cryptography_key(self._private_key.public_key())
+        elif key_type == "es512":
+            self._private_key = ec.generate_private_key(ec.SECP521R1())
+            self.cose_key = ES512.from_cryptography_key(self._private_key.public_key())
         elif key_type == "ed25519":
             self._private_key = ed25519.Ed25519PrivateKey.generate()
             self.cose_key = EdDSA.from_cryptography_key(self._private_key.public_key())

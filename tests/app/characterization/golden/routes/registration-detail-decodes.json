@@ -62,7 +62,7 @@
        "challenge": "-ykxNVmBKGtgsi8qvTDxAvgZ3kRIH3Hb4ng7DKaiUxM",
        "pubKeyCredParams": [
         {
-         "alg": -48,
+         "alg": -50,
          "type": "public-key"
         },
         {
@@ -70,15 +70,7 @@
          "type": "public-key"
         },
         {
-         "alg": -50,
-         "type": "public-key"
-        },
-        {
-         "alg": -7,
-         "type": "public-key"
-        },
-        {
-         "alg": -9,
+         "alg": -48,
          "type": "public-key"
         },
         {
@@ -86,43 +78,7 @@
          "type": "public-key"
         },
         {
-         "alg": -19,
-         "type": "public-key"
-        },
-        {
-         "alg": -53,
-         "type": "public-key"
-        },
-        {
-         "alg": -35,
-         "type": "public-key"
-        },
-        {
-         "alg": -36,
-         "type": "public-key"
-        },
-        {
-         "alg": -51,
-         "type": "public-key"
-        },
-        {
-         "alg": -52,
-         "type": "public-key"
-        },
-        {
-         "alg": -47,
-         "type": "public-key"
-        },
-        {
-         "alg": -37,
-         "type": "public-key"
-        },
-        {
-         "alg": -38,
-         "type": "public-key"
-        },
-        {
-         "alg": -39,
+         "alg": -7,
          "type": "public-key"
         },
         {
@@ -130,15 +86,7 @@
          "type": "public-key"
         },
         {
-         "alg": -258,
-         "type": "public-key"
-        },
-        {
-         "alg": -259,
-         "type": "public-key"
-        },
-        {
-         "alg": -65535,
+         "alg": -35,
          "type": "public-key"
         }
        ]
@@ -939,7 +887,7 @@
        "challenge": "Hw0Z30FvRCpLXXHDOcefdxu3ZrIxrW3EuhySYTDIaJQ",
        "pubKeyCredParams": [
         {
-         "alg": -48,
+         "alg": -50,
          "type": "public-key"
         },
         {
@@ -947,15 +895,7 @@
          "type": "public-key"
         },
         {
-         "alg": -50,
-         "type": "public-key"
-        },
-        {
-         "alg": -7,
-         "type": "public-key"
-        },
-        {
-         "alg": -9,
+         "alg": -48,
          "type": "public-key"
         },
         {
@@ -963,43 +903,7 @@
          "type": "public-key"
         },
         {
-         "alg": -19,
-         "type": "public-key"
-        },
-        {
-         "alg": -53,
-         "type": "public-key"
-        },
-        {
-         "alg": -35,
-         "type": "public-key"
-        },
-        {
-         "alg": -36,
-         "type": "public-key"
-        },
-        {
-         "alg": -51,
-         "type": "public-key"
-        },
-        {
-         "alg": -52,
-         "type": "public-key"
-        },
-        {
-         "alg": -47,
-         "type": "public-key"
-        },
-        {
-         "alg": -37,
-         "type": "public-key"
-        },
-        {
-         "alg": -38,
-         "type": "public-key"
-        },
-        {
-         "alg": -39,
+         "alg": -7,
          "type": "public-key"
         },
         {
@@ -1007,15 +911,7 @@
          "type": "public-key"
         },
         {
-         "alg": -258,
-         "type": "public-key"
-        },
-        {
-         "alg": -259,
-         "type": "public-key"
-        },
-        {
-         "alg": -65535,
+         "alg": -35,
          "type": "public-key"
         }
        ]
@@ -2034,7 +1930,7 @@
        "challenge": "pw9QzpCmBm-XmpGg2k9B5lN8YLv55Km1UYBivvHY5R0",
        "pubKeyCredParams": [
         {
-         "alg": -48,
+         "alg": -50,
          "type": "public-key"
         },
         {
@@ -2042,15 +1938,7 @@
          "type": "public-key"
         },
         {
-         "alg": -50,
-         "type": "public-key"
-        },
-        {
-         "alg": -7,
-         "type": "public-key"
-        },
-        {
-         "alg": -9,
+         "alg": -48,
          "type": "public-key"
         },
         {
@@ -2058,43 +1946,7 @@
          "type": "public-key"
         },
         {
-         "alg": -19,
-         "type": "public-key"
-        },
-        {
-         "alg": -53,
-         "type": "public-key"
-        },
-        {
-         "alg": -35,
-         "type": "public-key"
-        },
-        {
-         "alg": -36,
-         "type": "public-key"
-        },
-        {
-         "alg": -51,
-         "type": "public-key"
-        },
-        {
-         "alg": -52,
-         "type": "public-key"
-        },
-        {
-         "alg": -47,
-         "type": "public-key"
-        },
-        {
-         "alg": -37,
-         "type": "public-key"
-        },
-        {
-         "alg": -38,
-         "type": "public-key"
-        },
-        {
-         "alg": -39,
+         "alg": -7,
          "type": "public-key"
         },
         {
@@ -2102,15 +1954,7 @@
          "type": "public-key"
         },
         {
-         "alg": -258,
-         "type": "public-key"
-        },
-        {
-         "alg": -259,
-         "type": "public-key"
-        },
-        {
-         "alg": -65535,
+         "alg": -35,
          "type": "public-key"
         }
        ]
@@ -3357,7 +3201,7 @@
        "challenge": "ilPZHmcJBng1iukC-ueN-8Jib2yg0US40LGqG-FO4eM",
        "pubKeyCredParams": [
         {
-         "alg": -48,
+         "alg": -50,
          "type": "public-key"
         },
         {
@@ -3365,15 +3209,7 @@
          "type": "public-key"
         },
         {
-         "alg": -50,
-         "type": "public-key"
-        },
-        {
-         "alg": -7,
-         "type": "public-key"
-        },
-        {
-         "alg": -9,
+         "alg": -48,
          "type": "public-key"
         },
         {
@@ -3381,43 +3217,7 @@
          "type": "public-key"
         },
         {
-         "alg": -19,
-         "type": "public-key"
-        },
-        {
-         "alg": -53,
-         "type": "public-key"
-        },
-        {
-         "alg": -35,
-         "type": "public-key"
-        },
-        {
-         "alg": -36,
-         "type": "public-key"
-        },
-        {
-         "alg": -51,
-         "type": "public-key"
-        },
-        {
-         "alg": -52,
-         "type": "public-key"
-        },
-        {
-         "alg": -47,
-         "type": "public-key"
-        },
-        {
-         "alg": -37,
-         "type": "public-key"
-        },
-        {
-         "alg": -38,
-         "type": "public-key"
-        },
-        {
-         "alg": -39,
+         "alg": -7,
          "type": "public-key"
         },
         {
@@ -3425,15 +3225,7 @@
          "type": "public-key"
         },
         {
-         "alg": -258,
-         "type": "public-key"
-        },
-        {
-         "alg": -259,
-         "type": "public-key"
-        },
-        {
-         "alg": -65535,
+         "alg": -35,
          "type": "public-key"
         }
        ]
