@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import hashlib
 import logging
-import textwrap
 from collections.abc import Mapping
 from typing import Any
 
@@ -33,7 +32,8 @@ logger = logging.getLogger(__name__)
 
 
 def _pem(der_base64: str) -> str:
-    pem_body = "\n".join(textwrap.wrap(der_base64, 64))
+    # 64 characters a line, sliced: textwrap takes time quadratic in a long word's length.
+    pem_body = "\n".join(der_base64[start : start + 64] for start in range(0, len(der_base64), 64))
     return f"-----BEGIN CERTIFICATE-----\n{pem_body}\n-----END CERTIFICATE-----"
 
 

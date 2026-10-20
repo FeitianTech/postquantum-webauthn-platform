@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import re
-import textwrap
 from collections import deque
 from collections.abc import Mapping, Sequence
 from typing import Any
@@ -76,7 +75,8 @@ def _determine_pem_label(value: Any) -> str:
 
 def _format_pem_block(base64_body: str, label: str) -> str:
     normalized_label = _normalize_pem_label(label)
-    wrapped = "\n".join(textwrap.wrap(base64_body, 64)) if base64_body else ""
+    # 64 characters a line, sliced: textwrap takes time quadratic in a long word's length.
+    wrapped = "\n".join(base64_body[start : start + 64] for start in range(0, len(base64_body), 64))
     return f"-----BEGIN {normalized_label}-----\n{wrapped}\n-----END {normalized_label}-----"
 
 

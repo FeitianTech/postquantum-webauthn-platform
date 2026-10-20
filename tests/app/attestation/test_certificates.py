@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import time
 import tracemalloc
 from types import SimpleNamespace
 
@@ -196,6 +197,31 @@ def test_a_signature_hash_without_a_name_is_named_by_its_class():
     certificate = SimpleNamespace(signature_hash_algorithm=Sha3Hash())
 
     assert attestation_certificates._signature_hash(certificate) == {"name": "Sha3Hash"}
+
+
+def test_the_pem_holds_the_base64_in_lines_of_64_characters():
+    pem = attestation_certificates.serialize_attestation_certificate(bytes(100))["pem"]
+
+    lines = pem.split("\n")
+    assert lines[0] == "-----BEGIN CERTIFICATE-----"
+    assert lines[-1] == "-----END CERTIFICATE-----"
+    # 100 bytes are 136 base64 characters.
+    assert [len(line) for line in lines[1:-1]] == [64, 64, 8]
+    assert "".join(lines[1:-1]) == base64.b64encode(bytes(100)).decode("ascii")
+
+
+def test_a_long_pem_body_is_wrapped_in_time_linear_in_its_length():
+    # textwrap, given one word of 12 million characters, takes about 30 s.
+    body = "A" * 12_000_000
+
+    start = time.perf_counter()
+    pem = attestation_certificates._pem(body)
+    elapsed = time.perf_counter() - start
+
+    lines = pem.split("\n")
+    assert len(lines) == 12_000_000 // 64 + 2
+    assert {len(line) for line in lines[1:-1]} == {64}
+    assert elapsed < 1
 
 
 def test_serialize_attestation_certificate_returns_none_for_empty_bytes():
