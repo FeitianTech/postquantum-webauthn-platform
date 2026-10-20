@@ -20,6 +20,7 @@ from ... import json_values
 from ...encoding import encode_base64url
 from ...storage import credentials
 from ...webauthn import cose_algorithms, pqc, registration_facts
+from . import registration_request
 
 
 @dataclass
@@ -135,14 +136,7 @@ def _credential_info(reg: SimpleRegistration) -> dict[str, Any]:
         "attestation_certificates": reg.attestation_certificates_details,
         "client_extension_outputs": reg.client_extension_results,
         "authenticator_attachment": reg.authenticator_attachment_response,
-        "request_params": {
-            "user_verification": "discouraged",
-            "authenticator_attachment": "cross-platform",
-            "attestation": "none",
-            "resident_key": None,
-            "extensions": {},
-            "timeout": 90000,
-        },
+        "request_params": registration_request.request_params(),
         "properties": {
             "excludeCredentialsSentCount": reg.exclude_credentials_count,
             "excludeCredentialsUsed": False,

@@ -2,6 +2,7 @@
 
 ``registration`` and ``authentication`` each hold a Blueprint and the views on
 it; ``account`` checks the username a ceremony is for, ``parsing`` reads the
-credentials a page sends back, ``registration_record`` builds what a
-registration reports and stores, and ``registration_persistence`` stores it.
+credentials a page sends back, ``registration_request`` holds what a
+registration asks for, ``registration_record`` builds what a registration
+reports and stores, and ``registration_persistence`` stores it.
 """

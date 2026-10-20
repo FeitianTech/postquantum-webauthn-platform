@@ -26,7 +26,13 @@ from ...webauthn.attestation import aaguid as attestation_aaguid
 from ...webauthn.attestation import certificates as attestation_certificates
 from ...webauthn.attestation import checks, error_codes, request_expectations
 from .. import ceremony_session, json_body
-from . import account, parsing, registration_persistence, registration_record
+from . import (
+    account,
+    parsing,
+    registration_persistence,
+    registration_record,
+    registration_request,
+)
 
 bp = Blueprint("simple_registration", __name__)
 
@@ -302,8 +308,8 @@ def register_begin():
     options, state = server.register_begin(
         PublicKeyCredentialUserEntity(id=user_id, name=username, display_name=username),
         credentials,
-        user_verification="discouraged",
-        authenticator_attachment="cross-platform",
+        user_verification=registration_request.USER_VERIFICATION,
+        authenticator_attachment=registration_request.AUTHENTICATOR_ATTACHMENT,
     )
 
     # Stamped so /complete can refuse a stale state replayed from an old cookie.
