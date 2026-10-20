@@ -14,12 +14,18 @@ Python's reader also accepts ``NaN``, ``Infinity`` and ``-Infinity``, which RFC
 each is a ``json-nan-or-infinity`` finding with its offset and path, and is
 shown as the decoder shows such a CBOR float, ``{"diagnostic": "NaN"}`` -- never
 as a bare ``NaN``, which would make the decoder's own answer not JSON.
+
+Every value counts against the request's item budget (``item_budget``), named
+by its path and no offset, as a finding is. ``json.loads`` has read the whole
+text by then: the request's size limit bounds what that costs.
 """
 from __future__ import annotations
 
 import json
 from collections.abc import Callable
 from typing import Any
+
+from .. import item_budget
 
 
 class _Members(list):
@@ -67,7 +73,7 @@ def _read(text: str, lenient: bool, position: Callable[[int], int]) -> tuple[Any
     findings: list[dict[str, Any]] = []
     constants: list[tuple[str, str]] = []
     parsed = json.loads(text, object_pairs_hook=_Members, parse_constant=_Constant)
-    value = _resolve(parsed, "$", findings, constants=constants)
+    value = _resolve(parsed, "$", findings, constants=constants, budget=item_budget.current())
     located = [(name, path, position(offset)) for (name, path), offset in zip(constants, _constant_offsets(text))]
     if located and not lenient:
         raise JsonConstantError(*located[0])
@@ -131,12 +137,15 @@ def _resolve(
     dropped: bool = False,
     *,
     constants: list[tuple[str, str]],
+    budget: item_budget.Budget | None,
 ) -> Any:
     """``value`` as ``json.loads`` gives it; ``dropped``: it is inside a value the result drops.
 
     Each NaN or Infinity is noted in ``constants`` with its path, in the order of the text.
     """
 
+    if budget is not None:
+        budget.charge(None, path)
     if isinstance(value, _Constant):
         constants.append((str(value), path))
         return {"diagnostic": str(value)}
@@ -147,7 +156,7 @@ def _resolve(
         occurrences: dict[str, list[Any]] = {}
         for index, (key, member) in enumerate(value):
             member_value = _resolve(
-                member, _member_path(path, key), findings, dropped or last[key] != index, constants=constants
+                member, _member_path(path, key), findings, dropped or last[key] != index, constants=constants, budget=budget
             )
             occurrences.setdefault(key, []).append(member_value)
             resolved[key] = member_value
@@ -157,7 +166,8 @@ def _resolve(
         return resolved
     if isinstance(value, list):
         return [
-            _resolve(item, f"{path}[{index}]", findings, dropped, constants=constants) for index, item in enumerate(value)
+            _resolve(item, f"{path}[{index}]", findings, dropped, constants=constants, budget=budget)
+            for index, item in enumerate(value)
         ]
     return value
 
