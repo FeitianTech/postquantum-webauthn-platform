@@ -147,7 +147,7 @@ def _credential_info(reg: SimpleRegistration) -> dict[str, Any]:
             "authenticatorAttachment": reg.authenticator_attachment_response,
             "largeBlobRequested": {},
             "largeBlobClientOutput": reg.client_extension_results.get("largeBlob", {}),
-            "residentKeyRequested": None,
+            "residentKeyRequested": registration_request.RESIDENT_KEY,
             "residentKeyRequired": False,
         },
     }

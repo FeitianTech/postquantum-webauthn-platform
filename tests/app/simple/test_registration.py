@@ -145,6 +145,30 @@ def test_a_registration_records_how_many_credentials_its_begin_excluded(credenti
     assert complete.get_json()["excludeCredentialsUsed"] is True
 
 
+def test_the_record_says_what_the_begin_asked_for(credential_store):
+    client = entry_app().test_client()
+    begin = client.post(f"/api/register/begin?email={EMAIL}", json={"credentials": []})
+    options = begin.get_json()["publicKey"]
+    complete = client.post(
+        f"/api/register/complete?email={EMAIL}",
+        json=registration_payload(Authenticator(), challenge=unb64u(options["challenge"])),
+        headers={"Origin": ORIGIN},
+    )
+
+    [record] = storage_credentials.readkey(EMAIL, session_id=visitor_namespace.of(client))
+    asked = record["request_params"]
+    selection = options["authenticatorSelection"]
+    assert (asked["user_verification"], asked["authenticator_attachment"], asked["resident_key"]) == (
+        selection["userVerification"],
+        selection["authenticatorAttachment"],
+        selection["residentKey"],
+    )
+    # No timeout and no attestation preference is sent: the browser's default, "none".
+    assert "timeout" not in options and asked["timeout"] is None
+    assert "attestation" not in options and asked["attestation"] == "none"
+    assert complete.get_json()["storedCredential"]["properties"]["residentKeyRequested"] == selection["residentKey"]
+
+
 def test_a_complete_body_that_is_no_object_finds_no_registration_state():
     response = entry_app().test_client().post(
         f"/api/register/complete?email={EMAIL}", json=["not", "a", "registration"]

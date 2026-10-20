@@ -6,16 +6,18 @@ from typing import Any
 
 USER_VERIFICATION = "discouraged"
 AUTHENTICATOR_ATTACHMENT = "cross-platform"
+RESIDENT_KEY = "discouraged"
 
 
 def request_params() -> dict[str, Any]:
-    """The request as the stored record keeps it."""
+    """The request as the stored record keeps it. Begin sends no attestation
+    preference, which is "none", and no timeout."""
 
     return {
         "user_verification": USER_VERIFICATION,
         "authenticator_attachment": AUTHENTICATOR_ATTACHMENT,
         "attestation": "none",
-        "resident_key": None,
+        "resident_key": RESIDENT_KEY,
         "extensions": {},
-        "timeout": 90000,
+        "timeout": None,
     }

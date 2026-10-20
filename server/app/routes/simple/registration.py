@@ -308,6 +308,7 @@ def register_begin():
     options, state = server.register_begin(
         PublicKeyCredentialUserEntity(id=user_id, name=username, display_name=username),
         credentials,
+        resident_key_requirement=registration_request.RESIDENT_KEY,
         user_verification=registration_request.USER_VERIFICATION,
         authenticator_attachment=registration_request.AUTHENTICATOR_ATTACHMENT,
     )
