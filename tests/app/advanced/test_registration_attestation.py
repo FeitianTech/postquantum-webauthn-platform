@@ -43,3 +43,19 @@ def test_without_usable_options_from_begin_the_requests_are_checked(make_app):
 
         assert checks["client_data"]["challenge_matches"] is True
         assert checks["errors"] == []
+
+
+def test_a_chain_that_did_not_verify_leaves_the_attestation_unverified():
+    analysis = registration_attestation.summarise_attestation(
+        {"root_valid": False, "errors": ["certificate_chain_invalid"], "warnings": []}
+    )
+
+    assert analysis["errors"] == ["certificate_chain_invalid"]
+    assert analysis["rootValid"] is False
+    assert analysis["summary"]["verified"] is False
+
+
+def test_a_blank_error_is_left_out_of_the_summary():
+    analysis = registration_attestation.summarise_attestation({"errors": ["", "  ", "trust_path_missing"]})
+
+    assert analysis["errors"] == ["trust_path_missing"]

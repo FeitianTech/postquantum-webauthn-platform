@@ -306,6 +306,22 @@ def _simple_query(email: str | None) -> str:
     return f"?email={email}" if email else ""
 
 
+def complete_simple_registration(client: Any, authenticator: Authenticator, **payload: Any) -> Any:
+    """Begin and complete a Simple registration of ``authenticator``; complete's answer, whatever it is.
+
+    ``payload`` goes to ``registration_payload``.
+    """
+
+    query = _simple_query(SIMPLE_EMAIL)
+    begin = client.post(f"/api/register/begin{query}", json={"credentials": []})
+    challenge = unb64u(begin.get_json()["publicKey"]["challenge"])
+    return client.post(
+        f"/api/register/complete{query}",
+        json=registration_payload(authenticator, challenge=challenge, **payload),
+        headers={"Origin": ORIGIN},
+    )
+
+
 def register_simple(client: Any, authenticator: Authenticator, *, counter: int = 0, email: str | None = SIMPLE_EMAIL) -> Any:
     """Register ``authenticator`` through the Simple tab's routes; asserts it worked, returns complete's answer."""
 

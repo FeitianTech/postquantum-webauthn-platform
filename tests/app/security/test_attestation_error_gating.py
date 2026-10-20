@@ -20,24 +20,13 @@ from .ceremony_helpers import (
     ORIGIN,
     Authenticator,
     advanced_public_key_options,
+    complete_simple_registration,
     registration_payload,
     unb64u,
 )
 
 # The fixture snapshot's entry whose getInfo lists ES256 and EdDSA, and no other algorithm.
 ES256_AND_EDDSA_AAGUID = uuid.UUID("f1d0f1d0-0000-4000-8000-000000000001").bytes
-
-
-def _simple_complete(client, authenticator, **payload):
-    """A Simple registration of ``authenticator``, begun and completed; complete's answer."""
-
-    begin = client.post("/api/register/begin?email=user@example.com", json={"credentials": []})
-    challenge = unb64u(begin.get_json()["publicKey"]["challenge"])
-    return client.post(
-        "/api/register/complete?email=user@example.com",
-        json=registration_payload(authenticator, challenge=challenge, **payload),
-        headers={"Origin": ORIGIN},
-    )
 
 # --------------------------------------------------------------------------
 # NEGATIVE -- the simple flow gates on errors.
@@ -104,7 +93,7 @@ def test_simple_register_complete_rejects_origin_mismatch(simple_storage):
 def test_a_simple_refusal_lists_only_the_integrity_errors(simple_storage):
     """A cross-origin self attestation also has no trust path: only the integrity error is the refusal's."""
 
-    response = _simple_complete(entry_app().test_client(), Authenticator(), attestation="packed", cross_origin=True)
+    response = complete_simple_registration(entry_app().test_client(), Authenticator(), attestation="packed", cross_origin=True)
 
     assert response.status_code == 400
     assert response.get_json()["attestationErrors"] == ["cross_origin_not_allowed"]
@@ -117,7 +106,7 @@ def test_a_simple_registration_whose_attestation_signature_does_not_verify_is_re
     authenticator = Authenticator()
     certificate = material.attestation_leaf_certificate(authenticator.aaguid)
 
-    response = _simple_complete(
+    response = complete_simple_registration(
         entry_app().test_client(),
         authenticator,
         attestation="packed",
@@ -157,7 +146,7 @@ def test_clean_simple_registration_reports_no_attestation_errors(simple_storage)
 
 
 def test_a_packed_self_attestation_registers_in_the_simple_tab_with_its_trust_findings_as_warnings(simple_storage):
-    response = _simple_complete(entry_app().test_client(), Authenticator(), attestation="packed")
+    response = complete_simple_registration(entry_app().test_client(), Authenticator(), attestation="packed")
 
     assert response.status_code == 200, response.get_json()
     body = response.get_json()
@@ -171,7 +160,7 @@ def test_a_packed_self_attestation_registers_in_the_simple_tab_with_its_trust_fi
 
 
 def test_with_metadata_a_self_attestation_registers_with_no_root_as_a_warning(simple_storage, mds_fixture_snapshot):
-    response = _simple_complete(entry_app().test_client(), Authenticator(), attestation="packed")
+    response = complete_simple_registration(entry_app().test_client(), Authenticator(), attestation="packed")
 
     assert response.status_code == 200, response.get_json()
     checks = response.get_json()["relyingParty"]["registrationData"]["attestationChecks"]
@@ -257,7 +246,7 @@ def test_advanced_register_complete_reports_verified_when_clean(advanced_storage
 def test_an_algorithm_the_metadata_does_not_list_is_a_simple_warning(simple_storage, mds_fixture_snapshot):
     authenticator = Authenticator(key_type="es384", aaguid=ES256_AND_EDDSA_AAGUID)
 
-    response = _simple_complete(entry_app().test_client(), authenticator)
+    response = complete_simple_registration(entry_app().test_client(), authenticator)
 
     assert response.status_code == 200, response.get_json()
     checks = response.get_json()["relyingParty"]["registrationData"]["attestationChecks"]
