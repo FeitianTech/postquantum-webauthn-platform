@@ -162,24 +162,17 @@ def _collect_metadata_root_certificates(metadata_entry: Any) -> list[bytes]:
 
 
 def _resolve_root_validity(checks: Mapping[str, bool | None]) -> bool | None:
-    """Normalise root validity so red is only shown after explicit failures."""
+    """Whether the attestation's root is valid: only once its chain verified to a root the operator trusts.
 
-    trusted = checks.get("trusted_ca")
-    outcomes = [checks.get("chain"), checks.get("fido_mds")]
-    attempted = [value for value in outcomes if value is not None]
+    A chain that failed (a signature, an issuer's name, a date out of range)
+    makes it invalid; anything else leaves it unknown. ``fido_mds``, whether the
+    root's metadata is FIDO's or the visitor's own upload, is reported beside it
+    and decides nothing.
+    """
 
-    if trusted is True:
-        if any(value is True for value in attempted):
-            return True
-        if len(attempted) == len(outcomes) and all(value is False for value in attempted):
-            return False
-        return None
-
-    if trusted is False:
-        if any(value is True for value in attempted):
-            return True
-        if attempted and all(value is False for value in attempted):
-            return False
-        return None
-
+    chain = checks.get("chain")
+    if chain is False:
+        return False
+    if chain is True and checks.get("trusted_ca") is True:
+        return True
     return None

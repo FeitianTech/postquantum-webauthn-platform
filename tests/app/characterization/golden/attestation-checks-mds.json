@@ -262,7 +262,7 @@
  "x5c-wrong-root": {
   "attestation_format": "packed",
   "signature_valid": true,
-  "root_valid": null,
+  "root_valid": false,
   "rp_id_hash_valid": true,
   "aaguid_match": true,
   "client_data": {

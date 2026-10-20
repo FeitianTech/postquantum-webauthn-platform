@@ -152,20 +152,22 @@ def test_metadata_roots_are_one_certificate_or_a_list_and_unreadable_ones_are_sk
     ("checks", "expected"),
     [
         ({"trusted_ca": True, "chain": True, "fido_mds": None}, True),
-        ({"trusted_ca": True, "chain": False, "fido_mds": False}, False),
-        ({"trusted_ca": True, "chain": None, "fido_mds": None}, None),
-        ({"trusted_ca": False, "chain": True, "fido_mds": False}, True),
-        ({"trusted_ca": False, "chain": False, "fido_mds": False}, False),
-        ({"trusted_ca": False, "chain": None, "fido_mds": None}, None),
-        ({"trusted_ca": None, "chain": True, "fido_mds": True}, None),
+        ({"trusted_ca": True, "chain": True, "fido_mds": True}, True),
+        # The visitor's own uploaded metadata vouches for its root once the chain verified to it.
         ({"trusted_ca": True, "chain": True, "fido_mds": False}, True),
-        ({"trusted_ca": True, "chain": False, "fido_mds": True}, True),
-        ({"trusted_ca": False, "chain": None, "fido_mds": False}, False),
-        ({"trusted_ca": None, "chain": True, "fido_mds": False}, None),
+        # A chain that failed is never made good by the root's metadata being FIDO's.
+        ({"trusted_ca": True, "chain": False, "fido_mds": True}, False),
+        ({"trusted_ca": True, "chain": False, "fido_mds": False}, False),
+        ({"trusted_ca": False, "chain": False, "fido_mds": None}, False),
+        ({"trusted_ca": True, "chain": None, "fido_mds": True}, None),
+        ({"trusted_ca": True, "chain": None, "fido_mds": None}, None),
+        ({"trusted_ca": False, "chain": True, "fido_mds": None}, None),
+        ({"trusted_ca": False, "chain": None, "fido_mds": False}, None),
+        ({"trusted_ca": None, "chain": True, "fido_mds": True}, None),
         ({"trusted_ca": None, "chain": None, "fido_mds": None}, None),
     ],
 )
-def test_a_root_is_valid_by_what_its_checks_say(checks, expected):
+def test_a_root_is_valid_only_once_its_chain_verified_to_a_trusted_root(checks, expected):
     assert attestation_trust._resolve_root_validity(checks) is expected
 
 
