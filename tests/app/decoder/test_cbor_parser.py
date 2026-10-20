@@ -3,6 +3,7 @@
 
 import pytest
 
+from server.app.decoder import item_budget
 from server.app.decoder import values as decoder_values
 from server.app.decoder.decode import cbor_parser as decode_cbor_parser
 
@@ -396,3 +397,41 @@ def test_structure_to_value_keeps_an_array_key_as_a_key_of_its_own_type():
     # Not the text "[1, 2]": a text key spelled that way stays a different key.
     assert value == {decoder_values.CborDiagnostic("[1, 2]", "array"): "value"}
     assert decoder_values.stringify_mapping_keys(value) == {"[1, 2]": "value"}
+
+
+def test_an_item_of_as_many_items_as_the_budget_is_read_and_one_more_is_refused_where_it_starts():
+    data = bytes.fromhex("8400010203")  # [0, 1, 2, 3]: five items
+
+    with item_budget.limit(5) as budget:
+        _node, end, _skipped = decode_cbor_parser.decode_item(data)
+    assert (end, budget.used) == (5, 5)
+
+    with pytest.raises(item_budget.ItemLimitError) as refused, item_budget.limit(4):
+        decode_cbor_parser.decode_item(data)
+    assert (refused.value.offset, refused.value.path) == (4, "$[3]")
+
+
+def test_every_item_a_container_holds_counts():
+    # [[1, 2], {3: [4]}, 5(6), (_ h'01' h'02')]: the array; [1, 2] and its two
+    # items; the map, its key, its value and that value's item; the tag and what
+    # it tags; the string and its two chunks. Thirteen items.
+    data = bytes.fromhex("84820102a1038104c5065f41014102ff")
+
+    with item_budget.limit(13) as budget:
+        _node, end, _skipped = decode_cbor_parser.decode_item(data)
+    assert (end, budget.used) == (16, 13)
+
+    with pytest.raises(item_budget.ItemLimitError) as refused, item_budget.limit(12):
+        decode_cbor_parser.decode_item(data)
+    assert (refused.value.offset, refused.value.path) == (13, "$[3]<chunk 1>")
+
+
+def test_a_lenient_parse_is_refused_at_the_budget_as_a_strict_one_is():
+    with pytest.raises(item_budget.ItemLimitError) as refused, item_budget.limit(4):
+        decode_cbor_parser.decode_item(bytes.fromhex("8400010203"), lenient=True)
+    assert (refused.value.offset, refused.value.path) == (4, "$[3]")
+
+    # An item the lenient parser keeps as invalid is an item too: [invalid, invalid].
+    with pytest.raises(item_budget.ItemLimitError) as refused, item_budget.limit(2):
+        decode_cbor_parser.decode_item(bytes.fromhex("821c1c"), lenient=True)
+    assert (refused.value.offset, refused.value.path) == (2, "$[1]")

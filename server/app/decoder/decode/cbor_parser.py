@@ -11,6 +11,10 @@ steps over bytes it cannot read, and records every such step in ``skipped``.
 Every node records where it sits in the input (``offset``/``end``) and how its
 head was written (``info``/``argument``), which is what the canonical-form
 check in ``canonical.py`` reads. Offsets count from the start of ``data``.
+
+Every item counts against the request's item budget (``item_budget``), strict
+or lenient: past it, the parse stops with ``ItemLimitError`` at the item it
+would have read next.
 """
 from __future__ import annotations
 
@@ -20,7 +24,7 @@ from collections.abc import Mapping, Sequence
 from typing import Any
 
 from ...encoding import decode_hex, encode_base64, encode_base64url
-from .. import edn, values
+from .. import edn, item_budget, values
 from . import key_equivalence
 
 # Deep enough for any WebAuthn or CTAP structure; shallow enough that hostile
@@ -50,12 +54,13 @@ class _CborDecodingError(ValueError):
 
 
 class _ParseState:
-    __slots__ = ("data", "lenient", "skipped")
+    __slots__ = ("data", "lenient", "skipped", "budget")
 
     def __init__(self, data: bytes, lenient: bool) -> None:
         self.data = data
         self.lenient = lenient
         self.skipped: list[dict[str, Any]] = []
+        self.budget = item_budget.current()
 
     def problem(self, code: str, message: str, offset: int, path: str) -> None:
         """Raise in strict mode; in lenient mode, record the step and go on."""
@@ -167,6 +172,8 @@ def _parse_cbor_item(
         raise _CborDecodingError(f"items are nested more than {_MAX_DEPTH} deep", offset, path)
     if offset >= len(data):
         raise _CborDecodingError("the data ends where an item should start", offset, path)
+    if state.budget is not None:
+        state.budget.charge(offset, path)
 
     start = offset
     initial = data[offset]
