@@ -15,6 +15,10 @@ from cryptography.x509.oid import ObjectIdentifier
 
 AAGUID_EXTENSION_OID = ObjectIdentifier("1.3.6.1.4.1.45724.1.1.4")
 
+# The largest x5c certificate read: one over it is neither parsed nor hashed.
+# Real ones sit well inside it (an ML-DSA-87 certificate is about 7.5 KB).
+MAX_ATTESTATION_CERTIFICATE_BYTES = 64 * 1024
+
 # What cryptography raises reading the extensions of a certificate it loaded,
 # which it parses only then: one malformed (ValueError), one given twice
 # (DuplicateExtension), a general name it does not represent (x400Address,

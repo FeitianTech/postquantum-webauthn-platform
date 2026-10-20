@@ -22,7 +22,11 @@ from . import (
     certificate_summary,
     formatting,
 )
-from .constants import EXTENSION_DISPLAY_METADATA, UNREADABLE_EXTENSIONS
+from .constants import (
+    EXTENSION_DISPLAY_METADATA,
+    MAX_ATTESTATION_CERTIFICATE_BYTES,
+    UNREADABLE_EXTENSIONS,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -326,6 +330,11 @@ def _serialized_certificate_chain(attestation_statement: Any) -> list[dict[str, 
         if certificate_bytes is None:
             attestation_certificates.append({
                 "error": "Unable to decode attestation certificate bytes.",
+            })
+            continue
+        if len(certificate_bytes) > MAX_ATTESTATION_CERTIFICATE_BYTES:
+            attestation_certificates.append({
+                "error": f"Certificate is larger than {MAX_ATTESTATION_CERTIFICATE_BYTES} bytes.",
             })
             continue
 

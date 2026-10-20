@@ -9,7 +9,11 @@ from flask import current_app
 
 from ... import encoding, json_values
 from . import formatting
-from .constants import AAGUID_EXTENSION_OID, UNREADABLE_EXTENSIONS
+from .constants import (
+    AAGUID_EXTENSION_OID,
+    MAX_ATTESTATION_CERTIFICATE_BYTES,
+    UNREADABLE_EXTENSIONS,
+)
 
 
 def _trusted_ca_subjects() -> set[str] | None:
@@ -59,7 +63,10 @@ def _is_trusted_ca_certificate(cert_bytes: bytes, *, allow_subject_parsing: bool
 
 
 def _collect_trust_path_entries(x5c: Any) -> list[bytes]:
-    """Coerce an ``x5c`` attestation entry into a list of DER certificates."""
+    """Coerce an ``x5c`` attestation entry into a list of DER certificates.
+
+    An entry that is no byte string, or one larger than a certificate is read, is left out.
+    """
 
     if not isinstance(x5c, Sequence):
         return []
@@ -67,7 +74,7 @@ def _collect_trust_path_entries(x5c: Any) -> list[bytes]:
     trust_path: list[bytes] = []
     for entry in x5c:
         data = json_values.as_bytes(entry)
-        if data:
+        if data and len(data) <= MAX_ATTESTATION_CERTIFICATE_BYTES:
             trust_path.append(data)
     return trust_path
 

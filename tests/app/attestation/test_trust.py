@@ -17,6 +17,7 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.x509.oid import NameOID
 from fido2.utils import ByteBuffer
 
+from server.app.webauthn.attestation import constants as attestation_constants
 from server.app.webauthn.attestation import trust as attestation_trust
 from tests.app.characterization import material
 from tests.app.entry_app import entry_app
@@ -173,6 +174,13 @@ def test_a_trust_path_keeps_the_x5c_entries_that_are_bytes():
 
     assert attestation_trust._collect_trust_path_entries(x5c) == [b"leaf", b"intermediate", b"root"]
     assert attestation_trust._collect_trust_path_entries(None) == []
+
+
+def test_a_trust_path_leaves_out_an_x5c_entry_over_the_size_limit():
+    limit = attestation_constants.MAX_ATTESTATION_CERTIFICATE_BYTES
+    x5c = [b"\x30" * limit, b"\x30" * (limit + 1), b"root"]
+
+    assert attestation_trust._collect_trust_path_entries(x5c) == [b"\x30" * limit, b"root"]
 
 
 def _self_signed_cert_der() -> bytes:

@@ -9,15 +9,18 @@ import tracemalloc
 from types import SimpleNamespace
 
 import pytest
+from cryptography import x509
 from fido2 import cbor
 
 from server.app.webauthn.attestation import certificates as attestation_certificates
+from server.app.webauthn.attestation import constants as attestation_constants
 from tests.app.characterization import material
 from tests.app.security import ceremony_helpers
 
 EC_PUBLIC_KEY_OID = bytes.fromhex("06072a8648ce3d0201")  # id-ecPublicKey
 UNKNOWN_KEY_OID = bytes.fromhex("06072a8648ce3d0209")  # 1.2.840.10045.2.9, which nothing names
 CERTIFICATE = material.certificate(material.ec_key("certificates-test").public_key(), common_name="Leaf", serial=0x5E)
+PADDING_OID = x509.ObjectIdentifier("1.3.6.1.4.1.99999.2")
 
 
 def _registration_with_x5c(x5c):
@@ -28,6 +31,22 @@ def _registration_with_x5c(x5c):
     )
     payload["response"]["attestationObject"] = ceremony_helpers.b64u(attestation)
     return payload
+
+
+def _certificate_of(size: int) -> bytes:
+    """A real certificate, padded with an extension of its own to exactly ``size`` bytes of DER."""
+
+    padding = 0
+    while True:
+        certificate = material.certificate(
+            material.ec_key("certificates-test").public_key(),
+            common_name="Padded",
+            serial=0x61,
+            extensions=[(x509.UnrecognizedExtension(PADDING_OID, bytes(padding)), False)],
+        )
+        if len(certificate) == size:
+            return certificate
+        padding += size - len(certificate)
 
 
 def test_a_certificate_whose_key_cryptography_cannot_load_is_described_from_its_key_info():
@@ -116,6 +135,25 @@ def test_an_integer_x5c_entry_allocates_nothing_for_its_value():
 
     assert chain == [{"error": "Unable to decode attestation certificate bytes."}]
     assert peak < 1_000_000
+
+
+def test_a_certificate_at_the_size_limit_is_read():
+    certificate = _certificate_of(attestation_constants.MAX_ATTESTATION_CERTIFICATE_BYTES)
+
+    *_, chain = attestation_certificates.extract_attestation_details(_registration_with_x5c([certificate]))
+
+    assert chain[0]["subject"] == "CN=Padded,OU=Authenticator Attestation,O=Characterization Test,C=SE"
+
+
+def test_a_certificate_one_byte_over_the_size_limit_is_refused_unparsed(monkeypatch):
+    parsed = []
+    monkeypatch.setattr(attestation_certificates, "serialize_attestation_certificate", parsed.append)
+    certificate = _certificate_of(attestation_constants.MAX_ATTESTATION_CERTIFICATE_BYTES + 1)
+
+    *_, chain = attestation_certificates.extract_attestation_details(_registration_with_x5c([certificate]))
+
+    assert chain == [{"error": "Certificate is larger than 65536 bytes."}]
+    assert parsed == []
 
 
 @pytest.mark.parametrize("response", [["not-a-mapping"], {"not": "a registration"}])
