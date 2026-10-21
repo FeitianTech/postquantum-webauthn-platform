@@ -29,6 +29,10 @@ MAX_DEPTH = 64
 # So a match never fails, and the search never starts again inside text it took; nor does a possessive
 # repeat (*+) go back, so it keeps no state for each escape. The scan is linear in the body's length.
 _STRING = re.compile(rb'"[^"\\]*+(?:\\.[^"\\]*+)*+"?', re.DOTALL)
+# re.sub keeps what it leaves around each string until it joins it all, about 170 bytes a string: 476 MB for
+# 8 MiB of short strings. So it is given a stretch of the body at a time, up to 4,096 strings and the text
+# between them; a stretch ends where a string does, or before one.
+_STRETCH = re.compile(rb'(?:[^"]++|' + _STRING.pattern + rb"){1,4096}+", re.DOTALL)
 # Each bracket left once the strings are set aside, as a step: 2 for an opening one, 0 for a closing one.
 _STEPS = bytes.maketrans(b"[{]}", b"\x02\x02\x00\x00")
 _NOT_BRACKETS = bytes(byte for byte in range(256) if byte not in b"[]{}")
@@ -43,7 +47,8 @@ def nested_too_deep(data: bytes) -> bool:
 
     if data.count(b"[") + data.count(b"{") <= MAX_DEPTH:
         return False
-    steps = _STRING.sub(b"", data).translate(_STEPS, _NOT_BRACKETS)
+    outside = b"".join(_STRING.sub(b"", stretch) for stretch in _STRETCH.findall(data))
+    steps = outside.translate(_STEPS, _NOT_BRACKETS)
     # After k brackets, twice the opening ones less k is how deep the text is there.
     depths = map(operator.sub, itertools.accumulate(steps), itertools.count(1))
     return any(map(MAX_DEPTH.__lt__, depths))

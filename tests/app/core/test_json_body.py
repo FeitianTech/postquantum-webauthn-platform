@@ -8,6 +8,7 @@ JSON, before it is parsed, by a scan linear in the body's length.
 from __future__ import annotations
 
 import time
+import tracemalloc
 
 import pytest
 
@@ -107,6 +108,21 @@ def test_a_string_no_quote_closes_is_scanned_in_time_linear_in_the_body(end):
 
         assert too_deep is True
         assert elapsed < 2, f"{size} bytes scanned in {elapsed:.1f} s"
+
+
+def test_a_body_of_many_strings_is_scanned_in_memory_about_its_own_size():
+    # 2.8 million strings in 8 MiB: a record held for each one set aside took 476 MB.
+    body = b"[" * 65 + b'"",' * ((8 * 1024 * 1024 - 65) // 3)
+
+    tracemalloc.start()
+    try:
+        too_deep = json_body.nested_too_deep(body)
+        _current, peak = tracemalloc.get_traced_memory()
+    finally:
+        tracemalloc.stop()
+
+    assert too_deep is True
+    assert peak < 3 * len(body)
 
 
 def test_a_body_that_does_not_say_it_is_json_is_not_read(app):
