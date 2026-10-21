@@ -205,6 +205,43 @@ def _ctap_literals() -> dict[str, bytes]:
     return {where: data for data, where in found.items()}
 
 
+def payloads() -> dict[str, str]:
+    """Inputs that are not one well-formed item, as ``/api/codec`` is sent them: name -> payload.
+
+    Each is one the codec once answered wrongly, which the round trips above,
+    being of whole items, cannot hold.
+    """
+
+    return {
+        # A getAssertion request whose second key is a tag around an indefinite-length
+        # text string, read leniently: its first chunk is not UTF-8, the next three are
+        # byte strings. Strictly it is refused at offset 22; leniently it answered 500.
+        "getAssertion request: a key's text chunk that is not UTF-8": (
+            "02:a2:a1:0d:a0:83:a1:83:d4:46:58:1b:c7:31:69:6e:d3:31:18:e8:2e:f3:fe:c0:7f:75:fd:15:96:d6:4f:f6:b3:2a:b0:"
+            "eb:b7:40:6b:d6:2c:17:a3:48:65:b7:5f:41:4b:41:6f:41:ee:ff:f6:58:6a:db:af:45:68:35:46:94:a5:7a:bf:d3:5f:41:"
+            "0f:41:3f:ff:1b:1b:b2:c0:08:d2:fc:02:52:d8:f5:84:a3:0b:16:cd:44:f6:e5:cf:e9:f3:67:61:74:74:53:74:6d:74:23:"
+            "a4:b0:18:5c:1c:d8:28:9e:af:97:d2:5f:41:00:ff:63:66:6d:74:1b:74:93:8d:43:0b:04:dd:4e:f6:7f:a8:4f:c7:4d:ce:"
+            "5f:41:c8:41:4f:41:26:84:f4:b9:c8:03:1b:1f:93:97:97:fc:8d:e4:1f:24:80:a1:83:5f:41:80:41:db:ff:fa:01:aa:68:"
+            "9d:83:84:0b:5f:41:24:ff:50:1b:f2:b0:3d:2a:2e:91:5d:0a:1a:34:83:80:a0:0b:a0:a4:1b:25:df:a9:73:77:8b:6f:66:"
+            "f7:43:8d:1b:5a:81:c8:02:d5:d6:bb:75:84:04:a1:07:80:07:a3:5f:ff:0d:64:6e:6f:6e:65:a0:64:6e:6f:6e:65:01:a0:"
+            "a4:80:84:a4:09:d6:cb:5f:41:a9:41:2f:ff:1b:76:c0:cf:fb:2a:80:25:d2:63:66:6d:74:f4:72:dd:c4:8b:ff:71:c3:8a:"
+            "f4:a1:04:37:d6:f9:07:a2:66:70:61:63:6b:65:64:51:f9:94:a1:d3:8b:83:32:78:6c:11:cb:82:81:a3:28:c0:8e:8c:f7:"
+            "48:37:47:0d:b0:63:78:35:63:5f:41:b4:ff:26:a2:82:8e:dc:07:cc:11:a1:1b:e7:a1:5e:66:b7:19:97:8e:b2:64:80:81:"
+            "82:05:a3:c4:67:61:74:74:53:74:6d:74:2b:27:52:67:61:74:74:53:74:6d:74:35:81:80:30"
+        ),
+        # Authenticator data whose extensions are 8(simple(1)): the simple value reached
+        # the answer as a dataclass only Flask's JSON provider would write.
+        "authenticator data: extensions holding a simple value": (
+            "8480a1bc9c20070ca2ce83f722109f4c02a21a3f69fbca3c9f9fffa15106ff01819fff80d4c8e1"
+        ),
+        # So did the credential public key's: {1: 2, 3: -7, -1: undefined}.
+        "authenticator data: a credential public key holding undefined": (
+            "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f41000000010000000000000000"
+            "00000000000000000002aabba30102032620f7"
+        ),
+    }
+
+
 @functools.cache
 def ctap_messages() -> dict[str, bytes]:
     """Every CTAP message the repository holds, its command or status byte kept: name -> bytes.

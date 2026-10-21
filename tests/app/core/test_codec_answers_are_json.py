@@ -4,8 +4,13 @@ Python's JSON writer spells a non-finite float ``NaN``, ``Infinity`` or
 ``-Infinity``, which RFC 8259 has no place for, and ``response.json()`` then
 throws. Each answer here is parsed with a reader that refuses them: every
 decoder answer and every encoder answer it leads to, for each CBOR item the
-repository holds (``tests/app/codec_corpus.py``), and for JSON input holding
-NaN and Infinity.
+repository holds (``tests/app/codec_corpus.py``), for each other input it holds
+(``codec_corpus.payloads``), and for JSON input holding NaN and Infinity.
+
+Flask's JSON provider writes more than JSON does (a dataclass, a date), so each
+answer is also what ``decode_payload_text`` or ``encode_payload_text`` returns,
+written by ``json.dumps`` alone with ``allow_nan=False``: a value only Flask
+could write fails here.
 """
 from __future__ import annotations
 
@@ -14,6 +19,8 @@ from typing import Any
 
 import pytest
 
+from server.app.decoder.decode.text import decode_payload_text
+from server.app.decoder.encode.text import encode_payload_text
 from server.app.factory import create_app
 
 from .. import codec_corpus
@@ -27,13 +34,26 @@ def _strict(text: str) -> Any:
     return json.loads(text, parse_constant=refuse)
 
 
+def _written_plainly(body: dict[str, Any]) -> str:
+    """The answer ``body`` asks ``/api/codec`` for, as its module returns it, written with no Flask provider."""
+
+    if body.get("mode") == "encode":
+        answer = encode_payload_text(body["payload"], body["format"])
+    else:
+        answer = decode_payload_text(body["payload"], lenient=body.get("lenient", False))
+    return json.dumps(answer, allow_nan=False)
+
+
 @pytest.fixture(scope="module")
 def codec():
     client = create_app({"TESTING": True, "SECRET_KEY": TEST_SECRET_KEY}).test_client()
 
     def post(**body: Any) -> tuple[int, Any]:
         response = client.post("/api/codec", json=body)
-        return response.status_code, _strict(response.get_data(as_text=True))
+        answer = _strict(response.get_data(as_text=True))
+        if response.status_code == 200:
+            assert _strict(_written_plainly(body)) == answer
+        return response.status_code, answer
 
     return post
 
@@ -56,6 +76,15 @@ def test_every_answer_about_an_item_in_the_repository_is_json(codec, name, item)
         status, body = codec(payload=item.hex(), lenient=lenient)
         assert status == 200, body
         assert all(code < 500 for code in _encoder_answers(codec, body["data"]))
+
+
+@pytest.mark.parametrize(("name", "payload"), sorted(codec_corpus.payloads().items()))
+def test_every_answer_about_another_input_in_the_repository_is_json(codec, name, payload):
+    for lenient in (False, True):
+        status, body = codec(payload=payload, lenient=lenient)
+        assert status == 200 if lenient else status in (200, 422), body
+        if status == 200:
+            assert all(code < 500 for code in _encoder_answers(codec, body["data"]))
 
 
 @pytest.mark.parametrize(

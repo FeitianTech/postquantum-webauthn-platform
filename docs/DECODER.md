@@ -160,7 +160,11 @@ Nor may an answer hold a value only Flask's provider can write. A value JSON has
 no spelling for (`undefined`, a simple value, a NaN or an infinity) is
 `{"diagnostic": "simple(1)"}` wherever an answer holds it, as `decodedValue`
 writes it: authenticator data's extensions and credential public key too, which
-`values.json_ready`, the decoder answer's last pass, spells.
+`values.json_ready`, the decoder answer's last pass, spells. The same test
+writes each answer `decode_payload_text` and `encode_payload_text` return with
+`json.dumps` alone (`allow_nan=False`) and requires it to be the route's answer,
+over the corpus and over the inputs that are not one item
+(`codec_corpus.payloads()`).
 
 JSON is read at most 64 deep, as CBOR and EDN are (RFC 8259 section 9 lets a
 parser limit how deep it reads): a value nested deeper is refused with a 422
