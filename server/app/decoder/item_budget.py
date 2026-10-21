@@ -25,7 +25,7 @@ The default, 20,000, from measurement: the largest real inputs read 72 items
 (an ML-DSA-87 attestation object with its chain), 1,888 (a getInfo holding
 every CTAP 2.2 member) and 3,114 (a makeCredential request excluding 64
 credentials), and at 20,000 the costliest request, lenient input that writes a
-finding for each item, takes about 0.2 s and 30 MB (docs/DECODER.md).
+finding for each item, takes 0.2 to 0.4 s and about 30 MB (docs/DECODER.md).
 """
 from __future__ import annotations
 

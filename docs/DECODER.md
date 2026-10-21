@@ -150,9 +150,45 @@ provider would write it, and the answer would not be JSON.
 `tests/app/core/test_codec_answers_are_json.py` parses every decoder and encoder
 answer over the corpus with a reader that refuses them.
 
-Every body is limited in size (`config/request_limits.py`: 8 MiB, the metadata
-upload 16 MiB), and a larger one is answered 413 in JSON before the decoder
-reads it.
+## Limits
+
+`/api/codec` reads a body of at most 1 MiB (`config/request_limits.py`,
+`FIDO_SERVER_MAX_CODEC_REQUEST_BYTES`), set on the request before anything reads
+it; a larger one is answered 413 in JSON. Every other route takes 8 MiB, the
+metadata upload 16 MiB. The codec's largest real input, an ML-DSA-87
+attestation object with its full chain as hex, is about 60 KB.
+
+One decode or one encode reads at most 20,000 items (`decoder/item_budget.py`,
+`FIDO_SERVER_MAX_CODEC_ITEMS`): every CBOR item `decode/cbor_parser` builds
+(each array member, map key and value, tagged item and string chunk, and each
+item the lenient parser keeps as invalid), every JSON value `decode/json_input`
+reads and every EDN item `edn/reader` reads, counted over all the readings of
+one request, so that no input multiplies its cost by being read again. The
+decoder reads a plain CBOR item five times and one after a CTAP byte eight, so
+those reach the limit at about 4,000 and 2,500 items. Its checks of its own
+output (its EDN text read back, a CTAP view rebuilt) are not counted: they
+re-read what was counted, and a refusal there would point into text the decoder
+wrote. JSON is read whole by `json.loads` before its values are counted; the
+body limit bounds that.
+
+Past the limit the input is refused, 422, strict or lenient alike, with
+`item_budget.ItemLimitError`: the limit, and where the read that ran out was,
+as far as its reader can tell (the offset and path for CBOR, the path for JSON,
+the offset for EDN). A reading that fails is only "not this reading" to the
+decoder, so whatever catches the error on the way, the first refusal is the
+answer. That read may be a later reading than the first, or a part read on its
+own (authenticator data inside an attestation object, a credential's base64url
+field), whose offsets are that part's.
+
+Measured when the limits were set (on an M5, idle and under load): the largest
+input in the corpus and the goldens reads 143 items, a getInfo holding every
+CTAP 2.2 member 1,888, a makeCredential request excluding 64 credentials 3,114.
+At 20,000 the costliest request, lenient input that writes a finding for each
+item, takes 0.2 to 0.4 s and about 30 MB; well-formed CBOR takes under 0.2 s and
+5 MB. A 1,000,000-item array, which took 8.7 s and 465 MB, is refused in under
+0.1 s and 9 MB, and at the route by its size, before it is read. What the item
+count does not bound, the body limit does: a 1 MiB PEM bundle of about 2,100
+certificates takes 0.34 s and 39 MB.
 
 ## The EDN view and EDN input
 
@@ -176,7 +212,8 @@ and refuses, with the offset in the text as sent, reserved indicators, an
 indicator too narrow for its value, a float not exact at its width or beyond a
 double's range, `simple(24..31)`, a signed tag number, a `(_ ...)` chunk that is
 not a byte or text string, a lone surrogate, items nested more than 64 deep (the
-decoder's limit), a CBOR sequence and an integer beyond 64 bits. That last is a
+decoder's limit), more items than the request's budget (Limits), a CBOR sequence
+and an integer beyond 64 bits. That last is a
 deliberate departure from the EDN draft, which reads such an integer as a bignum:
 write the tag, `2(h'...')`.
 
@@ -296,4 +333,5 @@ shape), `ctap_message_view.py` (the views), `ctap_auth_data.py`,
 Spelling shared by both
 sides lives in `server/app/decoder/` itself (`view_spelling.py`, `ctap_message.py`,
 `cbor_canonical.py`, `cbor_head.py`, `ctap2_order.py`), since `decode/` never
-imports `encode/`.
+imports `encode/`; so does `item_budget.py`, which both sides and `edn/` count
+their reads against.
