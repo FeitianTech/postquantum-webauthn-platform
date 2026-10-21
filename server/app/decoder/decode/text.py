@@ -8,6 +8,7 @@ from __future__ import annotations
 from typing import Any
 
 from ...encoding import try_decode_base64, try_decode_base64url
+from .. import item_budget
 from . import (
     ambiguous_input,
     answer,
@@ -35,7 +36,9 @@ class _ReadAsBase64Error(ValueError):
         super().__init__(f"{exc} (the input was read as base64: as hexadecimal, its {digits} digits are an odd number)")
 
 
-def decode_payload_text(value: str, *, lenient: bool = False) -> dict[str, Any]:
+def decode_payload_text(
+    value: str, *, lenient: bool = False, max_items: int = item_budget.DEFAULT_MAX_ITEMS
+) -> dict[str, Any]:
     """Decode ``value`` into a structured representation.
 
     CBOR is parsed strictly. ``lenient`` asks for a best-effort parse of CBOR
@@ -46,8 +49,16 @@ def decode_payload_text(value: str, *, lenient: bool = False) -> dict[str, Any]:
 
     Text that is both hexadecimal and a JSON number is read by the precedence
     in ``ambiguous_input``, and the response names the reading not taken.
+
+    Every reading of the input counts against one budget of ``max_items``
+    (``item_budget``): past it, the input is refused with ``ItemLimitError``.
     """
 
+    with item_budget.limit(max_items):
+        return _decode(value, lenient)
+
+
+def _decode(value: str, lenient: bool) -> dict[str, Any]:
     trimmed = value.strip()
     if not trimmed:
         raise ValueError("Decoder input is empty.")
