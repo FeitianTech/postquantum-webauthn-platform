@@ -58,3 +58,15 @@ def test_stringify_and_hex_helpers_convert_nested_values():
         "buf": "cc",
     }
     assert decoder_values.make_hex_only(payload) == hex_only
+
+
+def test_a_value_json_has_no_spelling_for_is_made_ready_as_its_diagnostic():
+    simple = decoder_values.CborDiagnostic("simple(1)")
+    keyed = {decoder_values.CborDiagnostic("undefined", "undefined"): [decoder_values.CborDiagnostic("NaN")], "a": simple}
+
+    assert decoder_values.json_ready(simple) == {"diagnostic": "simple(1)"}
+    assert decoder_values.json_ready({"tag": 8, "value": simple}) == {"tag": 8, "value": {"diagnostic": "simple(1)"}}
+    assert decoder_values.json_ready(keyed) == {
+        "undefined": [{"diagnostic": "NaN"}],
+        "a": {"diagnostic": "simple(1)"},
+    }

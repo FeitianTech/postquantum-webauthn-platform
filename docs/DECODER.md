@@ -156,6 +156,12 @@ provider would write it, and the answer would not be JSON.
 `tests/app/core/test_codec_answers_are_json.py` parses every decoder and encoder
 answer over the corpus with a reader that refuses them.
 
+Nor may an answer hold a value only Flask's provider can write. A value JSON has
+no spelling for (`undefined`, a simple value, a NaN or an infinity) is
+`{"diagnostic": "simple(1)"}` wherever an answer holds it, as `decodedValue`
+writes it: authenticator data's extensions and credential public key too, which
+`values.json_ready`, the decoder answer's last pass, spells.
+
 JSON is read at most 64 deep, as CBOR and EDN are (RFC 8259 section 9 lets a
 parser limit how deep it reads): a value nested deeper is refused with a 422
 naming the offset and path of the first (`json_input.JsonDepthError`), decoded

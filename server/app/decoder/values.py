@@ -212,14 +212,18 @@ def stringify_mapping_keys(value: Any) -> Any:
 
 
 def json_ready(value: Any) -> Any:
-    """``value`` with every map in it one JSON can hold whole.
+    """``value`` with every map in it one JSON can hold whole, and every value one JSON can write.
 
     A map keyed only by text, or only by integers, is kept as it is: the JSON
     encoder spells an integer key itself. Any other map -- integer and text keys
     together, byte-string or CBOR-diagnostic keys -- is spelled by ``json_keys``,
-    so no entry is lost and the response still serializes.
+    so no entry is lost and the response still serializes. A value JSON has no
+    spelling for (``undefined``, ``simple(1)``, ``NaN``) is ``{"diagnostic": ...}``,
+    as ``make_hex_only`` writes it.
     """
 
+    if isinstance(value, CborDiagnostic):
+        return {"diagnostic": value.diagnostic}
     if isinstance(value, Mapping):
         keys = list(value)
         if all(isinstance(key, str) for key in keys) or all(_is_int(key) for key in keys):
