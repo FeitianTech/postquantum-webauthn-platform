@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import tracemalloc
 
 import pytest
 
@@ -60,6 +61,22 @@ def test_json_nested_deeper_than_python_reads_is_refused_at_the_first_value_too_
     with pytest.raises(json_input.JsonDepthError) as refused:
         json_input.read("[" * 100_000 + "]" * 100_000)
     assert (refused.value.offset, refused.value.path) == (65, "$" + "[0]" * 65)
+
+
+def test_a_long_string_before_the_value_too_deep_is_stepped_over_in_memory_about_its_own_size():
+    # A million characters: state kept for each one took about 118 MB.
+    text = '["' + "a" * 1_000_000 + '", ' + _nested(64) + "]"
+
+    tracemalloc.start()
+    try:
+        with pytest.raises(json_input.JsonDepthError) as refused:
+            json_input.read(text)
+        _current, peak = tracemalloc.get_traced_memory()
+    finally:
+        tracemalloc.stop()
+
+    assert (refused.value.offset, refused.value.path) == (1_000_005 + 64, "$[1]" + "[0]" * 64)
+    assert peak < 4 * len(text)
 
 
 def test_the_offset_in_json_bytes_too_deep_counts_bytes():

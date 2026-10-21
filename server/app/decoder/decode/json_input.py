@@ -212,7 +212,8 @@ def _resolve(
 
 
 _BLANK = re.compile(r"[ \t\n\r]*")
-_STRING = re.compile(r'"(?:[^"\\]|\\.)*"')
+# Possessive (++, *+): what a match took is never tried again, so it keeps no state for each character.
+_STRING = re.compile(r'"(?:[^"\\]++|\\.)*+"')
 _SCALAR = re.compile(r"[^,\]} \t\n\r]*")
 
 
