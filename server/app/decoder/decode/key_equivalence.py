@@ -11,9 +11,9 @@ tags by number and content; simple values by value (``simple(21)`` is
 ``identity(node)`` is the same for two nodes exactly when they are equivalent.
 The decoded value keeps one entry per identity; ``canonical`` reports a map
 that holds two as ``duplicate-map-key``. A node the lenient parser could not
-read (invalid, definite text that is not UTF-8) is identified by its raw bytes,
-and a string with a chunk it skipped or could not read as UTF-8 by its offset:
-what it could read of it is no string it equals.
+read (invalid, text that is not UTF-8, whole or in a chunk) is identified by
+its raw bytes, and a string with a chunk it skipped by its offset: what it kept
+of it is no string it equals.
 """
 from __future__ import annotations
 
@@ -61,7 +61,7 @@ def identity(node: Mapping[str, Any]) -> Hashable:
 
 
 def damaged_string(node: Mapping[str, Any]) -> bool:
-    """A byte or text string the lenient parser did not read whole: a chunk skipped, or a text chunk not UTF-8."""
+    """A byte or text string the lenient parser did not read whole: one of its chunks was skipped."""
 
     return node.get("majorType") in (2, 3) and bool(node.get("damaged"))
 

@@ -49,12 +49,14 @@ A byte or text string the lenient parser read past a skipped chunk is
 to itself (`key_equivalence.identity` is its offset) and is spelled as a damaged
 container key is, `invalid(bytes[1] at offset 1)`. Two such keys never merge
 into one entry, and never merge with the string their surviving chunks spell.
-So is a text string with a chunk that is not UTF-8: the chunk stays in its
-`segments` as sent (its `hex` and its `error`, and a finding at its offset and
-path), and the string has its bytes, `hex`, and no `value`, as a definite one
-that is not UTF-8 has, so its readable chunks never pass for its text; its
-decoded value is `{"diagnostic": "h'61ff' (not UTF-8)"}`, and as a key it is
-`invalid(text[2] at offset 1)`.
+A text string whose chunks were all kept, one or more not UTF-8, lost nothing,
+and is read as a definite text string that is not UTF-8 is: the chunk stays in
+its `segments` as sent (its `hex` and its `error`, and a finding at its offset
+and path), and the string has its bytes, `hex`, its `error`, no `value` (its
+readable chunks never pass for its text) and no EDN; its decoded value is
+`{"diagnostic": "h'61ff' (not UTF-8)"}`, and as a key it is `h'61ff' (not
+UTF-8)`, identified by its bytes, so the same bytes however chunked are one key.
+With a chunk skipped as well, it is damaged.
 In a CTAP view, a key or a tagged value holding anything the lenient parser could
 not read whole is spelled the same way (`view_spelling`), since no EDN spells it
 exactly.

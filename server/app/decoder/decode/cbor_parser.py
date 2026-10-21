@@ -231,9 +231,8 @@ def _parse_string(
 
     if length is None:
         chunks: list[dict[str, Any]] = []
-        # A chunk the lenient parser skips, or a text chunk it cannot read as UTF-8,
-        # leaves the string damaged: it is not the string of the chunks it could read
-        # (key_equivalence never makes it their key).
+        # A chunk the lenient parser skips leaves the string damaged: it is not the
+        # string of the chunks it kept (key_equivalence never makes it their key).
         damaged: dict[str, bool] = {}
         while True:
             if offset >= len(data):
@@ -254,8 +253,6 @@ def _parse_string(
                 )
                 damaged["damaged"] = True
                 continue
-            if "error" in chunk:
-                damaged["damaged"] = True
             chunks.append(chunk)
         if major_type == 2:
             raw = b"".join(decode_hex(chunk["hex"]) for chunk in chunks)
@@ -297,15 +294,16 @@ def _indefinite_text_node(chunks: list[dict[str, Any]], damaged: dict[str, bool]
     """An indefinite-length text string of ``chunks``, each kept as it was sent.
 
     Its ``value`` is the text its chunks spell. With a chunk that is not UTF-8
-    there is no such text: the string is its bytes (``hex``), as a definite
-    string that is not UTF-8 is, and no ``value`` passes for what it says.
+    there is no such text: the string is read as a definite string that is not
+    UTF-8 is, its bytes (``hex``) and its ``error``, and no ``value`` passes for
+    what it says.
     """
 
     if any("error" in chunk for chunk in chunks):
         raw_hex = "".join(
             chunk["hex"] if "error" in chunk else chunk["value"].encode("utf-8").hex() for chunk in chunks
         )
-        length, spelled = len(raw_hex) // 2, {"hex": raw_hex}
+        length, spelled = len(raw_hex) // 2, {"hex": raw_hex, "error": "Invalid UTF-8 in text string."}
         summary = f"text[{length}]"
     else:
         text = "".join(chunk["value"] for chunk in chunks)
@@ -445,8 +443,8 @@ _KEY_KINDS = {"simple": "simple value", "text string": "text, not UTF-8"}
 
 
 def _map_key(key_node: Mapping[str, Any]) -> Any:
-    # A string the lenient parser damaged (a chunk skipped, or one not UTF-8) is no
-    # string it holds a part of: named by what and where it is, as a damaged container is.
+    # A string the lenient parser damaged (a chunk skipped) is no string it holds a
+    # part of: named by what and where it is, as a damaged container is.
     if key_equivalence.damaged_string(key_node):
         return values.CborDiagnostic(f"invalid({key_node.get('summary')} at offset {key_node.get('offset')})", "invalid")
     key = _structure_to_value(key_node)

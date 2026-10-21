@@ -57,13 +57,21 @@ def test_parse_cbor_item_text_string_indefinite_and_invalid_utf8():
     assert [entry["code"] for entry in skipped] == ["invalid-utf8"]
 
 
-def test_a_text_chunk_that_is_not_utf8_is_kept_as_sent_and_damages_its_string():
+def test_a_text_chunk_that_is_not_utf8_is_kept_as_sent_and_its_string_read_as_one_not_utf8():
     # (_ "a", <ff>): the second chunk is no text, so the string has none either.
+    # No chunk was lost: it is its bytes, as the definite string <61ff> is.
     node, end, skipped = decode_cbor_parser.decode_item(bytes.fromhex("7f616161ffff"), lenient=True)
+    definite, _end, _skipped = decode_cbor_parser.decode_item(bytes.fromhex("6261ff"), lenient=True)
 
     assert end == 6
-    assert node["damaged"] is True
+    assert "damaged" not in node
     assert "value" not in node
+    assert (node["hex"], node["length"], node["summary"], node["error"]) == (
+        definite["hex"],
+        definite["length"],
+        definite["summary"],
+        definite["error"],
+    )
     assert (node["hex"], node["length"], node["summary"]) == ("61ff", 2, "text[2]")
     assert [chunk.get("value") for chunk in node["segments"]] == ["a", None]
     unreadable = node["segments"][1]
@@ -78,6 +86,15 @@ def test_a_text_chunk_that_is_not_utf8_is_kept_as_sent_and_damages_its_string():
         }
     ]
     assert decode_cbor_parser._structure_to_value(node) == decoder_values.CborDiagnostic("h'61ff' (not UTF-8)")
+
+
+def test_a_text_string_that_lost_a_chunk_is_damaged_whatever_its_other_chunks_hold():
+    # (_ "a", <ff>, h'01'): the byte-string chunk is skipped, so its bytes are not known.
+    node, _end, _skipped = decode_cbor_parser.decode_item(bytes.fromhex("7f616161ff4101ff"), lenient=True)
+
+    assert node["damaged"] is True
+    assert "value" not in node
+    assert [chunk.get("value") for chunk in node["segments"]] == ["a", None]
 
 
 def test_parse_cbor_item_array_map_tag_and_simple_float_values():

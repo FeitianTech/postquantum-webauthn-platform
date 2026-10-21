@@ -89,28 +89,31 @@ def test_a_damaged_container_key_is_shown_by_its_summary_and_offset_as_an_invali
     }
 
 
+def test_a_text_key_with_a_chunk_that_is_not_utf8_is_not_the_text_of_its_readable_chunks():
+    # (_ "a", <0xff>) and "a": two keys. Once, the first read as "a", replaced the
+    # second's entry and was reported as a duplicate of it.
+    result = decode_payload_text("a27f616161ffff01616102", lenient=True)
+
+    assert result["data"]["decodedValue"] == {"h'61ff' (not UTF-8)": 1, "a": 2}
+    assert "duplicate-map-key" not in _codes(result)
+
+
 @pytest.mark.parametrize(
-    ("hex_text", "decoded"),
+    "hex_text",
     [
-        # (_ "a", <0xff>) and "a": two keys. Before, the first read as "a", replaced the
-        # second's entry and was reported as a duplicate of it.
-        ("a2 7f 6161 61ff ff 01 6161 02", {"invalid(text[2] at offset 1)": 1, "a": 2}),
-        # (_ "a", <0xff>) and the same bytes unchunked: the chunk was not read, so not one key.
-        ("a2 7f 6161 61ff ff 01 6261ff 02", {"invalid(text[2] at offset 1)": 1, "h'61ff' (not UTF-8)": 2}),
-        # Twice (_ "a", <0xff>): each is only itself.
-        (
-            "a2 7f 6161 61ff ff 01 7f 6161 61ff ff 02",
-            {"invalid(text[2] at offset 1)": 1, "invalid(text[2] at offset 8)": 2},
-        ),
+        "a2 7f 6161 61ff ff 01 6261ff 02",  # (_ "a", <0xff>) and the same bytes unchunked
+        "a2 7f 6161 61ff ff 01 7f 6161 61ff ff 02",  # (_ "a", <0xff>) twice
+        "a2 6261ff 01 6261ff 02",  # <61ff> twice
     ],
 )
-def test_a_text_key_with_a_chunk_that_is_not_utf8_is_equal_only_to_itself(hex_text, decoded):
+def test_a_text_key_that_is_not_utf8_is_identified_by_its_bytes_however_chunked(hex_text):
+    # No chunk was lost, so its bytes are known: one key, and a duplicate.
     result = decode_payload_text(hex_text.replace(" ", ""), lenient=True)
 
-    assert result["data"]["decodedValue"] == decoded
-    assert "duplicate-map-key" not in [finding["code"] for finding in result["findings"]]
+    assert result["data"]["decodedValue"] == {"h'61ff' (not UTF-8)": 2}
+    assert _codes(result).count("duplicate-map-key") == 1
     node, _end, _skipped = cbor_parser.decode_item(bytes.fromhex(hex_text.replace(" ", "")), lenient=True)
-    assert key_equivalence.identity(node["entries"][0]["key"]) == ("damaged", 1)
+    assert key_equivalence.identity(node["entries"][0]["key"]) == ("raw", 3, "61ff")
 
 
 @pytest.mark.parametrize(
@@ -121,6 +124,8 @@ def test_a_text_key_with_a_chunk_that_is_not_utf8_is_equal_only_to_itself(hex_te
         ("a2 5f 4101 6161 ff 01 4101 02", {"invalid(bytes[1] at offset 1)": 1, "01": 2}),
         # (_ "a", h'01') and "a": the byte-string chunk is skipped, so the first is not "a".
         ("a2 7f 6161 4101 ff 01 6161 02", {'invalid("a" at offset 1)': 1, "a": 2}),
+        # (_ "a", <0xff>, h'01') and <61ff>: a chunk is lost, so its bytes are not known.
+        ("a2 7f 6161 61ff 4101 ff 01 6261ff 02", {"invalid(text[2] at offset 1)": 1, "h'61ff' (not UTF-8)": 2}),
     ],
 )
 def test_a_lenient_string_key_that_lost_a_chunk_is_no_other_key(hex_text, decoded):
