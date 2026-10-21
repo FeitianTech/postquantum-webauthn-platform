@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import pytest
 
-from server.app.decoder import edn
+from server.app.decoder import edn, item_budget
 from server.app.decoder.decode.cbor_parser import decode_item
 
 
@@ -107,3 +107,11 @@ def test_an_item_the_lenient_parser_could_not_read_whole_is_not_spelled(hex_text
     assert skipped
     with pytest.raises(ValueError):
         edn.spell(node)
+
+
+def test_an_item_is_spelled_without_counting_its_text_read_back():
+    # Five items, parsed under a budget of five: reading the text back would be five more.
+    with item_budget.limit(5) as budget:
+        node, _end, _skipped = decode_item(bytes.fromhex("8400010203"))
+        assert edn.spell(node) == "[0, 1, 2, 3]"
+    assert budget.used == 5

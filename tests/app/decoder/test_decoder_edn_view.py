@@ -5,7 +5,7 @@ EDN can, and it encodes back to the bytes that were decoded.
 """
 from __future__ import annotations
 
-from server.app.decoder import edn
+from server.app.decoder import edn, item_budget
 from server.app.decoder.decode import cbor_parser, edn_view
 from server.app.decoder.decode.text import decode_payload_text
 from tests.app.decoder.real_vectors import (
@@ -63,6 +63,16 @@ def test_no_edn_is_given_that_does_not_encode_back_to_the_item():
     assert edn_view.extra(node, bytes.fromhex("820102")) == {"edn": "[1, 2]"}
     assert edn_view.extra(node, bytes.fromhex("820103")) == {}  # the text is right, the bytes are not the item
     assert edn_view.extra({"majorType": 0, "value": 1}, b"\x01") == {}  # no offsets: nothing to compare with
+
+
+def test_the_edn_view_reads_its_text_back_without_counting_it():
+    data = bytes.fromhex("8400010203")
+
+    # Five items, parsed under a budget of five: the check reads them back twice more.
+    with item_budget.limit(5) as budget:
+        node, _end, _ = cbor_parser.decode_item(data)
+        assert edn_view.extra(node, data) == {"edn": "[0, 1, 2, 3]"}
+    assert budget.used == 5
 
 
 def test_the_endpoint_answers_with_the_edn(client):

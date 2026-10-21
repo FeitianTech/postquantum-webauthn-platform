@@ -18,6 +18,7 @@ from __future__ import annotations
 from collections.abc import Callable, Mapping, Sequence
 from typing import Any
 
+from .. import item_budget
 from ..cbor_head import INDEFINITE, shortest_info
 from . import floats, strings
 from .reader import encode
@@ -30,8 +31,10 @@ def spell(node: Mapping[str, Any], *, inline: bool = False) -> str:
 
     text = _item(node, 0, inline)
     offset, end = node.get("offset"), node.get("end")
-    if isinstance(offset, int) and isinstance(end, int) and len(encode(text)) != end - offset:
-        raise ValueError("the lenient parser dropped or supplied bytes that no spelling of this item shows")
+    # Read back without counting: the text spells items the request's budget counted as they were parsed.
+    with item_budget.unmetered():
+        if isinstance(offset, int) and isinstance(end, int) and len(encode(text)) != end - offset:
+            raise ValueError("the lenient parser dropped or supplied bytes that no spelling of this item shows")
     return text
 
 

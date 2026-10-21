@@ -15,7 +15,7 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from typing import Any
 
-from .. import ctap_message
+from .. import ctap_message, item_budget
 
 # The findings that the input is not what the encoder writes.
 _CAUSES = {"canonical", "malformed", "skipped"}
@@ -28,7 +28,9 @@ def check(
     """Why ``view`` does not give back ``data``; ``None`` when it does."""
 
     try:
-        rebuilt: bytes | None = ctap_message.rebuild(message, view, framing)
+        # The rebuild reads the decoder's own view back: what it reads was counted as it was parsed.
+        with item_budget.unmetered():
+            rebuilt: bytes | None = ctap_message.rebuild(message, view, framing)
         unreadable = ""
     except ValueError as exc:
         rebuilt, unreadable = None, str(exc)

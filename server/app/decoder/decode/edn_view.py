@@ -13,15 +13,17 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from .. import edn
+from .. import edn, item_budget
 
 
 def extra(node: Mapping[str, Any], data: bytes) -> dict[str, str]:
     """``{"edn": text}`` for the item ``node`` parsed from ``data``, or nothing when no exact text exists."""
 
     try:
-        text = edn.spell(node)
-        exact = edn.encode(text) == data[node["offset"] : node["end"]]
+        # The decoder reads its own text back: the items it spells were counted as they were parsed.
+        with item_budget.unmetered():
+            text = edn.spell(node)
+            exact = edn.encode(text) == data[node["offset"] : node["end"]]
     except (KeyError, TypeError, ValueError):
         return {}
     return {"edn": text} if exact else {}
