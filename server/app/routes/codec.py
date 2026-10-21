@@ -21,10 +21,12 @@ bp = Blueprint("codec", __name__)
 
 def _refusal(exc: ValueError) -> dict[str, Any]:
     body: dict[str, Any] = {"error": str(exc)}
-    # A parse error says where the input stops being well-formed (CBOR, EDN, JSON).
+    # A parse error says where the input stops being well-formed (CBOR, EDN, JSON),
+    # as far as its reader can tell: JSON gives no offset, EDN no path.
     for field in ("offset", "path"):
-        if hasattr(exc, field):
-            body[field] = getattr(exc, field)
+        value = getattr(exc, field, None)
+        if value is not None:
+            body[field] = value
     return body
 
 

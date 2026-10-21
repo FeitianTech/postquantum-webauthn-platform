@@ -6,6 +6,8 @@ import json
 import cbor2
 import pytest
 
+from server.app.decoder import item_budget
+from server.app.decoder.decode import text as decode_text
 from server.app.decoder.encode import text as encode_text
 from tests.app.decoder.credential_bytes import _build_attestation_object
 from tests.app.entry_app import entry_app
@@ -215,3 +217,21 @@ def test_the_codec_route_answers_each_payload_with_its_status(fake_decoders, req
 
     assert response.status_code == status
     assert response.get_json() == answer
+
+
+@pytest.mark.parametrize(
+    ("offset", "path", "named"),
+    [(4, "$[3]", {"offset": 4, "path": "$[3]"}), (None, "$[2]", {"path": "$[2]"}), (7, None, {"offset": 7})],
+    ids=["cbor", "json", "edn"],
+)
+def test_a_refusal_names_only_the_position_its_reader_knows(monkeypatch, offset, path, named):
+    error = item_budget.ItemLimitError(5, offset, path)
+
+    def refuse(_payload_text, **_options):
+        raise error
+
+    monkeypatch.setattr(decode_text, "decode_payload_text", refuse)
+    response = entry_app().test_client().post("/api/codec", json={"payload": "a0"})
+
+    assert response.status_code == 422
+    assert response.get_json() == {"error": str(error), **named}
