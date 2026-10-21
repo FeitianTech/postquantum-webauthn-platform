@@ -57,6 +57,29 @@ def test_parse_cbor_item_text_string_indefinite_and_invalid_utf8():
     assert [entry["code"] for entry in skipped] == ["invalid-utf8"]
 
 
+def test_a_text_chunk_that_is_not_utf8_is_kept_as_sent_and_damages_its_string():
+    # (_ "a", <ff>): the second chunk is no text, so the string has none either.
+    node, end, skipped = decode_cbor_parser.decode_item(bytes.fromhex("7f616161ffff"), lenient=True)
+
+    assert end == 6
+    assert node["damaged"] is True
+    assert "value" not in node
+    assert (node["hex"], node["length"], node["summary"]) == ("61ff", 2, "text[2]")
+    assert [chunk.get("value") for chunk in node["segments"]] == ["a", None]
+    unreadable = node["segments"][1]
+    assert (unreadable["offset"], unreadable["hex"], unreadable["error"]) == (3, "ff", "Invalid UTF-8 in text string.")
+    assert skipped == [
+        {
+            "code": "invalid-utf8",
+            "category": "skipped",
+            "offset": 3,
+            "path": "$<chunk 1>",
+            "message": "text string is not valid UTF-8",
+        }
+    ]
+    assert decode_cbor_parser._structure_to_value(node) == decoder_values.CborDiagnostic("h'61ff' (not UTF-8)")
+
+
 def test_parse_cbor_item_array_map_tag_and_simple_float_values():
     array_node, _ = decode_cbor_parser._parse_cbor_item(b"\x82\x01\x02", 0)
     assert array_node["summary"] == "array[2]"

@@ -96,6 +96,7 @@ def test_a_node_built_without_its_head_is_spelled_as_the_shortest():
         "82 01",  # an array missing an item
         "5f 01 4102 ff",  # an indefinite string with a chunk skipped ((_ h'02') before)
         "c1 7f 61ff 4101 ff",  # a tagged string with a chunk skipped and one that is not UTF-8
+        "7f 6161 61ff ff",  # an indefinite string with a chunk that is not UTF-8
         # Damage that leaves no mark on the node: the spelling would be well formed, and wrong.
         "bf 01 ff",  # an indefinite map whose key has no value ({_ } before)
         "9f 01",  # an indefinite array with no break byte ([_ 1] before)
