@@ -200,6 +200,16 @@ def test_what_is_not_a_report_is_answered_and_not_logged(client, lines, body, co
     assert lines() == []
 
 
+def test_a_report_nested_too_deep_is_refused_unread(client, lines):
+    response = post(client, "[" * 100_000 + "]" * 100_000)
+
+    assert response.status_code == 400
+    assert response.get_json() == {
+        "error": "The request body is JSON nested more than 64 deep, deeper than this server reads."
+    }
+    assert lines() == []
+
+
 class _Clock:
     def __init__(self):
         self.now = 1000.0

@@ -143,6 +143,9 @@ def _refuse_json_constant(constant: str) -> Any:
 
 def _read_metadata_json(text: str) -> Any:
     # RFC 8259's JSON: the metadata is answered back, and NaN would make that answer not JSON.
+    # Nested at most as deep as a JSON body (routes/json_body.py): Python's reader goes as deep as the text.
+    if json_body.nested_too_deep(text.encode("utf-8")):
+        raise ValueError(f"JSON nested more than {json_body.MAX_DEPTH} deep, deeper than this server reads")
     return json.loads(text, parse_constant=_refuse_json_constant)
 
 

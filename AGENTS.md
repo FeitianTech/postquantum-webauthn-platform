@@ -280,7 +280,8 @@ its logic out here first.
   attestation finding its warning, while the Advanced tab completes and reports them all as
   errors); `routes/ceremony_session.py` (every begin: refused, the session kept as
   it was, when its cookie would pass `MAX_COOKIE_SIZE`); `routes/json_body.py` (every route's
-  JSON body: an object, or read as an empty one); `routes/mds.py` (the MDS routes and
+  JSON body: an object, or read as an empty one; one nested more than 64 deep refused, 400 in JSON,
+  before it is parsed, as the CSP report and the metadata upload's files are); `routes/mds.py` (the MDS routes and
   certificate decoding); `routes/codec.py` (`/api/codec`); `routes/web_export.py` (`/health`,
   and the export at `/`: the site's catch-all, since Flask has no static rule; HTML `no-cache`,
   `/_next/static/` immutable with the build's `.gz`, the export's 404 page, a plain 404 under

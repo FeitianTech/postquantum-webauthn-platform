@@ -7,6 +7,7 @@ from flask import jsonify, request
 from werkzeug.exceptions import RequestEntityTooLarge
 
 from ..storage.common import InvalidStorageIdentifier, StorageReadError
+from . import json_body
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +42,14 @@ def request_entity_too_large(exc: RequestEntityTooLarge):
     return too_large_answer(request.max_content_length)
 
 
+def json_nested_too_deep(exc: json_body.NestedTooDeep):
+    # Refused before it was parsed: Python's JSON reader would go as deep as the text.
+    logger.warning("Refused a JSON body nested too deep in %s %s", request.method, request.path)
+    return jsonify({"error": f"The request body is JSON nested more than {json_body.MAX_DEPTH} deep, deeper than this server reads."}), 400
+
+
 def init_app(app) -> None:
     app.register_error_handler(InvalidStorageIdentifier, invalid_storage_identifier)
     app.register_error_handler(StorageReadError, storage_read_error)
     app.register_error_handler(RequestEntityTooLarge, request_entity_too_large)
+    app.register_error_handler(json_body.NestedTooDeep, json_nested_too_deep)

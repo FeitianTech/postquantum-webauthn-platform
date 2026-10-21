@@ -58,6 +58,20 @@ def test_an_upload_still_mints_the_namespace_it_is_stored_under(mds_fixture_snap
     assert len(session_metadata.list_sessions()) == 1
 
 
+def test_an_uploaded_file_nested_too_deep_is_refused_and_nothing_is_saved(mds_fixture_snapshot, client):
+    response = client.post(
+        "/api/mds/metadata/upload",
+        data={"files": (io.BytesIO(b"[" * 100_000 + b"]" * 100_000), "deep.json")},
+        content_type="multipart/form-data",
+    )
+
+    assert response.status_code == 400
+    assert response.get_json() == {
+        "items": [],
+        "errors": ["deep.json: JSON nested more than 64 deep, deeper than this server reads"],
+    }
+
+
 def test_the_visitors_uploads_are_never_cached_and_keyed_on_the_cookie(mds_fixture_snapshot, client):
     response = client.get("/api/mds/metadata/custom")
 

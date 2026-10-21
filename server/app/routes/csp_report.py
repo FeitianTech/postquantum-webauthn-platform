@@ -17,6 +17,7 @@ import json
 from flask import Blueprint, current_app, jsonify, request
 
 from ..csp_reports import ViolationLog, violations_from
+from . import json_body
 from .errors import too_large_answer
 
 bp = Blueprint("csp_report", __name__)
@@ -51,6 +52,8 @@ def csp_report():
         log.refused_as_too_large(MAX_REPORT_BYTES)
         return too_large_answer(MAX_REPORT_BYTES)
 
+    if json_body.nested_too_deep(body):
+        raise json_body.NestedTooDeep()
     try:
         payload = json.loads(body)
     except ValueError:
