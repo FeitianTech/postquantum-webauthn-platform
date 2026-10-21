@@ -3,6 +3,9 @@
 import base64
 import json
 
+import pytest
+
+from server.app.decoder import item_budget
 from server.app.decoder.encode import text as encode_text
 from tests.app.security.ceremony_helpers import b64u
 
@@ -81,3 +84,18 @@ def test_encode_der_extracts_nested_binary_payload():
     assert encoded["type"] == "DER (encoded)"
     assert encoded["data"]["binary"]["hex"] == payload_bytes.hex()
     assert encoded["data"]["derBase64"] == base64.b64encode(payload_bytes).decode("ascii")
+
+
+@pytest.mark.parametrize(
+    ("target_format", "offset", "path"),
+    [("EDN", 7, None), ("CBOR", None, "$[2]")],
+    ids=["edn", "json"],
+)
+def test_input_of_as_many_items_as_the_budget_is_encoded_and_one_more_is_refused(target_format, offset, path):
+    # The array and its three items: four, in EDN or in JSON.
+    encoded = encode_text.encode_payload_text("[1, 2, 3]", target_format, max_items=4)
+    assert encoded["data"]["binary"]["hex"] == "83010203"
+
+    with pytest.raises(item_budget.ItemLimitError) as refused:
+        encode_text.encode_payload_text("[1, 2, 3]", target_format, max_items=3)
+    assert (refused.value.offset, refused.value.path) == (offset, path)

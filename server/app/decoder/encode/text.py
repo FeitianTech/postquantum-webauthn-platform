@@ -5,6 +5,7 @@ import json
 from collections.abc import Callable
 from typing import Any
 
+from .. import item_budget
 from ..decode.json_input import read as read_json
 from ..decode.json_keys import as_written
 from .handlers_basic import (
@@ -21,9 +22,21 @@ from .handlers_cbor import (
 from .handlers_edn import _encode_edn_value
 
 
-def encode_payload_text(value: str, target_format: str) -> dict[str, Any]:
-    """Encode ``value`` into the requested ``target_format``."""
+def encode_payload_text(
+    value: str, target_format: str, *, max_items: int = item_budget.DEFAULT_MAX_ITEMS
+) -> dict[str, Any]:
+    """Encode ``value`` into the requested ``target_format``.
 
+    What it reads, the JSON or EDN and the CBOR a typed key spells, counts
+    against one budget of ``max_items`` (``item_budget``): past it, the input is
+    refused with ``ItemLimitError``.
+    """
+
+    with item_budget.limit(max_items):
+        return _encode(value, target_format)
+
+
+def _encode(value: str, target_format: str) -> dict[str, Any]:
     trimmed = value.strip()
     if not trimmed:
         raise ValueError("Encoder input is empty.")
