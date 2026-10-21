@@ -47,12 +47,15 @@ def test_the_limits_are_the_defaults_unless_the_environment_sets_them(make_app, 
     app = make_app()
     assert app.config["MAX_CONTENT_LENGTH"] == _LIMIT
     assert app.config[request_limits.METADATA_UPLOAD_LIMIT_KEY] == _UPLOAD_LIMIT
+    assert app.config[request_limits.CODEC_ITEM_LIMIT_KEY] == 20_000
 
     monkeypatch.setenv("FIDO_SERVER_MAX_REQUEST_BYTES", "4096")
     monkeypatch.setenv("FIDO_SERVER_MAX_METADATA_UPLOAD_BYTES", "8192")
+    monkeypatch.setenv("FIDO_SERVER_MAX_CODEC_ITEMS", "500")
     app = make_app()
     assert app.config["MAX_CONTENT_LENGTH"] == 4096
     assert app.config[request_limits.METADATA_UPLOAD_LIMIT_KEY] == 8192
+    assert app.config[request_limits.CODEC_ITEM_LIMIT_KEY] == 500
 
     for invalid in ("", "0", "-5", "lots"):
         monkeypatch.setenv("FIDO_SERVER_MAX_REQUEST_BYTES", invalid)

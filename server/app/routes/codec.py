@@ -8,8 +8,9 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, current_app, jsonify, request
 
+from ..config import request_limits
 from ..decoder.decode import text as decode_text
 from ..decoder.encode import text as encode_text
 from . import json_body
@@ -30,9 +31,9 @@ def _refusal(exc: ValueError) -> dict[str, Any]:
     return body
 
 
-def _perform_decode(decoder_input: str, *, lenient: bool = False):
+def _perform_decode(decoder_input: str, *, lenient: bool, max_items: int):
     try:
-        return decode_text.decode_payload_text(decoder_input, lenient=lenient), 200
+        return decode_text.decode_payload_text(decoder_input, lenient=lenient, max_items=max_items), 200
     except ValueError as exc:
         return _refusal(exc), 422
     except Exception as exc:  # pylint: disable=broad-except
@@ -40,9 +41,9 @@ def _perform_decode(decoder_input: str, *, lenient: bool = False):
         return {"error": "Unable to decode payload."}, 500
 
 
-def _perform_encode(encoder_input: str, target_format: str):
+def _perform_encode(encoder_input: str, target_format: str, *, max_items: int):
     try:
-        return encode_text.encode_payload_text(encoder_input, target_format), 200
+        return encode_text.encode_payload_text(encoder_input, target_format, max_items=max_items), 200
     except ValueError as exc:
         return _refusal(exc), 422
     except Exception as exc:  # pylint: disable=broad-except
@@ -62,17 +63,19 @@ def api_codec_payload():
 
     mode = payload.get("mode", "decode")
     mode_normalized = mode.lower() if isinstance(mode, str) else "decode"
+    # How many items one decode or encode reads (config/request_limits.py).
+    max_items = current_app.config[request_limits.CODEC_ITEM_LIMIT_KEY]
 
     if mode_normalized == "encode":
         target_format = payload.get("format")
         if not isinstance(target_format, str) or not target_format.strip():
             return jsonify({"error": "Encoder format must be provided."}), 400
-        result, status = _perform_encode(codec_input, target_format)
+        result, status = _perform_encode(codec_input, target_format, max_items=max_items)
         return jsonify(result), status
 
     lenient = payload.get("lenient", False)
     if not isinstance(lenient, bool):
         return jsonify({"error": "lenient must be true or false."}), 400
 
-    result, status = _perform_decode(codec_input, lenient=lenient)
+    result, status = _perform_decode(codec_input, lenient=lenient, max_items=max_items)
     return jsonify(result), status

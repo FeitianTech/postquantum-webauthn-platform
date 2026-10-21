@@ -235,3 +235,23 @@ def test_a_refusal_names_only_the_position_its_reader_knows(monkeypatch, offset,
 
     assert response.status_code == 422
     assert response.get_json() == {"error": str(error), **named}
+
+
+@pytest.mark.parametrize(
+    ("body", "named"),
+    [
+        ({"payload": "9f00010203ff"}, {"offset": 3, "path": "$[2]"}),
+        ({"payload": "[1, 2, 3]"}, {"path": "$[2]"}),
+        ({"payload": "[1, 2, 3]", "mode": "encode", "format": "EDN"}, {"offset": 7}),
+    ],
+    ids=["cbor", "json", "edn"],
+)
+def test_the_codec_reads_at_most_as_many_items_as_the_environment_sets(make_app, monkeypatch, body, named):
+    monkeypatch.setenv("FIDO_SERVER_MAX_CODEC_ITEMS", "3")
+
+    response = make_app().test_client().post("/api/codec", json=body)
+
+    # Each input holds four items or more: the fourth is refused where its reader was.
+    error = item_budget.ItemLimitError(3, named.get("offset"), named.get("path"))
+    assert response.status_code == 422
+    assert response.get_json() == {"error": str(error), **named}

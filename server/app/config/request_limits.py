@@ -18,11 +18,17 @@ The sizes the limits are chosen from (measured):
 
 So 8 MiB for every route, and 16 MiB for the metadata upload, which sets its
 own limit on the request before reading it. Both can be set in the environment.
+
+``/api/codec`` also reads at most ``MAX_CODEC_ITEMS`` items for one request,
+20,000 unless the environment says otherwise (``decoder/item_budget.py`` says
+what counts, and why that many).
 """
 from __future__ import annotations
 
 import os
 from typing import Any
+
+from ..decoder import item_budget
 
 _MIB = 1024 * 1024
 DEFAULT_MAX_REQUEST_BYTES = 8 * _MIB
@@ -30,6 +36,8 @@ DEFAULT_MAX_METADATA_UPLOAD_BYTES = 16 * _MIB
 
 # The app.config key the metadata upload reads its limit from.
 METADATA_UPLOAD_LIMIT_KEY = "MAX_METADATA_UPLOAD_LENGTH"
+# The app.config key /api/codec reads its item budget from.
+CODEC_ITEM_LIMIT_KEY = "MAX_CODEC_ITEMS"
 
 
 def _positive_int(name: str, default: int) -> int:
@@ -45,11 +53,12 @@ def _positive_int(name: str, default: int) -> int:
 
 
 def config_from_env() -> dict[str, Any]:
-    """The request-size limits ``create_app()`` puts into ``app.config``."""
+    """The request limits ``create_app()`` puts into ``app.config``."""
 
     return {
         "MAX_CONTENT_LENGTH": _positive_int("FIDO_SERVER_MAX_REQUEST_BYTES", DEFAULT_MAX_REQUEST_BYTES),
         METADATA_UPLOAD_LIMIT_KEY: _positive_int(
             "FIDO_SERVER_MAX_METADATA_UPLOAD_BYTES", DEFAULT_MAX_METADATA_UPLOAD_BYTES
         ),
+        CODEC_ITEM_LIMIT_KEY: _positive_int("FIDO_SERVER_MAX_CODEC_ITEMS", item_budget.DEFAULT_MAX_ITEMS),
     }
