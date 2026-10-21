@@ -200,8 +200,13 @@ def test_what_is_not_a_report_is_answered_and_not_logged(client, lines, body, co
     assert lines() == []
 
 
-def test_a_report_nested_too_deep_is_refused_unread(client, lines):
-    response = post(client, "[" * 100_000 + "]" * 100_000)
+@pytest.mark.parametrize(
+    "body",
+    ["[" * 100_000 + "]" * 100_000, ('["\\"", "x", ' + "[" * 100_000 + "]" * 100_000 + ', "y"]').encode("utf-16")],
+    ids=["UTF-8", "UTF-16 after an escaped quote"],
+)
+def test_a_report_nested_too_deep_is_refused_unread(client, lines, body):
+    response = post(client, body)
 
     assert response.status_code == 400
     assert response.get_json() == {

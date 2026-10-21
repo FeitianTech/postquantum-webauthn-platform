@@ -12,10 +12,16 @@ its stack runs out, about 10,000 levels on Python 3.12, and any walk over a valu
 deeper than about 1,000 levels fails the same way; no body the page sends nests
 deeper than about a dozen. The CSP report route and the metadata upload, which
 read their own JSON, ask ``nested_too_deep`` too.
+
+The body is scanned as the reader reads bytes: in the UTF-8, UTF-16 or UTF-32
+its first bytes name (``json.detect_encoding``). Read byte by byte, UTF-16 or
+UTF-32 text can hold a quote's byte where there is no quote, and hide brackets
+inside what looks like a string.
 """
 from __future__ import annotations
 
 import itertools
+import json
 import operator
 import re
 from typing import Any
@@ -45,6 +51,13 @@ class NestedTooDeep(BadRequest):
 def nested_too_deep(data: bytes) -> bool:
     """Whether JSON ``data`` nests arrays and objects more than ``MAX_DEPTH`` deep, its strings set aside."""
 
+    encoding = json.detect_encoding(data)
+    if encoding.startswith(("utf-16", "utf-32")):
+        try:
+            # Decoded as json.loads decodes it. In UTF-8 each bracket, quote and backslash is its one ASCII byte.
+            data = data.decode(encoding, "surrogatepass").encode("utf-8", "surrogatepass")
+        except UnicodeDecodeError:
+            return False  # the reader cannot decode it either: it reads nothing nested
     if data.count(b"[") + data.count(b"{") <= MAX_DEPTH:
         return False
     outside = b"".join(_STRING.sub(b"", stretch) for stretch in _STRETCH.findall(data))

@@ -97,6 +97,25 @@ def test_json_is_too_deep_past_64_arrays_or_objects_its_strings_set_aside(data, 
     assert json_body.nested_too_deep(data) is too_deep
 
 
+@pytest.mark.parametrize("encoding", ["utf-8-sig", "utf-16", "utf-16-le", "utf-16-be", "utf-32", "utf-32-le", "utf-32-be"])
+@pytest.mark.parametrize(
+    ("text", "too_deep"),
+    [
+        ('["\\"", "x", ' + "[" * 63 + "]" * 63 + ', "y"]', False),
+        ('["\\"", "x", ' + "[" * 64 + "]" * 64 + ', "y"]', True),
+        ('["∀屜' + "[" * 100 + '"]', False),
+    ],
+    ids=["64 deep after an escaped quote", "65 deep after an escaped quote", "in a string of a quote's and a backslash's bytes"],
+)
+def test_json_in_any_encoding_the_reader_reads_is_scanned_as_it_decodes_it(text, too_deep, encoding):
+    assert json_body.nested_too_deep(text.encode(encoding)) is too_deep
+
+
+def test_bytes_the_reader_cannot_decode_are_not_too_deep():
+    # The first bytes say UTF-16, and the body ends halfway through a character.
+    assert json_body.nested_too_deep(("[" * 100).encode("utf-16-be") + b"\x00") is False
+
+
 @pytest.mark.parametrize("end", [b"", b"\\"], ids=["escaped quotes", "then a lone backslash"])
 def test_a_string_no_quote_closes_is_scanned_in_time_linear_in_the_body(end):
     for size in (_SECONDS_IF_QUADRATIC, 8 * 1024 * 1024):
@@ -130,12 +149,14 @@ def test_a_body_that_does_not_say_it_is_json_is_not_read(app):
         assert json_body.json_object() == {}
 
 
+@pytest.mark.parametrize("encoding", ["utf-8", "utf-16", "utf-32-le"])
 @pytest.mark.parametrize("depth", [65, 100_000])
-def test_every_route_refuses_a_json_body_nested_too_deep_with_a_400_in_json(app, make_app, depth, monkeypatch, tmp_path):
+def test_every_route_refuses_a_json_body_nested_too_deep_with_a_400_in_json(app, make_app, depth, encoding, monkeypatch, tmp_path):
     for name in ("CREDENTIAL", "CREDENTIAL_ARTIFACT", "SESSION_METADATA"):
         monkeypatch.setenv(f"FIDO_SERVER_{name}_DIR", str(tmp_path / name.lower()))
     client = make_app().test_client()
-    body = "[" * depth + "]" * depth
+    # After an escaped quote, read byte by byte, UTF-16 and UTF-32 look like a string around the brackets.
+    body = ('["\\"", "x", ' + "[" * depth + "]" * depth + ', "y"]').encode(encoding)
 
     # The Simple begins read the body once the username is one they take.
     answers = {
