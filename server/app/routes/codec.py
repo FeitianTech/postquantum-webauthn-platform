@@ -53,6 +53,8 @@ def _perform_encode(encoder_input: str, target_format: str, *, max_items: int):
 
 @bp.route("/api/codec", methods=["POST"])
 def api_codec_payload():
+    # Its own limit, before the body is read (config/request_limits.py).
+    request.max_content_length = current_app.config[request_limits.CODEC_REQUEST_LIMIT_KEY]
     if not request.is_json:
         return jsonify({"error": "Expected JSON payload."}), 400
 

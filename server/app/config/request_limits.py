@@ -1,4 +1,4 @@
-"""How large a request body the app reads: ``MAX_CONTENT_LENGTH``, and the metadata upload's own limit.
+"""How large a request body the app reads: ``MAX_CONTENT_LENGTH``, and the metadata upload's and the codec's own.
 
 A body over the limit is answered 413 before any route reads it
 (``routes/errors.py`` answers it as JSON). Without one, only Cloud Run's 32 MiB
@@ -16,8 +16,10 @@ The sizes the limits are chosen from (measured):
 - the metadata upload of the whole MDS metadata (fido-mds3.verified.json):
   about 7.4 MB.
 
-So 8 MiB for every route, and 16 MiB for the metadata upload, which sets its
-own limit on the request before reading it. Both can be set in the environment.
+So 8 MiB for every route; 16 MiB for the metadata upload; and 1 MiB for
+``/api/codec``, whose inputs are at most about 60 KB and which reads each one
+several times. The upload and the codec set their own limit on the request
+before reading it. All three can be set in the environment.
 
 ``/api/codec`` also reads at most ``MAX_CODEC_ITEMS`` items for one request,
 20,000 unless the environment says otherwise (``decoder/item_budget.py`` says
@@ -33,10 +35,12 @@ from ..decoder import item_budget
 _MIB = 1024 * 1024
 DEFAULT_MAX_REQUEST_BYTES = 8 * _MIB
 DEFAULT_MAX_METADATA_UPLOAD_BYTES = 16 * _MIB
+DEFAULT_MAX_CODEC_REQUEST_BYTES = _MIB
 
 # The app.config key the metadata upload reads its limit from.
 METADATA_UPLOAD_LIMIT_KEY = "MAX_METADATA_UPLOAD_LENGTH"
-# The app.config key /api/codec reads its item budget from.
+# The app.config keys /api/codec reads its own limit and its item budget from.
+CODEC_REQUEST_LIMIT_KEY = "MAX_CODEC_REQUEST_LENGTH"
 CODEC_ITEM_LIMIT_KEY = "MAX_CODEC_ITEMS"
 
 
@@ -60,5 +64,6 @@ def config_from_env() -> dict[str, Any]:
         METADATA_UPLOAD_LIMIT_KEY: _positive_int(
             "FIDO_SERVER_MAX_METADATA_UPLOAD_BYTES", DEFAULT_MAX_METADATA_UPLOAD_BYTES
         ),
+        CODEC_REQUEST_LIMIT_KEY: _positive_int("FIDO_SERVER_MAX_CODEC_REQUEST_BYTES", DEFAULT_MAX_CODEC_REQUEST_BYTES),
         CODEC_ITEM_LIMIT_KEY: _positive_int("FIDO_SERVER_MAX_CODEC_ITEMS", item_budget.DEFAULT_MAX_ITEMS),
     }
