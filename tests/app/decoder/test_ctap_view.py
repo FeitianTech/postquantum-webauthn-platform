@@ -45,6 +45,7 @@ def test_a_value_is_spelled_so_its_type_comes_back(hex_text, spelled):
     [
         ("cc1e", "invalid(tag(12) at offset 0) (invalid)"),  # a tag around an unreadable head
         ("811e", ["invalid(invalid(h'1e') at offset 1) (invalid)"]),  # an array keeps its items
+        ("c17f61ff4101ff", "invalid(tag(1) at offset 0) (invalid)"),  # a tag around a damaged string
     ],
 )
 def test_a_value_holding_what_the_lenient_parser_could_not_read_is_spelled_invalid(hex_text, spelled):
@@ -59,6 +60,7 @@ def test_a_value_holding_what_the_lenient_parser_could_not_read_is_spelled_inval
         ("cc1e", "invalid(tag(12) at offset 0) (invalid)"),
         ("811e", "invalid(array[1] at offset 0) (invalid)"),
         ("a1011e", "invalid(map[1] at offset 0) (invalid)"),
+        ("c17f61ff4101ff", "invalid(tag(1) at offset 0) (invalid)"),
     ],
 )
 def test_a_key_holding_what_the_lenient_parser_could_not_read_is_labelled_invalid(hex_text, label):

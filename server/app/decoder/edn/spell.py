@@ -8,10 +8,10 @@ not in preferred serialization an encoding indicator says how it was written --
 duplicates. Reading the text back with :func:`..edn.encode` gives the same bytes.
 
 The node is the one ``decode/cbor_parser`` builds; a node the lenient parser
-damaged (truncated, invalid, with items dropped) cannot be spelled exactly and
-raises ``ValueError``. Not every damage marks the node -- a map key whose value
-is missing, a chunk skipped, a break byte absent -- so the text is read back and
-must span as many bytes as the node does.
+damaged (truncated, invalid, a string with a chunk it could not read, with items
+dropped) cannot be spelled exactly and raises ``ValueError``. Not every damage
+marks the node -- a map key whose value is missing, a break byte absent -- so
+the text is read back and must span as many bytes as the node does.
 """
 from __future__ import annotations
 
@@ -39,7 +39,13 @@ def spell(node: Mapping[str, Any], *, inline: bool = False) -> str:
 
 
 def _item(node: Mapping[str, Any], depth: int, inline: bool) -> str:
-    if node.get("type") == "invalid" or node.get("truncated") or "declaredLength" in node or "error" in node:
+    if (
+        node.get("type") == "invalid"
+        or node.get("truncated")
+        or node.get("damaged")
+        or "declaredLength" in node
+        or "error" in node
+    ):
         raise ValueError("an item the lenient parser could not read whole has no exact spelling")
     major_type = node.get("majorType")
     if major_type in (0, 1):
