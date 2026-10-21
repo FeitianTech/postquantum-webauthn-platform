@@ -25,7 +25,10 @@ from werkzeug.exceptions import BadRequest
 
 MAX_DEPTH = 64
 
-_STRING = re.compile(rb'"[^"\\]*(?:\\.[^"\\]*)*"', re.DOTALL)
+# A string to its closing quote, or to the body's end when none closes it: Python's reader reads no further.
+# So a match never fails, and the search never starts again inside text it took; nor does a possessive
+# repeat (*+) go back, so it keeps no state for each escape. The scan is linear in the body's length.
+_STRING = re.compile(rb'"[^"\\]*+(?:\\.[^"\\]*+)*+"?', re.DOTALL)
 # Each bracket left once the strings are set aside, as a step: 2 for an opening one, 0 for a closing one.
 _STEPS = bytes.maketrans(b"[{]}", b"\x02\x02\x00\x00")
 _NOT_BRACKETS = bytes(byte for byte in range(256) if byte not in b"[]{}")
