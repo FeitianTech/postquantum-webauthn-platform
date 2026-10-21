@@ -198,7 +198,7 @@ def _is_json_text(data: bytes) -> bool:
         return False
     try:
         return json_input.read_or_none(text)[0] is not json_input.NOT_JSON
-    except json_input.JsonConstantError:
+    except (json_input.JsonConstantError, json_input.JsonDepthError):
         return False
 
 

@@ -18,14 +18,24 @@ as a bare ``NaN``, which would make the decoder's own answer not JSON.
 Every value counts against the request's item budget (``item_budget``), named
 by its path and no offset, as a finding is. ``json.loads`` has read the whole
 text by then: the request's size limit bounds what that costs.
+
+JSON is read at most 64 deep, as CBOR and EDN are (RFC 8259 section 9 lets a
+parser limit how deep it reads): a value nested deeper raises ``JsonDepthError``
+with the offset and path of the first, strict or lenient. ``json.loads`` itself
+reads as deep as the text goes until Python's stack runs out, so both that and
+``_resolve`` stopping at the limit are refused at that first value.
 """
 from __future__ import annotations
 
 import json
+import re
 from collections.abc import Callable
 from typing import Any
 
 from .. import item_budget
+
+# decode/cbor_parser's limit, which edn/reader keeps too: JSON is read as deep as CBOR is.
+_MAX_DEPTH = 64
 
 
 class _Members(list):
@@ -46,6 +56,19 @@ class JsonConstantError(ValueError):
             f"Not JSON at offset {offset} ({path}): {self.reason}. The decoder reads it when asked to read "
             "leniently; EDN writes it (NaN, Infinity, -Infinity)."
         )
+
+
+class JsonDepthError(ValueError):
+    """JSON nested deeper than the decoder reads: where the first value too deep starts."""
+
+    def __init__(self, path: str, offset: int) -> None:
+        self.offset, self.path = offset, path
+        self.reason = f"values are nested more than {_MAX_DEPTH} deep, the most the decoder reads"
+        super().__init__(f"JSON nested too deep at offset {offset} ({path}): {self.reason}")
+
+
+class _TooDeep(Exception):
+    """``_resolve`` met a value nested deeper than ``_MAX_DEPTH``: ``_read`` finds where it starts."""
 
 
 def read(
@@ -72,8 +95,14 @@ def read_bytes(data: bytes, *, lenient: bool = False) -> tuple[Any, list[dict[st
 def _read(text: str, lenient: bool, position: Callable[[int], int]) -> tuple[Any, list[dict[str, Any]]]:
     findings: list[dict[str, Any]] = []
     constants: list[tuple[str, str]] = []
-    parsed = json.loads(text, object_pairs_hook=_Members, parse_constant=_Constant)
-    value = _resolve(parsed, "$", findings, constants=constants, budget=item_budget.current())
+    try:
+        parsed = json.loads(text, object_pairs_hook=_Members, parse_constant=_Constant)
+        value = _resolve(parsed, "$", findings, constants=constants, budget=item_budget.current())
+    except (_TooDeep, RecursionError):
+        too_deep = _first_too_deep(text)
+        if too_deep is None:
+            raise
+        raise JsonDepthError(too_deep[0], position(too_deep[1])) from None
     located = [(name, path, position(offset)) for (name, path), offset in zip(constants, _constant_offsets(text))]
     if located and not lenient:
         raise JsonConstantError(*located[0])
@@ -88,11 +117,12 @@ NOT_JSON: Any = object()
 def read_or_none(
     text: Any, *, lenient: bool = False, base: int = 0, in_bytes: bool = False
 ) -> tuple[Any, list[dict[str, Any]]]:
-    """``read``, or ``(NOT_JSON, [])`` for text that is not JSON; NaN or Infinity read strictly still raises."""
+    """``read``, or ``(NOT_JSON, [])`` for text that is not JSON; NaN or Infinity read strictly, or JSON
+    nested too deep, still raises."""
 
     try:
         return read(text, lenient=lenient, base=base, in_bytes=in_bytes)
-    except JsonConstantError:
+    except (JsonConstantError, JsonDepthError):
         raise
     except (ValueError, TypeError):
         return NOT_JSON, []
@@ -138,12 +168,15 @@ def _resolve(
     *,
     constants: list[tuple[str, str]],
     budget: item_budget.Budget | None,
+    depth: int = 0,
 ) -> Any:
     """``value`` as ``json.loads`` gives it; ``dropped``: it is inside a value the result drops.
 
     Each NaN or Infinity is noted in ``constants`` with its path, in the order of the text.
     """
 
+    if depth > _MAX_DEPTH:
+        raise _TooDeep
     if budget is not None:
         budget.charge(None, path)
     if isinstance(value, _Constant):
@@ -156,7 +189,13 @@ def _resolve(
         occurrences: dict[str, list[Any]] = {}
         for index, (key, member) in enumerate(value):
             member_value = _resolve(
-                member, _member_path(path, key), findings, dropped or last[key] != index, constants=constants, budget=budget
+                member,
+                _member_path(path, key),
+                findings,
+                dropped or last[key] != index,
+                constants=constants,
+                budget=budget,
+                depth=depth + 1,
             )
             occurrences.setdefault(key, []).append(member_value)
             resolved[key] = member_value
@@ -166,10 +205,57 @@ def _resolve(
         return resolved
     if isinstance(value, list):
         return [
-            _resolve(item, f"{path}[{index}]", findings, dropped, constants=constants, budget=budget)
+            _resolve(item, f"{path}[{index}]", findings, dropped, constants=constants, budget=budget, depth=depth + 1)
             for index, item in enumerate(value)
         ]
     return value
+
+
+_BLANK = re.compile(r"[ \t\n\r]*")
+_STRING = re.compile(r'"(?:[^"\\]|\\.)*"')
+_SCALAR = re.compile(r"[^,\]} \t\n\r]*")
+
+
+def _first_too_deep(text: str) -> tuple[str, int] | None:
+    """The path and offset of the first value nested more than ``_MAX_DEPTH`` deep in JSON ``text``, if any.
+
+    ``text`` is JSON as far as that value: ``json.loads`` read it, or went deeper still.
+    """
+
+    found: list[tuple[str, int]] = []
+
+    def skip_value(index: int, path: str, depth: int) -> int:
+        # Where the value at ``index`` ends; -1 once the first value too deep is found.
+        index = _BLANK.match(text, index).end()
+        if depth > _MAX_DEPTH:
+            found.append((path, index))
+            return -1
+        opening = text[index]
+        if opening == '"':
+            return _STRING.match(text, index).end()
+        if opening not in "[{":
+            return _SCALAR.match(text, index).end()
+        closing = "]" if opening == "[" else "}"
+        index = _BLANK.match(text, index + 1).end()
+        count = 0
+        while text[index] != closing:
+            if opening == "{":
+                key = _STRING.match(text, index)
+                inner = _member_path(path, json.loads(key.group()))
+                index = _BLANK.match(text, key.end()).end() + 1
+            else:
+                inner = f"{path}[{count}]"
+            index = skip_value(index, inner, depth + 1)
+            if index < 0:
+                return index
+            index = _BLANK.match(text, index).end()
+            if text[index] == ",":
+                index = _BLANK.match(text, index + 1).end()
+            count += 1
+        return index + 1
+
+    skip_value(0, "$", 0)
+    return found[0] if found else None
 
 
 def _member_path(path: str, key: str) -> str:

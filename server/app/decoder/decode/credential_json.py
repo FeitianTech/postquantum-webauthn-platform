@@ -200,7 +200,8 @@ def _read_nested(
 
 
 def _error_location(exc: ValueError) -> tuple[int, str, str]:
-    if isinstance(exc, (cbor_parser._CborDecodingError, auth_data_reader._LocatedError, json_input.JsonConstantError)):
+    located = (cbor_parser._CborDecodingError, auth_data_reader._LocatedError, json_input.JsonConstantError, json_input.JsonDepthError)
+    if isinstance(exc, located):
         return exc.offset, exc.path, exc.reason
     if isinstance(exc, json.JSONDecodeError):
         return exc.pos, "$", exc.msg

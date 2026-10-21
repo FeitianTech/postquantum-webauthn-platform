@@ -155,3 +155,14 @@ def test_a_jws_header_holding_nan_is_not_json():
         "error": "the header is not JSON: NaN is not JSON: RFC 8259 has no NaN or Infinity (at byte 8)",
         "text": '{"alg": NaN}',
     }
+
+
+def test_a_jws_payload_nested_too_deep_is_shown_as_its_text():
+    payload = "[" * 65 + "1" + "]" * 65
+
+    view = safetynet.read_response(f"e30.{b64u(payload.encode())}.AA")
+
+    assert view["payload"] == {
+        "error": "the payload is nested too deep: values are nested more than 64 deep, the most the decoder reads (at byte 65)",
+        "text": payload,
+    }

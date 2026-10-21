@@ -73,6 +73,8 @@ def _json_part(name: str, part: str) -> dict[str, Any]:
         return {"error": f"the {name} is not UTF-8 (at byte {exc.start})"}
     except json_input.JsonConstantError as exc:
         return {"error": f"the {name} is not JSON: {exc.reason} (at byte {exc.offset})", "text": data.decode("utf-8")}
+    except json_input.JsonDepthError as exc:
+        return {"error": f"the {name} is nested too deep: {exc.reason} (at byte {exc.offset})", "text": data.decode("utf-8")}
     except json.JSONDecodeError as exc:
         return {"error": f"the {name} is not JSON: {exc.msg} at character {exc.pos}", "text": data.decode("utf-8")}
     return {"json": value, "findings": findings} if findings else {"json": value}

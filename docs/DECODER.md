@@ -150,6 +150,14 @@ provider would write it, and the answer would not be JSON.
 `tests/app/core/test_codec_answers_are_json.py` parses every decoder and encoder
 answer over the corpus with a reader that refuses them.
 
+JSON is read at most 64 deep, as CBOR and EDN are (RFC 8259 section 9 lets a
+parser limit how deep it reads): a value nested deeper is refused with a 422
+naming the offset and path of the first (`json_input.JsonDepthError`), decoded
+or encoded, strict or lenient, and a nested field holding one (client data, a
+SafetyNet JWS part) is that field's error. `json.loads` reads as deep as the text
+goes until Python's stack runs out; that too is refused at the first value past
+64.
+
 ## Limits
 
 `/api/codec` reads a body of at most 1 MiB (`config/request_limits.py`,
