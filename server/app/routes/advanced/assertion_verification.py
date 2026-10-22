@@ -14,7 +14,7 @@ from typing import Any
 
 from fido2.cose import CoseKey, UnsupportedKey
 from fido2.webauthn import AuthenticatorData
-from flask import jsonify, session
+from flask import jsonify
 
 from ... import encoding
 from ...config import relying_party
@@ -57,13 +57,6 @@ def _server_supports_algorithm(algorithm: int | None) -> bool:
         return False
     # fido2 compares the number with each key class's: it does not raise.
     return CoseKey.for_alg(algorithm) is not UnsupportedKey
-
-
-def _assertion_rp() -> tuple[Any, Any]:
-    """The RP id and name begin kept in the session, beside the state complete has just taken."""
-
-    stored_rp = session.pop("advanced_auth_rp")
-    return stored_rp["id"], stored_rp["name"]
 
 
 def _verification_failure(exc: Exception, response: Any, lookup: Mapping[bytes, Any], trace: Mapping[str, Any]) -> Any:
@@ -201,12 +194,11 @@ def verify_assertion(
     credential_id_bytes: bytes | None,
     selected_record: Any,
     trace: Mapping[str, Any],
+    rp_id: Any,
 ) -> Any:
-    """Have fido2 verify the assertion, and answer with what it concluded."""
+    """Have fido2 verify the assertion for the RP ID its begin used, and answer with what it concluded."""
 
-    stored_rp_id, stored_rp_name = _assertion_rp()
-    resolved_rp_id = relying_party.determine_rp_id(stored_rp_id)
-    auth_server = relying_party.create_fido_server(rp_id=resolved_rp_id, rp_name=stored_rp_name)
+    auth_server = relying_party.create_fido_server(rp_id=relying_party.determine_rp_id(rp_id))
 
     derived_algorithms = algorithms._derive_algorithms_from_credentials(all_credentials)
     if derived_algorithms:

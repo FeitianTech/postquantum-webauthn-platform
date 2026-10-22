@@ -181,7 +181,7 @@ def advanced_authenticate_complete():
     if non_discoverable is not None:
         return _fail(non_discoverable)
 
-    state, refusal = _ceremony_state(state, trace)
+    rp_id, refusal = _ceremony_rp_id(state, trace)
     if refusal is not None:
         return refusal
 
@@ -196,6 +196,7 @@ def advanced_authenticate_complete():
         credential_id_bytes=credential_id_bytes,
         selected_record=selected_record,
         trace=trace,
+        rp_id=rp_id,
     )
 
 
@@ -212,11 +213,11 @@ def _attachment_violation(public_key: Mapping[str, Any], response: Any) -> str |
     )
 
 
-def _ceremony_state(state: Any, trace: Mapping[str, Any]) -> tuple[Any, Any]:
-    """The session's ceremony state, or the 400 for none. fido2 checks the origin."""
+def _ceremony_rp_id(state: Any, trace: Mapping[str, Any]) -> tuple[Any, Any]:
+    """The RP ID begin kept beside the session's ceremony state, or the 400 when either is gone. fido2 checks the origin."""
 
-    if state is None:
-        session.pop("advanced_auth_rp", None)
+    stored_rp = session.pop("advanced_auth_rp", None)
+    if state is None or not isinstance(stored_rp, Mapping):
         return None, (
             jsonify(
                 {
@@ -229,4 +230,4 @@ def _ceremony_state(state: Any, trace: Mapping[str, Any]) -> tuple[Any, Any]:
             ),
             400,
         )
-    return state, None
+    return stored_rp.get("id"), None

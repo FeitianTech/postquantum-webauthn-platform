@@ -10,7 +10,12 @@ from server.app.routes.advanced import algorithms as advanced_algorithms
 from server.app.routes.advanced import parsing as advanced_parsing
 from server.app.webauthn import assertion_hash
 from tests.app.entry_app import entry_app
-from tests.app.security.ceremony_helpers import Authenticator, assertion_payload, b64u
+from tests.app.security.ceremony_helpers import (
+    Authenticator,
+    assertion_payload,
+    b64u,
+    unb64u,
+)
 from tests.app.storage.codec_examples import _stored_credential_entry
 from tests.app.storage.credential_seed import sample_public_key_bytes
 
@@ -155,6 +160,26 @@ def test_advanced_authenticate_complete_without_session_state_returns_400(monkey
 
         with client.session_transaction() as session_state:
             assert "advanced_auth_rp" not in session_state
+
+
+def test_a_state_whose_relying_party_is_gone_from_the_session_is_not_found():
+    authenticator = Authenticator()
+    entry = authenticator.stored_credential_entry()
+    client = entry_app().test_client()
+    challenge = unb64u(begin(client, [entry]).get_json()["publicKey"]["challenge"])
+    with client.session_transaction() as session_state:
+        del session_state["advanced_auth_rp"]
+
+    response = complete(client, [entry], assertion_payload(authenticator, challenge=challenge))
+
+    assert response.status_code == 400
+    assert response.get_json() == {
+        "error": "Authentication state not found or has expired. Please restart the authentication flow.",
+        "challengeSource": "server-session",
+        "challengeStatus": "fresh",
+    }
+    with client.session_transaction() as session_state:
+        assert "advanced_auth_state" not in session_state
 
 
 def test_advanced_authenticate_complete_requires_attachment_when_session_scopes_allowed_attachments():
