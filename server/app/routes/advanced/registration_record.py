@@ -142,7 +142,7 @@ def build_debug_info(
     *,
     public_key: Mapping[str, Any],
     attestation_format: Any,
-    auth_data: Any,
+    client_extension_results: Any,
     analysis: Mapping[str, Any],
     algo: Any,
     challenge_source: Any,
@@ -154,7 +154,8 @@ def build_debug_info(
         "algorithmsUsed": algorithms_used or ([algo] if algo is not None else []),
         "excludeCredentialsUsed": bool(public_key.get("excludeCredentials")),
         "hintsUsed": public_key.get("hints", []),
-        "actualResidentKey": bool(auth_data.flags & 0x04) if hasattr(auth_data, "flags") else False,
+        # As the browser said (credProps.rk), else None: no authData flag says it.
+        "actualResidentKey": registration_facts.reported_resident_key(client_extension_results),
         "attestationSignatureValid": analysis["signatureValid"],
         "attestationRootValid": analysis["rootValid"],
         "attestationRpIdHashValid": analysis["rpIdHashValid"],
@@ -175,19 +176,6 @@ def build_debug_info(
         enforce_requested = extensions_requested.get("enforceCredProtect")
     debug_info["enforceCredProtectUsed"] = bool(enforce_requested)
     return debug_info
-
-
-def _resident_key_result(client_extension_results: Any, auth_data: Any, resident_key_required: bool) -> bool:
-    """credProps' ``rk`` when reported, else the BE flag or the requirement."""
-
-    cred_props = (
-        client_extension_results.get("credProps") if isinstance(client_extension_results, dict) else None
-    )
-    if isinstance(cred_props, dict) and "rk" in cred_props:
-        return bool(cred_props.get("rk"))
-    if isinstance(cred_props, bool):
-        return bool(cred_props)
-    return bool(auth_data.flags & auth_data.FLAG.BE) or bool(resident_key_required)
 
 
 def _public_key_encodings(auth_data: Any) -> tuple[str | None, str | None]:
@@ -211,7 +199,7 @@ class _Facts(NamedTuple):
     registration_timestamp: str
     rp_hash: dict[str, Any]
     rp_id_hash_valid: Any
-    resident_key: bool
+    resident_key: bool | None
     large_blob: bool
 
 
@@ -221,7 +209,6 @@ def _registration_facts(
     credential_info: dict[str, Any],
     client_extension_results: Any,
     resolved_rp_id: str,
-    resident_key_required: bool,
     attestation_rp_id_hash_valid: Any,
 ) -> _Facts:
     """What authData and the extension outputs say, recorded into the credential's properties."""
@@ -248,9 +235,10 @@ def _registration_facts(
         attestation_rp_id_hash_valid = rp_hash["bytes"] == rp_hash["expectedBytes"]
     registration_facts.record_rp_id_hash(properties, rp_hash)
 
-    resident_key_result = _resident_key_result(client_extension_results, auth_data, resident_key_required)
-    properties["residentKey"] = bool(resident_key_result)
-    credential_info["resident_key"] = bool(resident_key_result)
+    # As the browser said (credProps.rk), else None: neither the BE flag nor the request says it.
+    resident_key_result = registration_facts.reported_resident_key(client_extension_results)
+    properties["residentKey"] = resident_key_result
+    credential_info["resident_key"] = resident_key_result
     properties["authenticatorDataHash"] = authenticator_data_hash
 
     return _Facts(
@@ -322,7 +310,6 @@ def build_registration_material(
     response: Any,
     user_handle: bytes,
     resolved_rp_id: str,
-    resident_key_required: bool,
     attestation_rp_id_hash_valid: Any,
     attestation_checks_safe: Any,
     attestation_summary: Any,
@@ -332,7 +319,6 @@ def build_registration_material(
         credential_info=credential_info,
         client_extension_results=client_extension_results,
         resolved_rp_id=resolved_rp_id,
-        resident_key_required=resident_key_required,
         attestation_rp_id_hash_valid=attestation_rp_id_hash_valid,
     )
     rp_info = _relying_party_info(
@@ -384,7 +370,7 @@ def _stored_credential(
     user_handle: bytes,
     identifiers: Mapping[str, Any],
     aaguid: tuple[Any, Any, Any],
-    resident_key_result: bool,
+    resident_key_result: bool | None,
     large_blob_result: bool,
     authenticator_data: tuple[str, str],
 ) -> dict[str, Any]:
@@ -404,7 +390,7 @@ def _stored_credential(
         "type": "advanced",
         "userName": credential_info["user_info"]["name"],
         "displayName": credential_info["user_info"]["display_name"],
-        "residentKey": bool(resident_key_result),
+        "residentKey": resident_key_result,
         "largeBlob": bool(large_blob_result),
         "authenticatorAttachment": credential_info.get("authenticator_attachment"),
         "credentialId": credential_id_b64url,

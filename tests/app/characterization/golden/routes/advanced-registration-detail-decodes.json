@@ -117,7 +117,7 @@
     ],
     [
      "Content-Length",
-     "9614"
+     "9553"
     ],
     [
      "X-Content-Type-Options",
@@ -170,9 +170,9 @@
      "contents": null
     }
    ],
-   "bodySha256": "820e55a12a04e00fad983c541f9fb394d30e9f7537edbf81d499de0e9fd35f67",
+   "bodySha256": "4cfbb66f4ab45013378a6af1d9a1d52c868d914bf51805b15954f8c0cf362740",
    "body": {
-    "actualResidentKey": true,
+    "actualResidentKey": null,
     "algo": "ES256 (ECDSA)",
     "algorithmsUsed": [
      -7
@@ -344,7 +344,6 @@
       },
       "signatureCounter": 0
      },
-     "residentKey": false,
      "rpIdHash": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763",
      "rpIdHashBase64": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2M",
      "rpIdHashExpected": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763",
@@ -404,7 +403,7 @@
       "hintsSent": [],
       "largeBlobClientOutput": {},
       "largeBlobRequested": {},
-      "residentKey": false,
+      "residentKey": null,
       "residentKeyRequested": null,
       "residentKeyRequired": false,
       "resolvedAuthenticatorAttachments": [],
@@ -443,7 +442,6 @@
       },
       "largeBlob": false,
       "publicKeyAlgorithm": -7,
-      "residentKey": false,
       "rpIdHash": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763",
       "rpIdHashBase64": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2M",
       "rpIdHashExpected": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763",
@@ -455,7 +453,6 @@
        "hex": "757365722d68616e646c65"
       }
      },
-     "residentKey": false,
      "signCount": 0,
      "storageId": "-T_w3Mg8IpfJloVhNk79XD5u::1a0c4506c00::a9a0b8b703ff42c6a9e09a413c8aa9fb",
      "type": "advanced",
@@ -469,7 +466,7 @@
    "stored": [
     {
      "file": "artifacts/MGihcu5AJ9caEs8pcTwU5vGhLVdNVpL9y2ZPHJu5KJk/9650b49943337bca7f486c504840ce94c4f09ee75fcbbb4494eba29d0620c23f.json",
-     "sha256": "07f1991c8649352cfd2f95917d5e23eafbec6f4b656f9a4e871d846fe568de04",
+     "sha256": "9bb88895576b6c063081b34b27e7beb07c3df09459350fc2676200d8298d9df4",
      "content": {
       "storageId": "-T_w3Mg8IpfJloVhNk79XD5u::1a0c4506c00::a9a0b8b703ff42c6a9e09a413c8aa9fb",
       "createdAt": 1790000000.0,
@@ -480,7 +477,6 @@
         "type": "advanced",
         "userName": "user@example.com",
         "displayName": "A. User",
-        "residentKey": false,
         "largeBlob": false,
         "credentialId": "-T_w3Mg8IpfJloVhNk79XD5uW4FgwBOwKiDjFWpID9Q",
         "credentialIdBase64Url": "-T_w3Mg8IpfJloVhNk79XD5uW4FgwBOwKiDjFWpID9Q",
@@ -607,7 +603,6 @@
            }
           }
          },
-         "residentKey": false,
          "userHandle": {
           "base64": "dXNlci1oYW5kbGU=",
           "base64url": "dXNlci1oYW5kbGU",
@@ -698,7 +693,7 @@
          "rpIdHashBase64": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2M",
          "rpIdHashExpected": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763",
          "rpIdHashExpectedBase64": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2M",
-         "residentKey": false,
+         "residentKey": null,
          "authenticatorDataHash": "1228117600c85da697ff52968adecad139537c92c5d8da23b68dd1dfef3fbb2c"
         },
         "registrationResponse": {
@@ -878,7 +873,7 @@
     ],
     [
      "Content-Length",
-     "21607"
+     "21608"
     ],
     [
      "X-Content-Type-Options",
@@ -921,9 +916,9 @@
      "contents": null
     }
    ],
-   "bodySha256": "40071acdbddced6abffbbbb892d3aa81b6239b0f0be45f7252447e9952168502",
+   "bodySha256": "e532e996a5b4a6882ef11e88d21a43806bb41be3f88a1120398e9d901cce7895",
    "body": {
-    "actualResidentKey": true,
+    "actualResidentKey": false,
     "algo": "ES256 (ECDSA)",
     "algorithmsUsed": [
      -7
@@ -2114,7 +2109,7 @@
     ],
     [
      "Content-Length",
-     "34115"
+     "34054"
     ],
     [
      "X-Content-Type-Options",
@@ -2157,9 +2152,9 @@
      "contents": null
     }
    ],
-   "bodySha256": "0d2d65324017850e78467da93852c0b4a859c86315b3a0c63ba9e69fc45429e8",
+   "bodySha256": "3fad0839e2f635b6b3382517ae06af848a349c803dfdedd6b962733c4d9d8694",
    "body": {
-    "actualResidentKey": true,
+    "actualResidentKey": null,
     "algo": "ML-DSA-44 (PQC)",
     "algorithmsUsed": [
      -48
@@ -2361,7 +2356,6 @@
       },
       "signatureCounter": 0
      },
-     "residentKey": false,
      "rpIdHash": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763",
      "rpIdHashBase64": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2M",
      "rpIdHashExpected": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763",
@@ -2426,7 +2420,7 @@
       "hintsSent": [],
       "largeBlobClientOutput": {},
       "largeBlobRequested": {},
-      "residentKey": false,
+      "residentKey": null,
       "residentKeyRequested": null,
       "residentKeyRequired": false,
       "resolvedAuthenticatorAttachments": [],
@@ -2464,7 +2458,6 @@
       },
       "largeBlob": false,
       "publicKeyAlgorithm": -48,
-      "residentKey": false,
       "rpIdHash": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763",
       "rpIdHashBase64": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2M",
       "rpIdHashExpected": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763",
@@ -2476,7 +2469,6 @@
        "hex": "757365722d68616e646c65"
       }
      },
-     "residentKey": false,
      "signCount": 0,
      "storageId": "xC9zKkwunXh4ibaIGdsI5_4b::1a0c4506c00::48849fc400c34c0e847256920914b335",
      "type": "advanced",
@@ -2493,7 +2485,7 @@
    "stored": [
     {
      "file": "artifacts/MGihcu5AJ9caEs8pcTwU5vGhLVdNVpL9y2ZPHJu5KJk/735145c97bca80ce43cf573df7265e9d68496abd203d9abf6128daff2d2825b3.json",
-     "sha256": "8cbc479ef56c0718a97bc56e21fe6d5fcd4921cd77a9b310dcc38360e607fe1f",
+     "sha256": "766eccfbd135496c0ee2ace7f5c3ad340406afb47b838319d14bfc8ba19218e5",
      "content": {
       "storageId": "xC9zKkwunXh4ibaIGdsI5_4b::1a0c4506c00::48849fc400c34c0e847256920914b335",
       "createdAt": 1790000000.0,
@@ -2504,7 +2496,6 @@
         "type": "advanced",
         "userName": "user@example.com",
         "displayName": "A. User",
-        "residentKey": false,
         "largeBlob": false,
         "credentialId": "xC9zKkwunXh4ibaIGdsI5_4bz0sPxUnTlELTMYPEqds",
         "credentialIdBase64Url": "xC9zKkwunXh4ibaIGdsI5_4bz0sPxUnTlELTMYPEqds",
@@ -2647,7 +2638,6 @@
            ]
           }
          },
-         "residentKey": false,
          "userHandle": {
           "base64": "dXNlci1oYW5kbGU=",
           "base64url": "dXNlci1oYW5kbGU",
@@ -2752,7 +2742,7 @@
          "rpIdHashBase64": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2M",
          "rpIdHashExpected": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763",
          "rpIdHashExpectedBase64": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2M",
-         "residentKey": false,
+         "residentKey": null,
          "authenticatorDataHash": "a71b1b0c3beaebb07d3b6fb826caf2a14655e6b3970a2d94ca7ffd0cdd704121"
         },
         "registrationResponse": {

@@ -95,7 +95,7 @@ def _record_verified_registration(
     debug_info = registration_record.build_debug_info(
         public_key=public_key,
         attestation_format=prepared["attestationFormat"],
-        auth_data=auth_data,
+        client_extension_results=prepared["clientExtensionResults"],
         analysis=analysis,
         algo=algo,
         challenge_source=state_trace["challengeSource"],
@@ -112,7 +112,6 @@ def _record_verified_registration(
         response=response,
         user_handle=user_handle,
         resolved_rp_id=state_ctx["resolvedRpId"],
-        resident_key_required=bool(prepared["residentKeyRequired"]),
         attestation_rp_id_hash_valid=analysis["rpIdHashValid"],
         attestation_checks_safe=analysis["checksSafe"],
         attestation_summary=analysis["summary"],

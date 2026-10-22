@@ -157,7 +157,7 @@
     ],
     [
      "Content-Length",
-     "21753"
+     "21754"
     ],
     [
      "X-Content-Type-Options",
@@ -210,9 +210,9 @@
      "contents": null
     }
    ],
-   "bodySha256": "7f0e5fa1b486c287c7b2ce4edef1d7cf39b1b4202adcaf50e7c4812211dc5dea",
+   "bodySha256": "5cd184327382f587b794f94774066b38c26fcbd8531dafae9a41457f5a15dc9c",
    "body": {
-    "actualResidentKey": true,
+    "actualResidentKey": false,
     "algo": "ES256 (ECDSA)",
     "algorithmsUsed": [
      -7,
