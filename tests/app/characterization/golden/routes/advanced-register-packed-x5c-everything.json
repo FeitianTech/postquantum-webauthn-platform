@@ -157,7 +157,7 @@
     ],
     [
      "Content-Length",
-     "21754"
+     "21753"
     ],
     [
      "X-Content-Type-Options",
@@ -210,7 +210,7 @@
      "contents": null
     }
    ],
-   "bodySha256": "5cd184327382f587b794f94774066b38c26fcbd8531dafae9a41457f5a15dc9c",
+   "bodySha256": "a19744d55c20770b3b489f5b997e8cad573700b51c9764c02d10cc888e640502",
    "body": {
     "actualResidentKey": false,
     "algo": "ES256 (ECDSA)",
@@ -652,7 +652,7 @@
       "authenticatorDataHash": "29b306e7891724b1258da352e87b4eb123f31e1e171625e68e039cdeedac9bdd",
       "credentialIdLength": 32,
       "excludeCredentialsSentCount": 1,
-      "excludeCredentialsUsed": false,
+      "excludeCredentialsUsed": true,
       "fakeCredentialIdLengthRequested": null,
       "hintsSent": [
        "security-key"
@@ -734,7 +734,7 @@
    "stored": [
     {
      "file": "artifacts/VRJf72bDgaMlsA4lFvicETd02L9bX7zOxiqEty5JtjQ/226feaa5be0796b1c34f27fe5a7101b8fdbbd7e38874fdd5f6d9a257f0a0a268.json",
-     "sha256": "d29d44b68de4070c8c78b9a982fc08a9e74c2ee5dc97c4ed2dd612b7fcdccc29",
+     "sha256": "0b354c69c0b64c0fb7f48eecbaca017b577094ca82fca95754e23ae99ab398af",
      "content": {
       "storageId": "HhfJJzOBVmmUZYuGYc2aY9SM::1a0c4506c00::02f5575ac1c848f2bfd09f36c6fe1da5",
       "createdAt": 1790000000.0,
@@ -1084,7 +1084,7 @@
         },
         "properties": {
          "excludeCredentialsSentCount": 1,
-         "excludeCredentialsUsed": false,
+         "excludeCredentialsUsed": true,
          "credentialIdLength": 32,
          "fakeCredentialIdLengthRequested": null,
          "hintsSent": [

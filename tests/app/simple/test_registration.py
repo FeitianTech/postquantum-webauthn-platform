@@ -141,7 +141,8 @@ def test_a_registration_records_how_many_credentials_its_begin_excluded(credenti
 
     assert len(begin.get_json()["publicKey"]["excludeCredentials"]) == 2
     assert complete.status_code == 200, complete.get_json()
-    assert complete.get_json()["storedCredential"]["properties"]["excludeCredentialsSentCount"] == 2
+    properties = complete.get_json()["storedCredential"]["properties"]
+    assert (properties["excludeCredentialsSentCount"], properties["excludeCredentialsUsed"]) == (2, True)
     assert complete.get_json()["excludeCredentialsUsed"] is True
 
 

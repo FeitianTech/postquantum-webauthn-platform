@@ -137,3 +137,13 @@ def test_a_backup_eligible_credential_without_cred_props_reports_no_resident_key
     data[32] |= 0x08  # BE: backup eligible, which says nothing of discoverability.
 
     assert _debug_info(_registration(auth_data=AuthenticatorData(bytes(data))))["actualResidentKey"] is None
+
+
+def test_the_record_says_an_exclude_list_was_used_when_its_begin_sent_one():
+    used = []
+    for count in (0, 1):
+        reg = _registration(exclude_credentials_count=count)
+        simple_registration_record.initialize_registration_context(reg)
+        used.append(reg.credential_properties["excludeCredentialsUsed"])
+
+    assert used == [False, True]

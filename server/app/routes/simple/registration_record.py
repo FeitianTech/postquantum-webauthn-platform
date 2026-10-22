@@ -139,7 +139,7 @@ def _credential_info(reg: SimpleRegistration) -> dict[str, Any]:
         "request_params": registration_request.request_params(),
         "properties": {
             "excludeCredentialsSentCount": reg.exclude_credentials_count,
-            "excludeCredentialsUsed": False,
+            "excludeCredentialsUsed": reg.exclude_credentials_count > 0,
             "credentialIdLength": len(reg.auth_data.credential_data.credential_id),
             "fakeCredentialIdLengthRequested": None,
             "hintsSent": [],

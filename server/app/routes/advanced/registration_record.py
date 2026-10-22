@@ -49,6 +49,7 @@ def build_credential_info(
     attestation_certificate_details = prepared["attestationCertificateDetails"]
     authenticator_attachment_response = prepared["authenticatorAttachmentResponse"]
 
+    exclude_credentials_sent = len(public_key.get("excludeCredentials", []))
     credential_info = {
         "credential_data": auth_data.credential_data,
         "auth_data": auth_data,
@@ -67,8 +68,8 @@ def build_credential_info(
         "authenticator_attachment": authenticator_attachment_response,
         "original_webauthn_request": prepared["originalRequest"],
         "properties": {
-            "excludeCredentialsSentCount": len(public_key.get("excludeCredentials", [])),
-            "excludeCredentialsUsed": False,
+            "excludeCredentialsSentCount": exclude_credentials_sent,
+            "excludeCredentialsUsed": exclude_credentials_sent > 0,
             "credentialIdLength": len(auth_data.credential_data.credential_id),
             "fakeCredentialIdLengthRequested": None,
             "hintsSent": public_key.get("hints", []),

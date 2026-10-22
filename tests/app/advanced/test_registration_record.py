@@ -74,6 +74,16 @@ def test_an_rp_id_hash_the_checks_left_open_is_compared_with_the_rp_id():
     assert _facts("other.example").rp_id_hash_valid is False
 
 
+@pytest.mark.parametrize(("excluded", "used"), [([], False), ([{"type": "public-key", "id": "44" * 16}], True)])
+def test_the_record_says_an_exclude_list_was_used_when_the_request_sent_one(advanced_stores, excluded, used):
+    response = register(entry_app().test_client(), public_key_changes={"excludeCredentials": excluded})
+
+    assert response.status_code == 200, response.get_json()
+    properties = response.get_json()["storedCredential"]["properties"]
+    assert (properties["excludeCredentialsSentCount"], properties["excludeCredentialsUsed"]) == (len(excluded), used)
+    assert response.get_json()["excludeCredentialsUsed"] is used
+
+
 def test_a_registration_without_cred_props_reports_no_resident_key(advanced_stores):
     # The authenticator verified the user (UV) and the request required a resident key:
     # neither says whether the credential is discoverable.
