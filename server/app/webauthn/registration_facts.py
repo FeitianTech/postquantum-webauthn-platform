@@ -1,6 +1,7 @@
 """What a verified registration's authenticator data and extension outputs say, one way for both tabs.
 
-The flags in the order of their bits (``flags``), whether largeBlob did anything
+The flags in the order of their bits (``flags``), whether the browser says the
+credential is discoverable (``reported_resident_key``), whether largeBlob did anything
 (``large_blob_result``), a byte string's three spellings (``byte_forms``), the
 AAGUID (``aaguid_values``, ``record_aaguid``, ``aaguid_block``), authData's
 rpIdHash beside the hash of the RP ID it should be (``rp_id_hash_report``,
@@ -65,6 +66,14 @@ STORED_CREDENTIAL_KEYS = (
 def flags(auth_data: Any) -> dict[str, bool]:
     flags_value = getattr(auth_data, "flags", 0)
     return {flag: bool(flags_value & getattr(auth_data.FLAG, flag, 0)) for flag in FLAG_NAMES}
+
+
+def reported_resident_key(client_extension_results: Any) -> bool | None:
+    """Whether the browser says the credential is discoverable (credProps.rk); None when it does not say."""
+
+    cred_props = client_extension_results.get("credProps") if isinstance(client_extension_results, Mapping) else None
+    resident_key = cred_props.get("rk") if isinstance(cred_props, Mapping) else None
+    return resident_key if isinstance(resident_key, bool) else None
 
 
 def large_blob_result(client_extension_results: Any) -> bool:

@@ -40,6 +40,22 @@ def test_an_aaguid_without_spellings_adds_nothing_to_the_record():
     assert properties == {}
 
 
+@pytest.mark.parametrize(
+    ("outputs", "resident"),
+    [
+        ({"credProps": {"rk": True}}, True),
+        ({"credProps": {"rk": False}}, False),
+        ({}, None),
+        ({"credProps": {}}, None),
+        ({"credProps": {"rk": "true"}}, None),
+        ({"credProps": True}, None),
+        (None, None),
+    ],
+)
+def test_the_resident_key_reported_is_the_browsers_cred_props_rk_or_none(outputs, resident):
+    assert registration_facts.reported_resident_key(outputs) is resident
+
+
 def test_the_rp_id_hash_report_puts_authdata_beside_the_expected_hash():
     expected = hashlib.sha256(b"example.com").digest()
 

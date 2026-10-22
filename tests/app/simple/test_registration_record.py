@@ -1,7 +1,6 @@
 """Tests for the record a verified simple registration builds."""
 from __future__ import annotations
 
-import pytest
 from fido2.webauthn import AuthenticatorData
 
 from server.app.encoding import encode_base64url
@@ -127,19 +126,10 @@ def _debug_info(reg):
     return reg.debug_info
 
 
-@pytest.mark.parametrize(
-    ("outputs", "resident"),
-    [
-        ({"credProps": {"rk": True}}, True),
-        ({"credProps": {"rk": False}}, False),
-        ({}, None),
-        ({"credProps": {}}, None),
-        ({"credProps": {"rk": "true"}}, None),
-        ({"credProps": True}, None),
-    ],
-)
-def test_the_resident_key_reported_is_the_browsers_cred_props_rk_or_none(outputs, resident):
-    assert _debug_info(_registration(client_extension_results=outputs))["actualResidentKey"] is resident
+def test_the_resident_key_reported_is_the_browsers_cred_props_rk():
+    outputs = {"credProps": {"rk": True}}
+
+    assert _debug_info(_registration(client_extension_results=outputs))["actualResidentKey"] is True
 
 
 def test_a_backup_eligible_credential_without_cred_props_reports_no_resident_key():
