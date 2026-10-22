@@ -193,7 +193,10 @@ def advanced_register_begin():
         display_name=begin_request.display_name,
     )
 
-    exclude_list = registration_options.build_exclude_list(public_key)
+    try:
+        exclude_list = registration_options.build_exclude_list(public_key)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
     try:
         processed_extensions = registration_options.build_processed_extensions(public_key)
     except ValueError as exc:

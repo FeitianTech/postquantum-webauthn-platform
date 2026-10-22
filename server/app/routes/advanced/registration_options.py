@@ -165,12 +165,17 @@ def attestation_formats(public_key: Mapping[str, Any]) -> list[str]:
 
 
 def build_exclude_list(public_key: Mapping[str, Any]) -> list[Any]:
+    """The public-key credentials the request excludes; ValueError naming an ID that does not read as bytes."""
+
     exclude_list = []
     exclude_credentials = public_key.get("excludeCredentials") if "excludeCredentials" in public_key else None
     if isinstance(exclude_credentials, list):
-        for exclude_cred in exclude_credentials:
+        for index, exclude_cred in enumerate(exclude_credentials):
             if isinstance(exclude_cred, dict) and exclude_cred.get("type") == "public-key":
-                cred_id = client_binary.read_request_field(exclude_cred.get("id", ""))
+                try:
+                    cred_id = client_binary.read_request_bytes(exclude_cred.get("id", ""))
+                except (ValueError, TypeError) as exc:
+                    raise ValueError(f"Invalid excludeCredentials[{index}].id format: {exc}") from exc
                 if cred_id:
                     exclude_list.append(
                         PublicKeyCredentialDescriptor(
