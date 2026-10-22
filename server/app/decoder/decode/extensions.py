@@ -25,7 +25,12 @@ from typing import Any
 from ... import encoding
 from ...webauthn import pqc
 from .. import ctap_tables, values
-from . import cose_display
+from . import cose_display, key_equivalence
+
+# The CBOR item a value was read from (``decode/cbor_parser``'s node); ``None``
+# for JSON, which client outputs are. Every reader takes the value and its item.
+_Item = Mapping[str, Any] | None
+_Reader = Callable[[Any, _Item], dict[str, Any]]
 
 MAKE_CREDENTIAL_INPUT = "makeCredential input"
 GET_ASSERTION_INPUT = "getAssertion input"
@@ -48,28 +53,54 @@ _ROLE_SPECS = {
 _UNKNOWN = "not defined in CTAP 2.2 section 12 or WebAuthn L3 section 10; shown as sent"
 
 
-def block(
-    value: Any, *, is_map: bool, role: str, location: str, path: str, basis: str | None = None
-) -> dict[str, Any]:
+def block(value: Any, *, node: _Item, role: str, location: str, path: str, basis: str | None = None) -> dict[str, Any]:
     """Interpret the extensions map ``value`` found at ``location``, playing ``role``.
 
-    ``is_map`` says whether they were sent as a map (a CBOR map, a JSON object),
-    which ``value`` cannot: a CBOR tag is read as the mapping {"tag", "value"}.
+    ``node`` is the CBOR item ``value`` was read from, or ``None`` for JSON: what
+    was sent as a map, here and in each extension's value, is decided by it
+    (``_is_map``).
     """
 
     result: dict[str, Any] = {"location": location, "path": path, "role": role, "spec": _ROLE_SPECS[role]}
     if basis:
         result["basis"] = basis
-    if not is_map:
+    if not _is_map(value, node):
         result["value"] = values.make_hex_only(value)
         result["note"] = "extensions are a map from extension identifier to value; this is not a map"
         return result
     interpret = _client_entry if role == CLIENT_OUTPUT else _authenticator_entry
-    result["entries"] = {label: interpret(name, entry, role) for label, name, entry in values.json_items(value)}
+    item_of = _value_items(node)
+    result["entries"] = {
+        label: interpret(name, entry, role, item_of(name)) for label, name, entry in values.json_items(value)
+    }
     return result
 
 
-def _authenticator_entry(name: Any, value: Any, role: str) -> dict[str, Any]:
+def _is_map(value: Any, item: _Item) -> bool:
+    """Whether ``value`` was sent as a map: as its CBOR ``item`` says, or in JSON, as an object."""
+
+    if item is None:
+        return isinstance(value, Mapping)
+    # A tag is read as the mapping {"tag", "value"}, and is no map.
+    return item.get("majorType") == 5
+
+
+def _value_items(node: _Item) -> Callable[[Any], _Item]:
+    """The CBOR item of the value under each key of the map ``node``, as the decoded value keys it.
+
+    The later of two equal keys, as the decoded value keeps. Read from JSON
+    (``node`` is ``None``), no value has an item. A key the decoded value spells
+    otherwise than its item (no integer, text or bytes) finds ``{}``, which is no
+    map; no reader is asked about such a key.
+    """
+
+    if node is None:
+        return lambda _key: None
+    items = {key_equivalence.identity(entry["key"]): entry["value"] for entry in node.get("entries") or []}
+    return lambda key: items.get(values.key_identity(key), {})
+
+
+def _authenticator_entry(name: Any, value: Any, role: str, item: _Item) -> dict[str, Any]:
     view: dict[str, Any] = {"value": values.make_hex_only(value)}
     section = ctap_tables.EXTENSIONS.get(name) if isinstance(name, str) else None
     if section is None:
@@ -80,11 +111,11 @@ def _authenticator_entry(name: Any, value: Any, role: str) -> dict[str, Any]:
     if interpret is None:
         view["note"] = f"CTAP 2.2 section {section} defines no {role} for {name}"
     else:
-        view.update(interpret(value))
+        view.update(interpret(value, item))
     return view
 
 
-def _client_entry(name: Any, value: Any, _role: str) -> dict[str, Any]:
+def _client_entry(name: Any, value: Any, _role: str, item: _Item) -> dict[str, Any]:
     view: dict[str, Any] = {"value": values.make_hex_only(value)}
     known = _CLIENT.get(name) if isinstance(name, str) else None
     if known is None:
@@ -92,7 +123,7 @@ def _client_entry(name: Any, value: Any, _role: str) -> dict[str, Any]:
         return view
     spec, interpret = known
     view.update(known=True, spec=spec)
-    view.update(interpret(value))
+    view.update(interpret(value, item))
     return view
 
 
@@ -107,17 +138,17 @@ def _unexpected(expected: str) -> dict[str, Any]:
     return {"note": f"expected {expected} here; shown as sent"}
 
 
-def _requests(meaning: str) -> Callable[[Any], dict[str, Any]]:
+def _requests(meaning: str) -> _Reader:
     """An input the spec sends only as true."""
 
-    def read(value: Any) -> dict[str, Any]:
+    def read(value: Any, _item: _Item) -> dict[str, Any]:
         return {"meaning": meaning} if value is True else _unexpected("true")
 
     return read
 
 
-def _flag(if_true: str, if_false: str) -> Callable[[Any], dict[str, Any]]:
-    def read(value: Any) -> dict[str, Any]:
+def _flag(if_true: str, if_false: str) -> _Reader:
+    def read(value: Any, _item: _Item) -> dict[str, Any]:
         if isinstance(value, bool):
             return {"meaning": if_true if value else if_false}
         return _unexpected("a boolean")
@@ -125,8 +156,8 @@ def _flag(if_true: str, if_false: str) -> Callable[[Any], dict[str, Any]]:
     return read
 
 
-def _blob(meaning: str) -> Callable[[Any], dict[str, Any]]:
-    def read(value: Any) -> dict[str, Any]:
+def _blob(meaning: str) -> _Reader:
+    def read(value: Any, _item: _Item) -> dict[str, Any]:
         if isinstance(value, bytes):
             return {"length": len(value), "meaning": meaning if value else f"{meaning}: empty"}
         return _unexpected("a byte string")
@@ -134,8 +165,8 @@ def _blob(meaning: str) -> Callable[[Any], dict[str, Any]]:
     return read
 
 
-def _members(value: Any, names: tuple[str, ...], expected: str) -> dict[str, Any]:
-    if not isinstance(value, Mapping):
+def _members(value: Any, item: _Item, names: tuple[str, ...], expected: str) -> dict[str, Any]:
+    if not _is_map(value, item):
         return _unexpected(expected)
     extra = [values.key_text(key) for key in value if key not in names]
     view: dict[str, Any] = {}
@@ -147,7 +178,7 @@ def _members(value: Any, names: tuple[str, ...], expected: str) -> dict[str, Any
 # -- CTAP 2.2 section 12 -------------------------------------------------------
 
 
-def _cred_protect(value: Any) -> dict[str, Any]:
+def _cred_protect(value: Any, _item: _Item) -> dict[str, Any]:
     level = ctap_tables.CRED_PROTECT_LEVELS.get(value) if _is_int(value) else None
     if level is None:
         return _unexpected("a credProtect value 0x01, 0x02 or 0x03")
@@ -171,8 +202,8 @@ def _hmac_secret_label(key: Any, text: str) -> str:
     return f"{text} ({name})" if name else f"{text} (not in CTAP 2.2 section 12.7)"
 
 
-def _hmac_secret_input(value: Any) -> dict[str, Any]:
-    if not isinstance(value, Mapping):
+def _hmac_secret_input(value: Any, item: _Item) -> dict[str, Any]:
+    if not _is_map(value, item):
         return _unexpected("a map of keyAgreement (0x01), saltEnc (0x02), saltAuth (0x03), pinUvAuthProtocol (0x04)")
     protocol, basis = _protocol(value)
     members: dict[str, Any] = {}
@@ -203,7 +234,7 @@ def _hmac_secret_input(value: Any) -> dict[str, Any]:
 _OUTPUT_COUNTS = {32: ("one output", 1), 64: ("two outputs", 1), 48: ("one output", 2), 80: ("two outputs", 2)}
 
 
-def _hmac_secret_output(value: Any) -> dict[str, Any]:
+def _hmac_secret_output(value: Any, _item: _Item) -> dict[str, Any]:
     if not isinstance(value, bytes):
         return _unexpected("a byte string: output1, or output1 || output2, encrypted")
     known = _OUTPUT_COUNTS.get(len(value))
@@ -217,16 +248,16 @@ def _hmac_secret_output(value: Any) -> dict[str, Any]:
     }
 
 
-def _large_blob_make_credential_input(value: Any) -> dict[str, Any]:
-    view = _members(value, ctap_tables.LARGE_BLOB_MAKE_CREDENTIAL_INPUT, "a map {support: \"required\" / \"preferred\"}")
+def _large_blob_make_credential_input(value: Any, item: _Item) -> dict[str, Any]:
+    view = _members(value, item, ctap_tables.LARGE_BLOB_MAKE_CREDENTIAL_INPUT, "a map {support: \"required\" / \"preferred\"}")
     support = values.get_mapping_entry(value, "support")
     if support in ("required", "preferred"):
         view["meaning"] = f"large blob support {support}"
     return view
 
 
-def _large_blob_get_assertion_input(value: Any) -> dict[str, Any]:
-    view = _members(value, ctap_tables.LARGE_BLOB_GET_ASSERTION_INPUT, "a map of read, write, originalSize")
+def _large_blob_get_assertion_input(value: Any, item: _Item) -> dict[str, Any]:
+    view = _members(value, item, ctap_tables.LARGE_BLOB_GET_ASSERTION_INPUT, "a map of read, write, originalSize")
     if values.get_mapping_entry(value, "read") is True:
         view["meaning"] = "read the credential's large blob"
     elif isinstance(values.get_mapping_entry(value, "write"), bytes):
@@ -234,8 +265,8 @@ def _large_blob_get_assertion_input(value: Any) -> dict[str, Any]:
     return view
 
 
-def _large_blob_output(value: Any) -> dict[str, Any]:
-    view = _members(value, ctap_tables.LARGE_BLOB_OUTPUTS, "a map of supported, written, blob, originalSize")
+def _large_blob_output(value: Any, item: _Item) -> dict[str, Any]:
+    view = _members(value, item, ctap_tables.LARGE_BLOB_OUTPUTS, "a map of supported, written, blob, originalSize")
     blob = values.get_mapping_entry(value, "blob")
     if isinstance(blob, bytes):
         view["meaning"] = f"the stored blob, {len(blob)} bytes compressed"
@@ -246,7 +277,7 @@ def _large_blob_output(value: Any) -> dict[str, Any]:
     return view
 
 
-def _large_blob_key_output(_value: Any) -> dict[str, Any]:
+def _large_blob_key_output(_value: Any, _item: _Item) -> dict[str, Any]:
     return {
         "note": (
             "CTAP 2.2 section 12.3 returns the key as the response member largeBlobKey "
@@ -255,7 +286,7 @@ def _large_blob_key_output(_value: Any) -> dict[str, Any]:
     }
 
 
-_AUTHENTICATOR: dict[tuple[str, str], Callable[[Any], dict[str, Any]]] = {
+_AUTHENTICATOR: dict[tuple[str, str], _Reader] = {
     ("credProtect", MAKE_CREDENTIAL_INPUT): _cred_protect,
     ("credProtect", MAKE_CREDENTIAL_OUTPUT): _cred_protect,
     ("credBlob", MAKE_CREDENTIAL_INPUT): _blob("the blob to store with the credential"),
@@ -273,7 +304,7 @@ _AUTHENTICATOR: dict[tuple[str, str], Callable[[Any], dict[str, Any]]] = {
     ("largeBlob", MAKE_CREDENTIAL_UNSIGNED): _large_blob_output,
     ("largeBlob", GET_ASSERTION_UNSIGNED): _large_blob_output,
     ("minPinLength", MAKE_CREDENTIAL_INPUT): _requests("asks for the current minimum PIN length"),
-    ("minPinLength", MAKE_CREDENTIAL_OUTPUT): lambda value: (
+    ("minPinLength", MAKE_CREDENTIAL_OUTPUT): lambda value, _item: (
         {"meaning": f"the current minimum PIN length: {value} Unicode code points"}
         if _is_int(value)
         else _unexpected("an unsigned integer")
@@ -308,8 +339,8 @@ def _client_bytes(value: Any) -> bytes | None:
     return None
 
 
-def _client_blob(meaning: str) -> Callable[[Any], dict[str, Any]]:
-    def read(value: Any) -> dict[str, Any]:
+def _client_blob(meaning: str) -> _Reader:
+    def read(value: Any, _item: _Item) -> dict[str, Any]:
         data = _client_bytes(value)
         if data is None:
             return _unexpected("an ArrayBuffer, as base64url in JSON")
@@ -318,8 +349,8 @@ def _client_blob(meaning: str) -> Callable[[Any], dict[str, Any]]:
     return read
 
 
-def _cred_props(value: Any) -> dict[str, Any]:
-    if not isinstance(value, Mapping):
+def _cred_props(value: Any, item: _Item) -> dict[str, Any]:
+    if not _is_map(value, item):
         return _unexpected("a CredentialPropertiesOutput map")
     rk = value.get("rk", values.MISSING)
     if rk is True:
@@ -331,8 +362,8 @@ def _cred_props(value: Any) -> dict[str, Any]:
     return _unexpected("rk as a boolean")
 
 
-def _prf(value: Any) -> dict[str, Any]:
-    if not isinstance(value, Mapping):
+def _prf(value: Any, item: _Item) -> dict[str, Any]:
+    if not _is_map(value, item):
         return _unexpected("an AuthenticationExtensionsPRFOutputs map")
     view: dict[str, Any] = {}
     enabled = value.get("enabled")
@@ -352,8 +383,8 @@ def _prf(value: Any) -> dict[str, Any]:
     return view
 
 
-def _client_large_blob(value: Any) -> dict[str, Any]:
-    if not isinstance(value, Mapping):
+def _client_large_blob(value: Any, item: _Item) -> dict[str, Any]:
+    if not _is_map(value, item):
         return _unexpected("an AuthenticationExtensionsLargeBlobOutputs map")
     view: dict[str, Any] = {}
     if isinstance(value.get("supported"), bool):
@@ -366,8 +397,8 @@ def _client_large_blob(value: Any) -> dict[str, Any]:
     return view
 
 
-def _hmac_get_secret(value: Any) -> dict[str, Any]:
-    if not isinstance(value, Mapping):
+def _hmac_get_secret(value: Any, item: _Item) -> dict[str, Any]:
+    if not _is_map(value, item):
         return _unexpected("an HMACGetSecretOutput map")
     return {
         "outputs": {
@@ -378,7 +409,7 @@ def _hmac_get_secret(value: Any) -> dict[str, Any]:
     }
 
 
-_CLIENT: dict[str, tuple[str, Callable[[Any], dict[str, Any]]]] = {
+_CLIENT: dict[str, tuple[str, _Reader]] = {
     "appid": (
         "WebAuthn L3 section 10.1.1",
         _flag("the FIDO AppID was used: rpIdHash is the AppID's hash, not the RP ID's", "the RP ID was used"),
@@ -393,7 +424,7 @@ _CLIENT: dict[str, tuple[str, Callable[[Any], dict[str, Any]]]] = {
 }
 
 # The client outputs CTAP 2.2 section 12 defines, read by the section ctap_tables names.
-_CTAP_CLIENT: dict[str, Callable[[Any], dict[str, Any]]] = {
+_CTAP_CLIENT: dict[str, _Reader] = {
     "credBlob": _flag("the credBlob was stored", "the credBlob was not stored"),
     "getCredBlob": _client_blob("the credential's credBlob"),
     "hmacCreateSecret": _flag("the authenticator processed hmac-secret", "the authenticator did not process hmac-secret"),

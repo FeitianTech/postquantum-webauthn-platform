@@ -117,15 +117,8 @@ def for_public_key_credential(
     if results is values.MISSING:
         results = credential.get("getClientExtensionResults", values.MISSING)
     if results is not values.MISSING:
-        # JSON, where an object is a map.
-        _add(
-            blocks,
-            results,
-            extensions.CLIENT_OUTPUT,
-            "clientExtensionResults",
-            "clientExtensionResults",
-            is_map=isinstance(results, Mapping),
-        )
+        # JSON, read from no CBOR item.
+        _add(blocks, results, extensions.CLIENT_OUTPUT, "clientExtensionResults", "clientExtensionResults", node=None)
     _extensions(extra, blocks)
     return extra, findings
 
@@ -223,7 +216,7 @@ def _add_auth_data(
         return
     blocks.append(
         extensions.block(
-            found, is_map=_is_map(node), role=role, location=_AUTH_DATA_LOCATION, path=f"{path}<extensions>", basis=basis
+            found, node=node, role=role, location=_AUTH_DATA_LOCATION, path=f"{path}<extensions>", basis=basis
         )
     )
     if source:
@@ -235,19 +228,16 @@ def _add_member(blocks: list[dict[str, Any]], root: Mapping[str, Any], key: int,
 
     member = authenticator_data_findings.member_node(root, (key,))
     if member is not None:
-        _add(blocks, cbor_parser._structure_to_value(member), role, location, _path(key), is_map=_is_map(member))
+        _add(blocks, cbor_parser._structure_to_value(member), role, location, _path(key), node=member)
 
 
-def _add(blocks: list[dict[str, Any]], value: Any, role: str, location: str, path: str, *, is_map: bool) -> None:
+def _add(
+    blocks: list[dict[str, Any]], value: Any, role: str, location: str, path: str, *, node: Mapping[str, Any] | None
+) -> None:
     # An empty map has nothing to interpret, so it adds nothing.
     if value is None or value == {}:
         return
-    blocks.append(extensions.block(value, is_map=is_map, role=role, location=location, path=path))
-
-
-def _is_map(node: Mapping[str, Any]) -> bool:
-    # Decided by the CBOR item: a tag is read as the mapping {"tag", "value"}, and is no map.
-    return node.get("majorType") == 5
+    blocks.append(extensions.block(value, node=node, role=role, location=location, path=path))
 
 
 def _extensions(extra: dict[str, Any], blocks: list[dict[str, Any]]) -> None:

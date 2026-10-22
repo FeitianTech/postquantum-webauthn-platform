@@ -356,6 +356,86 @@ def test_extensions_sent_as_a_map_of_tag_and_value_are_a_map(data):
     assert "note" not in block
 
 
+_HMAC_SECRET_MAP = "a map of keyAgreement (0x01), saltEnc (0x02), saltAuth (0x03), pinUvAuthProtocol (0x04)"
+
+
+@pytest.mark.parametrize(
+    ("data", "name", "expected"),
+    [
+        (
+            b"\x01"
+            + cbor2.dumps(
+                {
+                    1: bytes(32),
+                    2: {"id": "example.com"},
+                    3: {"id": b"u"},
+                    4: [],
+                    6: {"largeBlob": cbor2.CBORTag(1, {"support": "required"})},
+                }
+            ),
+            "largeBlob",
+            'a map {support: "required" / "preferred"}',
+        ),
+        (
+            b"\x02" + cbor2.dumps({1: "example.com", 2: bytes(32), 4: {"largeBlob": cbor2.CBORTag(1, {"read": True})}}),
+            "largeBlob",
+            "a map of read, write, originalSize",
+        ),
+        (
+            b"\x02"
+            + cbor2.dumps(
+                {
+                    1: "example.com",
+                    2: bytes(32),
+                    4: {"hmac-secret": cbor2.CBORTag(1, {1: _KEY_AGREEMENT, 2: _SALT_ENC_ONE_PROTOCOL_2, 3: bytes(32), 4: 2})},
+                }
+            ),
+            "hmac-secret",
+            _HMAC_SECRET_MAP,
+        ),
+        (
+            b"\x00"
+            + cbor2.dumps(
+                {2: _auth_data(_UP, {"credBlob": b"b"}), 3: b"\x30\x00", 8: {"largeBlob": cbor2.CBORTag(1, {"blob": b"z"})}}
+            ),
+            "largeBlob",
+            "a map of supported, written, blob, originalSize",
+        ),
+    ],
+)
+def test_an_extension_value_sent_as_a_tag_is_not_a_map(data, name, expected):
+    # A tag reads as the mapping {"tag", "value"}, but no map was sent.
+    entry = _blocks(data)[-1]["entries"][name]
+
+    assert entry["note"] == f"expected {expected} here; shown as sent"
+    assert set(entry["value"]) == {"tag", "value"}
+    assert "members" not in entry
+
+
+@pytest.mark.parametrize(
+    ("name", "expected"),
+    [
+        ("largeBlob", {"note": "tag, value: not in the section's CDDL (read, write, originalSize)"}),
+        (
+            "hmac-secret",
+            {
+                "members": {
+                    "tag (not in CTAP 2.2 section 12.7)": {"value": 1},
+                    "value (not in CTAP 2.2 section 12.7)": {"value": 2},
+                }
+            },
+        ),
+    ],
+)
+def test_an_extension_value_sent_as_a_map_of_tag_and_value_is_a_map(name, expected):
+    request = b"\x02" + cbor2.dumps({1: "example.com", 2: bytes(32), 4: {name: {"tag": 1, "value": 2}}})
+
+    entry = _blocks(request)[0]["entries"][name]
+
+    for key, view in expected.items():
+        assert entry[key] == view
+
+
 def test_nothing_to_interpret_adds_nothing():
     request = b"\x02" + cbor2.dumps({1: "example.com", 2: bytes(32)})
 
@@ -363,7 +443,7 @@ def test_nothing_to_interpret_adds_nothing():
 
 
 def _entry(name: str, value, role: str) -> dict:
-    return extensions.block({name: value}, is_map=True, role=role, location="test", path="$")["entries"][name]
+    return extensions.block({name: value}, node=None, role=role, location="test", path="$")["entries"][name]
 
 
 @pytest.mark.parametrize(
