@@ -18,7 +18,8 @@ def test_a_resident_flag_given_as_null_is_read_from_the_next_field_that_gives_on
 
     records = parsing._parse_client_supplied_credentials([said_by_cred_props, said_nowhere])
 
-    assert [record["resident"] for record in records] == [True, False]
+    # Said nowhere, it is unknown.
+    assert [record["resident"] for record in records] == [True, None]
 
 
 def test_an_aaguid_given_as_plain_hex_is_read_as_hex_not_as_base64():

@@ -82,7 +82,7 @@ def _parse_client_supplied_credentials(
                     "id": material.credential_id,
                     "attachment": attachment_value,
                     "algorithm": algorithm_value,
-                    "resident": bool(resident_flag),
+                    "resident": resident_flag,
                     "signCount": int(entry.get("signCount"))
                     if isinstance(entry.get("signCount"), int) and not isinstance(entry.get("signCount"), bool)
                     else 0,
@@ -94,8 +94,8 @@ def _parse_client_supplied_credentials(
     return records
 
 
-def _resident_flag(entry: Mapping[str, Any]) -> bool:
-    """Whether the entry says its credential is discoverable: its own flags, its properties, or credProps."""
+def _resident_flag(entry: Mapping[str, Any]) -> bool | None:
+    """Whether the entry says its credential is discoverable: its own flags, its properties, or credProps; None when none says."""
 
     resident_flag = _extract_flag_from_mapping(
         entry,
@@ -118,6 +118,4 @@ def _resident_flag(entry: Mapping[str, Any]) -> bool:
             elif isinstance(cred_props_value, bool):
                 resident_flag = cred_props_value
 
-    if resident_flag is None:
-        resident_flag = False
     return resident_flag

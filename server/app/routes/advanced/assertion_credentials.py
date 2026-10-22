@@ -109,7 +109,7 @@ def select_begin_credentials(
         if not credentials_for_begin:
             credentials_for_begin = _pick_records(stored_records, allowed_attachment_values)
     else:
-        resident_records = [record for record in stored_records if record.get("resident")]
+        resident_records = [record for record in stored_records if record.get("resident") is True]
         candidate_records = resident_records if resident_key_only and resident_records else stored_records
         credentials_for_begin = _pick_records(candidate_records, allowed_attachment_values)
     return credentials_for_begin, resident_records, resident_key_only
@@ -186,9 +186,13 @@ def restore_complete_credentials(data: Mapping[str, Any]) -> tuple[list[dict[str
 def non_discoverable_error(
     resident_key_only: bool, selected_record: Mapping[str, Any] | None, credential_id_bytes: bytes | None
 ) -> dict[str, Any] | None:
-    """The failure when a discoverable-only ceremony was answered by a non-discoverable credential."""
+    """The failure when a discoverable-only ceremony was answered by a credential its record says is not discoverable.
 
-    if not (resident_key_only and selected_record is not None and not selected_record.get("resident")):
+    A record that does not say (no credProps.rk was reported) is not refused: the
+    authenticator found the credential without an allow list.
+    """
+
+    if not (resident_key_only and selected_record is not None and selected_record.get("resident") is False):
         return None
     response_payload = {
         "error": (
