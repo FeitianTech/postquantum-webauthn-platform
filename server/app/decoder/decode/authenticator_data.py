@@ -57,6 +57,8 @@ def _read_authenticator_data(data: bytes) -> dict[str, Any]:
     if flags & AuthenticatorData.FLAG.ED:
         node, offset = _read_embedded_item(data, offset, "extensions")
         fields["extensions"] = cbor_parser._structure_to_value(node)
+        # Decided by the CBOR item: a tag is read as the mapping {"tag", "value"}, and is no map.
+        fields["extensionsAreMap"] = node.get("majorType") == 5
 
     if offset != len(data):
         raise _LocatedError(f"{len(data) - offset} byte(s) after what the AT and ED flags account for", offset, "$")
@@ -123,7 +125,7 @@ def _describe_authenticator_data_bytes(data: bytes) -> dict[str, Any]:
         extensions_payload: dict[str, Any] = {
             "raw": make_json_safe(extensions),
         }
-        if isinstance(extensions, Mapping):
+        if fields["extensionsAreMap"]:
             extensions_payload["summary"] = make_json_safe(
                 summarize_authenticator_extensions(extensions)
             )
