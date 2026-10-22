@@ -84,9 +84,11 @@ def init_app(app: Flask) -> None:
 def determine_rp_id(explicit_id: str | None = None) -> str:
     """Resolve the relying party identifier for the current request.
 
-    ``explicit_id`` is honoured only when it is consistent with the configured
-    RP ID/origin allowlist; deriving the RP ID from the request ``Host`` header
-    is a development-only fallback used when nothing is configured.
+    ``explicit_id`` (an RP ID a request names, or the one a ceremony's begin
+    kept) is used as given: a begin checks a requested one first, with
+    ``requested_rp_id_refusal``. Without one, the configured RP ID; deriving it
+    from the request ``Host`` header is a development-only fallback used when
+    nothing is configured.
     """
 
     if explicit_id:
@@ -108,6 +110,25 @@ def determine_rp_id(explicit_id: str | None = None) -> str:
         return host
 
     return "localhost"
+
+
+def requested_rp_id_refusal(rp_id: str, member: str) -> str | None:
+    """Why a ceremony may not use the RP ID its request names in ``member`` (``rp.id``, ``rpId``); None when it may.
+
+    With an origin allowlist (``FIDO_SERVER_ALLOWED_ORIGINS``) the RP ID must be
+    one an allowed origin can use: the origin's host or a registrable suffix of
+    it, never a public suffix (fido2's ``verify_rp_id``). Without one, as in
+    local development, any RP ID is taken, as any origin is: the browser judges
+    it, and complete's origin check (``create_fido_server``) still applies.
+    """
+
+    allowed = origins.get_allowed_origins()
+    if not allowed or any(verify_rp_id(rp_id, origin) for origin in allowed):
+        return None
+    return (
+        f'{member} "{rp_id}" is not the host of an allowed origin ({", ".join(allowed)}) '
+        "or a registrable suffix of one."
+    )
 
 
 def _resolve_request_host() -> str | None:

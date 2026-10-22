@@ -5,7 +5,8 @@ request's host (a development-only fallback): its hostname or IP literal, with a
 loopback address read as ``localhost``, and ``localhost`` when there is no host.
 
 Without both an RP ID and an origin allowlist it warns, once, that it is running
-on that fallback.
+on that fallback. An RP ID a request names must, with an allowlist, be one an
+allowed origin can use.
 """
 from __future__ import annotations
 
@@ -66,6 +67,46 @@ def test_a_request_without_any_host_uses_localhost(unconfigured_app):
 def test_the_request_host_is_none_outside_a_request():
     # determine_rp_id asks for it only inside a request.
     assert relying_party._resolve_request_host() is None
+
+
+@pytest.mark.parametrize(
+    ("allowlist", "rp_id"),
+    [
+        ("https://webauthnlab.tech", "webauthnlab.tech"),
+        ("https://app.example.com", "example.com"),
+        ("https://app.example.com", "app.example.com"),
+        ("https://one.example, https://app.example.com", "example.com"),
+    ],
+)
+def test_an_allowed_origin_may_use_its_host_or_a_registrable_suffix_of_it(make_app, allowlist, rp_id):
+    with make_app({"FIDO_SERVER_ALLOWED_ORIGINS": allowlist}).app_context():
+        assert relying_party.requested_rp_id_refusal(rp_id, "rpId") is None
+
+
+@pytest.mark.parametrize(
+    "rp_id",
+    [
+        "evil.example",
+        "sub.webauthnlab.tech",
+        # A public suffix: no origin may use it.
+        "tech",
+        "webauthnlab.tech.evil.example",
+    ],
+)
+def test_an_rp_id_no_allowed_origin_can_use_is_refused(make_app, rp_id):
+    with make_app({"FIDO_SERVER_ALLOWED_ORIGINS": "https://webauthnlab.tech"}).app_context():
+        refusal = relying_party.requested_rp_id_refusal(rp_id, "rp.id")
+
+    assert refusal == (
+        f'rp.id "{rp_id}" is not the host of an allowed origin (https://webauthnlab.tech) '
+        "or a registrable suffix of one."
+    )
+
+
+@pytest.mark.parametrize("rp_id", ["sub.localhost", "evil.example", "tech"])
+def test_without_an_allowlist_any_requested_rp_id_is_taken(make_app, rp_id):
+    with make_app({"FIDO_SERVER_ALLOWED_ORIGINS": None}).app_context():
+        assert relying_party.requested_rp_id_refusal(rp_id, "rpId") is None
 
 
 @pytest.mark.parametrize(

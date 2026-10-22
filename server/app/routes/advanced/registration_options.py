@@ -66,6 +66,13 @@ def parse_begin_request(data: Any) -> tuple[BeginRequest | None, Any]:
     if not public_key.get("challenge"):
         return None, (jsonify({"error": "Missing required field: challenge"}), 400)
 
+    # Text when there (request_members); the configured or derived RP ID when not.
+    requested_rp_id = public_key["rp"].get("id")
+    if requested_rp_id is not None:
+        rp_refusal = relying_party.requested_rp_id_refusal(requested_rp_id, "rp.id")
+        if rp_refusal is not None:
+            return None, (jsonify({"error": rp_refusal}), 400)
+
     user_info = public_key["user"]
     username = user_info.get("name", "")
     display_name = user_info.get("displayName", username)

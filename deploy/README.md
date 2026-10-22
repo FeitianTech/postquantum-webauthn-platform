@@ -112,7 +112,7 @@ warning. "On Cloud Run" means `K_SERVICE` is set, which Cloud Run does.
 | `FIDO_SERVER_SESSION_COOKIE_SECURE` | on on Cloud Run | The session and namespace cookies' `Secure` flag |
 | `FIDO_SERVER_TRUST_PROXY` | on on Cloud Run | Believe `X-Forwarded-Proto` and the client address (never the forwarded host) |
 | `FIDO_SERVER_RP_ID` | the request's host | The relying party ID; unset is a development fallback, logged as a warning |
-| `FIDO_SERVER_ALLOWED_ORIGINS` | the request's own origin | The exact origins a ceremony may come from, separated by commas or new lines; unset is a development fallback |
+| `FIDO_SERVER_ALLOWED_ORIGINS` | the request's own origin | The exact origins a ceremony may come from, separated by commas or new lines; an RP ID an Advanced request names must be one of their hosts or a registrable suffix of one; unset is a development fallback, which takes any RP ID named |
 | `FIDO_SERVER_RP_NAME` | `FIDO2/WebAuthn PQC Developer Tools` | The relying party's name |
 | `FIDO_SERVER_CHALLENGE_TTL_SECONDS` | `600` | How long an issued challenge can be used |
 | `FIDO_SERVER_TRUSTED_ATTESTATION_CA_SUBJECTS` | none | Attestation roots the operator trusts, by subject (RFC 4514), separated by `,`, `;` or new lines |
