@@ -18,6 +18,7 @@ from .. import values
 from . import (
     attestation_statement,
     authenticator_data_findings,
+    cbor_parser,
     ctap_conformance,
     edn_view,
     extensions,
@@ -45,9 +46,9 @@ def for_ctap(classification: str, value: Any, node: Mapping[str, Any], data: byt
         # Beside the view, which shows every member as sent.
         extra["getInfoDecoded"] = get_info.interpret_get_info(value)
     elif classification == "make_credential_input":
-        _add(blocks, values.get_mapping_entry(value, 6), extensions.MAKE_CREDENTIAL_INPUT, "extensions (0x06)", "${6}")
+        _add_member(blocks, node, 6, extensions.MAKE_CREDENTIAL_INPUT, "extensions (0x06)")
     elif classification == "get_assertion_input":
-        _add(blocks, values.get_mapping_entry(value, 4), extensions.GET_ASSERTION_INPUT, "extensions (0x04)", "${4}")
+        _add_member(blocks, node, 4, extensions.GET_ASSERTION_INPUT, "extensions (0x04)")
     elif classification in ("make_credential_output", "get_assertion_output"):
         registration = classification == "make_credential_output"
         findings += authenticator_data_findings.for_member(node, data, (2,))
@@ -57,13 +58,7 @@ def for_ctap(classification: str, value: Any, node: Mapping[str, Any], data: byt
         _add_auth_data(blocks, auth_data, output, _path(2))
         unsigned_key = 6 if registration else 8
         unsigned = extensions.MAKE_CREDENTIAL_UNSIGNED if registration else extensions.GET_ASSERTION_UNSIGNED
-        _add(
-            blocks,
-            values.get_mapping_entry(value, unsigned_key),
-            unsigned,
-            f"{_UNSIGNED_LOCATION} (0x{unsigned_key:02x})",
-            f"${{{unsigned_key}}}",
-        )
+        _add_member(blocks, node, unsigned_key, unsigned, f"{_UNSIGNED_LOCATION} (0x{unsigned_key:02x})")
         if registration:
             fmt, att_stmt = values.get_mapping_entry(value, 1), values.get_mapping_entry(value, 3)
             findings += _attestation(extra, fmt, att_stmt, auth_data, node, data, (3,))
@@ -122,7 +117,15 @@ def for_public_key_credential(
     if results is values.MISSING:
         results = credential.get("getClientExtensionResults", values.MISSING)
     if results is not values.MISSING:
-        _add(blocks, results, extensions.CLIENT_OUTPUT, "clientExtensionResults", "clientExtensionResults")
+        # JSON, where an object is a map.
+        _add(
+            blocks,
+            results,
+            extensions.CLIENT_OUTPUT,
+            "clientExtensionResults",
+            "clientExtensionResults",
+            is_map=isinstance(results, Mapping),
+        )
     _extensions(extra, blocks)
     return extra, findings
 
@@ -212,19 +215,39 @@ def _add_auth_data(
 ) -> None:
     if not isinstance(auth_data, bytes):
         return
-    found = authenticator_data_findings.extensions(auth_data)
-    if found is values.MISSING or found == {}:
+    node = authenticator_data_findings.extensions(auth_data)
+    if node is None:
         return
-    blocks.append(extensions.block(found, role=role, location=_AUTH_DATA_LOCATION, path=f"{path}<extensions>", basis=basis))
+    found = cbor_parser._structure_to_value(node)
+    if found == {}:
+        return
+    blocks.append(
+        extensions.block(
+            found, is_map=_is_map(node), role=role, location=_AUTH_DATA_LOCATION, path=f"{path}<extensions>", basis=basis
+        )
+    )
     if source:
         blocks[-1]["source"] = source
 
 
-def _add(blocks: list[dict[str, Any]], value: Any, role: str, location: str, path: str) -> None:
+def _add_member(blocks: list[dict[str, Any]], root: Mapping[str, Any], key: int, role: str, location: str) -> None:
+    """The extensions a CTAP message holds as member ``key``, read from its CBOR item."""
+
+    member = authenticator_data_findings.member_node(root, (key,))
+    if member is not None:
+        _add(blocks, cbor_parser._structure_to_value(member), role, location, _path(key), is_map=_is_map(member))
+
+
+def _add(blocks: list[dict[str, Any]], value: Any, role: str, location: str, path: str, *, is_map: bool) -> None:
     # An empty map has nothing to interpret, so it adds nothing.
-    if value is None or value is values.MISSING or value == {}:
+    if value is None or value == {}:
         return
-    blocks.append(extensions.block(value, role=role, location=location, path=path))
+    blocks.append(extensions.block(value, is_map=is_map, role=role, location=location, path=path))
+
+
+def _is_map(node: Mapping[str, Any]) -> bool:
+    # Decided by the CBOR item: a tag is read as the mapping {"tag", "value"}, and is no map.
+    return node.get("majorType") == 5
 
 
 def _extensions(extra: dict[str, Any], blocks: list[dict[str, Any]]) -> None:

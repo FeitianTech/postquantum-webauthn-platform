@@ -171,7 +171,9 @@ def test_get_info_options_keep_colliding_option_keys():
 
 
 def test_extension_entries_keep_colliding_identifiers():
-    block = extensions.block({b"\x01": 1, "01": 2}, role=extensions.MAKE_CREDENTIAL_INPUT, location="x", path="$")
+    block = extensions.block(
+        {b"\x01": 1, "01": 2}, is_map=True, role=extensions.MAKE_CREDENTIAL_INPUT, location="x", path="$"
+    )
 
     assert set(block["entries"]) == {"h'01' (bytes)", '"01" (text)'}
 

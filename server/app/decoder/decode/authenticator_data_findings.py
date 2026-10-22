@@ -19,7 +19,7 @@ from fido2.webauthn import AuthenticatorData
 
 from .. import values
 from . import canonical, key_collisions, key_equivalence
-from .cbor_parser import _CborDecodingError, _structure_to_value, decode_item
+from .cbor_parser import _CborDecodingError, decode_item
 
 _HEADER_LENGTH = 37
 
@@ -76,14 +76,14 @@ def check(auth_data: bytes, base_offset: int, path: str) -> list[dict[str, Any]]
     return findings
 
 
-def extensions(auth_data: bytes) -> Any:
-    """The extensions ``auth_data`` carries under its ED flag, or ``values.MISSING``."""
+def extensions(auth_data: bytes) -> dict[str, Any] | None:
+    """The extensions item ``auth_data`` carries under its ED flag, or ``None``."""
 
     items, _end = embedded_items(auth_data)
     for name, node in items:
         if name == "extensions":
-            return _structure_to_value(node)
-    return values.MISSING
+            return node
+    return None
 
 
 def embedded_items(auth_data: bytes) -> tuple[list[tuple[str, dict[str, Any]]], int | None]:

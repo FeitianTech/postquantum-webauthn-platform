@@ -48,13 +48,19 @@ _ROLE_SPECS = {
 _UNKNOWN = "not defined in CTAP 2.2 section 12 or WebAuthn L3 section 10; shown as sent"
 
 
-def block(value: Any, *, role: str, location: str, path: str, basis: str | None = None) -> dict[str, Any]:
-    """Interpret the extensions map ``value`` found at ``location``, playing ``role``."""
+def block(
+    value: Any, *, is_map: bool, role: str, location: str, path: str, basis: str | None = None
+) -> dict[str, Any]:
+    """Interpret the extensions map ``value`` found at ``location``, playing ``role``.
+
+    ``is_map`` says whether they were sent as a map (a CBOR map, a JSON object),
+    which ``value`` cannot: a CBOR tag is read as the mapping {"tag", "value"}.
+    """
 
     result: dict[str, Any] = {"location": location, "path": path, "role": role, "spec": _ROLE_SPECS[role]}
     if basis:
         result["basis"] = basis
-    if not isinstance(value, Mapping):
+    if not is_map:
         result["value"] = values.make_hex_only(value)
         result["note"] = "extensions are a map from extension identifier to value; this is not a map"
         return result

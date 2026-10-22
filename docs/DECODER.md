@@ -19,6 +19,11 @@ CTAP 2.2 section 12 and WebAuthn L3 section 10) and `data.attestationStatementDe
 `data.getInfoDecoded` (`decode/get_info.py`, what an authenticatorGetInfo
 response's members mean, CTAP 2.2 section 6.4). It shows, it does not verify:
 every attestation view says so and lists what it did not check.
+Extensions are read as a map only when the CBOR item is one (or, in a
+PublicKeyCredential, the JSON value is an object): a tag is read as the mapping
+`{"tag", "value"}`, so the decoded value cannot tell. Extensions sent as a tag
+get the note that they are not a map, and no summary in the authenticator
+data's `extensions`.
 
 What a reading finds in a nested part is reported where the part is: a key
 given twice in a SafetyNet JWS header or payload is a `duplicate-json-key`

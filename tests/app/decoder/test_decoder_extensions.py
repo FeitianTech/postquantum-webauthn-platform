@@ -320,6 +320,42 @@ def test_an_extensions_parameter_that_is_not_a_map_is_shown_as_sent():
     assert block["note"] == "extensions are a map from extension identifier to value; this is not a map"
 
 
+@pytest.mark.parametrize(
+    "data",
+    [
+        # Authenticator data whose extensions are 8(simple(1)).
+        bytes.fromhex("8480a1bc9c20070ca2ce83f722109f4c02a21a3f69fbca3c9f9fffa15106ff01819fff80d4c8e1"),
+        b"\x01"
+        + cbor2.dumps(
+            {1: bytes(32), 2: {"id": "example.com"}, 3: {"id": b"u"}, 4: [], 6: cbor2.CBORTag(1, {"credProtect": 2})}
+        ),
+        b"\x02" + cbor2.dumps({1: "example.com", 2: bytes(32), 4: cbor2.CBORTag(1, {"credBlob": True})}),
+        b"\x00" + cbor2.dumps({2: _auth_data(_UP, {"credBlob": b"b"}), 3: b"\x30\x00", 8: cbor2.CBORTag(1, {"x": 1})}),
+    ],
+)
+def test_extensions_sent_as_a_tag_are_not_a_map(data):
+    # A tag reads as the mapping {"tag", "value"}, but no map was sent.
+    block = _blocks(data)[-1]
+
+    assert block["note"] == "extensions are a map from extension identifier to value; this is not a map"
+    assert set(block["value"]) == {"tag", "value"}
+    assert "entries" not in block
+
+
+@pytest.mark.parametrize(
+    "data",
+    [
+        _auth_data(_UP, {"tag": 8, "value": 1}),
+        b"\x02" + cbor2.dumps({1: "example.com", 2: bytes(32), 4: {"tag": 8, "value": 1}}),
+    ],
+)
+def test_extensions_sent_as_a_map_of_tag_and_value_are_a_map(data):
+    (block,) = _blocks(data)
+
+    assert set(block["entries"]) == {"tag", "value"}
+    assert "note" not in block
+
+
 def test_nothing_to_interpret_adds_nothing():
     request = b"\x02" + cbor2.dumps({1: "example.com", 2: bytes(32)})
 
@@ -327,7 +363,7 @@ def test_nothing_to_interpret_adds_nothing():
 
 
 def _entry(name: str, value, role: str) -> dict:
-    return extensions.block({name: value}, role=role, location="test", path="$")["entries"][name]
+    return extensions.block({name: value}, is_map=True, role=role, location="test", path="$")["entries"][name]
 
 
 @pytest.mark.parametrize(
