@@ -12,6 +12,8 @@ from typing import Any
 # list, when it has them.
 _OBJECT_MEMBERS = ("rp", "user", "extensions")
 _LIST_MEMBERS = ("excludeCredentials",)
+# Members of rp and user that must be text when there.
+_TEXT_MEMBERS = (("rp", "name"), ("user", "name"), ("user", "displayName"))
 
 
 def registration_refusal(public_key: Any) -> str | None:
@@ -28,4 +30,17 @@ def registration_refusal(public_key: Any) -> str | None:
     timeout = public_key.get("timeout")
     if timeout is not None and (isinstance(timeout, bool) or not isinstance(timeout, (int, float))):
         return "timeout must be a number of milliseconds."
+    return _text_member_refusal(public_key)
+
+
+def _text_member_refusal(public_key: Mapping[str, Any]) -> str | None:
+    """Why rp.id is not a non-empty string, or a name of rp or user no string; else None."""
+
+    rp = public_key.get("rp")
+    if isinstance(rp, Mapping) and "id" in rp and not (isinstance(rp["id"], str) and rp["id"]):
+        return "rp.id must be a non-empty string."
+    for parent, name in _TEXT_MEMBERS:
+        container = public_key.get(parent)
+        if isinstance(container, Mapping) and name in container and not isinstance(container[name], str):
+            return f"{parent}.{name} must be a string."
     return None

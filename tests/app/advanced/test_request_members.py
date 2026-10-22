@@ -17,6 +17,12 @@ from tests.app.security.ceremony_helpers import advanced_public_key_options
         ({"excludeCredentials": None}, "excludeCredentials must be a list."),
         ({"timeout": "60s"}, "timeout must be a number of milliseconds."),
         ({"timeout": True}, "timeout must be a number of milliseconds."),
+        ({"rp": {"id": 5, "name": "x"}}, "rp.id must be a non-empty string."),
+        ({"rp": {"id": "", "name": "x"}}, "rp.id must be a non-empty string."),
+        ({"rp": {"id": None, "name": "x"}}, "rp.id must be a non-empty string."),
+        ({"rp": {"id": "localhost", "name": 5}}, "rp.name must be a string."),
+        ({"user": {"name": 5, "displayName": "x"}}, "user.name must be a string."),
+        ({"user": {"id": "00", "name": "alice", "displayName": 5}}, "user.displayName must be a string."),
     ],
 )
 def test_a_registration_member_of_the_wrong_type_is_refused(changes, error):
