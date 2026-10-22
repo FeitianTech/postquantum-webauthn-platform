@@ -32,6 +32,24 @@ def test_a_request_that_is_no_object_is_refused(body, error):
     assert response.get_json() == {"error": error}
 
 
+@pytest.mark.parametrize(
+    ("changes", "error"),
+    [
+        ({"user": {"id": 5, "name": "alice"}}, "Invalid user ID format: not hex text or a $hex, $base64 or $base64url value"),
+        ({"challenge": 5}, "Invalid challenge format: not hex text or a $hex, $base64 or $base64url value"),
+        ({"challenge": {"value": "00"}}, "Invalid challenge format: not hex text or a $hex, $base64 or $base64url value"),
+    ],
+)
+def test_a_user_id_or_challenge_that_does_not_read_as_bytes_is_refused(changes, error):
+    response = entry_app().test_client().post(
+        "/api/advanced/register/begin",
+        json={"publicKey": {**advanced_public_key_options(challenge=b"\x01" * 32), **changes}},
+    )
+
+    assert response.status_code == 400
+    assert response.get_json() == {"error": error}
+
+
 @pytest.mark.parametrize("attestation", ["direct", "indirect", "enterprise"])
 def test_the_requested_attestation_is_asked_for(attestation):
     assert _begin(attestation=attestation)["attestation"] == attestation

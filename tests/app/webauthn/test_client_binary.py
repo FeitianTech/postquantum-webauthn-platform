@@ -109,6 +109,17 @@ def test_a_bare_request_field_is_read_as_hex():
     assert client_binary.read_request_field({"$base64url": "YWI"}) == b"ab"
 
 
+@pytest.mark.parametrize("value", [5, None, ["61"], {"id": "61"}])
+def test_a_request_field_that_must_be_bytes_refuses_what_reads_as_anything_else(value):
+    with pytest.raises(ValueError, match="not hex text or a"):
+        client_binary.read_request_bytes(value)
+
+
+def test_a_request_field_that_must_be_bytes_reads_hex_and_wrappers():
+    assert client_binary.read_request_bytes("6162") == b"ab"
+    assert client_binary.read_request_bytes({"$base64": "YWI="}) == b"ab"
+
+
 def test_decode_client_binary_accepts_base64url_mapping_key():
     raw = b"\x00\x01\x02\xfa"
     decoded = client_binary.read({"$base64url": b64u(raw)}, wrappers=True)

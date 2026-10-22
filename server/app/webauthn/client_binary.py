@@ -6,7 +6,8 @@ prose pasted into a ``rawId`` is refused, never read as junk bytes. What else a
 caller takes, it says: the Simple tab's stored records may hold a list of byte
 values (``iterables``); the Advanced editor writes ``{"$hex": ...}``,
 ``{"$base64": ...}`` and ``{"$base64url": ...}`` (``wrappers``), and its request
-fields read bare text as hex (``read_request_field``).
+fields read bare text as hex (``read_request_field``), and the fields that must be
+bytes are refused when they read as anything else (``read_request_bytes``).
 """
 from __future__ import annotations
 
@@ -158,4 +159,13 @@ def read_request_field(value: Any) -> Any:
     decoded = unwrap_request_value(value)
     if isinstance(decoded, str):
         decoded = encoding.decode_hex(decoded)
+    return decoded
+
+
+def read_request_bytes(value: Any) -> bytes:
+    """A request field that must be bytes, read as ``read_request_field`` reads it; ValueError when it is not bytes."""
+
+    decoded = read_request_field(value)
+    if not isinstance(decoded, bytes):
+        raise ValueError("not hex text or a $hex, $base64 or $base64url value")
     return decoded

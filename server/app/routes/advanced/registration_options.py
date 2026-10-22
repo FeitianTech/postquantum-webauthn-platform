@@ -76,7 +76,7 @@ def parse_begin_request(data: Any) -> tuple[BeginRequest | None, Any]:
     user_id_value = user_info.get("id", "")
     if user_id_value:
         try:
-            user_id_bytes = client_binary.read_request_field(user_id_value)
+            user_id_bytes = client_binary.read_request_bytes(user_id_value)
         except (ValueError, TypeError) as exc:
             return None, (jsonify({"error": f"Invalid user ID format: {exc}"}), 400)
     else:
@@ -86,7 +86,7 @@ def parse_begin_request(data: Any) -> tuple[BeginRequest | None, Any]:
     challenge_bytes = None
     if challenge_value:
         try:
-            challenge_bytes = client_binary.read_request_field(challenge_value)
+            challenge_bytes = client_binary.read_request_bytes(challenge_value)
         except (ValueError, TypeError) as exc:
             return None, (jsonify({"error": f"Invalid challenge format: {exc}"}), 400)
 
