@@ -97,6 +97,19 @@ def test_a_text_string_that_lost_a_chunk_is_damaged_whatever_its_other_chunks_ho
     assert [chunk.get("value") for chunk in node["segments"]] == ["a", None]
 
 
+def test_a_chunk_is_numbered_by_its_place_in_the_input_kept_or_skipped():
+    # (_ "a", h'01', h'02', <ff>): chunks 1 and 2 are skipped, and chunk 3 is
+    # chunk 3 though it is the second kept.
+    node, _end, skipped = decode_cbor_parser.decode_item(bytes.fromhex("7f61614101410261ffff"), lenient=True)
+
+    assert [(entry["code"], entry["offset"], entry["path"]) for entry in skipped] == [
+        ("invalid-indefinite-chunk", 3, "$<chunk 1>"),
+        ("invalid-indefinite-chunk", 5, "$<chunk 2>"),
+        ("invalid-utf8", 7, "$<chunk 3>"),
+    ]
+    assert [chunk["offset"] for chunk in node["segments"]] == [1, 7]
+
+
 def test_parse_cbor_item_array_map_tag_and_simple_float_values():
     array_node, _ = decode_cbor_parser._parse_cbor_item(b"\x82\x01\x02", 0)
     assert array_node["summary"] == "array[2]"

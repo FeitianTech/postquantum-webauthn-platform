@@ -57,6 +57,9 @@ readable chunks never pass for its text) and no EDN; its decoded value is
 `{"diagnostic": "h'61ff' (not UTF-8)"}`, and as a key it is `h'61ff' (not
 UTF-8)`, identified by its bytes, so the same bytes however chunked are one key.
 With a chunk skipped as well, it is damaged.
+An indefinite-length string's `chunks` (bytes) or `segments` (text) hold only
+the chunks the parser kept; a chunk's path, `$<chunk 3>`, numbers it by its
+place in the input, kept or skipped, so it need not be its index there.
 In a CTAP view, a key or a tagged value holding anything the lenient parser could
 not read whole is spelled the same way (`view_spelling`), since no EDN spells it
 exactly.

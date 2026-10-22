@@ -234,6 +234,7 @@ def _parse_string(
         # A chunk the lenient parser skips leaves the string damaged: it is not the
         # string of the chunks it kept (key_equivalence never makes it their key).
         damaged: dict[str, bool] = {}
+        sent = 0
         while True:
             if offset >= len(data):
                 state.problem("truncated", f"indefinite-length {kind} has no break byte", start, path)
@@ -242,7 +243,9 @@ def _parse_string(
                 offset += 1
                 break
             chunk_start = offset
-            chunk_path = f"{path}<chunk {len(chunks)}>"
+            # Numbered by its place in the input, kept or skipped: ``chunks`` holds the kept ones.
+            chunk_path = f"{path}<chunk {sent}>"
+            sent += 1
             chunk, offset = _parse_cbor_item(data, offset, state=state, path=chunk_path, depth=depth + 1)
             if chunk.get("majorType") != major_type or chunk.get("indefinite") or chunk.get("type") == "invalid":
                 state.problem(
