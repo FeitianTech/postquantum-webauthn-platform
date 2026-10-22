@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import hashlib
 
+import pytest
 from fido2.webauthn import AuthenticatorData
 
 from server.app.decoder import values as decoder_values
@@ -44,3 +45,26 @@ def test_extensions_that_are_a_map_of_tag_and_value_are_summarised_as_a_map():
     )["extensions"]
 
     assert extensions["summary"] == {"tag": 8, "value": 1}
+
+
+def _with_credential_public_key(key_hex: str) -> bytes:
+    # The UP and AT flags, a counter of 5, a zero AAGUID and the credential ID "id", then the key.
+    header = hashlib.sha256(b"example.com").digest() + bytes([0x41]) + (5).to_bytes(4, "big")
+    return header + bytes(16) + (2).to_bytes(2, "big") + b"id" + bytes.fromhex(key_hex)
+
+
+def test_a_credential_public_key_that_is_a_tag_is_no_cose_key():
+    # 1({1: 2, 3: -7}) reads as the mapping {"tag": 1, "value": {1: 2, 3: -7}}, but no map was sent.
+    with pytest.raises(decode_authenticator_data._LocatedError, match="not a COSE_Key map") as refused:
+        decode_authenticator_data._describe_authenticator_data_bytes(_with_credential_public_key("c1a201020326"))
+
+    assert (refused.value.offset, refused.value.path) == (57, "$<credentialPublicKey>")
+
+
+def test_a_credential_public_key_that_is_a_map_of_tag_and_value_is_read_as_a_map():
+    # {"tag": 8, "value": 1}
+    attested = decode_authenticator_data._describe_authenticator_data_bytes(
+        _with_credential_public_key("a263746167086576616c756501")
+    )["attestedCredentialData"]
+
+    assert attested["publicKey"] == {"tag": 8, "value": 1}

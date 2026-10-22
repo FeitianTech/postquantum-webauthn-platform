@@ -7,7 +7,6 @@ decoder's own strict CBOR parser; a structure that does not fit raises
 from __future__ import annotations
 
 import uuid
-from collections.abc import Mapping
 from typing import Any
 
 from fido2.webauthn import AuthenticatorData
@@ -49,10 +48,10 @@ def _read_authenticator_data(data: bytes) -> dict[str, Any]:
         credential_id = data[offset : offset + id_length]
         key_offset = offset + id_length
         node, offset = _read_embedded_item(data, key_offset, "credentialPublicKey")
-        public_key = cbor_parser._structure_to_value(node)
-        if not isinstance(public_key, Mapping):
+        # Decided by the CBOR item: a tag is read as the mapping {"tag", "value"}, and is no map.
+        if node.get("majorType") != 5:
             raise _LocatedError("the credential public key is not a COSE_Key map", key_offset, "$<credentialPublicKey>")
-        fields["attestedCredentialData"] = (aaguid, credential_id, public_key)
+        fields["attestedCredentialData"] = (aaguid, credential_id, cbor_parser._structure_to_value(node))
 
     if flags & AuthenticatorData.FLAG.ED:
         node, offset = _read_embedded_item(data, offset, "extensions")
