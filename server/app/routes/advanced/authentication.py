@@ -43,7 +43,7 @@ def advanced_authenticate_begin():
         ), 400
 
     public_key = data["publicKey"]
-    refusal = request_members.authentication_refusal(public_key)
+    refusal = request_members.authentication_refusal(public_key) or assertion_options.rp_id_refusal(public_key)
     if refusal is not None:
         return jsonify({"error": refusal}), 400
 
@@ -61,7 +61,7 @@ def advanced_authenticate_begin():
         except (ValueError, TypeError) as exc:
             return jsonify({"error": f"Invalid challenge format: {exc}"}), 400
 
-    temp_server, resolved_rp_id, stored_rp_name = assertion_options.assertion_server(public_key)
+    temp_server, rp_id = assertion_options.assertion_server(public_key)
     uv_req = assertion_options.user_verification_requirement(public_key)
 
     raw_credentials_input = assertion_credentials.credential_list_input(data) or []
@@ -100,7 +100,7 @@ def advanced_authenticate_begin():
     # Stamped so /complete can tell a fresh state from one replayed out of an
     # old cookie.
     session["advanced_auth_state"] = stamp_ceremony_state(dict(state))
-    session["advanced_auth_rp"] = {"id": resolved_rp_id, "name": stored_rp_name}
+    session["advanced_auth_rp"] = {"id": rp_id}
 
     # The extensions may hold bytes (prf's eval inputs).
     return jsonify(json_values.make_json_safe(_begin_payload(options, resident_key_only, request_hints(public_key))))

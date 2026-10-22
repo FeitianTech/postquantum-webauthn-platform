@@ -279,7 +279,10 @@ its logic out here first.
   (`extract_attestation_details`) only once the state is consumed and fido2 accepted the
   response; the Simple tab refuses a registration only on an integrity error, every other
   attestation finding its warning, while the Advanced tab completes and reports them all as
-  errors); `routes/ceremony_session.py` (every begin: refused, the session kept as
+  errors; an Advanced ceremony is for the RP ID its request names (`rp.id`, `rpId`), else the
+  configured one, and its complete for the one its begin kept beside its state (`advanced_rp`,
+  `advanced_auth_rp`); `routes/advanced/request_members.py` names the member of the wrong JSON
+  type, 400); `routes/ceremony_session.py` (every begin: refused, the session kept as
   it was, when its cookie would pass `MAX_COOKIE_SIZE`); `routes/json_body.py` (every route's
   JSON body: an object, or read as an empty one; one nested more than 64 deep refused, 400 in JSON,
   before it is parsed, as the CSP report and the metadata upload's files are); `routes/mds.py` (the MDS routes and

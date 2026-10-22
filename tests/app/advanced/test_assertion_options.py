@@ -17,16 +17,38 @@ def _options(response):
     return response.get_json()["publicKey"]
 
 
-def test_authentication_is_for_the_rp_of_the_last_registration_begin():
+def test_authentication_is_for_the_rp_id_the_request_names():
     client = entry_app().test_client()
-    registration_options = advanced_public_key_options(challenge=b"\x01" * 32)
+
+    options = _options(begin(client, [Authenticator().stored_credential_entry()], rpId="sub.localhost"))
+
+    assert options["rpId"] == "sub.localhost"
+    with client.session_transaction() as session:
+        assert session["advanced_auth_rp"] == {"id": "sub.localhost"}
+
+
+@pytest.mark.parametrize("changes", [{"rpId": "localhost"}, {}])
+def test_a_registration_begin_left_unfinished_names_no_rp_for_authentication(changes):
+    client = entry_app().test_client()
+    registration_options = advanced_public_key_options(challenge=b"\x01" * 32, rp_id="other.localhost")
     client.post("/api/advanced/register/begin", json={"publicKey": registration_options})
 
-    options = _options(begin(client, [Authenticator().stored_credential_entry()]))
+    options = _options(begin(client, [Authenticator().stored_credential_entry()], **changes))
 
-    assert options["rpId"] == registration_options["rp"]["id"]
-    with client.session_transaction() as session:
-        assert session["advanced_auth_rp"] == registration_options["rp"]
+    # The request's rpId, else the RP ID derived from the request's host.
+    assert options["rpId"] == "localhost"
+
+
+def test_with_allowed_origins_an_rp_id_none_of_them_can_use_is_refused(make_app):
+    app = make_app({"FIDO_SERVER_ALLOWED_ORIGINS": "https://webauthnlab.tech", "FIDO_SERVER_RP_ID": "webauthnlab.tech"})
+
+    response = begin(app.test_client(), [Authenticator().stored_credential_entry()], rpId="evil.example")
+
+    assert response.status_code == 400
+    assert response.get_json() == {
+        "error": 'rpId "evil.example" is not the host of an allowed origin (https://webauthnlab.tech) '
+        "or a registrable suffix of one."
+    }
 
 
 @pytest.mark.parametrize(

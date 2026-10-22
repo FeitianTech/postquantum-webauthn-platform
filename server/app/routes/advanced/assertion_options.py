@@ -9,28 +9,28 @@ from collections.abc import Mapping
 from typing import Any
 
 from fido2.webauthn import UserVerificationRequirement
-from flask import session
 
 from ...config import relying_party
 from ...webauthn import client_binary
 
 
-def assertion_server(public_key: Mapping[str, Any]) -> tuple[Any, Any, Any]:
-    """A fido2 server for the RP of the last registration begin, with the request's timeout."""
+def rp_id_refusal(public_key: Mapping[str, Any]) -> str | None:
+    """Why the request may not use the RP ID it names (rpId, text by now); None when it may or names none."""
 
-    stored_rp = session.get("advanced_rp")
-    stored_rp_id = None
-    stored_rp_name = None
-    if isinstance(stored_rp, Mapping):
-        stored_rp_id = stored_rp.get("id")
-        stored_rp_name = stored_rp.get("name")
+    if "rpId" not in public_key:
+        return None
+    return relying_party.requested_rp_id_refusal(public_key["rpId"], "rpId")
 
-    resolved_rp_id = relying_party.determine_rp_id(stored_rp_id)
-    temp_server = relying_party.create_fido_server(rp_id=resolved_rp_id, rp_name=stored_rp_name)
+
+def assertion_server(public_key: Mapping[str, Any]) -> tuple[Any, str]:
+    """A fido2 server for the RP ID the request names, else the configured or derived one, with the request's timeout."""
+
+    rp_id = relying_party.determine_rp_id(public_key.get("rpId"))
+    temp_server = relying_party.create_fido_server(rp_id=rp_id)
 
     # In milliseconds, as the options carry it (fido2 passes the server's timeout through).
     temp_server.timeout = public_key.get("timeout", 90000) or None
-    return temp_server, resolved_rp_id, stored_rp_name
+    return temp_server, rp_id
 
 
 def user_verification_requirement(public_key: Mapping[str, Any]) -> UserVerificationRequirement:

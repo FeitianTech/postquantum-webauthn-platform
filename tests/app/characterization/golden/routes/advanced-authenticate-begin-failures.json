@@ -445,8 +445,7 @@
      ],
      "contents": {
       "advanced_auth_rp": {
-       "id": "localhost",
-       "name": null
+       "id": "localhost"
       },
       "advanced_auth_state": {
        "challenge": "cXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXE",
@@ -518,8 +517,7 @@
      ],
      "contents": {
       "advanced_auth_rp": {
-       "id": "localhost",
-       "name": null
+       "id": "localhost"
       },
       "advanced_auth_state": {
        "challenge": "cXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXE",
