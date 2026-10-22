@@ -73,8 +73,9 @@ describe('a saved credential\'s details, the detail', () => {
     await openDetail('x5c@example.com');
 
     const properties = section('Properties');
-    // A Simple record keeps its extension outputs, not the resident key's or large blob's own fields.
-    expect(properties.querySelector('[data-item="discoverable"] [data-value]')).toHaveTextContent('false');
+    // A Simple record keeps its extension outputs, not large blob's own field; its browser said
+    // the credential is discoverable (credProps.rk).
+    expect(properties.querySelector('[data-item="discoverable"] [data-value]')).toHaveTextContent('true');
     expect(properties.querySelector('[data-item="largeBlob"] [data-value]')).toHaveTextContent('false');
     expect(properties.querySelector('[data-item="minPinLength"]')).toHaveTextContent('Authenticator minPinLength8');
     expect(properties.querySelector('[data-checks] p')).toHaveTextContent(

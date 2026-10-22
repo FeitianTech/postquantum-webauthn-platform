@@ -3,7 +3,7 @@ import { join, resolve } from 'node:path';
 
 import type { Page } from '@playwright/test';
 
-import { shownLevel, shownSubViews, expectedFor, keep, report } from './credential-views';
+import { discoverableFor, shownLevel, shownSubViews, expectedFor, keep, report } from './credential-views';
 import { expect, test } from './fixtures';
 import { type ShownSection, compareShownText, describeDifferences, readShownText } from './recorded-words';
 import { recorded } from './recorded';
@@ -114,7 +114,8 @@ test.describe('the Advanced tab\'s registration, as recorded', () => {
     const registration = await shownLevel(page, 'registration', 'h4, [data-recorded-heading]');
     const shownSubs = await shownSubViews(page);
 
-    expect(report(current.sections, [...detail, ...registration], expectedFor(current.name))).toEqual([]);
+    const expected = [...expectedFor(current.name), ...discoverableFor(current.records[0])];
+    expect(report(current.sections, [...detail, ...registration], expected)).toEqual([]);
     expect(shownSubs).toEqual(current.subViews);
   });
 });

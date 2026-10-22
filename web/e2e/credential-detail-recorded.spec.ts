@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
-import { shownLevel, shownSubViews, expectedFor, keep, report } from './credential-views';
+import { discoverableFor, shownLevel, shownSubViews, expectedFor, keep, report } from './credential-views';
 import { expect, test } from './fixtures';
 import type { ExpectedDifference, ShownSection } from './recorded-words';
 import { recorded } from './recorded';
@@ -89,7 +89,7 @@ test.describe('a saved credential\'s details, as recorded', () => {
       const registration = await shownLevel(page, 'registration', 'h4, [data-recorded-heading]');
       const shownSubs = await shownSubViews(page);
 
-      const expected = [...expectedFor(name), ...redrawnFor(record), ...handleFor(record)];
+      const expected = [...expectedFor(name), ...redrawnFor(record), ...handleFor(record), ...discoverableFor(record)];
       expect(report(legacy, [...detail, ...registration], expected)).toEqual([]);
       expect(legacy.map((section) => section.heading)).toEqual(
         [...detail, ...registration].map((section) => section.heading).filter((heading) => heading && heading !== 'Registration Details'),

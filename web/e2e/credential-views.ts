@@ -35,6 +35,22 @@ export function expectedFor(name: string): ExpectedDifference[] {
   ];
 }
 
+// "Discoverable (resident key)": the recording showed false for every record that
+// held no residentKey true. The page shows what the browser said (credProps.rk), and
+// N/A when it did not say, never a false it does not know.
+export function discoverableFor(record: object): ExpectedDifference[] {
+  const outputs = (record as { clientExtensionOutputs?: { credProps?: { rk?: unknown } } }).clientExtensionOutputs;
+  const rk = outputs?.credProps?.rk;
+  if (rk === false) return [];
+  const reason = rk === true
+    ? 'whether the credential is discoverable, as its browser said (credProps.rk true)'
+    : 'whether the credential is discoverable is not known (its browser reported no credProps.rk): N/A, not false';
+  return [
+    { only: 'recorded', token: /^false$/, section: 'Properties', reason },
+    { only: 'shown', token: rk === true ? /^true$/ : /^N\/A$/, section: 'Properties', reason },
+  ];
+}
+
 // The ML-DSA-65 registration's attestation is "none": the ML-DSA-only root
 // evaluation that gave it root checks and a metadata warning is gone, as for any
 // other "none" attestation.

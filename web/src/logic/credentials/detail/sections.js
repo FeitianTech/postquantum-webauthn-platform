@@ -14,6 +14,7 @@ import {aaguidGuid, aaguidHex} from '../../shared/aaguid.js';
 import {resolveCredentialAlgorithmIdentifier} from '../algorithm-tag.js';
 import {extractMinPinLengthValue} from '../min-pin-length.js';
 import {deriveAaguidFromCredentialData} from '../record-fields.js';
+import {reportedResidentKey} from '../resident-key.js';
 import {
     computeCredentialAaguidMatchStatus,
     normaliseAttestationResultValue,
@@ -157,7 +158,8 @@ export function describeProperties({
 
     return {
         title: DETAIL_TEXT.properties,
-        discoverable: cred.residentKey ?? false,
+        // As the browser said (credProps.rk); null, shown as N/A, when it did not.
+        discoverable: reportedResidentKey(cred),
         largeBlob: cred.largeBlob ?? false,
         minPinLength: extractMinPinLengthValue(cred),
         checks: [

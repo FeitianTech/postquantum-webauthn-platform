@@ -106,8 +106,16 @@ describe('describeProperties', () => {
   });
 
   it('reads large blob support from the record, and false when it says nothing', () => {
-    expect(properties({ largeBlob: true })).toMatchObject({ discoverable: false, largeBlob: true });
-    expect(properties({})).toMatchObject({ discoverable: false, largeBlob: false, minPinLength: null });
+    expect(properties({ largeBlob: true })).toMatchObject({ largeBlob: true });
+    expect(properties({})).toMatchObject({ largeBlob: false, minPinLength: null });
+  });
+
+  it('says a credential is discoverable only as the browser did, and N/A when it did not', () => {
+    expect(properties({ clientExtensionOutputs: { credProps: { rk: true } } }).discoverable).toBe(true);
+    // The residentKey earlier versions stored came from the BE flag or the request.
+    const unsaid = properties({ residentKey: true, clientExtensionOutputs: { credProps: {} } }).discoverable;
+    expect(unsaid).toBeNull();
+    expect(describeValue(unsaid)).toEqual({ kind: 'missing', text: 'N/A' });
   });
 
   it('matches the AAGUID from the certificate and the authenticator data it is given', () => {
