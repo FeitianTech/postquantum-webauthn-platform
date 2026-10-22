@@ -24,6 +24,7 @@ from . import (
     assertion_verification,
     constants,
     parsing,
+    request_members,
 )
 
 logger = logging.getLogger(__name__)
@@ -42,8 +43,9 @@ def advanced_authenticate_begin():
         ), 400
 
     public_key = data["publicKey"]
-    if not isinstance(public_key, Mapping):
-        return jsonify({"error": "publicKey must be an object."}), 400
+    refusal = request_members.authentication_refusal(public_key)
+    if refusal is not None:
+        return jsonify({"error": refusal}), 400
 
     if not public_key.get("challenge"):
         return jsonify({"error": "Missing required field: challenge"}), 400
@@ -55,7 +57,7 @@ def advanced_authenticate_begin():
     challenge_bytes = None
     if challenge_value:
         try:
-            challenge_bytes = client_binary.read_request_field(challenge_value)
+            challenge_bytes = client_binary.read_request_bytes(challenge_value)
         except (ValueError, TypeError) as exc:
             return jsonify({"error": f"Invalid challenge format: {exc}"}), 400
 

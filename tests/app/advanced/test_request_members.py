@@ -4,7 +4,12 @@ from __future__ import annotations
 import pytest
 
 from tests.app.entry_app import entry_app
-from tests.app.security.ceremony_helpers import advanced_public_key_options
+from tests.app.security.ceremony_helpers import (
+    Authenticator,
+    advanced_public_key_options,
+)
+
+from .assertion_ceremony import begin
 
 
 @pytest.mark.parametrize(
@@ -30,6 +35,23 @@ def test_a_registration_member_of_the_wrong_type_is_refused(changes, error):
         "/api/advanced/register/begin",
         json={"publicKey": {**advanced_public_key_options(challenge=b"\x01" * 32), **changes}},
     )
+
+    assert response.status_code == 400
+    assert response.get_json() == {"error": error}
+
+
+@pytest.mark.parametrize(
+    ("changes", "error"),
+    [
+        ({"extensions": "x"}, "extensions must be an object."),
+        ({"timeout": "soon"}, "timeout must be a number of milliseconds."),
+        ({"allowCredentials": 5}, "allowCredentials must be a list."),
+        ({"rpId": 5}, "rpId must be a non-empty string."),
+        ({"rpId": ""}, "rpId must be a non-empty string."),
+    ],
+)
+def test_an_authentication_member_of_the_wrong_type_is_refused(changes, error):
+    response = begin(entry_app().test_client(), [Authenticator().stored_credential_entry()], **changes)
 
     assert response.status_code == 400
     assert response.get_json() == {"error": error}

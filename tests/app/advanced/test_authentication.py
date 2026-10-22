@@ -101,6 +101,18 @@ def test_begin_refuses_an_extension_value_it_cannot_read():
     assert response.get_json() == {"error": "Invalid extension value: input is not hexadecimal"}
 
 
+def test_begin_refuses_a_challenge_that_does_not_read_as_bytes():
+    response = entry_app().test_client().post(
+        "/api/advanced/authenticate/begin",
+        json={"publicKey": {"challenge": 5}, "__storedCredentials": [Authenticator().stored_credential_entry()]},
+    )
+
+    assert response.status_code == 400
+    assert response.get_json() == {
+        "error": "Invalid challenge format: not hex text or a $hex, $base64 or $base64url value"
+    }
+
+
 def test_begin_refuses_a_public_key_that_is_no_object():
     response = entry_app().test_client().post("/api/advanced/authenticate/begin", json={"publicKey": ["challenge"]})
 

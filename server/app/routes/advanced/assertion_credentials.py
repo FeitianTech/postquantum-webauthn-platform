@@ -12,7 +12,7 @@ from typing import Any
 
 from flask import jsonify
 
-from ...encoding import decode_hex, encode_base64url
+from ...encoding import encode_base64url
 from ...webauthn import client_binary
 from . import parsing
 
@@ -60,7 +60,10 @@ def _pick_records(records: Iterable[Mapping[str, Any]], allowed_attachment_value
 def _pick_allowed(
     allow_credentials: list[Any], lookup: Mapping[bytes, Any], allowed_attachment_values: list[str]
 ) -> list[Any]:
-    """The stored credentials the allow list names, once each, in its order."""
+    """The stored credentials the allow list names, once each, in its order.
+
+    An ID that does not read as bytes names no saved credential, and is passed over like one that names none.
+    """
 
     picked: list[Any] = []
     seen_ids: set[bytes] = set()
@@ -68,17 +71,11 @@ def _pick_allowed(
         if not isinstance(allow_cred, dict) or allow_cred.get("type") != "public-key":
             continue
 
-        cred_id = client_binary.unwrap_request_value(allow_cred.get("id", ""))
-        if isinstance(cred_id, str):
-            try:
-                cred_id = decode_hex(cred_id)
-            except ValueError:
-                continue
-
-        if not isinstance(cred_id, (bytes, bytearray, memoryview)):
+        try:
+            cred_id_bytes = client_binary.read_request_bytes(allow_cred.get("id", ""))
+        except (ValueError, TypeError):
             continue
 
-        cred_id_bytes = bytes(cred_id)
         if cred_id_bytes in seen_ids:
             continue
 

@@ -20,6 +20,8 @@ def test_allow_list_entries_that_name_no_saved_credential_are_passed_over():
             {"type": "not-public-key", "id": authenticator.credential_id.hex()},
             {"type": "public-key", "id": "not hex"},
             {"type": "public-key", "id": 7},
+            {"type": "public-key", "id": {"$hex": "zz"}},
+            {"type": "public-key", "id": {"$base64url": "%%"}},
             {"type": "public-key", "id": authenticator.credential_id.hex()},
         ],
     )
