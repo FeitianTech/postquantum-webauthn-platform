@@ -180,8 +180,10 @@ its logic out here first.
   (`followForm`) and what both requests' validation shares; `hints.js`,
   `fake-credentials.js` and `hex-input.js` serve both forms.
 - `credentials/`: the saved list (`saved-list.js`: the records, each row, the warm-up),
-  deletion (`delete-flow.js`, through the list's report), the algorithm tag, hydration from
-  a server artifact (`hydrate.js`), and (`registration/`, `certificates/`, `detail/`) a
+  deletion (`delete-flow.js`, through the list's report), the algorithm tag, whether a credential
+  is discoverable (`resident-key.js`: credProps.rk as the browser reported it, else unknown; a
+  stored `residentKey` is never read, since earlier versions derived it from BE or the request),
+  hydration from a server artifact (`hydrate.js`), and (`registration/`, `certificates/`, `detail/`) a
   credential's details and registration view as data (`registration/view.js` composes the view
   from `registration/describe.js`'s parts and `registration/relying-party.js`'s copy of the
   relying party), which `detail/compose.js` composes into a registration state of its own. Registration snapshots (`schemaVersion` 2) hold the

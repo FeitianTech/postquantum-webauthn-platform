@@ -271,6 +271,7 @@ describe("stored credentials: advanced", () => {
           signCount: 4,
           authenticatorAttachment: 'platform',
           residentKey: true,
+          clientExtensionOutputs: { credProps: { rk: true } },
         });
     expect(saved.storageId).toContain('adv-1');
     expect(getAllSimpleCredentials()).toHaveLength(0);

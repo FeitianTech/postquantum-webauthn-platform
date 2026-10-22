@@ -65,6 +65,15 @@ describe('the advanced credentials sent to the server', () => {
     expect(prepared.signCount).toBe(0);
   });
 
+  it('say whether the credential is discoverable as the browser did, else null', () => {
+    const [reported, unsaid] = prepareAdvancedCredentialsForServerFromSource([
+      credential({ residentKey: false, clientExtensionOutputs: { credProps: { rk: true } } }),
+      credential({ credentialId: 'AQID', residentKey: true, properties: { residentKey: true } }),
+    ]);
+
+    expect([reported.resident, unsaid.resident]).toEqual([true, null]);
+  });
+
   it('keep the copy with the higher sign count when an id repeats', () => {
     const prepared = prepareAdvancedCredentialsForServerFromSource([
       credential({ signCount: 5, authenticatorAttachment: 'platform' }),
@@ -115,7 +124,7 @@ describe("stored credentials: advanced", () => {
             signCount: 10,
             algorithm: undefined,
             authenticatorAttachment: 'cross-platform',
-            resident: false,
+            resident: null,
           },
         ]);
   });
@@ -147,6 +156,6 @@ describe("stored credentials: advanced", () => {
           }),
         );
     expect(payload[0].publicKey).toBe('pQE');
-    expect(payload[0].resident).toBe(false);
+    expect(payload[0].resident).toBeNull();
   });
 });

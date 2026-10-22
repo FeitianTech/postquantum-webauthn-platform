@@ -2,6 +2,7 @@ import {
     ensureBase64Url,
     normaliseAdvancedCredentialId,
 } from './id-utils.js';
+import { reportedResidentKey } from '../../resident-key.js';
 
 // The algorithm a saved record names: the server writes it twice, and in the COSE key.
 function extractAlgorithm(record) {
@@ -57,8 +58,6 @@ export function prepareAdvancedCredentialsForServerFromSource(source) {
             const signCount = Number.isFinite(item.signCount) ? Number(item.signCount) : 0;
             const algorithm = extractAlgorithm(item);
             const attachment = item.authenticatorAttachment || item.properties?.authenticatorAttachment;
-            const residentSource = item.residentKey ?? item.properties?.residentKey ?? item.relyingParty?.residentKey;
-            const resident = typeof residentSource === 'boolean' ? residentSource : Boolean(item.residentKey);
 
             const prepared = {
                 credentialId,
@@ -67,7 +66,8 @@ export function prepareAdvancedCredentialsForServerFromSource(source) {
                 signCount,
                 algorithm,
                 authenticatorAttachment: attachment || null,
-                resident,
+                // Null when the browser did not say: the server then refuses no assertion for it.
+                resident: reportedResidentKey(item),
             };
 
             if (!uniqueById.has(credentialId)) {
