@@ -161,11 +161,18 @@ def prepare_register_complete_inputs(
     }, None
 
 
-def _registration_rp() -> tuple[Any, Any]:
-    """The RP id and name begin kept in the session, beside the state complete has just taken."""
-
-    stored_rp = session.pop("advanced_rp")
-    return stored_rp["id"], stored_rp["name"]
+def _state_not_found() -> Any:
+    return (
+        jsonify(
+            {
+                "error": (
+                    "Registration state not found or has expired. "
+                    "Please restart the registration process."
+                )
+            }
+        ),
+        400,
+    )
 
 
 def resolve_state_and_registration_server(
@@ -178,21 +185,15 @@ def resolve_state_and_registration_server(
     stored_original_request = session.pop("advanced_original_request", None)
 
     if state is None:
-        return None, (
-            jsonify(
-                {
-                    "error": (
-                        "Registration state not found or has expired. "
-                        "Please restart the registration process."
-                    )
-                }
-            ),
-            400,
-        )
+        return None, _state_not_found()
 
-    stored_rp_id, stored_rp_name = _registration_rp()
-    resolved_rp_id = relying_party.determine_rp_id(stored_rp_id)
-    register_server = relying_party.create_fido_server(rp_id=resolved_rp_id, rp_name=stored_rp_name)
+    # The RP begin kept beside the state: without it the state cannot be completed.
+    stored_rp = session.pop("advanced_rp", None)
+    if not isinstance(stored_rp, Mapping):
+        return None, _state_not_found()
+
+    resolved_rp_id = relying_party.determine_rp_id(stored_rp.get("id"))
+    register_server = relying_party.create_fido_server(rp_id=resolved_rp_id, rp_name=stored_rp.get("name"))
     auth_data = register_server.register_complete(state, response)
 
     return {

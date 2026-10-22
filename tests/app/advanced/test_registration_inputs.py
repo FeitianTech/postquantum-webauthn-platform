@@ -4,6 +4,13 @@ from __future__ import annotations
 import pytest
 
 from tests.app.entry_app import entry_app
+from tests.app.security.ceremony_helpers import (
+    ORIGIN,
+    Authenticator,
+    advanced_public_key_options,
+    registration_payload,
+    unb64u,
+)
 
 from .registration_ceremony import register
 
@@ -49,3 +56,27 @@ def test_an_authenticator_selection_that_is_no_object_asks_for_no_resident_key(a
     properties = response.get_json()["storedCredential"]["properties"]
     assert properties["residentKeyRequested"] is None
     assert properties["residentKeyRequired"] is False
+
+
+def test_a_state_whose_relying_party_is_gone_from_the_session_is_not_found():
+    client = entry_app().test_client()
+    begin = client.post("/api/advanced/register/begin", json={"publicKey": advanced_public_key_options(challenge=b"\x73" * 32)})
+    challenge = unb64u(begin.get_json()["publicKey"]["challenge"])
+    with client.session_transaction() as session_state:
+        del session_state["advanced_rp"]
+
+    response = client.post(
+        "/api/advanced/register/complete",
+        json={
+            "publicKey": advanced_public_key_options(challenge=challenge),
+            "__credential_response": registration_payload(Authenticator(), challenge=challenge),
+        },
+        headers={"Origin": ORIGIN},
+    )
+
+    assert response.status_code == 400
+    assert response.get_json() == {
+        "error": "Registration state not found or has expired. Please restart the registration process.",
+        "challengeSource": "server-session",
+        "challengeStatus": "fresh",
+    }
