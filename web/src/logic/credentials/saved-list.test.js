@@ -114,12 +114,18 @@ describe('what a card shows', () => {
     expect(CREDENTIAL_CHECKS.map((check) => check.label)).toEqual(['Signature', 'Root', 'RPID', 'AAGUID']);
   });
 
-  it('tags the algorithm, a discoverable credential and large blob support', () => {
-    expect(card({ residentKey: true, largeBlob: true }).tags).toEqual(['ES256', 'Discoverable', 'Large blob']);
-    expect(card({ residentKey: true, largeBlob: true }, { algorithmTag: '' }).tags).toEqual(['Discoverable', 'Large blob']);
-    // No record says it is discoverable under any other name.
+  it('tags the algorithm, a credential the browser said is discoverable and large blob support', () => {
+    const discoverable = { clientExtensionOutputs: { credProps: { rk: true } } };
+    expect(card({ ...discoverable, largeBlob: true }).tags).toEqual(['ES256', 'Discoverable', 'Large blob']);
+    expect(card({ ...discoverable, largeBlob: true }, { algorithmTag: '' }).tags).toEqual(['Discoverable', 'Large blob']);
+    expect(card({ clientExtensionOutputs: { credProps: { rk: false } } }).tags).toEqual(['ES256']);
+  });
+
+  it('tags no credential discoverable that the browser did not say is', () => {
+    // The residentKey earlier versions stored came from the BE flag or the request.
+    expect(card({ residentKey: true, clientExtensionOutputs: { credProps: {} } }).tags).toEqual(['ES256']);
+    expect(card({ residentKey: true, properties: { residentKey: true } }).tags).toEqual(['ES256']);
     expect(card({ discoverable: true }, { algorithmTag: '' }).tags).toEqual([]);
-    expect(card({ residentKey: false }).tags).toEqual(['ES256']);
   });
 
   it('links to FIDO MDS only with an AAGUID and a valid root or known metadata', () => {

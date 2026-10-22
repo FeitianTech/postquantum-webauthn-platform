@@ -7,6 +7,7 @@ import { describeCredentialAlgorithmTagWith } from './algorithm-tag.js';
 import { deriveCredentialStatusIndicators } from './attestation-context.js';
 import { describeCoseAlgorithm } from './cose-labels.js';
 import { getCredentialIdHex, getCredentialUserHandleHex, normalizeToHex } from './record-fields.js';
+import { reportedResidentKey } from './resident-key.js';
 import {
     ensureAdvancedCredentialArtifactsSynced,
     ensureAdvancedCredentialSnapshotsPrefetched,
@@ -126,7 +127,8 @@ export function describeCredentialCard(credential, { indicators, algorithmTag, c
     if (algorithmTag) {
         tags.push(algorithmTag);
     }
-    if (credential.residentKey === true) {
+    // Only when the browser said so (credProps.rk), never from a stored residentKey.
+    if (reportedResidentKey(credential) === true) {
         tags.push('Discoverable');
     }
     if (credential.largeBlob === true) {

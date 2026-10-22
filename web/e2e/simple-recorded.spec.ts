@@ -61,6 +61,15 @@ function rowExpected(name: string, row: Locator): Promise<ExpectedDifference[]> 
   );
 }
 
+// The recording's tag read residentKey, which a Simple record never held. The tag
+// now follows what the browser reported, credProps.rk, true for x5c@example.com.
+const DISCOVERABLE: ExpectedDifference = {
+  only: 'shown',
+  token: /^Discoverable$/,
+  section: '',
+  reason: 'the browser said the credential is discoverable (credProps.rk true), which the tag now follows',
+};
+
 // Each check's verdict: the current card said it by the word's colour (green,
 // red, grey), recorded as passed, failed or unknown; the new UI by the chip's tone (and
 // a word for screen readers).
@@ -112,7 +121,9 @@ test.describe('the Simple tab, as recorded', () => {
       const shownSections = await readShownText(shownRow, 'h6');
       const shownButtons = (await shownRow.getByRole('button').allTextContents()).filter((text) => ['FIDO MDS', 'Delete'].includes(text));
 
-      const differences = compareShownText(legacy, shownSections, await rowExpected(name, shownRow));
+      const outputs = RECORDS[index].clientExtensionOutputs as { credProps?: { rk?: unknown } } | undefined;
+      const discoverable = outputs?.credProps?.rk === true ? [DISCOVERABLE] : [];
+      const differences = compareShownText(legacy, shownSections, [...(await rowExpected(name, shownRow)), ...discoverable]);
       expect(describeDifferences(differences.filter((difference) => !difference.reason)), name).toEqual([]);
       expect(shownButtons, `${name}'s actions`).toEqual(legacyButtons);
       expect(await shownVerdicts(shownRow), `${name}'s checks`).toEqual(legacyChecks);
