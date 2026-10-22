@@ -24,7 +24,7 @@ from ...webauthn.attachments import (
 )
 from ...webauthn.attestation import aaguid as attestation_aaguid
 from ...webauthn.attestation import certificates as attestation_certificates
-from . import registration_options
+from . import request_members
 
 
 def _request_allowed_attachments(original_public_key: Any) -> list[str]:
@@ -135,7 +135,7 @@ def prepare_register_complete_inputs(
         )
 
     public_key = original_request["publicKey"]
-    refusal = registration_options.member_type_refusal(public_key)
+    refusal = request_members.registration_refusal(public_key)
     if refusal is not None:
         return None, (jsonify({"error": refusal}), 400)
     user_info = public_key.get("user", {})

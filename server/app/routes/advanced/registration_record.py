@@ -166,7 +166,7 @@ def build_debug_info(
         "challengeSource": challenge_source,
     }
 
-    # An object when there (registration_options.member_type_refusal).
+    # An object when there (request_members.registration_refusal).
     extensions_requested = public_key.get("extensions", {})
     debug_info["credProtectUsed"] = _cred_protect_used(extensions_requested)
 
