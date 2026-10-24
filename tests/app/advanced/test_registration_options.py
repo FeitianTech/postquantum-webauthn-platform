@@ -86,16 +86,16 @@ def test_an_excluded_entry_of_another_type_is_left_out_whatever_its_id():
 
 
 def _begin_with_allowed_origins(make_app, rp_id):
-    app = make_app({"FIDO_SERVER_ALLOWED_ORIGINS": "https://webauthnlab.tech", "FIDO_SERVER_RP_ID": "webauthnlab.tech"})
+    app = make_app({"FIDO_SERVER_ALLOWED_ORIGINS": "https://webauthndev.com", "FIDO_SERVER_RP_ID": "webauthndev.com"})
     options = {**advanced_public_key_options(challenge=b"\x01" * 32), "rp": {"id": rp_id, "name": "Example"}}
     return app.test_client().post("/api/advanced/register/begin", json={"publicKey": options})
 
 
 def test_with_allowed_origins_begin_takes_an_rp_id_they_can_use(make_app):
-    response = _begin_with_allowed_origins(make_app, "webauthnlab.tech")
+    response = _begin_with_allowed_origins(make_app, "webauthndev.com")
 
     assert response.status_code == 200, response.get_json()
-    assert response.get_json()["publicKey"]["rp"]["id"] == "webauthnlab.tech"
+    assert response.get_json()["publicKey"]["rp"]["id"] == "webauthndev.com"
 
 
 def test_with_allowed_origins_begin_refuses_an_rp_id_none_of_them_can_use(make_app):
@@ -103,7 +103,7 @@ def test_with_allowed_origins_begin_refuses_an_rp_id_none_of_them_can_use(make_a
 
     assert response.status_code == 400
     assert response.get_json() == {
-        "error": 'rp.id "evil.example" is not the host of an allowed origin (https://webauthnlab.tech) '
+        "error": 'rp.id "evil.example" is not the host of an allowed origin (https://webauthndev.com) '
         "or a registrable suffix of one."
     }
 

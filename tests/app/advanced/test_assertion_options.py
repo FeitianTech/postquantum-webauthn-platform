@@ -40,13 +40,13 @@ def test_a_registration_begin_left_unfinished_names_no_rp_for_authentication(cha
 
 
 def test_with_allowed_origins_an_rp_id_none_of_them_can_use_is_refused(make_app):
-    app = make_app({"FIDO_SERVER_ALLOWED_ORIGINS": "https://webauthnlab.tech", "FIDO_SERVER_RP_ID": "webauthnlab.tech"})
+    app = make_app({"FIDO_SERVER_ALLOWED_ORIGINS": "https://webauthndev.com", "FIDO_SERVER_RP_ID": "webauthndev.com"})
 
     response = begin(app.test_client(), [Authenticator().stored_credential_entry()], rpId="evil.example")
 
     assert response.status_code == 400
     assert response.get_json() == {
-        "error": 'rpId "evil.example" is not the host of an allowed origin (https://webauthnlab.tech) '
+        "error": 'rpId "evil.example" is not the host of an allowed origin (https://webauthndev.com) '
         "or a registrable suffix of one."
     }
 

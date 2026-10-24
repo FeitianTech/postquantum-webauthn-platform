@@ -72,7 +72,7 @@ def test_the_request_host_is_none_outside_a_request():
 @pytest.mark.parametrize(
     ("allowlist", "rp_id"),
     [
-        ("https://webauthnlab.tech", "webauthnlab.tech"),
+        ("https://webauthndev.com", "webauthndev.com"),
         ("https://app.example.com", "example.com"),
         ("https://app.example.com", "app.example.com"),
         ("https://one.example, https://app.example.com", "example.com"),
@@ -87,18 +87,18 @@ def test_an_allowed_origin_may_use_its_host_or_a_registrable_suffix_of_it(make_a
     "rp_id",
     [
         "evil.example",
-        "sub.webauthnlab.tech",
+        "sub.webauthndev.com",
         # A public suffix: no origin may use it.
         "tech",
-        "webauthnlab.tech.evil.example",
+        "webauthndev.com.evil.example",
     ],
 )
 def test_an_rp_id_no_allowed_origin_can_use_is_refused(make_app, rp_id):
-    with make_app({"FIDO_SERVER_ALLOWED_ORIGINS": "https://webauthnlab.tech"}).app_context():
+    with make_app({"FIDO_SERVER_ALLOWED_ORIGINS": "https://webauthndev.com"}).app_context():
         refusal = relying_party.requested_rp_id_refusal(rp_id, "rp.id")
 
     assert refusal == (
-        f'rp.id "{rp_id}" is not the host of an allowed origin (https://webauthnlab.tech) '
+        f'rp.id "{rp_id}" is not the host of an allowed origin (https://webauthndev.com) '
         "or a registrable suffix of one."
     )
 
