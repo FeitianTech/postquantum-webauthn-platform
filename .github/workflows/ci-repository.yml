@@ -18,8 +18,8 @@ concurrency:
 
 jobs:
   # The workflows themselves, with shellcheck over every run: script. The image is
-  # actionlint's own, pinned by digest (1.7.12, with shellcheck 0.11.0); Dependabot
-  # does not bump a docker:// action, so move the digest by hand.
+  # actionlint's own, pinned by digest (1.7.12, with shellcheck 0.11.0); move the
+  # digest by hand.
   workflows:
     name: Workflows (actionlint, shellcheck)
     runs-on: ubuntu-latest

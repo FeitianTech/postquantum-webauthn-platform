@@ -39,7 +39,7 @@ in `server/app` (see "Backend").
 - `docs/`: `DESIGN.md` (the UI's design, security and serving rules), `DECODER.md`,
   `STORAGE.md`, `MDS_SNAPSHOT.md`.
 - `Dockerfile`, `cloudbuild.yaml` (the deploy gate), `deploy/` (Cloud Run service config),
-  `.github/` (workflows, Dependabot, the bot PR action).
+  `.github/` (workflows, the bot PR action).
 - `LICENSE`: Apache 2.0, FEITIAN Technologies Co., Ltd. Third-party material keeps its own
   licence beside it: the Geist font (`web/src/fonts/OFL.txt`), python-fido2's test vectors (in
   `tests/app/python_fido2_vectors.py`).
@@ -401,9 +401,8 @@ at zero; `F821` has nothing ignored and there is no per-file ignore. Do not run 
 
 Declared in the root `pyproject.toml` (the app's manifest; the app is not a package), locked in
 `uv.lock`; the image, CI and local venvs install from the lock (`uv sync --locked`). To change
-one: edit `pyproject.toml`, `uv lock`, commit both. `fido2` is pinned exactly; Dependabot
-proposes its minor releases, and a major one is a deliberate move (the characterization
-goldens show what it changes).
+one: edit `pyproject.toml`, `uv lock`, commit both. `fido2` is pinned exactly; moving it is a
+deliberate change (the characterization goldens show what it changes).
 
 ## CI, deploys and bots
 
@@ -418,7 +417,7 @@ goldens show what it changes).
   Playwright tests), `ci-docker.yml` (builds the image and checks it answers), `ci-security.yml`
   (`pip-audit`, `npm audit --audit-level=moderate` in `web/`, Trivy (its image pinned by digest)
   on the image; fix the dependency, never widen a threshold), `ci-repository.yml` (actionlint
-  with shellcheck from its author's image pinned by digest, which Dependabot does not bump; and
+  with shellcheck from its author's image pinned by digest, moved by hand; and
   on a push, `tools/commit_messages.py` over the pushed commits), `ci-scheduled-runs.yml` (warns
   while a scheduled workflow's latest run on `main` has failed: add any new scheduled workflow
   to its list).
@@ -431,11 +430,11 @@ goldens show what it changes).
   100 %).
 - `npm ci` everywhere. If a lock regeneration drops foreign-platform native builds, delete
   `node_modules` and the lock and `npm install` from clean (npm/cli#4828). `web/package.json`
-  overrides Next 15's pinned `postcss`; Dependabot skips majors of `next`, `typescript` and
-  `@types/node`.
-- Dependabot (`.github/dependabot.yml`) opens one grouped pull request per ecosystem a month,
-  with `fido2`, `@playwright/test` and any major release on their own. Its commits carry a
-  body: squash-merge with the PR title as the message, or cherry-pick with a one-line message.
+  overrides Next 15's pinned `postcss`. The site stays on Next 15, TypeScript 5 (which Next 15's
+  build checks with) and Node 22.
+- No bot opens dependency pull requests (there is no `.github/dependabot.yml`):
+  `ci-security.yml`'s audits, on every push and weekly, are the alert, and a dependency moves by
+  hand when one fails or a change needs it.
 - The Dockerfile's first stage builds `web/` and scans the export; only `web/out` reaches the
   runtime image, at `/app/web/out`, precompressed by `tools/build_static_assets.py`. The runtime
   stage's `apt-get upgrade` keeps fixable Debian CVEs out of the image.
