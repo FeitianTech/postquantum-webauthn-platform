@@ -47,7 +47,7 @@ def _path(name: str) -> Path:
 def _fetch_remote_blob() -> tuple[bytes, str | None, str | None]:
     request = urllib.request.Request(
         MDS_METADATA_URL,
-        headers={"User-Agent": "webauthnlab-mds-updater"},
+        headers={"User-Agent": "webauthndev-mds-updater"},
     )
     with urllib.request.urlopen(request, timeout=120) as response:  # noqa: S310 - trusted host
         payload = response.read()

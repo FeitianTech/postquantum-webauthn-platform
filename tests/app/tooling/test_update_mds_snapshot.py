@@ -91,7 +91,7 @@ def test_fetch_remote_blob_uses_expected_request_contract(monkeypatch):
         assert request.full_url == updater.MDS_METADATA_URL
         assert timeout == 120
         headers = {k.lower(): v for k, v in request.header_items()}
-        assert headers["user-agent"] == "webauthnlab-mds-updater"
+        assert headers["user-agent"] == "webauthndev-mds-updater"
         return _FakeResponse()
 
     monkeypatch.setattr(updater.urllib.request, "urlopen", _fake_urlopen)
