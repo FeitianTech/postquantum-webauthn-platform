@@ -55,14 +55,22 @@ def test_json_over_the_budget_is_refused_rather_than_read_as_other_text():
     assert (refused.value.offset, refused.value.path) == (None, "$[2]")
 
 
-def test_a_million_items_are_refused_in_well_under_a_second_and_with_little_memory():
+def _fastest_refusal_seconds(text: str) -> float:
+    fastest = float("inf")
+    for _ in range(3):
+        start = time.perf_counter()
+        with pytest.raises(item_budget.ItemLimitError):
+            decode_payload_text(text)
+        fastest = min(fastest, time.perf_counter() - start)
+    return fastest
+
+
+def test_a_million_items_are_refused_about_as_fast_as_one_past_the_budget_and_with_little_memory():
     # Read whole, this array took 8.7 s and 465 MB.
     text = _array(1_000_000).hex()
 
-    start = time.perf_counter()
     with pytest.raises(item_budget.ItemLimitError) as refused:
         decode_payload_text(text)
-    elapsed = time.perf_counter() - start
 
     tracemalloc.start()
     try:
@@ -75,7 +83,9 @@ def test_a_million_items_are_refused_in_well_under_a_second_and_with_little_memo
     # The first reading stops at the first item past the default: the array's head is five bytes.
     limit = item_budget.DEFAULT_MAX_ITEMS
     assert (refused.value.offset, refused.value.path) == (5 + limit - 1, f"$[{limit - 1}]")
-    assert elapsed < 1
+    # Its text is still read whole, so it costs a few times what an array one item past the budget does;
+    # read whole, over 700 times. Timed against each other, not a clock: the deploy gate runs ~10x slower.
+    assert _fastest_refusal_seconds(text) < 20 * _fastest_refusal_seconds(_array(limit + 1).hex())
     assert peak < 30_000_000
 
 
