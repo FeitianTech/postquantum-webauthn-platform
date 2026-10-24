@@ -1,16 +1,31 @@
 version: 2
+# One pull request per ecosystem a month, its minor and patch releases
+# together: none of them is urgent, since CI / Security's audits (on every push
+# and weekly) are the alert for an advisory. A major release comes on its own.
 updates:
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "weekly"
+      interval: "monthly"
+    groups:
+      actions:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
   # web/package-lock.json is what npm audit in ci-security.yml gates on. The
   # site stays on Next.js 15, and TypeScript on 5, which Next 15's build checks
   # with.
   - package-ecosystem: "npm"
     directory: "/web"
     schedule:
-      interval: "weekly"
+      interval: "monthly"
+    groups:
+      # react and react-dom must move together: React refuses to run them at
+      # different versions. @playwright/test comes on its own, since each
+      # release brings a new Chromium, whose behaviour the e2e tests pin.
+      web:
+        patterns: ["*"]
+        exclude-patterns: ["@playwright/test"]
+        update-types: ["minor", "patch"]
     ignore:
       - dependency-name: "next"
         update-types: ["version-update:semver-major"]
@@ -23,20 +38,26 @@ updates:
   - package-ecosystem: "uv"
     directory: "/"
     schedule:
-      interval: "weekly"
+      interval: "monthly"
+    groups:
+      python:
+        patterns: ["*"]
+        exclude-patterns: ["fido2"]
+        update-types: ["minor", "patch"]
     ignore:
       - dependency-name: "python"
         versions:
           - ">=3.13"
       # fido2 is pinned exactly: the app reads its data classes and CTAP
       # tables, and a major release has changed both (2.0). Minor and patch
-      # releases come as pull requests; a major waits for a deliberate move.
+      # releases come as pull requests of their own; a major waits for a
+      # deliberate move.
       - dependency-name: "fido2"
         update-types: ["version-update:semver-major"]
   - package-ecosystem: "docker"
     directory: "/"
     schedule:
-      interval: "weekly"
+      interval: "monthly"
     ignore:
       - dependency-name: "python"
         versions:

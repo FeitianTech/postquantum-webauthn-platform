@@ -433,6 +433,9 @@ goldens show what it changes).
   `node_modules` and the lock and `npm install` from clean (npm/cli#4828). `web/package.json`
   overrides Next 15's pinned `postcss`; Dependabot skips majors of `next`, `typescript` and
   `@types/node`.
+- Dependabot (`.github/dependabot.yml`) opens one grouped pull request per ecosystem a month,
+  with `fido2`, `@playwright/test` and any major release on their own. Its commits carry a
+  body: squash-merge with the PR title as the message, or cherry-pick with a one-line message.
 - The Dockerfile's first stage builds `web/` and scans the export; only `web/out` reaches the
   runtime image, at `/app/web/out`, precompressed by `tools/build_static_assets.py`. The runtime
   stage's `apt-get upgrade` keeps fixable Debian CVEs out of the image.
