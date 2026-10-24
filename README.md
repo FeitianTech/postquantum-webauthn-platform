@@ -33,7 +33,7 @@ For PQC support, the following algorithms are available:
 
 | Environment                 | Description             | URL                                                        |
 | --------------------------- | ----------------------- | ---------------------------------------------------------- |
-| **Google Cloud Deployment** | Full FIDO MDS Support   | https://webauthnlab.tech                                   |
+| **Google Cloud Deployment** | Full FIDO MDS Support   | https://webauthndev.com                                    |
 | **Server Deployment**       | Limited FIDO MDS Update | https://webauthndev.ftsafe.com *(Temporarily Unavailable)* |
 
 ---
