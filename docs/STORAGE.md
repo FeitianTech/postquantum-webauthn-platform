@@ -37,6 +37,23 @@ as absent. A merge that cannot read the record, or whose record does not decode,
 refuses rather than overwrite it, and one whose write raised is re-read: it counts
 as stored if the record holds every merged value.
 
+## Quotas
+
+What one visitor's namespace keeps is bounded; each limit is read from the
+environment in `config/request_limits.py` (`deploy/README.md` lists them). A write
+past one raises `common.StorageQuotaExceeded` before anything is written, and
+`routes/errors.py` answers it with its sentence: 409 for a count, 413 for bytes.
+
+- Credential artifacts: 1,000 in a namespace, and 256 MiB of them. A new artifact
+  past the count is refused, and so is a write that would take the namespace's
+  artifacts past the bytes; a write that shrinks an artifact never is.
+
+The counts and sizes come from a listing of the namespace's objects
+(`cloud.list_blob_stats`; a scandir locally, which leaves `.lock` and `.tmp` files
+out). A store that cannot be listed raises `StorageReadError` (503). Two writes at
+once in one namespace can both pass the check, so a namespace can go past a limit
+by the writes in flight; each write is still compare-and-swap where it was.
+
 ## Listings
 
 Listings stay inside what they need: `session_metadata.list_sessions` reads session

@@ -3,9 +3,10 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from flask import Blueprint, jsonify
+from flask import Blueprint, current_app, jsonify
 
 from ... import visitor_session
+from ...config import request_limits
 from ...storage import credential_artifacts
 from .. import json_body
 
@@ -81,11 +82,13 @@ def api_put_advanced_credential_artifact(storage_id: str):
         return jsonify({"error": "Artifact payload must be an object."}), 400
 
     metadata_session_id = visitor_session.ensure_id()
+    # Past the namespace's quota the store raises StorageQuotaExceeded: routes/errors.py answers it.
     if not credential_artifacts.store_credential_artifact(
         storage_id,
         artifact_payload,
         merge=merge,
         session_id=metadata_session_id,
+        quota=request_limits.artifacts_quota(current_app.config),
     ):
         return jsonify({"error": "Unable to store artifact."}), 400
 
@@ -106,6 +109,7 @@ def api_put_advanced_credential_snapshot(storage_id: str):
         payload,
         merge=True,
         session_id=metadata_session_id,
+        quota=request_limits.artifacts_quota(current_app.config),
     ):
         return jsonify({"error": "Unable to store artifact snapshot."}), 400
 

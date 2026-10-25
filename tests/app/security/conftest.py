@@ -47,7 +47,7 @@ def advanced_storage(monkeypatch, tmp_path) -> list[Any]:
     _session_metadata_in(tmp_path, monkeypatch)
     stored: list[Any] = []
 
-    def _store(storage_id, payload, *, session_id=None):
+    def _store(storage_id, payload, *, session_id=None, quota=None):
         stored.append((storage_id, payload, session_id))
         return True
 

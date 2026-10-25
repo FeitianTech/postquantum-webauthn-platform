@@ -3,6 +3,7 @@ import json
 import pytest
 
 from server.app import visitor_session
+from server.app.config import request_limits
 from server.app.storage import credential_artifacts
 from tests.app.entry_app import entry_app
 
@@ -215,3 +216,40 @@ def test_an_artifact_is_stored_merged_snapshotted_read_and_deleted_in_the_visito
     assert client.delete(f"{base}/cred-1").get_json() == {"status": "deleted"}
     assert client.delete(f"{base}/cred-1").get_json() == {"status": "absent"}
     assert client.get(f"{base}/cred-1").status_code == 404
+
+
+def test_an_artifact_past_the_visitors_count_is_refused_with_the_sentence_the_page_shows(make_app, advanced_stores):
+    base = "/api/advanced/credential-artifacts"
+    client = make_app({request_limits.STORED_ARTIFACTS_KEY: 2}).test_client()
+    for storage_id in ("cred-1", "cred-2"):
+        assert client.put(f"{base}/{storage_id}", json={"artifact": {"x": 1}}).status_code == 200
+
+    for path, body in ((f"{base}/cred-3", {"artifact": {"x": 1}}), (f"{base}/cred-3/snapshot", {"snapshot": {"view": 1}})):
+        response = client.put(path, json=body)
+        assert response.status_code == 409
+        assert response.get_json() == {
+            "error": (
+                "This browser already keeps 2 saved credentials on this server, the most it keeps for one visitor. "
+                "Delete ones you no longer use and try again."
+            )
+        }
+    assert client.get(f"{base}/cred-3").status_code == 404
+    # An artifact already kept is still written.
+    assert client.put(f"{base}/cred-2/snapshot", json={"snapshot": {"view": 1}}).status_code == 200
+
+
+def test_an_artifact_past_the_visitors_bytes_is_refused_with_a_413(make_app, advanced_stores):
+    base = "/api/advanced/credential-artifacts"
+    client = make_app({request_limits.STORED_ARTIFACT_BYTES_KEY: 2048}).test_client()
+    assert client.put(f"{base}/cred-1", json={"artifact": {"x": 1}}).status_code == 200
+
+    response = client.put(f"{base}/cred-1/snapshot", json={"snapshot": {"view": "v" * 4096}})
+
+    assert response.status_code == 413
+    assert response.get_json() == {
+        "error": (
+            "Saving this credential would take this browser's saved credentials past the 2,048 bytes this server "
+            "keeps for one visitor. Delete ones you no longer use and try again."
+        )
+    }
+    assert client.get(f"{base}/cred-1").get_json()["artifact"] == {"x": 1}

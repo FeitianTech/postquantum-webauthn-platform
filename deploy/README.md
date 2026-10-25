@@ -121,6 +121,8 @@ warning. "On Cloud Run" means `K_SERVICE` is set, which Cloud Run does.
 | `FIDO_SERVER_MAX_REQUEST_BYTES` | 8 MiB | The largest request body; larger answers 413 |
 | `FIDO_SERVER_MAX_METADATA_UPLOAD_BYTES` | 16 MiB | The largest metadata upload |
 | `FIDO_SERVER_MAX_REGISTRATION_RESPONSE_BYTES` | 256 KiB | The largest credential response a registration completes with (a Simple complete's whole body, an Advanced complete's `__credential_response`); larger answers 413 |
+| `FIDO_SERVER_MAX_STORED_ARTIFACTS` | `1000` | The most credential artifacts one visitor's namespace keeps; a new one past it answers 409 |
+| `FIDO_SERVER_MAX_STORED_ARTIFACT_BYTES` | 256 MiB | The most bytes of them; a write past it answers 413 |
 | `FIDO_SERVER_GCS_ENABLED` | off | Keep the stores and the MDS snapshot in Cloud Storage |
 | `FIDO_SERVER_GCS_BUCKET` | none | The bucket; Cloud Storage is used only when it is set too |
 | `FIDO_SERVER_GCS_PROJECT` | the credentials' | The Cloud Storage client's project |

@@ -236,7 +236,8 @@ its logic out here first.
   only when an allowed origin can use it, `requested_rp_id_refusal`), `paths.py` (the project and instance roots; `store_dir`: every local
   store under `instance/`, its setting read when used), `request_limits.py` (8 MiB, the metadata
   upload 16 MiB, `/api/codec` 1 MiB, a registration's credential response 256 KiB (a Simple
-  complete's body, an Advanced complete's `__credential_response`); 413 in JSON; and the codec's 20,000 items read per request,
+  complete's body, an Advanced complete's `__credential_response`); 413 in JSON; the namespace's
+  quotas, `artifacts_quota`; and the codec's 20,000 items read per request,
   `decoder/item_budget.py`, 422 past it), `web_export.py`. Importing it configures nothing, and
   the package re-exports nothing: routes call `relying_party.create_fido_server` and
   `origins.determine_expected_origin` through their modules, where tests patch them. Tests reach
@@ -326,7 +327,8 @@ its logic out here first.
   credential IDs at INFO.
 - `storage/` (`credentials.py`, `credential_artifacts.py`, `session_metadata.py`,
   `github_mirror.py`, over `cloud.py`, `common.py` and `record_format.py`): every read-modify-write is
-  compare-and-swap; a failed read raises `StorageReadError` (503), never a shorter list. **Read
+  compare-and-swap; a failed read raises `StorageReadError` (503), never a shorter list; a write past
+  a namespace's quota raises `StorageQuotaExceeded` (409 for a count, 413 for bytes). **Read
   `docs/STORAGE.md` first.** `decoder/`: the Codec's server side (`decode/text.py` the entry,
   `decode/answer.py` what it answers, `encode/text.py` the encoder's, `values.py` the leaf both
   share); it shows what was sent and

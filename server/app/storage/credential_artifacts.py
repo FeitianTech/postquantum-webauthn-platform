@@ -25,12 +25,16 @@ from .cloud import (
     delete_blob,
     download_bytes,
     download_bytes_with_generation,
+    list_blob_stats,
     upload_bytes,
     upload_bytes_if_generation,
 )
 from .common import (
+    Quota,
+    StorageQuotaExceeded,
     StorageReadError,
     assert_contained_blob_name,
+    describe_size,
     file_lock,
     resolve_contained_path,
     resolve_session_id,
@@ -41,6 +45,7 @@ __all__ = [
     "store_credential_artifact",
     "load_credential_artifact",
     "delete_credential_artifact_with_status",
+    "usage",
 ]
 
 logger = logging.getLogger(__name__)
@@ -69,6 +74,16 @@ _LOCK_STRIPES = tuple(threading.RLock() for _ in range(64))
 # A merge that loses re-reads and merges into the winner's record. Each other
 # writer wins at most once while it waits, so eight attempts cover eight at once.
 _MERGE_ATTEMPTS = 8
+# What the visitor reads when their saved credentials' artifacts fill their namespace's quota.
+# Each says what to do, so the page adds no advice of its own (shared/failed-response.js).
+_COUNT_FULL = (
+    "This browser already keeps {count} saved credentials on this server, the most it keeps "
+    "for one visitor. Delete ones you no longer use and try again."
+)
+_BYTES_PAST = (
+    "Saving this credential would take this browser's saved credentials past the {size} this "
+    "server keeps for one visitor. Delete ones you no longer use and try again."
+)
 
 
 def _lock_for(storage_id: str, session_id: str) -> threading.RLock:
@@ -118,10 +133,10 @@ def _ensure_directory(session_id: str) -> None:
     common.make_store_directory(_artifact_dir(), _session_directory(session_id))
 
 
-def _write_file(path: str, payload: dict[str, Any]) -> None:
+def _write_file(path: str, encoded: bytes) -> None:
     tmp_path = f"{path}.tmp"
-    with open(tmp_path, "w", encoding="utf-8") as handle:
-        json.dump(payload, handle, ensure_ascii=False, separators=(",", ":"))
+    with open(tmp_path, "wb") as handle:
+        handle.write(encoded)
     os.replace(tmp_path, path)
 
 
@@ -193,14 +208,54 @@ def _encode_record(record: dict[str, Any]) -> bytes:
     return json.dumps(record, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
 
 
-def _write_record(storage_id: str, session_id: str, record: dict[str, Any]) -> None:
+def _write_record(storage_id: str, session_id: str, encoded: bytes) -> None:
     if common.using_gcs():
         blob_name = _artifact_blob(storage_id, session_id)
-        upload_bytes(blob_name, _encode_record(record), content_type="application/json")
+        upload_bytes(blob_name, encoded, content_type="application/json")
         return
 
     _ensure_directory(session_id)
-    _write_file(_artifact_path(storage_id, session_id), record)
+    _write_file(_artifact_path(storage_id, session_id), encoded)
+
+
+def usage(session_id: str) -> dict[str, int]:
+    """The namespace's stored artifacts: each one's name in the store, and its size in bytes.
+
+    One listing, on either backend. A store that cannot be listed raises
+    ``StorageReadError``: a quota is never judged on fewer artifacts than are stored.
+    """
+
+    if common.using_gcs():
+        prefix = _artifact_prefix(session_id) + "/"
+        try:
+            stats = list_blob_stats(prefix)
+        except Exception as exc:
+            raise StorageReadError(f"the artifacts of {session_id} could not be listed") from exc
+        return {stat.name[len(prefix) :]: stat.size for stat in stats if stat.name.endswith(".json")}
+
+    directory = _session_directory(session_id)
+    try:
+        with os.scandir(directory) as entries:
+            # A record's .lock and .tmp files beside it are no artifacts.
+            return {entry.name: entry.stat().st_size for entry in entries if entry.name.endswith(".json") and entry.is_file()}
+    except FileNotFoundError:
+        return {}
+    except OSError as exc:
+        raise StorageReadError(f"the artifacts of {session_id} could not be listed") from exc
+
+
+def _check_quota(quota: Quota | None, session_id: str, storage_id: str, size: int) -> None:
+    """Refuse a write past the namespace's quota: a new artifact past the count (409), or one that
+    grows the namespace's artifacts past their bytes (413). One that shrinks is never refused."""
+
+    if quota is None:
+        return
+    stored = usage(session_id)
+    current = stored.get(_artifact_filename(storage_id))
+    if current is None and len(stored) >= quota.count:
+        raise StorageQuotaExceeded(409, _COUNT_FULL.format(count=f"{quota.count:,}"))
+    if size > (current or 0) and sum(stored.values()) - (current or 0) + size > quota.total_bytes:
+        raise StorageQuotaExceeded(413, _BYTES_PAST.format(size=describe_size(quota.total_bytes)))
 
 
 def _remove_locked(path: str) -> None:
@@ -256,11 +311,13 @@ def store_credential_artifact(
     *,
     merge: bool = False,
     session_id: str | None = None,
+    quota: Quota | None = None,
 ) -> bool:
     """Persist ``payload`` for ``storage_id``.
 
     When ``merge`` is true, existing payload keys are shallowly merged with the
-    provided payload. Returns ``True`` when the artifact was stored.
+    provided payload. Returns ``True`` when the artifact was stored. With a
+    ``quota``, a write past it raises ``StorageQuotaExceeded`` and writes nothing.
     """
 
     normalised = _normalise_storage_id(storage_id)
@@ -273,7 +330,7 @@ def store_credential_artifact(
 
     with _lock_for(normalised, resolved_session):
         if common.using_gcs() and merge:
-            return _merge_on_gcs(normalised, resolved_session, payload, timestamp)
+            return _merge_on_gcs(normalised, resolved_session, payload, timestamp, quota)
         with contextlib.ExitStack() as held:
             if not common.using_gcs():
                 try:
@@ -283,8 +340,10 @@ def store_credential_artifact(
                     return False
             existing = _record_to_merge_into(normalised, resolved_session) if merge else None
             record = _updated_record(normalised, existing, payload, merge=merge, timestamp=timestamp)
+            encoded = _encode_record(record)
+            _check_quota(quota, resolved_session, normalised, len(encoded))
             try:
-                _write_record(normalised, resolved_session, record)
+                _write_record(normalised, resolved_session, encoded)
             except Exception:
                 return False
 
@@ -314,7 +373,9 @@ def _updated_record(
     }
 
 
-def _merge_on_gcs(storage_id: str, session_id: str, payload: dict[str, Any], timestamp: float) -> bool:
+def _merge_on_gcs(
+    storage_id: str, session_id: str, payload: dict[str, Any], timestamp: float, quota: Quota | None
+) -> bool:
     """Read-merge-write conditional on the generation read; a lost race merges again."""
 
     blob_name = _artifact_blob(storage_id, session_id)
@@ -329,10 +390,10 @@ def _merge_on_gcs(storage_id: str, session_id: str, payload: dict[str, Any], tim
         except ArtifactUndecodable as exc:
             raise StorageReadError(str(exc)) from exc
         record = _updated_record(storage_id, existing, payload, merge=True, timestamp=timestamp)
+        encoded = _encode_record(record)
+        _check_quota(quota, session_id, storage_id, len(encoded))
         try:
-            if upload_bytes_if_generation(
-                blob_name, _encode_record(record), generation=generation, content_type="application/json"
-            ):
+            if upload_bytes_if_generation(blob_name, encoded, generation=generation, content_type="application/json"):
                 return True
         except Exception:
             # The write may have landed with only its reply lost: what is stored now says.

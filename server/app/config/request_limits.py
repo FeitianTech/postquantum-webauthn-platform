@@ -1,4 +1,4 @@
-"""How large a request body the app reads: ``MAX_CONTENT_LENGTH``, and the metadata upload's, the codec's and a registration's own.
+"""How large a request body the app reads (``MAX_CONTENT_LENGTH``, and the metadata upload's, the codec's and a registration's own), and how much one visitor's namespace keeps.
 
 A body over the limit is answered 413 before any route reads it
 (``routes/errors.py`` answers it as JSON). Without one, only Cloud Run's 32 MiB
@@ -35,19 +35,31 @@ environment.
 ``/api/codec`` also reads at most ``MAX_CODEC_ITEMS`` items for one request,
 20,000 unless the environment says otherwise (``decoder/item_budget.py`` says
 what counts, and why that many).
+
+What one visitor's namespace keeps (docs/STORAGE.md, "Quotas"): a write past it
+raises ``storage.common.StorageQuotaExceeded``, 409 for a count, 413 for bytes.
+Measured: an advanced registration's artifact is about 10 KB for a classical
+credential and 1 MB for that ML-DSA-87 attestation with its chain, about
+1.3 MB with the page's snapshot; the e2e runs keep one artifact per namespace,
+the goldens four; a heavy visitor's 200 registrations, 20 of them ML-DSA-87
+with chains, about 35 MB. So 1,000 artifacts and 256 MiB of them.
 """
 from __future__ import annotations
 
 import os
+from collections.abc import Mapping
 from typing import Any
 
 from ..decoder import item_budget
+from ..storage.common import Quota
 
 _MIB = 1024 * 1024
 DEFAULT_MAX_REQUEST_BYTES = 8 * _MIB
 DEFAULT_MAX_METADATA_UPLOAD_BYTES = 16 * _MIB
 DEFAULT_MAX_CODEC_REQUEST_BYTES = _MIB
 DEFAULT_MAX_REGISTRATION_RESPONSE_BYTES = 256 * 1024
+DEFAULT_MAX_STORED_ARTIFACTS = 1000
+DEFAULT_MAX_STORED_ARTIFACT_BYTES = 256 * _MIB
 
 # The app.config key the metadata upload reads its limit from.
 METADATA_UPLOAD_LIMIT_KEY = "MAX_METADATA_UPLOAD_LENGTH"
@@ -56,6 +68,9 @@ CODEC_REQUEST_LIMIT_KEY = "MAX_CODEC_REQUEST_LENGTH"
 CODEC_ITEM_LIMIT_KEY = "MAX_CODEC_ITEMS"
 # The app.config key a registration's complete reads the limit of its credential response from.
 REGISTRATION_RESPONSE_LIMIT_KEY = "MAX_REGISTRATION_RESPONSE_LENGTH"
+# The app.config keys of the namespace's quota of credential artifacts: how many, how many bytes.
+STORED_ARTIFACTS_KEY = "MAX_STORED_ARTIFACTS"
+STORED_ARTIFACT_BYTES_KEY = "MAX_STORED_ARTIFACT_BYTES"
 
 
 def _positive_int(name: str, default: int) -> int:
@@ -83,4 +98,12 @@ def config_from_env() -> dict[str, Any]:
         REGISTRATION_RESPONSE_LIMIT_KEY: _positive_int(
             "FIDO_SERVER_MAX_REGISTRATION_RESPONSE_BYTES", DEFAULT_MAX_REGISTRATION_RESPONSE_BYTES
         ),
+        STORED_ARTIFACTS_KEY: _positive_int("FIDO_SERVER_MAX_STORED_ARTIFACTS", DEFAULT_MAX_STORED_ARTIFACTS),
+        STORED_ARTIFACT_BYTES_KEY: _positive_int("FIDO_SERVER_MAX_STORED_ARTIFACT_BYTES", DEFAULT_MAX_STORED_ARTIFACT_BYTES),
     }
+
+
+def artifacts_quota(config: Mapping[str, Any]) -> Quota:
+    """The namespace's quota of credential artifacts, as ``config`` (``app.config``) holds it."""
+
+    return Quota(config[STORED_ARTIFACTS_KEY], config[STORED_ARTIFACT_BYTES_KEY])

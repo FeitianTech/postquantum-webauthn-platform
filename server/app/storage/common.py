@@ -7,7 +7,7 @@ import fcntl
 import hashlib
 import os
 from collections.abc import Callable, Iterator
-from typing import Any
+from typing import Any, NamedTuple
 
 from werkzeug.security import safe_join
 
@@ -17,8 +17,11 @@ from .cloud import build_blob_name, normalise_blob_prefix
 __all__ = [
     "USER_FOLDER_PREFIX",
     "InvalidStorageIdentifier",
+    "Quota",
+    "StorageQuotaExceeded",
     "StorageReadError",
     "assert_contained_blob_name",
+    "describe_size",
     "file_digest",
     "file_lock",
     "normalise_session_id",
@@ -54,6 +57,36 @@ class StorageReadError(OSError):
     caller must not answer as if there were fewer records, or none: the app
     answers 503.
     """
+
+
+class StorageQuotaExceeded(Exception):
+    """A write that would take a visitor's namespace past one of its quotas.
+
+    Raised before anything is written. ``status`` is 409 for a count, 413 for
+    bytes; ``sentence`` says which, and what to do. ``routes/errors.py`` answers
+    it with both.
+    """
+
+    def __init__(self, status: int, sentence: str) -> None:
+        super().__init__(sentence)
+        self.status = status
+        self.sentence = sentence
+
+
+class Quota(NamedTuple):
+    """How much one store keeps in a namespace: so many objects, so many bytes of them."""
+
+    count: int
+    total_bytes: int
+
+
+def describe_size(size: int) -> str:
+    """``size`` bytes as a sentence says it: in MiB when it is a whole number of them."""
+
+    mebibyte = 1024 * 1024
+    if size >= mebibyte and size % mebibyte == 0:
+        return f"{size // mebibyte:,} MiB"
+    return f"{size:,} bytes"
 
 
 def using_gcs() -> bool:

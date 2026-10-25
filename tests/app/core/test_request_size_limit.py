@@ -72,6 +72,15 @@ def test_the_limits_are_the_defaults_unless_the_environment_sets_them(make_app, 
         assert make_app().config["MAX_CONTENT_LENGTH"] == _LIMIT
 
 
+def test_the_namespace_quotas_are_the_defaults_unless_the_environment_sets_them(make_app, monkeypatch):
+    app = make_app()
+    assert request_limits.artifacts_quota(app.config) == (1000, 256 * _MIB)
+
+    monkeypatch.setenv("FIDO_SERVER_MAX_STORED_ARTIFACTS", "10")
+    monkeypatch.setenv("FIDO_SERVER_MAX_STORED_ARTIFACT_BYTES", "4096")
+    assert request_limits.artifacts_quota(make_app().config) == (10, 4096)
+
+
 _ROUTE_LIMITS = [
     ("/api/codec", _CODEC_LIMIT),
     ("/api/register/complete?email=user@example.com", _REGISTRATION_LIMIT),

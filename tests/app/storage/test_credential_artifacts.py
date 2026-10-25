@@ -330,3 +330,97 @@ def test_resolve_session_id_falls_back_for_non_string(monkeypatch, local_artifac
 
 def test_load_credential_artifact_rejects_non_string_storage_id(local_artifact_store):
     assert credential_artifacts.load_credential_artifact(123, session_id="session-a") is None
+
+
+QUOTA = storage_common.Quota(count=2, total_bytes=4096)
+COUNT_FULL = (
+    "This browser already keeps 2 saved credentials on this server, the most it keeps for one visitor. "
+    "Delete ones you no longer use and try again."
+)
+BYTES_PAST = (
+    "Saving this credential would take this browser's saved credentials past the 4,096 bytes this server "
+    "keeps for one visitor. Delete ones you no longer use and try again."
+)
+
+
+@pytest.fixture(params=["on Cloud Storage", "on disk"])
+def either_store(request, monkeypatch, tmp_path):
+    """The artifact store on the in-memory bucket, then on disk: a quota holds on both."""
+
+    if request.param == "on Cloud Storage":
+        fake_gcs.install(monkeypatch, credential_artifacts)
+    else:
+        monkeypatch.setenv("FIDO_SERVER_CREDENTIAL_ARTIFACT_DIR", str(tmp_path))
+        monkeypatch.setattr(storage_common, "using_gcs", lambda: False)
+
+
+def _store(storage_id, payload, *, merge=False):
+    return credential_artifacts.store_credential_artifact(storage_id, payload, merge=merge, session_id=SESSION, quota=QUOTA)
+
+
+def test_a_new_artifact_past_the_namespaces_count_is_refused_with_a_409_and_not_written(either_store):
+    assert _store("one", {"x": 1}) and _store("two", {"x": 1})
+
+    with pytest.raises(storage_common.StorageQuotaExceeded) as refused:
+        _store("three", {"x": 1})
+
+    assert (refused.value.status, refused.value.sentence) == (409, COUNT_FULL)
+    assert credential_artifacts.load_credential_artifact("three", session_id=SESSION) is None
+    # One already stored is still merged into, and replaced.
+    assert _store("two", {"y": 2}, merge=True)
+    assert credential_artifacts.load_credential_artifact("two", session_id=SESSION) == {"x": 1, "y": 2}
+    assert _store("one", {"z": 3})
+    assert credential_artifacts.load_credential_artifact("one", session_id=SESSION) == {"z": 3}
+
+
+def test_a_write_past_the_namespaces_bytes_is_refused_with_a_413_and_one_that_shrinks_is_not(either_store):
+    assert _store("one", {"x": "a" * 3000})
+
+    for storage_id, merge in (("two", False), ("one", True)):
+        with pytest.raises(storage_common.StorageQuotaExceeded) as refused:
+            _store(storage_id, {"y": "b" * 2000}, merge=merge)
+        assert (refused.value.status, refused.value.sentence) == (413, BYTES_PAST)
+    assert credential_artifacts.load_credential_artifact("two", session_id=SESSION) is None
+    assert credential_artifacts.load_credential_artifact("one", session_id=SESSION) == {"x": "a" * 3000}
+
+    # Replacing it with a smaller one frees the room the other needs.
+    assert _store("one", {"x": "c"})
+    assert _store("two", {"y": "b" * 2000})
+
+
+def test_the_usage_is_the_namespaces_artifacts_alone(artifacts_on_disk):
+    assert credential_artifacts.store_credential_artifact("one", {"x": 1}, session_id=SESSION)
+    assert credential_artifacts.store_credential_artifact("one", {"x": 1}, session_id="session-b")
+    folder = artifacts_on_disk / SESSION
+    (folder / "left.json.tmp").write_bytes(b"{}")
+
+    [(name, size)] = credential_artifacts.usage(SESSION).items()
+    # The record's lock and a write's leftover are no artifacts; another namespace's are not this one's.
+    assert name == credential_artifacts._artifact_filename("one")
+    assert size == (folder / name).stat().st_size
+    assert credential_artifacts.usage("session-none") == {}
+
+
+def test_a_namespace_whose_artifacts_cannot_be_listed_refuses_a_write_under_a_quota(bucket, monkeypatch):
+    def _refused(_bucket, **_options):
+        raise fake_gcs.ServiceUnavailable("listing failed")
+
+    monkeypatch.setattr(fake_gcs.Bucket, "list_blobs", _refused)
+
+    with pytest.raises(StorageReadError, match="could not be listed"):
+        _store("one", {"x": 1})
+    assert _blob("one") not in bucket.objects
+
+
+def test_on_disk_a_namespace_whose_folder_cannot_be_listed_refuses_a_write_under_a_quota(artifacts_on_disk, monkeypatch):
+    real_scandir = os.scandir
+
+    def _refused(path):
+        if str(path).endswith(SESSION):
+            raise PermissionError(path)
+        return real_scandir(path)
+
+    monkeypatch.setattr(os, "scandir", _refused)
+
+    with pytest.raises(StorageReadError, match="could not be listed"):
+        _store("one", {"x": 1})

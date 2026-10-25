@@ -6,7 +6,11 @@ import logging
 from flask import jsonify, request
 from werkzeug.exceptions import RequestEntityTooLarge
 
-from ..storage.common import InvalidStorageIdentifier, StorageReadError
+from ..storage.common import (
+    InvalidStorageIdentifier,
+    StorageQuotaExceeded,
+    StorageReadError,
+)
 from . import json_body
 
 logger = logging.getLogger(__name__)
@@ -26,6 +30,13 @@ def storage_read_error(exc: StorageReadError):
     # its cause; the answer names neither.
     logger.warning("Could not read the store in %s %s: %s (%r)", request.method, request.path, exc, exc.__cause__)
     return jsonify({"error": "The stored credentials could not be read. Please try again."}), 503
+
+
+def storage_quota_exceeded(exc: StorageQuotaExceeded):
+    # A write that would take a visitor's namespace past a quota, refused before
+    # anything was written: the visitor's to act on, so its sentence, and one line.
+    logger.warning("Refused a write past a namespace's quota in %s %s: %s", request.method, request.path, exc.sentence)
+    return jsonify({"error": exc.sentence}), exc.status
 
 
 def too_large_answer(limit: int | None):
@@ -51,5 +62,6 @@ def json_nested_too_deep(exc: json_body.NestedTooDeep):
 def init_app(app) -> None:
     app.register_error_handler(InvalidStorageIdentifier, invalid_storage_identifier)
     app.register_error_handler(StorageReadError, storage_read_error)
+    app.register_error_handler(StorageQuotaExceeded, storage_quota_exceeded)
     app.register_error_handler(RequestEntityTooLarge, request_entity_too_large)
     app.register_error_handler(json_body.NestedTooDeep, json_nested_too_deep)
