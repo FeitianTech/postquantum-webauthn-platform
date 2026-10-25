@@ -14,6 +14,7 @@ import shutil
 
 import pytest
 
+from server.app.config import paths
 from server.app.storage import common as storage_common
 from server.app.storage import session_metadata as session_store
 from tests.app.storage import fake_gcs
@@ -162,14 +163,6 @@ def test_uploads_whose_sizes_cannot_be_listed_raise_rather_than_seem_none(bucket
 
     with pytest.raises(storage_common.StorageReadError, match="could not be listed"):
         session_store.file_sizes(SESSION)
-
-
-def test_a_namespace_on_cloud_storage_is_never_pruned(bucket):
-    bucket.put(MARKER, b"{}")
-
-    session_store.prune_session(SESSION)
-
-    assert MARKER in bucket.objects
 
 
 @pytest.fixture
@@ -330,25 +323,6 @@ def test_on_disk_a_namespace_that_cannot_be_removed_is_kept_and_said_so(on_disk,
     assert session_store.list_files("session-local") == ["entry.json"]
 
 
-def test_on_disk_an_emptied_namespace_is_pruned_unless_an_upload_arrives_meanwhile(on_disk, monkeypatch):
-    session_store.ensure_session("emptied")
-    session_store.prune_session("emptied")
-    assert not (on_disk / "emptied").exists()
-
-    # Another request's upload lands between the marker's removal and the second look.
-    session_store.ensure_session("busy")
-    delete_file = session_store.delete_file
-
-    def _then_an_upload(session_id, name, **kwargs):
-        delete_file(session_id, name, **kwargs)
-        session_store.write_file(session_id, "late.json", b"{}")
-
-    monkeypatch.setattr(session_store, "delete_file", _then_an_upload)
-    session_store.prune_session("busy")
-
-    assert session_store.list_files("busy") == ["late.json"]
-
-
 def test_on_disk_an_upload_that_is_not_there_has_no_time(on_disk):
     session_store.write_file("session-local", "entry.json", b"{}")
 
@@ -397,7 +371,6 @@ def test_deleting_the_last_upload_keeps_the_namespaces_other_stores_on_cloud_sto
     session_store.write_file("session-gcs", "entry.json", b"{}")
 
     session_store.delete_file("session-gcs", "entry.json")
-    session_store.prune_session("session-gcs")
 
     assert session_store.list_files("session-gcs") == []
     assert credentials in bucket.objects
@@ -405,10 +378,78 @@ def test_deleting_the_last_upload_keeps_the_namespaces_other_stores_on_cloud_sto
     assert session_store.resolve_last_access("session-gcs") is not None
 
 
-def test_a_local_folder_that_cannot_be_listed_is_not_pruned(session_metadata_dir, monkeypatch):
-    monkeypatch.setattr(storage_common, "using_gcs", lambda: False)
-    (session_metadata_dir / "session-local").write_text("not a folder")
 
-    with pytest.raises(storage_common.StorageReadError):
-        session_store.prune_session("session-local")
-    assert (session_metadata_dir / "session-local").read_text() == "not a folder"
+
+def _namespace_in_every_store(own_stores, namespace: str) -> list:
+    """The namespace's folder made in each of the three local stores, each with a file."""
+
+    folders = []
+    for _setting, store in paths.LOCAL_STORES:
+        folder = own_stores / store / namespace
+        folder.mkdir(parents=True, exist_ok=True)
+        (folder / f"{store}.json").write_text("{}")
+        folders.append(folder)
+    return folders
+
+
+def test_on_disk_the_namespaces_are_every_stores_visible_folders(on_disk, own_stores):
+    (on_disk / "uploads-only").mkdir()
+    (own_stores / "session-credentials" / "credentials-only").mkdir(parents=True)
+    (own_stores / "credential-artifacts" / "artifacts-only").mkdir(parents=True)
+    (own_stores / "credential-artifacts" / ".hidden").mkdir()
+    _namespace_in_every_store(own_stores, "everywhere")
+
+    assert session_store.list_sessions() == ["artifacts-only", "credentials-only", "everywhere", "uploads-only"]
+
+
+def test_on_disk_a_namespace_is_removed_from_every_store_and_no_other(on_disk, own_stores):
+    folders = _namespace_in_every_store(own_stores, "idle")
+    kept = _namespace_in_every_store(own_stores, "active")
+
+    session_store.delete_session("idle")
+
+    assert [folder.exists() for folder in folders] == [False, False, False]
+    assert [folder.exists() for folder in kept] == [True, True, True]
+    assert session_store.list_sessions() == ["active"]
+
+
+def test_on_disk_a_namespace_folder_that_cannot_be_removed_is_kept_and_the_others_go(on_disk, own_stores, monkeypatch, caplog):
+    folders = _namespace_in_every_store(own_stores, "idle")
+    real_rmtree = shutil.rmtree
+
+    def _refusing_one(path, *args, **kwargs):
+        if "session-credentials" in str(path):
+            raise PermissionError(path)
+        return real_rmtree(path, *args, **kwargs)
+
+    monkeypatch.setattr(shutil, "rmtree", _refusing_one)
+
+    with caplog.at_level(logging.WARNING, logger=session_store.__name__):
+        session_store.delete_session("idle")
+
+    assert [folder.exists() for folder in folders] == [False, True, False]
+    assert "Failed to remove metadata session" in caplog.text
+
+
+def test_on_disk_a_namespace_without_a_marker_was_last_used_when_its_newest_file_in_any_store_was(on_disk, own_stores):
+    upload, credentials, artifacts = _namespace_in_every_store(own_stores, "session-local")
+    for folder, mtime in ((upload, 10.0), (credentials, 30.0), (artifacts, 20.0)):
+        [entry] = folder.iterdir()
+        os.utime(entry, (mtime, mtime))
+
+    assert session_store.resolve_last_access("session-local") == 30.0
+
+    # With no file in them, the newest folder.
+    for folder, mtime in ((upload, 40.0), (credentials, 50.0), (artifacts, 45.0)):
+        for entry in folder.iterdir():
+            entry.unlink()
+        os.utime(folder, (mtime, mtime))
+    assert session_store.resolve_last_access("session-local") == 50.0
+
+    # A namespace with only credentials has their time; one with no folder anywhere, none.
+    only = own_stores / "session-credentials" / "credentials-only"
+    only.mkdir()
+    (only / "alice_credential_data.json").write_text("{}")
+    os.utime(only / "alice_credential_data.json", (60.0, 60.0))
+    assert session_store.resolve_last_access("credentials-only") == 60.0
+    assert session_store.resolve_last_access("nowhere") is None

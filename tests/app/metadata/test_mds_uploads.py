@@ -164,14 +164,6 @@ def test_no_session_names_no_directory():
     assert mds_uploads._session_metadata_directory("") is None
 
 
-def test_an_emptied_namespace_that_cannot_be_pruned_still_has_its_upload_deleted(storage, monkeypatch):
-    stored = _stored(storage)
-    monkeypatch.setattr(session_metadata, "prune_session", _fail)
-
-    assert mds_uploads.delete_session_metadata_item(stored, session_id=SESSION) is True
-    assert not (storage / SESSION / stored).exists()
-
-
 def test_saved_metadata_info_keeps_json_objects_and_refuses_malformed_json(metadata_state, monkeypatch):
     monkeypatch.setattr(session_metadata, 'read_file', lambda _sid, _name: b'{"uploaded_at":"now"}')
     assert mds_uploads._load_session_metadata_info('session', 'entry.meta.json') == {'uploaded_at': 'now'}
@@ -326,3 +318,14 @@ def test_an_entry_json_cannot_hold_is_not_counted_and_none_is_no_upload(storage)
 
     for payloads in ([unsupported, unsupported, unsupported], []):
         mds_uploads.refuse_past_quota(SESSION, payloads, storage_common.Quota(count=0, total_bytes=0))
+
+
+def test_deleting_the_last_upload_keeps_the_namespace_for_the_sweep(storage):
+    # The marker stays: the idle sweep removes the namespace whole, its other stores' folders too.
+    session_metadata.touch_last_access(SESSION)
+    stored = _stored(storage)
+
+    assert mds_uploads.delete_session_metadata_item(stored, session_id=SESSION) is True
+
+    assert sorted(path.name for path in (storage / SESSION).iterdir()) == [".last-access"]
+    assert SESSION in session_metadata.list_sessions()

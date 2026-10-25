@@ -119,5 +119,9 @@ Two cookies, both signed with the app's secret, `HttpOnly`, `SameSite=Lax`, and
   so one minted by a begin that goes no further stores nothing. It lasts a year and
   is signed again once a day old. A namespace idle for 14 days is
   removed whole, on both backends, by one sweep at most every 6 hours
-  (`visitor_session.schedule_cleanup`). Deleting a visitor's last upload removes only
-  the local uploads folder, never their credentials or artifacts.
+  (`visitor_session.schedule_cleanup`). Its last access is its `.last-access`
+  marker's time (the visitor's requests refresh it, at most every 30 minutes),
+  else its newest file's. Locally the namespace is its folder in each store
+  (`config/paths.LOCAL_STORES`): the sweep lists the namespaces of all three and
+  removes all three folders. Deleting a visitor's last upload leaves the namespace,
+  its marker with it, for the sweep.

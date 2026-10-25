@@ -1,4 +1,12 @@
-"""Session metadata storage helpers backed by pluggable storage."""
+"""A visitor's uploads store, and the namespace each visitor's stores share: its
+last-access marker, the listing of namespaces, and their removal, whole, by the
+idle sweep (``visitor_session``).
+
+On Cloud Storage a namespace is ``user-data/<namespace>/``, every store's objects
+under it. Locally each store keeps the namespace's folder under its own root
+(``config.paths.LOCAL_STORES``): the namespace is the three folders, and the
+uploads store's holds its marker.
+"""
 from __future__ import annotations
 
 import json
@@ -7,7 +15,7 @@ import os
 import shutil
 import time
 
-from ..config.paths import METADATA_STORE, store_dir
+from ..config.paths import LOCAL_STORES, METADATA_STORE, store_dir
 from . import common
 from .cloud import (
     blob_exists,
@@ -32,7 +40,6 @@ __all__ = [
     "file_sizes",
     "list_files",
     "list_sessions",
-    "prune_session",
     "read_file",
     "resolve_last_access",
     "session_is_empty",
@@ -113,20 +120,38 @@ def _local_touch_last_access(directory: str) -> None:
         pass
 
 
+def _local_namespace_folders(session_id: str) -> list[str]:
+    """The namespace's folder in each local store, those that exist; none for a name that is no namespace."""
+
+    try:
+        normalised = _normalise_local_session_id(session_id)
+    except ValueError:
+        return []
+    folders = (os.path.join(store_dir(*store), normalised) for store in LOCAL_STORES)
+    return [folder for folder in folders if os.path.isdir(folder)]
+
+
 def _local_resolve_last_access(directory: str) -> float | None:
+    """The namespace whose uploads folder is ``directory``: when it was last used."""
+
     marker_path = os.path.join(directory, _LAST_ACCESS_BLOB)
     try:
         return os.path.getmtime(marker_path)
     except OSError:
         pass
 
-    # Else the newest entry, else the folder itself. An entry or the folder that
-    # goes while it is read leaves the time unknown: the idle sweep keeps the
-    # namespace until it looks again.
+    # Else the newest entry in the namespace's folders, else the newest folder.
+    # An entry or a folder that goes while it is read leaves the time unknown:
+    # the idle sweep keeps the namespace until it looks again.
+    folders = _local_namespace_folders(os.path.basename(directory))
+    if not folders:
+        return None
     try:
-        with os.scandir(directory) as entries:
-            times = [entry.stat(follow_symlinks=False).st_mtime for entry in entries]
-        return max(times) if times else os.path.getmtime(directory)
+        times = []
+        for folder in folders:
+            with os.scandir(folder) as entries:
+                times.extend(entry.stat(follow_symlinks=False).st_mtime for entry in entries)
+        return max(times) if times else max(os.path.getmtime(folder) for folder in folders)
     except OSError:
         return None
 
@@ -160,16 +185,15 @@ def list_sessions() -> list[str]:
             logger.warning("Unable to list session metadata blobs: %s", exc)
         return sorted(seen)
 
-    try:
-        entries = os.listdir(session_metadata_dir())
-    except OSError:
-        return []
-
-    sessions: list[str] = []
-    for entry in entries:
-        path = os.path.join(session_metadata_dir(), entry)
-        if os.path.isdir(path) and not entry.startswith("."):
-            sessions.append(entry)
+    # Every store's namespaces: one that has only credentials or artifacts is one too.
+    sessions: set[str] = set()
+    for store in LOCAL_STORES:
+        root = store_dir(*store)
+        try:
+            entries = os.listdir(root)
+        except OSError:
+            continue
+        sessions.update(entry for entry in entries if not entry.startswith(".") and os.path.isdir(os.path.join(root, entry)))
     return sorted(sessions)
 
 
@@ -361,6 +385,9 @@ def session_is_empty(session_id: str) -> bool:
 
 
 def delete_session(session_id: str) -> None:
+    """Remove the namespace whole: every object under it on Cloud Storage, its folder
+    in each local store (``config.paths.LOCAL_STORES``) on disk."""
+
     if common.using_gcs():
         prefix = _user_root_prefix(session_id) + "/"
         to_delete: list[str] = []
@@ -373,30 +400,11 @@ def delete_session(session_id: str) -> None:
             delete_blob(blob_name, missing_ok=True)
         return
 
-    directory = _local_session_directory(session_id)
-    if not directory:
-        return
-
-    try:
-        shutil.rmtree(directory)
-    except OSError as exc:
-        logger.warning("Failed to remove metadata session %s: %s", directory, exc)
-
-
-def prune_session(session_id: str) -> None:
-    """Remove a namespace's local metadata folder once it holds no upload.
-
-    Only the local backend has such a folder. On Cloud Storage a namespace's
-    uploads sit beside its credentials and artifacts under ``user-data/<session>/``,
-    which stay until the idle sweep removes the namespace whole.
-    """
-
-    if common.using_gcs():
-        return
-    if session_is_empty(session_id):
-        delete_file(session_id, _LAST_ACCESS_BLOB, missing_ok=True)
-        if session_is_empty(session_id):
-            delete_session(session_id)
+    for folder in _local_namespace_folders(session_id):
+        try:
+            shutil.rmtree(folder)
+        except OSError as exc:
+            logger.warning("Failed to remove metadata session %s: %s", folder, exc)
 
 
 def file_exists(session_id: str, name: str) -> bool:

@@ -1,7 +1,8 @@
 """A visitor's uploaded metadata statements: save, list, delete, serialise.
 
 Each upload is stored in the visitor's namespace (``visitor_session``), with an
-info file beside it; the namespace goes when the last upload does.
+info file beside it. The namespace stays when its last upload goes: the idle
+sweep removes it whole.
 """
 from __future__ import annotations
 
@@ -92,13 +93,6 @@ class SessionMetadataItem:
     uploaded_at: str | None
     original_filename: str | None
     mtime: float | None
-
-
-def _prune_session_metadata_directory(session_id: str) -> None:
-    try:
-        session_metadata.prune_session(session_id)
-    except Exception:
-        pass
 
 
 def _load_session_metadata_info(session_id: str, filename: str) -> dict[str, Any]:
@@ -334,7 +328,6 @@ def delete_session_metadata_item(
     except Exception:
         pass
 
-    _prune_session_metadata_directory(directory)
     return True
 
 

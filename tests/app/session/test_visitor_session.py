@@ -7,6 +7,7 @@ a sweep deletes namespaces idle longer than ``INACTIVE_AGE``.
 
 from __future__ import annotations
 
+import os
 import threading
 import time
 from datetime import timedelta
@@ -17,11 +18,13 @@ import pytest
 from flask import session
 
 from server.app import visitor_session
+from server.app.config import paths
 from server.app.storage import common as storage_common
 from server.app.storage import session_metadata
 from server.app.storage import session_metadata as session_store
 from tests.app import visitor_namespace
 from tests.app.entry_app import entry_app
+from tests.app.security.ceremony_helpers import Authenticator, register_simple
 
 
 @pytest.fixture
@@ -360,3 +363,35 @@ def test_local_cleanup_removes_only_stale_non_hidden_sessions(session_metadata_d
     assert stale_dir.exists() is False
     assert fresh_dir.exists() is True
     assert hidden_dir.exists() is True
+
+
+def test_a_local_sweep_removes_an_idle_namespace_from_every_store(own_stores, monkeypatch, metadata_state):
+    monkeypatch.setattr(storage_common, "using_gcs", lambda: False)
+    now = 2_000_000.0
+    folders = {}
+    for namespace, mtime in (("idle", now - visitor_session.INACTIVE_AGE.total_seconds() - 1), ("active", now - 10.0)):
+        for _setting, store in paths.LOCAL_STORES:
+            folder = own_stores / store / namespace
+            folder.mkdir(parents=True)
+            (folder / "kept.json").write_text("{}")
+            os.utime(folder / "kept.json", (mtime, mtime))
+            folders.setdefault(namespace, []).append(folder)
+
+    visitor_session._maybe_cleanup(now=now)
+
+    assert [folder.exists() for folder in folders["idle"]] == [False, False, False]
+    assert [folder.exists() for folder in folders["active"]] == [True, True, True]
+
+
+def test_a_new_visitors_namespace_is_swept_from_local_disk_once_idle(own_stores, monkeypatch, metadata_state, make_app):
+    monkeypatch.setattr(storage_common, "using_gcs", lambda: False)
+    monkeypatch.setattr(visitor_session, "CLEANUP_ASYNC", False)
+    client = make_app().test_client()
+    register_simple(client, Authenticator())
+    namespace = visitor_namespace.of(client)
+    assert (own_stores / "session-credentials" / namespace).is_dir()
+
+    visitor_session._maybe_cleanup(now=time.time() + visitor_session.INACTIVE_AGE.total_seconds() + 60)
+
+    assert not (own_stores / "session-credentials" / namespace).exists()
+    assert namespace not in session_metadata.list_sessions()
