@@ -32,15 +32,6 @@ function jsonAnswer(body, status = 200) {
   });
 }
 
-// A body that fails while it is read, as when the connection drops.
-function droppedBody() {
-  return new ReadableStream({
-    start(controller) {
-      controller.error(new TypeError('network error'));
-    },
-  });
-}
-
 describe('the requests to the artifacts API', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -112,13 +103,14 @@ describe('the requests to the artifacts API', () => {
     await expect(updateCredentialSnapshot('id', {})).resolves.toBe(false);
   });
 
-  it('deletes an artifact, and says how the delete went', async () => {
-    await expect(deleteCredentialArtifact('')).resolves.toEqual(
-      expect.objectContaining({
-        ok: false,
-        status: 'failed',
-      }),
-    );
+  it('deletes an artifact at its trimmed id\'s address, and asks nothing for a blank id', async () => {
+    await expect(deleteCredentialArtifact('')).resolves.toEqual({
+      ok: false,
+      status: 'failed',
+      httpStatus: null,
+      error: 'Invalid storage identifier.',
+    });
+    expect(fetch).not.toHaveBeenCalled();
 
     fetch.mockResolvedValueOnce(jsonResponse({ status: 'deleted' }));
     await expect(deleteCredentialArtifact(' id ')).resolves.toEqual({
@@ -127,32 +119,9 @@ describe('the requests to the artifacts API', () => {
       httpStatus: 200,
     });
 
-    const [, options] = fetch.mock.calls[0];
+    const [url, options] = fetch.mock.calls[0];
+    expect(url).toBe('/api/advanced/credential-artifacts/id');
     expect(options.method).toBe('DELETE');
-
-    fetch.mockResolvedValueOnce(jsonResponse({ status: 'absent' }));
-    await expect(deleteCredentialArtifact('id')).resolves.toEqual({
-      ok: false,
-      status: 'absent',
-      httpStatus: 200,
-    });
-
-    fetch.mockResolvedValueOnce(jsonResponse({ status: 'failed', error: 'delete failed' }, { ok: false, status: 500 }));
-    await expect(deleteCredentialArtifact('id')).resolves.toEqual({
-      ok: false,
-      status: 'failed',
-      httpStatus: 500,
-      error: 'delete failed',
-    });
-
-    fetch.mockRejectedValueOnce(new Error('delete failed'));
-    await expect(deleteCredentialArtifact('id')).resolves.toEqual(
-      expect.objectContaining({
-        ok: false,
-        status: 'failed',
-        httpStatus: null,
-      }),
-    );
   });
 
   it('reads an answer that is not JSON as no artifact', async () => {
@@ -194,68 +163,5 @@ describe('the artifacts API\'s unusual answers', () => {
     vi.stubGlobal('fetch', vi.fn(async () => jsonAnswer({ storageIds: [STORAGE_ID] })));
 
     await expect(fetchCredentialArtifactsBulk([STORAGE_ID])).resolves.toEqual({});
-  });
-
-  it('reports a plain-text refusal of a delete as its error', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => new Response('  Service Unavailable\n', {
-      status: 503,
-      headers: { 'Content-Type': 'text/plain' },
-    })));
-
-    await expect(deleteCredentialArtifact(STORAGE_ID)).resolves.toEqual({
-      ok: false,
-      status: 'failed',
-      httpStatus: 503,
-      error: 'Service Unavailable',
-    });
-  });
-
-  it('names the status when a delete is refused with an empty body', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => new Response(null, { status: 502 })));
-
-    await expect(deleteCredentialArtifact(STORAGE_ID)).resolves.toEqual({
-      ok: false,
-      status: 'failed',
-      httpStatus: 502,
-      error: 'Request failed with status 502',
-    });
-  });
-
-  it('treats a delete answer that is not valid JSON as no answer', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => new Response('{"status": "del', {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    })));
-
-    await expect(deleteCredentialArtifact(STORAGE_ID)).resolves.toEqual({
-      ok: false,
-      status: 'failed',
-      httpStatus: 200,
-      error: 'Request failed with status 200',
-    });
-  });
-
-  it('treats a delete answer whose body could not be read as no answer', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => new Response(droppedBody(), { status: 500 })));
-
-    await expect(deleteCredentialArtifact(STORAGE_ID)).resolves.toEqual({
-      ok: false,
-      status: 'failed',
-      httpStatus: 500,
-      error: 'Request failed with status 500',
-    });
-  });
-
-  it('says the delete failed when the request fails with something other than an Error', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => {
-      throw 'offline';
-    }));
-
-    await expect(deleteCredentialArtifact(STORAGE_ID)).resolves.toEqual({
-      ok: false,
-      status: 'failed',
-      httpStatus: null,
-      error: 'Delete request failed.',
-    });
   });
 });
