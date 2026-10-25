@@ -107,7 +107,6 @@ def _record_verified_registration(
         auth_data=auth_data,
         attestation_format=prepared["attestationFormat"],
         attestation_statement=prepared["attestationStatement"],
-        attestation_certificates_details=prepared["attestationCertificatesDetails"],
         client_extension_results=prepared["clientExtensionResults"],
         credential_info=credential_info,
         response=response,
@@ -122,6 +121,10 @@ def _record_verified_registration(
         material["rpInfo"]["registrationData"]["authenticatorExtensions"] = json_values.make_json_safe(
             extensions_summary
         )
+    # The answer's relying party names the certificates, where the page's result reads
+    # them; the record keeps them once, in its properties.
+    if prepared["attestationCertificatesDetails"]:
+        material["rpInfo"]["attestationCertificates"] = prepared["attestationCertificatesDetails"]
 
     return registration_persistence.finalize_registration_completion(
         stored_credential=material["storedCredential"],

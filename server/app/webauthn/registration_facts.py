@@ -214,14 +214,13 @@ def relying_party_info(
     attestation_object: Any = None,
     device: dict[str, Any] | None = None,
     resident_key: bool | None = None,
-    attestation_certificates: Any = None,
 ) -> dict[str, Any]:
     """The relying party's view of the registration, as the answer reports it and the record keeps it.
 
     ``credential_id`` holds its ``hex``, ``base64`` and ``base64url``. What only
     one tab reports is left out when not given: the AAGUID block and the
-    attestation object, the device, the resident-key result, and the
-    attestation certificates.
+    attestation object, the device, and the resident-key result. The attestation
+    certificates are the record's (its properties), never the view's.
     """
 
     rp_info: dict[str, Any] = {}
@@ -252,8 +251,6 @@ def relying_party_info(
     if resident_key is not None:
         rp_info["residentKey"] = resident_key
     rp_info["userHandle"] = byte_forms(user_handle)
-    if attestation_certificates:
-        rp_info["attestationCertificates"] = attestation_certificates
     return rp_info
 
 

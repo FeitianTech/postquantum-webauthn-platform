@@ -62,7 +62,6 @@ def build_credential_info(
         "attestation_object": prepared["rawAttestationObject"] or "",
         "attestation_format": prepared["attestationFormat"],
         "attestation_statement": prepared["attestationStatement"],
-        "attestation_certificates": attestation_certificates_details,
         "client_extension_outputs": client_extension_results,
         "authenticator_attachment": authenticator_attachment_response,
         "original_webauthn_request": prepared["originalRequest"],
@@ -90,7 +89,6 @@ def build_credential_info(
     if prepared["minPinLengthValue"] is not None:
         credential_info["properties"]["minPinLength"] = prepared["minPinLengthValue"]
     if attestation_certificates_details:
-        credential_info["attestationCertificates"] = attestation_certificates_details
         credential_info["properties"]["attestationCertificates"] = attestation_certificates_details
 
     credentials.add_public_key_material(credential_info, getattr(auth_data.credential_data, "public_key", {}))
@@ -263,7 +261,6 @@ def _relying_party_info(
     attestation_checks_safe: Any,
     attestation_summary: Any,
     user_handle: bytes,
-    attestation_certificates_details: Any,
 ) -> dict[str, Any]:
     """The relying party's view of the registration, as the response reports it."""
 
@@ -290,7 +287,6 @@ def _relying_party_info(
         ),
         resident_key=facts.resident_key,
         user_handle=user_handle,
-        attestation_certificates=attestation_certificates_details,
     )
 
 
@@ -299,7 +295,6 @@ def build_registration_material(
     auth_data: Any,
     attestation_format: Any,
     attestation_statement: Any,
-    attestation_certificates_details: Any,
     client_extension_results: Any,
     credential_info: dict[str, Any],
     response: Any,
@@ -325,7 +320,6 @@ def build_registration_material(
         attestation_checks_safe=attestation_checks_safe,
         attestation_summary=attestation_summary,
         user_handle=user_handle,
-        attestation_certificates_details=attestation_certificates_details,
     )
 
     credential_info["relying_party"] = json_values.make_json_safe(rp_info)
