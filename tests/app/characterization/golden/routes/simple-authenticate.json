@@ -182,7 +182,7 @@
     ],
     [
      "Content-Length",
-     "12310"
+     "11938"
     ],
     [
      "X-Content-Type-Options",
@@ -225,7 +225,7 @@
      "contents": null
     }
    ],
-   "bodySha256": "34741b92dcda52f467e9542f73f0b3a2994b3364eef34649926d7ddabd5b7f0e",
+   "bodySha256": "2719ee5f0be5974683145b66b0c502040e2fa426e99db77f2385b6f1df5073d5",
    "body": {
     "actualResidentKey": null,
     "algo": "ES256 (ECDSA)",
@@ -453,15 +453,7 @@
      },
      "publicKey": "pQECAyYgASFYIOUXheTw1E-EWQzlvZV436po9IPSSC4v-2KUgHzYdwcBIlggV1x10katy4m49ykeifI0L8XqeWIF6rPx0q0yg5YadZ4",
      "publicKeyAlgorithm": -7,
-     "publicKeyBase64Url": "pQECAyYgASFYIOUXheTw1E-EWQzlvZV436po9IPSSC4v-2KUgHzYdwcBIlggV1x10katy4m49ykeifI0L8XqeWIF6rPx0q0yg5YadZ4",
-     "publicKeyBytes": "pQECAyYgASFYIOUXheTw1E-EWQzlvZV436po9IPSSC4v-2KUgHzYdwcBIlggV1x10katy4m49ykeifI0L8XqeWIF6rPx0q0yg5YadZ4",
-     "publicKeyCose": {
-      "-3": "V1x10katy4m49ykeifI0L8XqeWIF6rPx0q0yg5YadZ4",
-      "-2": "5ReF5PDUT4RZDOW9lXjfqmj0g9JILi_7YpSAfNh3BwE",
-      "-1": 1,
-      "1": 2,
-      "3": -7
-     },
+     "publicKeyType": 2,
      "registrationResponse": {
       "clientExtensionResults": {},
       "id": "hc3wKwT2pzE_moP8MirmB9IeO2Kr5g8EXY7MXMk-FvU",

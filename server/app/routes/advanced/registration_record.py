@@ -17,7 +17,7 @@ from typing import Any, NamedTuple
 from fido2 import cbor
 
 from ... import json_values
-from ...encoding import encode_base64, encode_base64url
+from ...encoding import encode_base64url
 from ...storage import credentials
 from ...webauthn import client_binary, cose_algorithms, pqc, registration_facts
 from ...webauthn.attestation import aaguid as attestation_aaguid
@@ -172,7 +172,9 @@ def build_debug_info(
     return debug_info
 
 
-def _public_key_encodings(auth_data: Any) -> tuple[str | None, str | None]:
+def _public_key_base64url(auth_data: Any) -> str | None:
+    """The credential's COSE public key in base64url, the one spelling the record keeps."""
+
     credential_public_key = getattr(auth_data.credential_data, "public_key", None)
     if isinstance(credential_public_key, Mapping):
         try:
@@ -180,8 +182,8 @@ def _public_key_encodings(auth_data: Any) -> tuple[str | None, str | None]:
         except Exception:
             public_key_cbor_bytes = None
         if public_key_cbor_bytes:
-            return encode_base64(public_key_cbor_bytes), encode_base64url(public_key_cbor_bytes)
-    return None, None
+            return encode_base64url(public_key_cbor_bytes)
+    return None
 
 
 class _Facts(NamedTuple):
@@ -366,7 +368,7 @@ def _stored_credential(
 
     stored_properties = json_values.make_json_safe(credential_info.get("properties", {}))
     stored_extensions = json_values.make_json_safe(client_extension_results)
-    public_key_b64, public_key_b64url = _public_key_encodings(auth_data)
+    public_key_b64url = _public_key_base64url(auth_data)
 
     stored_credential = registration_facts.stored_credential({
         "type": "advanced",
@@ -383,10 +385,6 @@ def _stored_credential(
         "aaguidGuid": aaguid_guid,
         "publicKeyAlgorithm": credential_info.get("publicKeyAlgorithm"),
         "publicKey": public_key_b64url,
-        "publicKeyBase64": public_key_b64,
-        "publicKeyBase64Url": public_key_b64url,
-        "publicKeyBytes": credential_info.get("publicKeyBytes"),
-        "publicKeyCose": credential_info.get("publicKeyCose"),
         "publicKeyType": credential_info.get("publicKeyType"),
         "signCount": getattr(auth_data, "counter", 0),
         "createdAt": credential_info["registration_time"],

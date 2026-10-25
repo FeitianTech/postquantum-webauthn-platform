@@ -255,7 +255,7 @@ describe('credentials prepared for the server', () => {
     expect(prepareCredentialsForServer([ES256])).toEqual([{
       credentialId: ES256_ID,
       aaguid: ES256.aaguid,
-      publicKey: ES256.publicKeyBase64Url,
+      publicKey: ES256.publicKey,
       signCount: ES256.signCount,
       algorithm: ES256.publicKeyAlgorithm,
     }]);

@@ -182,7 +182,7 @@
     ],
     [
      "Content-Length",
-     "12310"
+     "11938"
     ],
     [
      "X-Content-Type-Options",
@@ -225,7 +225,7 @@
      "contents": null
     }
    ],
-   "bodySha256": "52f115f0c4fa209dc18fa6e9e8ceacbfb59c32148cac23c9d3d45e12ee43a3b2",
+   "bodySha256": "6547bd86d04301adf67e4a07204b775b731f831581cc929af8edf70374b6b7ce",
    "body": {
     "actualResidentKey": null,
     "algo": "ES256 (ECDSA)",
@@ -453,15 +453,7 @@
      },
      "publicKey": "pQECAyYgASFYIAfVYnvHdGJSEXI-LQxWQQEbIHufII8HpwWLbW_JAmsQIlgg07NoYlNzDOW4jodt19K-TBvWMpY7oWbRMfKQY3xE-A4",
      "publicKeyAlgorithm": -7,
-     "publicKeyBase64Url": "pQECAyYgASFYIAfVYnvHdGJSEXI-LQxWQQEbIHufII8HpwWLbW_JAmsQIlgg07NoYlNzDOW4jodt19K-TBvWMpY7oWbRMfKQY3xE-A4",
-     "publicKeyBytes": "pQECAyYgASFYIAfVYnvHdGJSEXI-LQxWQQEbIHufII8HpwWLbW_JAmsQIlgg07NoYlNzDOW4jodt19K-TBvWMpY7oWbRMfKQY3xE-A4",
-     "publicKeyCose": {
-      "-3": "07NoYlNzDOW4jodt19K-TBvWMpY7oWbRMfKQY3xE-A4",
-      "-2": "B9Vie8d0YlIRcj4tDFZBARsge58gjwenBYttb8kCaxA",
-      "-1": 1,
-      "1": 2,
-      "3": -7
-     },
+     "publicKeyType": 2,
      "registrationResponse": {
       "clientExtensionResults": {},
       "id": "bvEU3nQtcja9DuaJ0PHAfo5eQGygwl2qirzX5XC9CiE",
@@ -1007,7 +999,7 @@
     ],
     [
      "Content-Length",
-     "12310"
+     "11938"
     ],
     [
      "X-Content-Type-Options",
@@ -1050,7 +1042,7 @@
      "contents": null
     }
    ],
-   "bodySha256": "61154994d11bfc9c5987ebac1e926fb8dd39215c9b856fa79a5b249053223cb7",
+   "bodySha256": "79fe9c9eaa31d40fb36625184d60ef042b55151280c839355ff9afa1c07c611b",
    "body": {
     "actualResidentKey": null,
     "algo": "ES256 (ECDSA)",
@@ -1278,15 +1270,7 @@
      },
      "publicKey": "pQECAyYgASFYIChnOZ_FrciM_toXPg6Xng8w731UCLPW7Hwx-lTAEmhdIlggrTV6YKhtwAoGgWepwHwcTNoXFjYYSHIixAw14GJDj28",
      "publicKeyAlgorithm": -7,
-     "publicKeyBase64Url": "pQECAyYgASFYIChnOZ_FrciM_toXPg6Xng8w731UCLPW7Hwx-lTAEmhdIlggrTV6YKhtwAoGgWepwHwcTNoXFjYYSHIixAw14GJDj28",
-     "publicKeyBytes": "pQECAyYgASFYIChnOZ_FrciM_toXPg6Xng8w731UCLPW7Hwx-lTAEmhdIlggrTV6YKhtwAoGgWepwHwcTNoXFjYYSHIixAw14GJDj28",
-     "publicKeyCose": {
-      "-3": "rTV6YKhtwAoGgWepwHwcTNoXFjYYSHIixAw14GJDj28",
-      "-2": "KGc5n8WtyIz-2hc-DpeeDzDvfVQIs9bsfDH6VMASaF0",
-      "-1": 1,
-      "1": 2,
-      "3": -7
-     },
+     "publicKeyType": 2,
      "registrationResponse": {
       "clientExtensionResults": {},
       "id": "U5_lFp4uI6Lw6z2i0uGNuzR_OzmUlfxu4iWzzdiomVc",

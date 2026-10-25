@@ -18,7 +18,6 @@ from typing import Any
 
 from .. import visitor_session
 from ..config.paths import CREDENTIAL_STORE, store_dir
-from ..json_values import make_json_safe
 from . import common, record_format
 from .cloud import (
     build_blob_name,
@@ -222,17 +221,14 @@ def readkey(name: str, *, session_id: str | None = None) -> list[Any]:
 
 
 def add_public_key_material(target: dict[str, Any], public_key: Any) -> None:
-    """Populate JSON-friendly COSE public key details if available."""
+    """The COSE public key's type and algorithm, where ``target`` names neither yet.
+
+    The record keeps the key itself once, as ``publicKey`` (the COSE key in base64url).
+    """
     if not isinstance(public_key, dict):
         return
 
     cose_map = dict(public_key)
-    target['publicKeyCose'] = make_json_safe(cose_map)
-
-    raw_key = cose_map.get(-1)
-    if isinstance(raw_key, (bytes, bytearray, memoryview)):
-        target['publicKeyBytes'] = make_json_safe(raw_key)
-
     if 'publicKeyType' not in target:
         target['publicKeyType'] = cose_map.get(1)
 

@@ -117,7 +117,7 @@
     ],
     [
      "Content-Length",
-     "9088"
+     "8842"
     ],
     [
      "X-Content-Type-Options",
@@ -170,7 +170,7 @@
      "contents": null
     }
    ],
-   "bodySha256": "898e254af65daee1587f3c4657e09b6188af1095961097cdab627d120dd11ce5",
+   "bodySha256": "3a05eaf3f1741d6d56058d683c6528016eb86d6c888ab28ec01236317e515035",
    "body": {
     "actualResidentKey": null,
     "algo": "EdDSA",
@@ -448,14 +448,6 @@
      },
      "publicKey": "pAEBAycgBiFYIMeGk8ZtMtfSNKJbhBbTtDkWCOnaORR8r4yL_LqxNIEl",
      "publicKeyAlgorithm": -8,
-     "publicKeyBase64": "pAEBAycgBiFYIMeGk8ZtMtfSNKJbhBbTtDkWCOnaORR8r4yL/LqxNIEl",
-     "publicKeyBase64Url": "pAEBAycgBiFYIMeGk8ZtMtfSNKJbhBbTtDkWCOnaORR8r4yL_LqxNIEl",
-     "publicKeyCose": {
-      "-1": 6,
-      "-2": "x4aTxm0y19I0oluEFtO0ORYI6do5FHyvjIv8urE0gSU",
-      "1": 1,
-      "3": -8
-     },
      "publicKeyType": 1,
      "relyingParty": {
       "aaguid": {
@@ -501,7 +493,7 @@
    "stored": [
     {
      "file": "artifacts/cQUQf5EliGThHs2boeS0VepH7C5DXjV-PqfXfYXsTS0/d932fdc2c432c7050ce6b728173357d2a53f73df2a0673588ef329a3019a00f5.json",
-     "sha256": "17ad3fc947c5ac5426a9c296c8cf209df98c4ba2aec6dbbf9620d3016ecc9f53",
+     "sha256": "8f5aef05d67dc68f38b2151e2b849b0b057b176df6e22b383187d8111ed0c2f8",
      "content": {
       "storageId": "82wp6a6k5qtS_SKwtOva7IZ5::1a0c4506c00::de402f3397aa41e3ad0732a1222b43f4",
       "createdAt": 1790000000.0,
@@ -521,14 +513,6 @@
         "aaguidGuid": "00000000-0000-0000-0000-000000000000",
         "publicKeyAlgorithm": -8,
         "publicKey": "pAEBAycgBiFYIMeGk8ZtMtfSNKJbhBbTtDkWCOnaORR8r4yL_LqxNIEl",
-        "publicKeyBase64": "pAEBAycgBiFYIMeGk8ZtMtfSNKJbhBbTtDkWCOnaORR8r4yL/LqxNIEl",
-        "publicKeyBase64Url": "pAEBAycgBiFYIMeGk8ZtMtfSNKJbhBbTtDkWCOnaORR8r4yL_LqxNIEl",
-        "publicKeyCose": {
-         "1": 1,
-         "3": -8,
-         "-1": 6,
-         "-2": "x4aTxm0y19I0oluEFtO0ORYI6do5FHyvjIv8urE0gSU"
-        },
         "publicKeyType": 1,
         "signCount": 0,
         "createdAt": 1790000000.0,

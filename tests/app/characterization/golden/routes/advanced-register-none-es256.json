@@ -117,7 +117,7 @@
     ],
     [
      "Content-Length",
-     "8989"
+     "8597"
     ],
     [
      "X-Content-Type-Options",
@@ -170,7 +170,7 @@
      "contents": null
     }
    ],
-   "bodySha256": "7fc7050b8471ec9209b0c488761e37d3111e282940e9f642d68d62808446833b",
+   "bodySha256": "c7669e7410cddadbcab4e138a75e5e2932e7420043cc7f5a5dda5aa3024b8900",
    "body": {
     "actualResidentKey": null,
     "algo": "ES256 (ECDSA)",
@@ -413,15 +413,6 @@
      },
      "publicKey": "pQECAyYgASFYIDMAqV_ceu7i7Gw9sutq4PjEPKbbjqmToYzZWR03vPwCIlggivkDu6wVP_oBEKxHEVurqEqp4Q7zkRyxRmqawViw2Lg",
      "publicKeyAlgorithm": -7,
-     "publicKeyBase64": "pQECAyYgASFYIDMAqV/ceu7i7Gw9sutq4PjEPKbbjqmToYzZWR03vPwCIlggivkDu6wVP/oBEKxHEVurqEqp4Q7zkRyxRmqawViw2Lg=",
-     "publicKeyBase64Url": "pQECAyYgASFYIDMAqV_ceu7i7Gw9sutq4PjEPKbbjqmToYzZWR03vPwCIlggivkDu6wVP_oBEKxHEVurqEqp4Q7zkRyxRmqawViw2Lg",
-     "publicKeyCose": {
-      "-1": 1,
-      "-2": "MwCpX9x67uLsbD2y62rg-MQ8ptuOqZOhjNlZHTe8_AI",
-      "-3": "ivkDu6wVP_oBEKxHEVurqEqp4Q7zkRyxRmqawViw2Lg",
-      "1": 2,
-      "3": -7
-     },
      "publicKeyType": 2,
      "relyingParty": {
       "aaguid": {
@@ -464,7 +455,7 @@
    "stored": [
     {
      "file": "artifacts/szCDHLxETTCKJ8LLZMt8h4oRkUkXqEH-veDgEl9PHMI/8cedae684cc0008b408c5da52374f9d489ef8111f09983afd2201521ec297c09.json",
-     "sha256": "b86200605b244de37f103817ecec6ff5d265b1efa0cce20a0c4f70fd31d6886e",
+     "sha256": "711dcdf604bfdc3416d28b43db040f87f498d4911bc29ffd4f6ef739f74f7066",
      "content": {
       "storageId": "THBi3GyG-MexchMynbz3x5Nv::1a0c4506c00::abb1b052d88044e486bb1446aa6a1e87",
       "createdAt": 1790000000.0,
@@ -484,15 +475,6 @@
         "aaguidGuid": "00112233-4455-6677-8899-aabbccddeeff",
         "publicKeyAlgorithm": -7,
         "publicKey": "pQECAyYgASFYIDMAqV_ceu7i7Gw9sutq4PjEPKbbjqmToYzZWR03vPwCIlggivkDu6wVP_oBEKxHEVurqEqp4Q7zkRyxRmqawViw2Lg",
-        "publicKeyBase64": "pQECAyYgASFYIDMAqV/ceu7i7Gw9sutq4PjEPKbbjqmToYzZWR03vPwCIlggivkDu6wVP/oBEKxHEVurqEqp4Q7zkRyxRmqawViw2Lg=",
-        "publicKeyBase64Url": "pQECAyYgASFYIDMAqV_ceu7i7Gw9sutq4PjEPKbbjqmToYzZWR03vPwCIlggivkDu6wVP_oBEKxHEVurqEqp4Q7zkRyxRmqawViw2Lg",
-        "publicKeyCose": {
-         "1": 2,
-         "3": -7,
-         "-1": 1,
-         "-2": "MwCpX9x67uLsbD2y62rg-MQ8ptuOqZOhjNlZHTe8_AI",
-         "-3": "ivkDu6wVP_oBEKxHEVurqEqp4Q7zkRyxRmqawViw2Lg"
-        },
         "publicKeyType": 2,
         "signCount": 7,
         "createdAt": 1790000000.0,

@@ -182,7 +182,7 @@
     ],
     [
      "Content-Length",
-     "12914"
+     "12542"
     ],
     [
      "X-Content-Type-Options",
@@ -225,7 +225,7 @@
      "contents": null
     }
    ],
-   "bodySha256": "0be24735a8e37df1f9f041cef844e69a76de8e48a1d82021000dcf7e2308590c",
+   "bodySha256": "509d2168eb8bf837eee30ca0f17bb869ca677dd56fd414d04494b63728859489",
    "body": {
     "actualResidentKey": true,
     "algo": "ES256 (ECDSA)",
@@ -461,15 +461,7 @@
      },
      "publicKey": "pQECAyYgASFYIFqwCf_U5cMd-3T3vwujIs6WSVOQ8xBdzP7CI-cI9IkXIlgg-to_bMDlpB-QDYZohrD3zDV2OVYRUOAbDviJiUk25lc",
      "publicKeyAlgorithm": -7,
-     "publicKeyBase64Url": "pQECAyYgASFYIFqwCf_U5cMd-3T3vwujIs6WSVOQ8xBdzP7CI-cI9IkXIlgg-to_bMDlpB-QDYZohrD3zDV2OVYRUOAbDviJiUk25lc",
-     "publicKeyBytes": "pQECAyYgASFYIFqwCf_U5cMd-3T3vwujIs6WSVOQ8xBdzP7CI-cI9IkXIlgg-to_bMDlpB-QDYZohrD3zDV2OVYRUOAbDviJiUk25lc",
-     "publicKeyCose": {
-      "-3": "-to_bMDlpB-QDYZohrD3zDV2OVYRUOAbDviJiUk25lc",
-      "-2": "WrAJ_9Tlwx37dPe_C6MizpZJU5DzEF3M_sIj5wj0iRc",
-      "-1": 1,
-      "1": 2,
-      "3": -7
-     },
+     "publicKeyType": 2,
      "registrationResponse": {
       "authenticatorAttachment": "cross-platform",
       "clientExtensionResults": {
@@ -935,7 +927,7 @@
     ],
     [
      "Content-Length",
-     "9425"
+     "9033"
     ],
     [
      "X-Content-Type-Options",
@@ -978,7 +970,7 @@
      "contents": null
     }
    ],
-   "bodySha256": "640dee2ae15fd8908c267bf3468b048933cdef8ffc64b17f23f5819132628486",
+   "bodySha256": "fd64181229995b3296dd0d13418deb6d48659d59dbebd86d0b0cf3a4b0a4cf99",
    "body": {
     "actualResidentKey": true,
     "algo": "ES256 (ECDSA)",
@@ -1253,15 +1245,6 @@
      },
      "publicKey": "pQECAyYgASFYIH4ftpONpOfCMWIot0pA5M-bZb7vd14lJ_pHFeGNeLLaIlggTR6dG0fS-6MazgMyUI12V3wXjQiSxrwfygu_hIu0_t0",
      "publicKeyAlgorithm": -7,
-     "publicKeyBase64": "pQECAyYgASFYIH4ftpONpOfCMWIot0pA5M+bZb7vd14lJ/pHFeGNeLLaIlggTR6dG0fS+6MazgMyUI12V3wXjQiSxrwfygu/hIu0/t0=",
-     "publicKeyBase64Url": "pQECAyYgASFYIH4ftpONpOfCMWIot0pA5M-bZb7vd14lJ_pHFeGNeLLaIlggTR6dG0fS-6MazgMyUI12V3wXjQiSxrwfygu_hIu0_t0",
-     "publicKeyCose": {
-      "-1": 1,
-      "-2": "fh-2k42k58IxYii3SkDkz5tlvu93XiUn-kcV4Y14sto",
-      "-3": "TR6dG0fS-6MazgMyUI12V3wXjQiSxrwfygu_hIu0_t0",
-      "1": 2,
-      "3": -7
-     },
      "publicKeyType": 2,
      "relyingParty": {
       "aaguid": {
@@ -1306,7 +1289,7 @@
    "stored": [
     {
      "file": "artifacts/OiCtZ_OoWGuo9RiesCHMbTh5TJTbSdiGbnyVqb8n1CI/ff6154861a1b425a93ad598e301e8b2f1e01a2051e583dea0d332f2a5b93a938.json",
-     "sha256": "8168c3d43fc3d236a05fce1291615d1360242ed15c59242d904033ec73f6b75d",
+     "sha256": "a0aeb95e1fe74d539c75fb9a63d0acb8945aee900693e11c58488e69111f915f",
      "content": {
       "storageId": "nIBBTTKLdrgEbFE3KOkYJDeg::1a0c4506c00::c7e8d9e5046d4f0a8f7d23f9dffb5b95",
       "createdAt": 1790000000.0,
@@ -1328,15 +1311,6 @@
         "aaguidGuid": "00000000-0000-0000-0000-000000000000",
         "publicKeyAlgorithm": -7,
         "publicKey": "pQECAyYgASFYIH4ftpONpOfCMWIot0pA5M-bZb7vd14lJ_pHFeGNeLLaIlggTR6dG0fS-6MazgMyUI12V3wXjQiSxrwfygu_hIu0_t0",
-        "publicKeyBase64": "pQECAyYgASFYIH4ftpONpOfCMWIot0pA5M+bZb7vd14lJ/pHFeGNeLLaIlggTR6dG0fS+6MazgMyUI12V3wXjQiSxrwfygu/hIu0/t0=",
-        "publicKeyBase64Url": "pQECAyYgASFYIH4ftpONpOfCMWIot0pA5M-bZb7vd14lJ_pHFeGNeLLaIlggTR6dG0fS-6MazgMyUI12V3wXjQiSxrwfygu_hIu0_t0",
-        "publicKeyCose": {
-         "1": 2,
-         "3": -7,
-         "-1": 1,
-         "-2": "fh-2k42k58IxYii3SkDkz5tlvu93XiUn-kcV4Y14sto",
-         "-3": "TR6dG0fS-6MazgMyUI12V3wXjQiSxrwfygu_hIu0_t0"
-        },
         "publicKeyType": 2,
         "signCount": 0,
         "createdAt": 1790000000.0,

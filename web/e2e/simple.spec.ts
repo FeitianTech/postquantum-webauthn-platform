@@ -122,7 +122,7 @@ test.describe('/#simple', () => {
     const twoMldsa65 = [0x52, 0x53].map((first) => {
       const id = Buffer.from(mldsa65.credentialIdHex as string, 'hex');
       id[0] = first;
-      const key = Buffer.from(mldsa65.publicKeyBase64Url as string, 'base64url');
+      const key = Buffer.from(mldsa65.publicKey as string, 'base64url');
       const noise = createHash('shake256', { outputLength: 1900 }).update(id).digest();
       noise.forEach((byte, index) => { key[key.length - noise.length + index] ^= byte; });
       return {
@@ -135,7 +135,6 @@ test.describe('/#simple', () => {
         credentialIdBase64Url: id.toString('base64url'),
         credentialIdHex: id.toString('hex'),
         publicKey: key.toString('base64url'),
-        publicKeyBase64Url: key.toString('base64url'),
       };
     });
     const saved = await page.evaluate((key) => JSON.parse(window.localStorage.getItem(key) ?? '[]'), STORAGE_KEY);

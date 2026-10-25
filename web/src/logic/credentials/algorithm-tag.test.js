@@ -25,14 +25,13 @@ describe('resolveCredentialAlgorithmIdentifier', () => {
     expect(resolveCredentialAlgorithmIdentifier(MLDSA65)).toBe(-49);
   });
 
+  // A record from an earlier release kept its COSE key as a map beside its other spellings.
   it('reads the COSE key when the record names no algorithm', () => {
-    expect(resolveCredentialAlgorithmIdentifier({ publicKeyCose: ES256.publicKeyCose })).toBe(-7);
+    expect(resolveCredentialAlgorithmIdentifier({ publicKeyCose: { 1: 2, 3: -7, '-1': 1 } })).toBe(-7);
   });
 
   it('finds none in a COSE key without an algorithm', () => {
-    const coseKey = { ...ES256.publicKeyCose };
-    delete coseKey[3];
-    expect(resolveCredentialAlgorithmIdentifier({ publicKeyCose: coseKey })).toBeNull();
+    expect(resolveCredentialAlgorithmIdentifier({ publicKeyCose: { 1: 2, '-1': 1 } })).toBeNull();
   });
 
   it('skips an empty field and reads the next one', () => {

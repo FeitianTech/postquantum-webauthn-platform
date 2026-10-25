@@ -53,9 +53,9 @@ def test_the_algorithm_is_read_from_the_keys_label_three_or_its_alg(public_key, 
     assert credential_info["publicKeyAlgorithm"] == algorithm
 
 
-def test_a_key_that_does_not_encode_has_no_public_key_encodings():
-    assert advanced_registration_record._public_key_encodings(_with_public_key({1: object()})) == (None, None)
-    assert advanced_registration_record._public_key_encodings(_with_public_key(None)) == (None, None)
+def test_a_key_that_does_not_encode_has_no_public_key():
+    assert advanced_registration_record._public_key_base64url(_with_public_key({1: object()})) is None
+    assert advanced_registration_record._public_key_base64url(_with_public_key(None)) is None
 
 
 def test_an_rp_id_hash_the_checks_left_open_is_compared_with_the_rp_id():

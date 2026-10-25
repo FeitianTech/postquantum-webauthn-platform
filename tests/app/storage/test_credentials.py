@@ -86,10 +86,8 @@ def test_public_key_material_helper(storage_local):
     public_key = {1: "type-a", 3: -7, -1: b"\xAA\xBB"}
     storage.add_public_key_material(target, public_key)
 
-    assert target["publicKeyCose"][-1] == "qrs"
-    assert target["publicKeyBytes"] == "qrs"
-    assert target["publicKeyType"] == "type-a"
-    assert target["publicKeyAlgorithm"] == -7
+    # The key's type and algorithm; the key itself is kept once, as publicKey.
+    assert target == {"publicKeyType": "type-a", "publicKeyAlgorithm": -7}
 
 
 def test_add_public_key_material_respects_existing_type_and_algorithm(storage_local):
