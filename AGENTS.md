@@ -238,7 +238,8 @@ its logic out here first.
   it), `origins.py`, `attestation_trust.py`, `relying_party.py` (the default RP name is the
   site's, `APP_TITLE`; an RP ID a request names is used as named, and with an origin allowlist
   only when an allowed origin can use it, `requested_rp_id_refusal`), `paths.py` (the project and instance roots; `store_dir`: every local
-  store under `instance/`, its setting read when used), `request_limits.py` (8 MiB, the metadata
+  store under `instance/`, its setting read when used; `LOCAL_STORES`, the three stores' settings
+  and folders), `request_limits.py` (8 MiB, the metadata
   upload 16 MiB, `/api/codec` 1 MiB, a registration's credential response 256 KiB (a Simple
   complete's body, an Advanced complete's `__credential_response`); 413 in JSON; the namespace's
   quotas, `artifacts_quota` and `metadata_quota`, and the Simple credentials a username keeps; and the codec's 20,000 items read per request,
@@ -269,7 +270,9 @@ its logic out here first.
   `aaguid.py` (an AAGUID's GUID spelling), `env_flags.py`.
 - `visitor_session.py`: the namespace a visitor's uploads and credentials are stored under (its id
   in a signed cookie of its own, never the Flask session; the last-access touch, throttled in
-  memory; and the one sweep of idle namespaces, on both backends). `challenge_registry.py`: each
+  memory; and the one sweep of idle namespaces, on both backends: a namespace whole, by its
+  marker's time or else its newest object's, locally its folder in all three stores,
+  `storage/session_metadata.py`). `challenge_registry.py`: each
   ceremony's challenge used once (the session is a client-side cookie, so popping it does not
   stop a replay). `csp_reports.py`: a CSP report read in either format and logged in one line.
   `startup.py`: the Cloud Run warm-up after the worker starts (the bucket, the MDS snapshot, the
