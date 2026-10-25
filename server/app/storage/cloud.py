@@ -5,7 +5,7 @@ import importlib
 import os
 import threading
 from collections.abc import Iterable
-from typing import Any
+from typing import Any, NamedTuple
 
 from ..env_flags import parse_env_flag
 
@@ -18,6 +18,7 @@ __all__ = [
     "download_bytes_with_generation",
     "gcs_enabled",
     "list_blob_names",
+    "list_blob_stats",
     "normalise_blob_prefix",
     "upload_bytes",
     "upload_bytes_if_generation",
@@ -219,6 +220,30 @@ def list_blob_names(prefix: str, *, delimiter: str | None = None) -> Iterable[st
         options["delimiter"] = delimiter
     names = [blob.name for blob in bucket.list_blobs(**options)]
     yield from names
+
+
+class BlobStat(NamedTuple):
+    """One object a listing names: its size in bytes, and when it was last written (epoch seconds)."""
+
+    name: str
+    size: int
+    updated: float | None
+
+
+def list_blob_stats(prefix: str) -> list[BlobStat]:
+    """The objects under ``prefix``, each with its size and the time it was last written.
+
+    One listing: Cloud Storage returns each object's metadata with its name, so
+    no object is read.
+    """
+
+    bucket = _ensure_bucket()
+
+    stats = []
+    for blob in bucket.list_blobs(prefix=prefix, retry=_retry()):
+        updated = blob.updated.timestamp() if blob.updated is not None else None
+        stats.append(BlobStat(blob.name, int(blob.size or 0), updated))
+    return stats
 
 
 def list_prefixes(prefix: str) -> list[str]:

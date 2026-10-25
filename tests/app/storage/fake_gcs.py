@@ -68,8 +68,18 @@ class Bucket:
             if delimiter is not None and delimiter in rest:
                 prefixes.add(prefix + rest[: rest.index(delimiter) + len(delimiter)])
             else:
-                blobs.append(Blob(self, name))
+                blobs.append(self._listed(name))
         return Listing(blobs[:max_results], prefixes)
+
+    def _listed(self, name: str) -> Blob:
+        """``name`` as a listing gives it: with its size and the time it was last written."""
+
+        blob = Blob(self, name)
+        with self.lock:
+            data, _generation = self.objects.get(name, (b"", 0))
+            blob.size = len(data)
+            blob.updated = self.updated.get(name)
+        return blob
 
     def put(self, name: str, data: bytes) -> None:
         """Write ``name`` directly, as another server instance would."""
@@ -98,6 +108,7 @@ class Blob:
         self.bucket = bucket
         self.name = name
         self.generation = None
+        self.size: int | None = None
         self.updated: datetime | None = None
 
     def download_as_bytes(self, **options) -> bytes:

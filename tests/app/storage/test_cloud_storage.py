@@ -38,6 +38,35 @@ def test_list_blob_names_passes_a_delimiter_only_when_asked(monkeypatch):
     ]
 
 
+def test_a_listing_with_stats_gives_each_objects_size_and_time_without_reading_it(monkeypatch):
+    calls = []
+    written = datetime(2026, 10, 24, tzinfo=timezone.utc)
+
+    class _Bucket:
+        def list_blobs(self, **kwargs):
+            calls.append(kwargs)
+            return [
+                types.SimpleNamespace(name="user-data/a/x.json", size=12, updated=written),
+                types.SimpleNamespace(name="user-data/a/y.json", size=None, updated=None),
+            ]
+
+    monkeypatch.setattr(cloud, "_ensure_bucket", lambda: _Bucket())
+
+    assert cloud.list_blob_stats("user-data/a/") == [
+        cloud.BlobStat("user-data/a/x.json", 12, written.timestamp()),
+        cloud.BlobStat("user-data/a/y.json", 0, None),
+    ]
+    assert calls == [{"prefix": "user-data/a/", "retry": RETRY}]
+
+
+def test_a_listing_with_stats_reads_what_the_bucket_holds(monkeypatch):
+    bucket = fake_gcs.install(monkeypatch)
+    bucket.put("user-data/a/x.json", b"12345")
+
+    [stat] = cloud.list_blob_stats("user-data/a/")
+    assert (stat.name, stat.size, stat.updated) == ("user-data/a/x.json", 5, bucket.updated["user-data/a/x.json"].timestamp())
+
+
 def test_download_bytes_handles_not_found(monkeypatch):
     class _Blob:
         def download_as_bytes(self, **_options):
