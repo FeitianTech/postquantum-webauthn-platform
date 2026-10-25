@@ -59,7 +59,6 @@ def build_credential_info(
         },
         "registration_time": time.time(),
         "client_data_json": prepared["clientDataJson"] or "",
-        "attestation_object": prepared["rawAttestationObject"] or "",
         "attestation_format": prepared["attestationFormat"],
         "attestation_statement": prepared["attestationStatement"],
         "client_extension_outputs": client_extension_results,
@@ -268,7 +267,6 @@ def _relying_party_info(
     return registration_facts.relying_party_info(
         aaguid=registration_facts.aaguid_block(aaguid_hex, aaguid_guid),
         attestation_format=attestation_format,
-        attestation_object=credential_info.get("attestation_object"),
         created_at=facts.registration_timestamp,
         credential_id=facts.identifiers,
         rp_hash=facts.rp_hash,
@@ -399,7 +397,6 @@ def _stored_credential(
         "clientExtensionOutputs": stored_extensions,
         "attestationFormat": attestation_format,
         "attestationStatement": json_values.make_json_safe(attestation_statement),
-        "attestationObject": json_values.make_json_safe(credential_info.get("attestation_object")),
         "authenticatorData": authenticator_data_hex,
         "authenticatorDataHash": authenticator_data_hash,
         "clientDataJSON": json_values.make_json_safe(credential_info.get("client_data_json")),

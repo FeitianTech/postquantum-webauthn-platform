@@ -182,7 +182,7 @@
     ],
     [
      "Content-Length",
-     "16397"
+     "15854"
     ],
     [
      "X-Content-Type-Options",
@@ -225,7 +225,7 @@
      "contents": null
     }
    ],
-   "bodySha256": "7017183f37feb89c28a32eeac42e75988ff3c040128181ed2d47de33ab9cf3eb",
+   "bodySha256": "0aa3dc85cb681575cf42cdedc4a013ea76c806284b2196e9d3ba444a1d446706",
    "body": {
     "actualResidentKey": null,
     "algo": "RS256 (RSA)",
@@ -355,7 +355,6 @@
      "aaguid": "AAAAAAAAAAAAAAAAAAAAAA",
      "aaguidHex": "00000000000000000000000000000000",
      "attestationFormat": "none",
-     "attestationObject": "o2NmbXRkbm9uZWdhdHRTdG10oGhhdXRoRGF0YVkBZ0mWDeWIDoxodDQXD2R2YFuP5K65ooYyx5lc87qDHZdjRQAAAAAAAAAAAAAAAAAAAAAAAAAAACC8r4V9eEHYr-a9OJPVuUEx15CE2UsFTMyN5hw4IFtJGaQBAwM5AQAgWQEAmmUmfjtrDvhk5PF50y6IttCnZhqHOrwncKHbealTmMDDVfWFbU8hMdpxSC3ABqMXZT7Ok2L7Ll-CLG4MHIGOrS6IGgiTho-oS3_M999AXzAerrS1jALa2LfRCyOK9G22QsDL5UmZtnLInQfxQABEU0mSR5LtQje2QKNFiexi5Ss5BDjUOW3nsrukmlsnvdl6ooe7n7JA7ytt30k-bj77CiLXEEmbAqyGmXgAfu7K7PgCp7Eo88vz_oyrJYrhaHF3hXqKAKzFAadgHJBVQBCsz0jpHki9o59U5FuYFGzLohVu6JHIUOwnoHwutLq_Z73ee8GXeGUX52SFGIdcjssm8SFDAQAB",
      "attestationStatement": {},
      "authenticatorAttachment": null,
      "authenticatorData": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAAAAAAAAAAAAAAAAAAAAAAAAILyvhX14Qdiv5r04k9W5QTHXkITZSwVMzI3mHDggW0kZpAEDAzkBACBZAQCaZSZ-O2sO-GTk8XnTLoi20KdmGoc6vCdwodt5qVOYwMNV9YVtTyEx2nFILcAGoxdlPs6TYvsuX4IsbgwcgY6tLogaCJOGj6hLf8z330BfMB6utLWMAtrYt9ELI4r0bbZCwMvlSZm2csidB_FAAERTSZJHku1CN7ZAo0WJ7GLlKzkEONQ5beeyu6SaWye92Xqih7ufskDvK23fST5uPvsKItcQSZsCrIaZeAB-7srs-AKnsSjzy_P-jKsliuFocXeFeooArMUBp2AckFVAEKzPSOkeSL2jn1TkW5gUbMuiFW7okchQ7CegfC60ur9nvd57wZd4ZRfnZIUYh1yOyybxIUMBAAE",

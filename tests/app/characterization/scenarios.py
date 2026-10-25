@@ -225,21 +225,25 @@ def _advanced_register(
     *,
     options: dict[str, Any] | None = None,
     begin_options: dict[str, Any] | None = None,
+    sent: list[dict[str, Any]] | None = None,
     **payload: Any,
 ):
+    """An advanced registration's begin and complete; the credential complete is sent
+    is appended to ``sent`` when given."""
+
     options = options or _options()
     challenge = unb64u(options["challenge"]["$base64url"])
     begin = copy.deepcopy(begin_options or options)
     response = r.post(client, "/api/advanced/register/begin", json={"publicKey": begin})
     if response is not None and response.status_code == 200:
         challenge = unb64u(response.get_json()["publicKey"]["challenge"])
+    credential = m.registration_payload(authenticator, challenge=challenge, **payload)
+    if sent is not None:
+        sent.append(credential)
     return r.post(
         client,
         "/api/advanced/register/complete",
-        json={
-            "publicKey": copy.deepcopy(options),
-            "__credential_response": m.registration_payload(authenticator, challenge=challenge, **payload),
-        },
+        json={"publicKey": copy.deepcopy(options), "__credential_response": credential},
         headers=HEADERS,
     )
 
@@ -670,21 +674,21 @@ def _(r: Recorder) -> None:
     ]
     stored = [response.get_json()["storedCredential"] for response in registrations]
     for record in stored:
-        r.post(client, "/api/codec", json={"payload": record["attestationObject"]})
+        r.post(client, "/api/codec", json={"payload": record["registrationResponse"]["response"]["attestationObject"]})
     r.post(client, "/api/codec", json={"payload": stored[0]["authenticatorData"]})
 
 
 @scenario("advanced-registration-detail-decodes")
 def _(r: Recorder) -> None:
     """What an advanced registration's result asks the decoder: each registration's
-    attestation object as the browser received it (base64url, which the relying
-    party's view repeats), decoded as the result's registration view asks. A none
-    attestation, a packed one with a certificate and every extension, and an ML-DSA
-    one."""
+    attestation object as the browser sent it (base64url), decoded as the result's
+    registration view asks. A none attestation, a packed one with a certificate and
+    every extension, and an ML-DSA one."""
 
     client = r.client()
+    sent: list[dict[str, Any]] = []
     registrations = [
-        _advanced_register(r, client, m.Authenticator("adv-detail-es256", aaguid=AAGUID)),
+        _advanced_register(r, client, m.Authenticator("adv-detail-es256", aaguid=AAGUID), sent=sent),
         _advanced_register(
             r,
             client,
@@ -698,14 +702,16 @@ def _(r: Recorder) -> None:
             attachment="cross-platform",
             transports=["usb", "nfc"],
             extension_results={"credProps": {"rk": False}, "minPinLength": 6},
+            sent=sent,
         ),
         _advanced_register(
             r, client, m.Authenticator("adv-detail-mldsa44", key_type="ML-DSA-44"), attestation="self",
-            options=_options(pubKeyCredParams=[{"type": "public-key", "alg": -48}]),
+            options=_options(pubKeyCredParams=[{"type": "public-key", "alg": -48}]), sent=sent,
         ),
     ]
-    for response in registrations:
-        r.post(client, "/api/codec", json={"payload": response.get_json()["relyingParty"]["attestationObject"]})
+    assert all(response.status_code == 200 for response in registrations)
+    for credential in sent:
+        r.post(client, "/api/codec", json={"payload": credential["response"]["attestationObject"]})
 
 
 @scenario("advanced-authentication-answers")

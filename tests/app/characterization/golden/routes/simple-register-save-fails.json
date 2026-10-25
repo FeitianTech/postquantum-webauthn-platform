@@ -182,7 +182,7 @@
     ],
     [
      "Content-Length",
-     "12618"
+     "12336"
     ],
     [
      "X-Content-Type-Options",
@@ -225,7 +225,7 @@
      "contents": null
     }
    ],
-   "bodySha256": "643b448fc1162ce6096aceb5b267207d580ab9ba76ca2eb8b966b1192758cc00",
+   "bodySha256": "944e04bd8de961183a287b8a835a853219dd81add63e20dd59b8c91972814997",
    "body": {
     "actualResidentKey": null,
     "algo": "ES256 (ECDSA)",
@@ -355,7 +355,6 @@
      "aaguid": "AAAAAAAAAAAAAAAAAAAAAA",
      "aaguidHex": "00000000000000000000000000000000",
      "attestationFormat": "none",
-     "attestationObject": "o2NmbXRkbm9uZWdhdHRTdG10oGhhdXRoRGF0YVikSZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAAAAAAAAAAAAAAAAAAAAAAAAIG7xFN50LXI2vQ7midDxwH6OXkBsoMJdqoq81-VwvQohpQECAyYgASFYIAfVYnvHdGJSEXI-LQxWQQEbIHufII8HpwWLbW_JAmsQIlgg07NoYlNzDOW4jodt19K-TBvWMpY7oWbRMfKQY3xE-A4",
      "attestationStatement": {},
      "authenticatorAttachment": null,
      "authenticatorData": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAAAAAAAAAAAAAAAAAAAAAAAAIG7xFN50LXI2vQ7midDxwH6OXkBsoMJdqoq81-VwvQohpQECAyYgASFYIAfVYnvHdGJSEXI-LQxWQQEbIHufII8HpwWLbW_JAmsQIlgg07NoYlNzDOW4jodt19K-TBvWMpY7oWbRMfKQY3xE-A4",
@@ -1009,7 +1008,7 @@
     ],
     [
      "Content-Length",
-     "12618"
+     "12336"
     ],
     [
      "X-Content-Type-Options",
@@ -1052,7 +1051,7 @@
      "contents": null
     }
    ],
-   "bodySha256": "e3255f841bb3caa464cde8ef7e9269cdcc9e3d27ed509c6e3a6bf1ab7c00adb1",
+   "bodySha256": "8bc47e4105324fd560a2d2844d532042d36eada9b45f1b77e86127fd544e28f9",
    "body": {
     "actualResidentKey": null,
     "algo": "ES256 (ECDSA)",
@@ -1182,7 +1181,6 @@
      "aaguid": "AAAAAAAAAAAAAAAAAAAAAA",
      "aaguidHex": "00000000000000000000000000000000",
      "attestationFormat": "none",
-     "attestationObject": "o2NmbXRkbm9uZWdhdHRTdG10oGhhdXRoRGF0YVikSZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAAAAAAAAAAAAAAAAAAAAAAAAIFOf5RaeLiOi8Os9otLhjbs0fzs5lJX8buIls83YqJlXpQECAyYgASFYIChnOZ_FrciM_toXPg6Xng8w731UCLPW7Hwx-lTAEmhdIlggrTV6YKhtwAoGgWepwHwcTNoXFjYYSHIixAw14GJDj28",
      "attestationStatement": {},
      "authenticatorAttachment": null,
      "authenticatorData": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAAAAAAAAAAAAAAAAAAAAAAAAIFOf5RaeLiOi8Os9otLhjbs0fzs5lJX8buIls83YqJlXpQECAyYgASFYIChnOZ_FrciM_toXPg6Xng8w731UCLPW7Hwx-lTAEmhdIlggrTV6YKhtwAoGgWepwHwcTNoXFjYYSHIixAw14GJDj28",

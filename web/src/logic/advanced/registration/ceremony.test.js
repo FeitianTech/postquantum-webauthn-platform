@@ -112,7 +112,7 @@ function authenticatorGiving(credential) {
 }
 
 /** The credential JSON the server is sent for a recorded registration's credential. */
-function sentCredential({ begin, complete }) {
+function sentCredential({ begin, complete, attestationObject }) {
   const clientData = { type: 'webauthn.create', challenge: begin.body.publicKey.challenge, origin: 'https://localhost' };
   return {
     type: 'public-key',
@@ -121,7 +121,7 @@ function sentCredential({ begin, complete }) {
     authenticatorAttachment: 'cross-platform',
     response: {
       clientDataJSON: base64url(JSON.stringify(clientData)),
-      attestationObject: complete.body.relyingParty.attestationObject,
+      attestationObject,
       transports: ['usb'],
     },
     clientExtensionResults: { credProps: { rk: false } },

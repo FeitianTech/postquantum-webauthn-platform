@@ -10,11 +10,11 @@ import { advancedArtifact, attestationDecodeAnswer, simpleRecord } from '@/test/
 const AAGUID = '00112233445566778899aabbccddeeff';
 
 describe('buildRegistrationContext', () => {
-  it('reads a Simple registration\'s attestation object, authenticator data, client data and relying party', () => {
+  it('reads a Simple registration\'s attestation object, from the browser\'s response it kept, its authenticator data, client data and relying party', () => {
     const record = simpleRecord('es256');
     const context = buildRegistrationContext(record);
     expect(context).toMatchObject({
-      attestationObjectValue: record.attestationObject,
+      attestationObjectValue: record.registrationResponse.response.attestationObject,
       attestationObjectDecoded: null,
       authenticatorDataHex: record.authenticatorDataHex,
       fallbackCertificates: [],
@@ -85,20 +85,26 @@ describe('buildRegistrationContext', () => {
     expect([decoded.attestationObjectValue, decoded.authenticatorDataForDetail]).toEqual(['from-snapshot', 'auth-from-snapshot']);
 
     const empty = buildRegistrationContext(record, { detailPreparation: { attestationObjectValue: '', authenticatorDataValue: '' } });
-    expect([empty.attestationObjectValue, empty.authenticatorDataForDetail]).toEqual([record.attestationObject, record.authenticatorData]);
+    expect([empty.attestationObjectValue, empty.authenticatorDataForDetail]).toEqual([record.registrationResponse.response.attestationObject, record.authenticatorData]);
   });
 
   it('reads an advanced artifact\'s record the same way', () => {
     const { storedCredential } = advancedArtifact();
     const context = buildRegistrationContext(storedCredential);
-    expect(context.attestationObjectValue).toBe(storedCredential.attestationObject);
+    expect(context.attestationObjectValue).toBe(storedCredential.registrationResponse.response.attestationObject);
     expect(context.authDataAaguidHex).toBe(AAGUID);
     expect(context.registrationCredential.id).toBe(storedCredential.registrationResponse.id);
     expect(context.registrationCredential.clientExtensionResults).toEqual(storedCredential.registrationResponse.clientExtensionResults);
   });
 
-  it('builds a response from the record\'s own fields when it kept none', () => {
-    const record = simpleRecord('es256');
+  it('prefers the attestation object an earlier release kept on the record to its response\'s', () => {
+    const record = { ...simpleRecord('es256'), attestationObject: 'o2NmbXRkbm9uZQ' };
+    expect(buildRegistrationContext(record).attestationObjectValue).toBe('o2NmbXRkbm9uZQ');
+  });
+
+  it('builds a response from the fields an earlier release\'s record kept when it kept none', () => {
+    const record = { ...simpleRecord('es256') };
+    record.attestationObject = record.registrationResponse.response.attestationObject;
     delete record.registrationResponse;
     const { registrationCredential } = buildRegistrationContext(record);
     expect(registrationCredential).toEqual({

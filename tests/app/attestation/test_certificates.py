@@ -99,7 +99,7 @@ def test_an_attestation_statement_that_is_no_map_has_no_certificates():
     attestation = cbor.encode({"fmt": "none", "attStmt": [1], "authData": authenticator.authenticator_data()})
     payload["response"]["attestationObject"] = ceremony_helpers.b64u(attestation)
 
-    fmt, statement, _attestation, _client_data, _extensions, chain = attestation_certificates.extract_attestation_details(payload)
+    fmt, statement, _client_data, _extensions, chain = attestation_certificates.extract_attestation_details(payload)
 
     assert (fmt, statement, chain) == ("none", [1], [])
 
@@ -108,7 +108,7 @@ def test_each_x5c_entry_is_serialised_or_reported_as_what_went_wrong():
     details = attestation_certificates.extract_attestation_details(
         _registration_with_x5c(["%%%", b"", b"junk", CERTIFICATE])
     )
-    fmt, _statement, _attestation, _client_data, _extensions, chain = details
+    fmt, _statement, _client_data, _extensions, chain = details
 
     assert fmt == "packed"
     assert chain[0] == {"error": "Unable to decode attestation certificate bytes."}
@@ -194,7 +194,7 @@ def test_a_chain_over_the_length_limit_keeps_its_first_ten_certificates():
 
 @pytest.mark.parametrize("response", [["not-a-mapping"], {"not": "a registration"}])
 def test_a_response_that_is_no_registration_has_no_attestation_details(response):
-    assert attestation_certificates.extract_attestation_details(response) == ("none", {}, None, None, {}, [])
+    assert attestation_certificates.extract_attestation_details(response) == ("none", {}, None, {}, [])
 
 
 @pytest.mark.parametrize(

@@ -4,22 +4,32 @@
 // certificate and every extension, an ML-DSA one, each followed by the
 // decoder's answer for its attestation object), and the credential the
 // authenticator gave for each.
-import { credentialToJSON, goldenAnswers } from '../simple/ceremony-answers.js';
+import { credentialToJSON, goldenAnswers, goldenRequests } from '../simple/ceremony-answers.js';
 
 export const ADVANCED_SCENARIO = 'advanced-registration-detail-decodes';
 
-/** Each registration: its begin and complete answers and the decoder's answer for its attestation object. */
+/** The attestation object a registration's browser sent, as the artifact its complete stored keeps the browser's response. */
+function sentAttestationObject({ stored }) {
+  const { content } = stored.find(({ file }) => file.startsWith('artifacts/'));
+  return content.payload.storedCredential.registrationResponse.response.attestationObject;
+}
+
+/**
+ * Each registration: its begin and complete answers, the decoder's answer for its
+ * attestation object, and that attestation object as the browser sent it.
+ */
 export function advancedRegistrations() {
   const answers = goldenAnswers(ADVANCED_SCENARIO);
   const begins = answers.filter(({ request }) => request.includes('/register/begin'));
   const completes = answers.filter(({ request }) => request.includes('/register/complete'));
+  const sent = goldenRequests(ADVANCED_SCENARIO).filter(({ request }) => request.includes('/register/complete')).map(sentAttestationObject);
   const decodes = answers.filter(({ request }) => request === 'POST /api/codec');
-  return completes.map((complete, index) => ({ begin: begins[index], complete, decode: decodes[index] }));
+  return completes.map((complete, index) => ({ begin: begins[index], complete, decode: decodes[index], attestationObject: sent[index] }));
 }
 
 /** The decoder as the server answered the registrations' attestation objects, by the payload asked. */
 export function advancedDecodeAnswer(payload) {
-  const found = advancedRegistrations().find(({ complete }) => complete.body.relyingParty.attestationObject === payload);
+  const found = advancedRegistrations().find(({ attestationObject }) => attestationObject === payload);
   return found ? found.decode : { status: 422, body: { error: 'The payload is not valid CBOR.' } };
 }
 
@@ -33,7 +43,7 @@ const bytes = (base64url) => {
  * registration: its id and attestation object as the server received them, and
  * client data naming the begin answer's challenge.
  */
-export function recordedCredential({ begin, complete }) {
+export function recordedCredential({ begin, complete, attestationObject }) {
   const clientData = { type: 'webauthn.create', challenge: begin.body.publicKey.challenge, origin: 'https://localhost' };
   return {
     type: 'public-key',
@@ -42,7 +52,7 @@ export function recordedCredential({ begin, complete }) {
     authenticatorAttachment: 'cross-platform',
     response: {
       clientDataJSON: new TextEncoder().encode(JSON.stringify(clientData)).buffer,
-      attestationObject: bytes(complete.body.relyingParty.attestationObject),
+      attestationObject: bytes(attestationObject),
       getTransports: () => ['usb'],
     },
     getClientExtensionResults: () => ({ credProps: { rk: false } }),

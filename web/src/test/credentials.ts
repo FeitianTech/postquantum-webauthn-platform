@@ -31,10 +31,12 @@ export const DETAIL_SCENARIO = 'registration-detail-decodes';
 /** The decoder's route as the server answered the credential details' questions, by the payload asked. */
 export function decodeRoute(): Route {
   const answers = answersOf(DETAIL_SCENARIO);
-  const registered = answers.filter((entry) => entry.request.includes('/register/complete')).map((entry) => entry.body.storedCredential as Record<string, string>);
+  // Each record keeps the browser's response, whose attestation object the details decode.
+  type Registered = { authenticatorData: string; registrationResponse: { response: { attestationObject: string } } };
+  const registered = answers.filter((entry) => entry.request.includes('/register/complete')).map((entry) => entry.body.storedCredential as Registered);
   const decodes = answers.filter((entry) => entry.request === 'POST /api/codec');
   const byPayload = new Map<string, Answer>();
-  registered.forEach((record, index) => byPayload.set(record.attestationObject, decodes[index]));
+  registered.forEach((record, index) => byPayload.set(record.registrationResponse.response.attestationObject, decodes[index]));
   byPayload.set(registered[0].authenticatorData, decodes[registered.length]);
   return (init) => {
     const payload = JSON.parse(String(init?.body)).payload as string;

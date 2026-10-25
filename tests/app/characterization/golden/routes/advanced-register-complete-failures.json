@@ -316,7 +316,7 @@
     ],
     [
      "Content-Length",
-     "9553"
+     "8989"
     ],
     [
      "X-Content-Type-Options",
@@ -359,7 +359,7 @@
      "contents": null
     }
    ],
-   "bodySha256": "5a5d59c3c55724e4b5f88dfe06cfa3c5e8dda84d66359e0e15b91ee694a374ec",
+   "bodySha256": "b1e85f80fd86723723eb49b3bc4cde8ff933e6c82ea2aae19d00132d2b703438",
    "body": {
     "actualResidentKey": null,
     "algo": "ES256 (ECDSA)",
@@ -446,7 +446,6 @@
       "raw": "00000000000000000000000000000000"
      },
      "attestationFmt": "none",
-     "attestationObject": "o2NmbXRkbm9uZWdhdHRTdG10oGhhdXRoRGF0YVikSZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAAAAAAAAAAAAAAAAAAAAAAAAIDvmmpDgLZUekVh3QKTeK16hij6QxsWnUm2HoXaW3LDVpQECAyYgASFYIG-FF-DmUlPm46YMFIlpZ0u_THw1hNrPH_Mo7I8rcEUAIlggtcNTROm_q4sWm8RWSjM_B4gwuocGQU4pxrBgd1hR3kg",
      "authenticatorDataHash": "b56fe330e5b37c60d74bbf501c5b0f1d263640fb06e3e2535a8f81c0dabd625d",
      "createdAt": "2026-09-21T14:13:20+00:00",
      "credentialId": "3be69a90e02d951e91587740a4de2b5ea18a3e90c6c5a7526d87a17696dcb0d5",
@@ -619,7 +618,6 @@
        "raw": "00000000000000000000000000000000"
       },
       "attestationFmt": "none",
-      "attestationObject": "o2NmbXRkbm9uZWdhdHRTdG10oGhhdXRoRGF0YVikSZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAAAAAAAAAAAAAAAAAAAAAAAAIDvmmpDgLZUekVh3QKTeK16hij6QxsWnUm2HoXaW3LDVpQECAyYgASFYIG-FF-DmUlPm46YMFIlpZ0u_THw1hNrPH_Mo7I8rcEUAIlggtcNTROm_q4sWm8RWSjM_B4gwuocGQU4pxrBgd1hR3kg",
       "authenticatorDataHash": "b56fe330e5b37c60d74bbf501c5b0f1d263640fb06e3e2535a8f81c0dabd625d",
       "createdAt": "2026-09-21T14:13:20+00:00",
       "credentialId": "3be69a90e02d951e91587740a4de2b5ea18a3e90c6c5a7526d87a17696dcb0d5",
@@ -655,7 +653,7 @@
    "stored": [
     {
      "file": "artifacts/RCwQ_e2mdacpbW9TWRyln6Yfq7alEzciAIw_aJmbqK8/1556ed03d42b6fa819390dfecd2e0c56f33656e3b9643f82e651793dfb6cf07f.json",
-     "sha256": "5ab2ee071effb0006b969c6de4ff3cfe1ac79ca4c758270b9a562c3abb714726",
+     "sha256": "64a7c8f9e59e65eca83cf1a287f2592443b1d701b11ca4c54435920109c23bb5",
      "content": {
       "storageId": "O-aakOAtlR6RWHdApN4rXqGK::1a0c4506c00::11104dd440fd4448b42ae058ba84b657",
       "createdAt": 1790000000.0,
@@ -690,7 +688,6 @@
         "clientExtensionOutputs": {},
         "attestationFormat": "none",
         "attestationStatement": {},
-        "attestationObject": "o2NmbXRkbm9uZWdhdHRTdG10oGhhdXRoRGF0YVikSZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAAAAAAAAAAAAAAAAAAAAAAAAIDvmmpDgLZUekVh3QKTeK16hij6QxsWnUm2HoXaW3LDVpQECAyYgASFYIG-FF-DmUlPm46YMFIlpZ0u_THw1hNrPH_Mo7I8rcEUAIlggtcNTROm_q4sWm8RWSjM_B4gwuocGQU4pxrBgd1hR3kg",
         "authenticatorData": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d976345000000000000000000000000000000000000000000203be69a90e02d951e91587740a4de2b5ea18a3e90c6c5a7526d87a17696dcb0d5a50102032620012158206f8517e0e65253e6e3a60c148969674bbf4c7c3584dacf1ff328ec8f2b704500225820b5c35344e9bfab8b169bc4564a333f078830ba8706414e29c6b060775851de48",
         "authenticatorDataHash": "b56fe330e5b37c60d74bbf501c5b0f1d263640fb06e3e2535a8f81c0dabd625d",
         "clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIiwiY2hhbGxlbmdlIjoiTVRFeE1URXhNVEV4TVRFeE1URXhNVEV4TVRFeE1URXhNVEV4TVRFeE1URSIsIm9yaWdpbiI6Imh0dHA6Ly9sb2NhbGhvc3QiLCJjcm9zc09yaWdpbiI6ZmFsc2V9",
@@ -700,7 +697,6 @@
           "guid": "00000000-0000-0000-0000-000000000000"
          },
          "attestationFmt": "none",
-         "attestationObject": "o2NmbXRkbm9uZWdhdHRTdG10oGhhdXRoRGF0YVikSZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAAAAAAAAAAAAAAAAAAAAAAAAIDvmmpDgLZUekVh3QKTeK16hij6QxsWnUm2HoXaW3LDVpQECAyYgASFYIG-FF-DmUlPm46YMFIlpZ0u_THw1hNrPH_Mo7I8rcEUAIlggtcNTROm_q4sWm8RWSjM_B4gwuocGQU4pxrBgd1hR3kg",
          "createdAt": "2026-09-21T14:13:20+00:00",
          "credentialId": "3be69a90e02d951e91587740a4de2b5ea18a3e90c6c5a7526d87a17696dcb0d5",
          "credentialIdBase64": "O+aakOAtlR6RWHdApN4rXqGKPpDGxadSbYehdpbcsNU=",
@@ -932,7 +928,7 @@
     ],
     [
      "Content-Length",
-     "9556"
+     "8992"
     ],
     [
      "X-Content-Type-Options",
@@ -975,7 +971,7 @@
      "contents": null
     }
    ],
-   "bodySha256": "a968684d42e9fc44fa12fad40bcf6940c0efa46143752e5f234b04afaa750cd3",
+   "bodySha256": "e090a0be20084271f4a2c20e859c8ab1d779ed0e0c550ed295810c57ce1b6a1d",
    "body": {
     "actualResidentKey": null,
     "algo": "ES256 (ECDSA)",
@@ -1062,7 +1058,6 @@
       "raw": "00000000000000000000000000000000"
      },
      "attestationFmt": "none",
-     "attestationObject": "o2NmbXRkbm9uZWdhdHRTdG10oGhhdXRoRGF0YVikSZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAAAAAAAAAAAAAAAAAAAAAAAAIDvmmpDgLZUekVh3QKTeK16hij6QxsWnUm2HoXaW3LDVpQECAyYgASFYIG-FF-DmUlPm46YMFIlpZ0u_THw1hNrPH_Mo7I8rcEUAIlggtcNTROm_q4sWm8RWSjM_B4gwuocGQU4pxrBgd1hR3kg",
      "authenticatorDataHash": "b56fe330e5b37c60d74bbf501c5b0f1d263640fb06e3e2535a8f81c0dabd625d",
      "createdAt": "2026-09-21T14:13:20+00:00",
      "credentialId": "3be69a90e02d951e91587740a4de2b5ea18a3e90c6c5a7526d87a17696dcb0d5",
@@ -1235,7 +1230,6 @@
        "raw": "00000000000000000000000000000000"
       },
       "attestationFmt": "none",
-      "attestationObject": "o2NmbXRkbm9uZWdhdHRTdG10oGhhdXRoRGF0YVikSZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAAAAAAAAAAAAAAAAAAAAAAAAIDvmmpDgLZUekVh3QKTeK16hij6QxsWnUm2HoXaW3LDVpQECAyYgASFYIG-FF-DmUlPm46YMFIlpZ0u_THw1hNrPH_Mo7I8rcEUAIlggtcNTROm_q4sWm8RWSjM_B4gwuocGQU4pxrBgd1hR3kg",
       "authenticatorDataHash": "b56fe330e5b37c60d74bbf501c5b0f1d263640fb06e3e2535a8f81c0dabd625d",
       "createdAt": "2026-09-21T14:13:20+00:00",
       "credentialId": "3be69a90e02d951e91587740a4de2b5ea18a3e90c6c5a7526d87a17696dcb0d5",
@@ -1271,7 +1265,7 @@
    "stored": [
     {
      "file": "artifacts/RCwQ_e2mdacpbW9TWRyln6Yfq7alEzciAIw_aJmbqK8/3175a16ee727e093aef7ed1c0312a0e0a08ab32b419fc170e1eb25fc0c183037.json",
-     "sha256": "25047da33b0c9fd644d4cf6b8a3971281eb51b87026f636a667c7173eeb655e2",
+     "sha256": "d08e79b01185a4b27a215ce5af33f08e55d7cf09f1816d0f8bb3bb3626f79028",
      "content": {
       "storageId": "O-aakOAtlR6RWHdApN4rXqGK::1a0c4506c00::65bb1f918a5843eaa4a40336688b7e69",
       "createdAt": 1790000000.0,
@@ -1306,7 +1300,6 @@
         "clientExtensionOutputs": {},
         "attestationFormat": "none",
         "attestationStatement": {},
-        "attestationObject": "o2NmbXRkbm9uZWdhdHRTdG10oGhhdXRoRGF0YVikSZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAAAAAAAAAAAAAAAAAAAAAAAAIDvmmpDgLZUekVh3QKTeK16hij6QxsWnUm2HoXaW3LDVpQECAyYgASFYIG-FF-DmUlPm46YMFIlpZ0u_THw1hNrPH_Mo7I8rcEUAIlggtcNTROm_q4sWm8RWSjM_B4gwuocGQU4pxrBgd1hR3kg",
         "authenticatorData": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d976345000000000000000000000000000000000000000000203be69a90e02d951e91587740a4de2b5ea18a3e90c6c5a7526d87a17696dcb0d5a50102032620012158206f8517e0e65253e6e3a60c148969674bbf4c7c3584dacf1ff328ec8f2b704500225820b5c35344e9bfab8b169bc4564a333f078830ba8706414e29c6b060775851de48",
         "authenticatorDataHash": "b56fe330e5b37c60d74bbf501c5b0f1d263640fb06e3e2535a8f81c0dabd625d",
         "clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIiwiY2hhbGxlbmdlIjoiTVRFeE1URXhNVEV4TVRFeE1URXhNVEV4TVRFeE1URXhNVEV4TVRFeE1URSIsIm9yaWdpbiI6Imh0dHA6Ly9sb2NhbGhvc3QiLCJjcm9zc09yaWdpbiI6ZmFsc2V9",
@@ -1316,7 +1309,6 @@
           "guid": "00000000-0000-0000-0000-000000000000"
          },
          "attestationFmt": "none",
-         "attestationObject": "o2NmbXRkbm9uZWdhdHRTdG10oGhhdXRoRGF0YVikSZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAAAAAAAAAAAAAAAAAAAAAAAAIDvmmpDgLZUekVh3QKTeK16hij6QxsWnUm2HoXaW3LDVpQECAyYgASFYIG-FF-DmUlPm46YMFIlpZ0u_THw1hNrPH_Mo7I8rcEUAIlggtcNTROm_q4sWm8RWSjM_B4gwuocGQU4pxrBgd1hR3kg",
          "createdAt": "2026-09-21T14:13:20+00:00",
          "credentialId": "3be69a90e02d951e91587740a4de2b5ea18a3e90c6c5a7526d87a17696dcb0d5",
          "credentialIdBase64": "O+aakOAtlR6RWHdApN4rXqGKPpDGxadSbYehdpbcsNU=",
@@ -2152,7 +2144,7 @@
     ],
     [
      "Content-Length",
-     "9716"
+     "9152"
     ],
     [
      "X-Content-Type-Options",
@@ -2195,7 +2187,7 @@
      "contents": null
     }
    ],
-   "bodySha256": "78b46905d6c72bed0b33b67e98d0b564146aed9b6fa9894d21ea44ade5001f98",
+   "bodySha256": "5cb170130245812ebee8d4b8b14018b5be898e929036cf259a5abbe599ec93f6",
    "body": {
     "actualResidentKey": null,
     "algo": "ES256 (ECDSA)",
@@ -2288,7 +2280,6 @@
       "raw": "00000000000000000000000000000000"
      },
      "attestationFmt": "none",
-     "attestationObject": "o2NmbXRkbm9uZWdhdHRTdG10oGhhdXRoRGF0YVikSZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAAAAAAAAAAAAAAAAAAAAAAAAIDvmmpDgLZUekVh3QKTeK16hij6QxsWnUm2HoXaW3LDVpQECAyYgASFYIG-FF-DmUlPm46YMFIlpZ0u_THw1hNrPH_Mo7I8rcEUAIlggtcNTROm_q4sWm8RWSjM_B4gwuocGQU4pxrBgd1hR3kg",
      "authenticatorDataHash": "b56fe330e5b37c60d74bbf501c5b0f1d263640fb06e3e2535a8f81c0dabd625d",
      "createdAt": "2026-09-21T14:13:20+00:00",
      "credentialId": "3be69a90e02d951e91587740a4de2b5ea18a3e90c6c5a7526d87a17696dcb0d5",
@@ -2467,7 +2458,6 @@
        "raw": "00000000000000000000000000000000"
       },
       "attestationFmt": "none",
-      "attestationObject": "o2NmbXRkbm9uZWdhdHRTdG10oGhhdXRoRGF0YVikSZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAAAAAAAAAAAAAAAAAAAAAAAAIDvmmpDgLZUekVh3QKTeK16hij6QxsWnUm2HoXaW3LDVpQECAyYgASFYIG-FF-DmUlPm46YMFIlpZ0u_THw1hNrPH_Mo7I8rcEUAIlggtcNTROm_q4sWm8RWSjM_B4gwuocGQU4pxrBgd1hR3kg",
       "authenticatorDataHash": "b56fe330e5b37c60d74bbf501c5b0f1d263640fb06e3e2535a8f81c0dabd625d",
       "createdAt": "2026-09-21T14:13:20+00:00",
       "credentialId": "3be69a90e02d951e91587740a4de2b5ea18a3e90c6c5a7526d87a17696dcb0d5",
@@ -2503,7 +2493,7 @@
    "stored": [
     {
      "file": "artifacts/RCwQ_e2mdacpbW9TWRyln6Yfq7alEzciAIw_aJmbqK8/18d9a8fd4a5f0233b08a7bb809aa4f6219dad83169dd03676b85c9781de9cc93.json",
-     "sha256": "802dc90258ccc3b4baa720f7aaff7f1fa7450fe0f5def77e4ecd52ea376f1805",
+     "sha256": "b11a286b2647277aec0c423aa85d0175de5a70b7a3e6a6480f9ead8fd8a2929d",
      "content": {
       "storageId": "O-aakOAtlR6RWHdApN4rXqGK::1a0c4506c00::f86a88600dee46a3bfe2b6122d09b5d5",
       "createdAt": 1790000000.0,
@@ -2538,7 +2528,6 @@
         "clientExtensionOutputs": {},
         "attestationFormat": "none",
         "attestationStatement": {},
-        "attestationObject": "o2NmbXRkbm9uZWdhdHRTdG10oGhhdXRoRGF0YVikSZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAAAAAAAAAAAAAAAAAAAAAAAAIDvmmpDgLZUekVh3QKTeK16hij6QxsWnUm2HoXaW3LDVpQECAyYgASFYIG-FF-DmUlPm46YMFIlpZ0u_THw1hNrPH_Mo7I8rcEUAIlggtcNTROm_q4sWm8RWSjM_B4gwuocGQU4pxrBgd1hR3kg",
         "authenticatorData": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d976345000000000000000000000000000000000000000000203be69a90e02d951e91587740a4de2b5ea18a3e90c6c5a7526d87a17696dcb0d5a50102032620012158206f8517e0e65253e6e3a60c148969674bbf4c7c3584dacf1ff328ec8f2b704500225820b5c35344e9bfab8b169bc4564a333f078830ba8706414e29c6b060775851de48",
         "authenticatorDataHash": "b56fe330e5b37c60d74bbf501c5b0f1d263640fb06e3e2535a8f81c0dabd625d",
         "clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIiwiY2hhbGxlbmdlIjoiTVRFeE1URXhNVEV4TVRFeE1URXhNVEV4TVRFeE1URXhNVEV4TVRFeE1URSIsIm9yaWdpbiI6Imh0dHA6Ly9sb2NhbGhvc3QiLCJjcm9zc09yaWdpbiI6dHJ1ZX0",
@@ -2548,7 +2537,6 @@
           "guid": "00000000-0000-0000-0000-000000000000"
          },
          "attestationFmt": "none",
-         "attestationObject": "o2NmbXRkbm9uZWdhdHRTdG10oGhhdXRoRGF0YVikSZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAAAAAAAAAAAAAAAAAAAAAAAAIDvmmpDgLZUekVh3QKTeK16hij6QxsWnUm2HoXaW3LDVpQECAyYgASFYIG-FF-DmUlPm46YMFIlpZ0u_THw1hNrPH_Mo7I8rcEUAIlggtcNTROm_q4sWm8RWSjM_B4gwuocGQU4pxrBgd1hR3kg",
          "createdAt": "2026-09-21T14:13:20+00:00",
          "credentialId": "3be69a90e02d951e91587740a4de2b5ea18a3e90c6c5a7526d87a17696dcb0d5",
          "credentialIdBase64": "O+aakOAtlR6RWHdApN4rXqGKPpDGxadSbYehdpbcsNU=",

@@ -117,7 +117,7 @@
     ],
     [
      "Content-Length",
-     "9764"
+     "9088"
     ],
     [
      "X-Content-Type-Options",
@@ -170,7 +170,7 @@
      "contents": null
     }
    ],
-   "bodySha256": "b315818d7b64cb3e753f330854eaac14bcb843694663e0c771516e8fbc2b803a",
+   "bodySha256": "898e254af65daee1587f3c4657e09b6188af1095961097cdab627d120dd11ce5",
    "body": {
     "actualResidentKey": null,
     "algo": "EdDSA",
@@ -273,7 +273,6 @@
       "raw": "00000000000000000000000000000000"
      },
      "attestationFmt": "packed",
-     "attestationObject": "o2NmbXRmcGFja2VkZ2F0dFN0bXSiY2FsZydjc2lnWEBm8FWAWZ06qz-VUJ-6OC6dPKKNRU4d44zJ1LM-4_sWy2LEOSIDFHtxXB0boQ6D_OLLYtQRGJn8RkZ7PQq8P3EOaGF1dGhEYXRhWIFJlg3liA6MaHQ0Fw9kdmBbj-SuuaKGMseZXPO6gx2XY0UAAAAAAAAAAAAAAAAAAAAAAAAAAAAg82wp6a6k5qtS_SKwtOva7IZ5ixdbHMkZSp2iHe5MZCWkAQEDJyAGIVggx4aTxm0y19I0oluEFtO0ORYI6do5FHyvjIv8urE0gSU",
      "authenticatorDataHash": "a414e058a0a2b00d9dacacc908144f1160e50db206dee1e13fbc1628f1add41d",
      "createdAt": "2026-09-21T14:13:20+00:00",
      "credentialId": "f36c29e9aea4e6ab52fd22b0b4ebdaec86798b175b1cc9194a9da21dee4c6425",
@@ -464,7 +463,6 @@
        "raw": "00000000000000000000000000000000"
       },
       "attestationFmt": "packed",
-      "attestationObject": "o2NmbXRmcGFja2VkZ2F0dFN0bXSiY2FsZydjc2lnWEBm8FWAWZ06qz-VUJ-6OC6dPKKNRU4d44zJ1LM-4_sWy2LEOSIDFHtxXB0boQ6D_OLLYtQRGJn8RkZ7PQq8P3EOaGF1dGhEYXRhWIFJlg3liA6MaHQ0Fw9kdmBbj-SuuaKGMseZXPO6gx2XY0UAAAAAAAAAAAAAAAAAAAAAAAAAAAAg82wp6a6k5qtS_SKwtOva7IZ5ixdbHMkZSp2iHe5MZCWkAQEDJyAGIVggx4aTxm0y19I0oluEFtO0ORYI6do5FHyvjIv8urE0gSU",
       "authenticatorDataHash": "a414e058a0a2b00d9dacacc908144f1160e50db206dee1e13fbc1628f1add41d",
       "createdAt": "2026-09-21T14:13:20+00:00",
       "credentialId": "f36c29e9aea4e6ab52fd22b0b4ebdaec86798b175b1cc9194a9da21dee4c6425",
@@ -503,7 +501,7 @@
    "stored": [
     {
      "file": "artifacts/cQUQf5EliGThHs2boeS0VepH7C5DXjV-PqfXfYXsTS0/d932fdc2c432c7050ce6b728173357d2a53f73df2a0673588ef329a3019a00f5.json",
-     "sha256": "5982fff771a34818807dede0fdca1e6b1590b46950518f17696bed743f253936",
+     "sha256": "1e7c8051716370bb0c27514aebcb31d438fa4263172bfe2879407f0bc76f09e9",
      "content": {
       "storageId": "82wp6a6k5qtS_SKwtOva7IZ5::1a0c4506c00::de402f3397aa41e3ad0732a1222b43f4",
       "createdAt": 1790000000.0,
@@ -540,7 +538,6 @@
          "alg": -8,
          "sig": "ZvBVgFmdOqs_lVCfujgunTyijUVOHeOMydSzPuP7FstixDkiAxR7cVwdG6EOg_ziy2LUERiZ_EZGez0KvD9xDg"
         },
-        "attestationObject": "o2NmbXRmcGFja2VkZ2F0dFN0bXSiY2FsZydjc2lnWEBm8FWAWZ06qz-VUJ-6OC6dPKKNRU4d44zJ1LM-4_sWy2LEOSIDFHtxXB0boQ6D_OLLYtQRGJn8RkZ7PQq8P3EOaGF1dGhEYXRhWIFJlg3liA6MaHQ0Fw9kdmBbj-SuuaKGMseZXPO6gx2XY0UAAAAAAAAAAAAAAAAAAAAAAAAAAAAg82wp6a6k5qtS_SKwtOva7IZ5ixdbHMkZSp2iHe5MZCWkAQEDJyAGIVggx4aTxm0y19I0oluEFtO0ORYI6do5FHyvjIv8urE0gSU",
         "authenticatorData": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d97634500000000000000000000000000000000000000000020f36c29e9aea4e6ab52fd22b0b4ebdaec86798b175b1cc9194a9da21dee4c6425a4010103272006215820c78693c66d32d7d234a25b8416d3b4391608e9da39147caf8c8bfcbab1348125",
         "authenticatorDataHash": "a414e058a0a2b00d9dacacc908144f1160e50db206dee1e13fbc1628f1add41d",
         "clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIiwiY2hhbGxlbmdlIjoiTVRFeE1URXhNVEV4TVRFeE1URXhNVEV4TVRFeE1URXhNVEV4TVRFeE1URSIsIm9yaWdpbiI6Imh0dHA6Ly9sb2NhbGhvc3QiLCJjcm9zc09yaWdpbiI6ZmFsc2V9",
@@ -550,7 +547,6 @@
           "guid": "00000000-0000-0000-0000-000000000000"
          },
          "attestationFmt": "packed",
-         "attestationObject": "o2NmbXRmcGFja2VkZ2F0dFN0bXSiY2FsZydjc2lnWEBm8FWAWZ06qz-VUJ-6OC6dPKKNRU4d44zJ1LM-4_sWy2LEOSIDFHtxXB0boQ6D_OLLYtQRGJn8RkZ7PQq8P3EOaGF1dGhEYXRhWIFJlg3liA6MaHQ0Fw9kdmBbj-SuuaKGMseZXPO6gx2XY0UAAAAAAAAAAAAAAAAAAAAAAAAAAAAg82wp6a6k5qtS_SKwtOva7IZ5ixdbHMkZSp2iHe5MZCWkAQEDJyAGIVggx4aTxm0y19I0oluEFtO0ORYI6do5FHyvjIv8urE0gSU",
          "createdAt": "2026-09-21T14:13:20+00:00",
          "credentialId": "f36c29e9aea4e6ab52fd22b0b4ebdaec86798b175b1cc9194a9da21dee4c6425",
          "credentialIdBase64": "82wp6a6k5qtS/SKwtOva7IZ5ixdbHMkZSp2iHe5MZCU=",

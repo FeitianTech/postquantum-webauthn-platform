@@ -23,7 +23,6 @@ def _registration(*, auth_data_class=AuthenticatorData, **changes):
         "response": {},
         "attestation_format": "none",
         "attestation_statement": {},
-        "parsed_attestation_object": None,
         "attestation_certificates_details": [],
         "client_data_json": "",
         "client_extension_results": {},

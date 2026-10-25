@@ -86,7 +86,7 @@ describe('composeCredentialDetail', () => {
     const record = simpleRecord('es256');
     const { decode, detail, state } = await detailOf(record);
     expect(decode).toHaveBeenCalledTimes(1);
-    expect(decode).toHaveBeenCalledWith(record.attestationObject);
+    expect(decode).toHaveBeenCalledWith(record.registrationResponse.response.attestationObject);
     const credential = JSON.parse(detail.registration.response.credential);
     expect(credential.id).toBe(record.registrationResponse.id);
     expect(credential.response.authenticatorData).toBe(record.authenticatorData);
@@ -141,7 +141,7 @@ describe('composeCredentialDetail', () => {
   it('decodes again a record whose snapshot does not hold the registration as data', async () => {
     const record = { ...simpleRecord('es256'), registrationDetailSnapshot: { schemaVersion: 1, state: {} } };
     const { decode, detail } = await detailOf(record);
-    expect(decode).toHaveBeenCalledWith(record.attestationObject);
+    expect(decode).toHaveBeenCalledWith(record.registrationResponse.response.attestationObject);
     expect(detail.registration.attestation.body.kind).toBe('json');
   });
 
@@ -154,7 +154,7 @@ describe('composeCredentialDetail', () => {
     expect(fetch).toHaveBeenCalledWith(`/api/advanced/credential-artifacts/${encodeURIComponent(record.storageId)}`, expect.anything());
 
     const { decode, detail } = await detailOf(record);
-    expect(decode).toHaveBeenCalledWith(storedCredential.attestationObject);
+    expect(decode).toHaveBeenCalledWith(storedCredential.registrationResponse.response.attestationObject);
     expect(detail.attestationFormat.value).toBe('packed');
     expect(detail.properties).toMatchObject({ discoverable: false, largeBlob: true, minPinLength: 6 });
     expect(detail.registration.attestation.certificates).toEqual([{ index: 0, title: 'Attestation Certificate' }]);
@@ -186,7 +186,7 @@ describe('composeCredentialDetail', () => {
     const direct = await composeRegistration({
       credentialJson: detail.registration.response.credential ? JSON.parse(detail.registration.response.credential) : null,
       relyingPartyInfo: record.relyingParty,
-      attestationObjectValue: record.attestationObject,
+      attestationObjectValue: record.registrationResponse.response.attestationObject,
       authenticatorDataValue: record.authenticatorData,
       authenticatorDataHex: record.authenticatorDataHex,
       fallbackClientData: record.clientDataJSON,

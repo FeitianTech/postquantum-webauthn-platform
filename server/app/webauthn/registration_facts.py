@@ -48,7 +48,6 @@ STORED_CREDENTIAL_KEYS = (
     "clientExtensionOutputs",
     "attestationFormat",
     "attestationStatement",
-    "attestationObject",
     "authenticatorData",
     "authenticatorDataHex",
     "authenticatorDataHash",
@@ -211,24 +210,22 @@ def relying_party_info(
     public_key_algorithm: Any,
     registration: dict[str, Any],
     user_handle: bytes,
-    attestation_object: Any = None,
     device: dict[str, Any] | None = None,
     resident_key: bool | None = None,
 ) -> dict[str, Any]:
     """The relying party's view of the registration, as the answer reports it and the record keeps it.
 
     ``credential_id`` holds its ``hex``, ``base64`` and ``base64url``. What only
-    one tab reports is left out when not given: the AAGUID block and the
-    attestation object, the device, and the resident-key result. The attestation
-    certificates are the record's (its properties), never the view's.
+    one tab reports is left out when not given: the AAGUID block, the device, and
+    the resident-key result. The attestation certificates are the record's (its
+    properties), never the view's, and the attestation object is the browser's
+    response's, which the record keeps.
     """
 
     rp_info: dict[str, Any] = {}
     if aaguid is not None:
         rp_info["aaguid"] = aaguid
     rp_info["attestationFmt"] = attestation_format
-    if attestation_object is not None:
-        rp_info["attestationObject"] = attestation_object
     rp_info.update(
         {
             "createdAt": created_at,

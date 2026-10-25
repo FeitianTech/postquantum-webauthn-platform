@@ -182,7 +182,7 @@
     ],
     [
      "Content-Length",
-     "13781"
+     "13386"
     ],
     [
      "X-Content-Type-Options",
@@ -225,7 +225,7 @@
      "contents": null
     }
    ],
-   "bodySha256": "b90cec45dbac939687154804d317a74e660a0fce473031aed4aa0321467ce6cc",
+   "bodySha256": "9411114dee28f68b757a6c0d2b087407bd9f7834d23588e3ded4f171db5be86f",
    "body": {
     "actualResidentKey": null,
     "algo": "ES256 (ECDSA)",
@@ -375,7 +375,6 @@
      "aaguid": "AAAAAAAAAAAAAAAAAAAAAA",
      "aaguidHex": "00000000000000000000000000000000",
      "attestationFormat": "packed",
-     "attestationObject": "o2NmbXRmcGFja2VkZ2F0dFN0bXSiY2FsZyZjc2lnWEgwRgIhAN2ODB7nGe5vpEGZpQgVRfzn87vgz7ObYzpnjOMN1VZ3AiEA-vVbyc7oFW3DL1HfABXsoSwC04UNwsBLlOoSZnhE5SJoYXV0aERhdGFYpEmWDeWIDoxodDQXD2R2YFuP5K65ooYyx5lc87qDHZdjRQAAAAAAAAAAAAAAAAAAAAAAAAAAACCLPL3e0As3M5-VdSQxerLpfClv5AKk05SJYY21iKjXgaUBAgMmIAEhWCDwrOXHWXfp_WLC1AHzJffKCN6uLT6XB-5T8fUXy5CC-iJYICuBX-GEqKLJ60nbqB_VIpQWJh_tmqZTRM5jpbubC9p4",
      "attestationStatement": {
       "alg": -7,
       "sig": "MEYCIQDdjgwe5xnub6RBmaUIFUX85_O74M-zm2M6Z4zjDdVWdwIhAPr1W8nO6BVtwy9R3wAV7KEsAtOFDcLAS5TqEmZ4ROUi"

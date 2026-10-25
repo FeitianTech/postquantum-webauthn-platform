@@ -22,7 +22,7 @@ def test_register_complete_rejects_non_mapping_request_state_fallback(monkeypatc
     monkeypatch.setattr(
         attestation_certificates,
         "extract_attestation_details",
-        lambda _response: ("none", {}, None, None, {}, [])
+        lambda _response: ("none", {}, None, {}, [])
     )
 
     with entry_app().test_client() as client:

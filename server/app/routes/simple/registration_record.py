@@ -44,7 +44,6 @@ class SimpleRegistration:
     response: Any
     attestation_format: Any
     attestation_statement: Any
-    parsed_attestation_object: Any
     attestation_certificates_details: Any
     client_data_json: Any
     client_extension_results: Any
@@ -126,7 +125,6 @@ def _credential_info(reg: SimpleRegistration) -> dict[str, Any]:
         },
         "registration_time": time.time(),
         "client_data_json": reg.client_data_json or "",
-        "attestation_object": reg.raw_attestation_object_b64 or "",
         "properties": {
             "excludeCredentialsSentCount": reg.exclude_credentials_count,
             "excludeCredentialsUsed": reg.exclude_credentials_count > 0,
@@ -330,7 +328,6 @@ def build_stored_credential_context(reg: SimpleRegistration) -> None:
         "publicKeyBytes": encode_base64url(reg.public_key_bytes),
         "authenticatorAttachment": reg.authenticator_attachment_response,
         "clientDataJSON": reg.credential_info.get("client_data_json"),
-        "attestationObject": reg.credential_info.get("attestation_object"),
         "authenticatorData": reg.authenticator_data_raw,
         "authenticatorDataHex": reg.authenticator_data_hex,
         "authenticatorDataHash": reg.authenticator_data_hash or None,

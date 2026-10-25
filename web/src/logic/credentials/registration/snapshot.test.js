@@ -66,12 +66,12 @@ describe('keepRegistrationSnapshot', () => {
 
     const relyingParty = EVERYTHING.complete.body.relyingParty;
     expect(registrationResultInput(input.credentialJson, relyingParty)).toEqual({
-      attestationObjectValue: relyingParty.attestationObject,
+      attestationObjectValue: input.credentialJson.response.attestationObject,
       authenticatorDataValue: '',
       fallbackCertificates: relyingParty.attestationCertificates,
     });
     expect(decodePayloadThroughApi).toHaveBeenCalledTimes(1);
-    expect(decodePayloadThroughApi).toHaveBeenCalledWith(relyingParty.attestationObject);
+    expect(decodePayloadThroughApi).toHaveBeenCalledWith(input.credentialJson.response.attestationObject);
     expect(kept.composed).toEqual(await composeRegistration({
       credentialJson: input.credentialJson,
       relyingPartyInfo: relyingParty,
@@ -104,7 +104,7 @@ describe('keepRegistrationSnapshot', () => {
       relyingParty.attestationCertificates[0].derBase64,
     ]);
     expect(payload.state.detailPreparation).toEqual({
-      attestationObjectValue: relyingParty.attestationObject,
+      attestationObjectValue: input.credentialJson.response.attestationObject,
       attestationDecodeError: '',
       authenticatorDataValue: '',
       authenticatorDecodeError: '',

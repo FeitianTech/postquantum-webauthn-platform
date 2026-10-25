@@ -113,7 +113,7 @@ describe('composeRegistration', () => {
   it('keeps the registration\'s decoded state for its snapshot', async () => {
     const { composed } = await compose(registrationOptions('packedX5c'));
     expect(composed.stateSnapshot.detailPreparation).toEqual({
-      attestationObjectValue: simpleRecord('packedX5c').attestationObject,
+      attestationObjectValue: simpleRecord('packedX5c').registrationResponse.response.attestationObject,
       attestationDecodeError: '',
       authenticatorDataValue: '',
       authenticatorDecodeError: '',

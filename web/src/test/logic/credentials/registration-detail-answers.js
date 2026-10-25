@@ -23,7 +23,7 @@ export function registration(name) {
     complete,
     storedCredential: complete.storedCredential,
     relyingParty: complete.relyingParty,
-    attestationObject: complete.storedCredential.attestationObject,
+    attestationObject: complete.storedCredential.registrationResponse.response.attestationObject,
     authenticatorData: complete.storedCredential.authenticatorData,
     attestationDecode: structuredClone(decodes[index].body),
     authenticatorDataDecode: index === 0 ? structuredClone(decodes[NAMES.length].body) : null,
