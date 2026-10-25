@@ -6,7 +6,7 @@ import userEvent from '@testing-library/user-event';
 
 import { SavedCredentialsProvider } from '@/components/credentials/useSavedCredentials';
 import { ToastProvider } from '@/components/ui/Toast';
-import { keepRecords, savedRecord, warmUpRoutes } from '@/test/credentials';
+import { keepRecords, savedRecord, simpleRecordRoutes, warmUpRoutes } from '@/test/credentials';
 import { json, stubFetch } from '@/test/fetch';
 import { renderPage } from '@/test/page';
 
@@ -18,7 +18,7 @@ const ADVANCED_PATH = `/api/advanced/credential-artifacts/${encodeURIComponent(A
 
 function renderDrawer(records: object[], routes = {}) {
   keepRecords(records);
-  stubFetch({ ...warmUpRoutes(), ...routes });
+  stubFetch({ ...warmUpRoutes(), ...simpleRecordRoutes(records), ...routes });
   const onOpen = vi.fn();
   renderPage(
     <ToastProvider>

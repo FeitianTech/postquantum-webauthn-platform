@@ -4,7 +4,7 @@ import { act, fireEvent, render, screen, waitFor, within } from '@testing-librar
 import userEvent from '@testing-library/user-event';
 
 import { ToastProvider } from '@/components/ui/Toast';
-import { STORAGE_KEY, keepRecords, savedRecord, storedRecords, warmUpRoutes } from '@/test/credentials';
+import { STORAGE_KEY, keepRecords, savedRecord, simpleRecordRoutes, storedRecords, warmUpRoutes } from '@/test/credentials';
 import { json, stubFetch } from '@/test/fetch';
 import { renderPage } from '@/test/page';
 
@@ -29,7 +29,7 @@ function FlashButton({ id }: { id: string }) {
 
 function renderList(records: object[], routes = {}) {
   keepRecords(records);
-  const fetch = stubFetch({ ...warmUpRoutes(), ...routes });
+  const fetch = stubFetch({ ...warmUpRoutes(), ...simpleRecordRoutes(records), ...routes });
   const onOpen = vi.fn();
   renderPage(
     <ToastProvider>
@@ -155,8 +155,8 @@ describe('the saved credentials', () => {
 });
 
 describe('deleting a saved credential', () => {
-  it('asks first, then removes a simple one from this browser and says so', async () => {
-    renderList([ES256, MLDSA]);
+  it('asks first, then deletes a simple one on the server and in this browser, and says so', async () => {
+    const { fetch } = renderList([ES256, MLDSA]);
     const row = await waitFor(() => rowNamed('user@example.com'));
     await userEvent.click(within(row).getByRole('button', { name: 'Delete' }));
     const dialog = await screen.findByRole('alertdialog', { name: 'Delete credential' });
@@ -167,7 +167,18 @@ describe('deleting a saved credential', () => {
       expect(screen.getByText('Deletion successful.')).toBeVisible();
       expect(rows()).toHaveLength(1);
       expect(storedRecords().map((record) => record.email)).toEqual(['ml@example.com']);
+      const path = `/api/simple/credentials/${ES256.credentialIdBase64Url}?email=user%40example.com`;
+      expect(fetch.mock.calls.find(([url]) => String(url) === path)?.[1]).toMatchObject({ method: 'DELETE' });
     });
+  });
+
+  it('warns under the header when the server no longer had a simple one', async () => {
+    renderList([ES256], simpleRecordRoutes([ES256], { status: 'absent' }));
+    await userEvent.click(within(await waitFor(() => rowNamed('user@example.com'))).getByRole('button', { name: 'Delete' }));
+    await confirmIn('Delete');
+    const notice = await screen.findByText('Credential was already absent from server storage and has been removed locally.');
+    expect(notice).toHaveAttribute('data-notice', 'warning');
+    expect(storedRecords()).toEqual([]);
   });
 
   it('keeps the credential when the question is cancelled', async () => {

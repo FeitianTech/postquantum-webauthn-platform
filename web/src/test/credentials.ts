@@ -66,3 +66,16 @@ export function warmUpRoutes(): Record<string, Route> {
     '/api/advanced/credential-artifacts/bulk': () => json({ artifacts: {} }),
   };
 }
+
+/** The DELETE of each Simple one of `records`' server record, answered `answer`: deleted unless said. */
+export function simpleRecordRoutes(
+  records: object[],
+  answer: Record<string, unknown> = { status: 'deleted' },
+  status = 200,
+): Record<string, Route> {
+  return Object.fromEntries(
+    (records as Record<string, unknown>[])
+      .filter((record) => record.type === 'simple')
+      .map((record) => [`/api/simple/credentials/${encodeURIComponent(String(record.credentialIdBase64Url))}`, () => json(answer, status)]),
+  );
+}

@@ -58,6 +58,10 @@ test.describe('credentials an earlier release stored', () => {
     await expect(question.getByRole('button', { name: 'Cancel' })).toBeFocused();
     await question.getByRole('button', { name: 'Delete' }).click();
     await expect(rows(page)).toHaveCount(1);
+    // The server holds no record of it (a fresh run's stores): deleted here, and said so.
+    await expect(simpleSection(page).locator('[data-notice="warning"]')).toHaveText(
+      'Credential was already absent from server storage and has been removed locally.',
+    );
 
     await simpleSection(page).getByRole('button', { name: 'Clear All' }).click();
     await page.getByRole('alertdialog', { name: 'Clear All' }).getByRole('button', { name: 'Clear All' }).click();

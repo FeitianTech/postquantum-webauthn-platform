@@ -178,6 +178,25 @@ test.describe('/#simple', () => {
     expect(await late).toBe(200);
   });
 
+  test('deletes a registered passkey from the server, then from this browser', async ({ page }) => {
+    await addVirtualAuthenticator(page);
+    await openPage(page);
+    const name = username();
+    await registerPasskey(page, name);
+
+    await rows(page).filter({ hasText: name }).getByRole('button', { name: 'Delete' }).click();
+    const [deletion] = await Promise.all([
+      page.waitForResponse((answer) => new URL(answer.url()).pathname.startsWith('/api/simple/credentials/')),
+      page.getByRole('alertdialog', { name: 'Delete credential' }).getByRole('button', { name: 'Delete' }).click(),
+    ]);
+
+    expect(deletion.request().method()).toBe('DELETE');
+    expect(new URL(deletion.url()).searchParams.get('email')).toBe(name);
+    expect(await deletion.json()).toEqual({ status: 'deleted' });
+    await expect(page.getByText('Deletion successful.')).toBeVisible();
+    await expect(rows(page)).toHaveCount(0);
+  });
+
   test('keeps a failure in place, with its sentence', async ({ page }) => {
     await addVirtualAuthenticator(page);
     await openPage(page);

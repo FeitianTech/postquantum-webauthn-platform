@@ -10,17 +10,20 @@ import {
 import { deleteCredentialArtifact } from './storage/artifacts-client.js';
 import { getAllAdvancedCredentials, removeAdvancedCredential } from './storage/local/advanced-credentials.js';
 import { clearSimpleCredentials, getAllSimpleCredentials, removeSimpleCredential } from './storage/local/simple-credentials.js';
+import { deleteSimpleCredentialRecord } from './storage/simple-records-client.js';
 
 // Deleting a saved credential and clearing them all (credentials/delete-flow.js):
 // in what order, and what each outcome says. The storage and the server answer
 // as each test says.
 
 vi.mock('./storage/artifacts-client.js', () => ({ deleteCredentialArtifact: vi.fn() }));
+vi.mock('./storage/simple-records-client.js', () => ({ deleteSimpleCredentialRecord: vi.fn() }));
 vi.mock('./storage/local/advanced-credentials.js', () => ({
   getAllAdvancedCredentials: vi.fn(),
   removeAdvancedCredential: vi.fn(),
 }));
-vi.mock('./storage/local/simple-credentials.js', () => ({
+vi.mock('./storage/local/simple-credentials.js', async (importOriginal) => ({
+  ...(await importOriginal()),
   clearSimpleCredentials: vi.fn(),
   getAllSimpleCredentials: vi.fn(),
   removeSimpleCredential: vi.fn(),
@@ -37,6 +40,7 @@ function flow({
   removeSimple = true,
   removeAdvanced = true,
   artifact = { status: 'deleted' },
+  record: simpleRecord = { status: 'deleted' },
   reload = async () => {},
 } = {}) {
   const calls = [];
@@ -50,6 +54,7 @@ function flow({
   vi.mocked(removeAdvancedCredential).mockImplementation(record('remove advanced', removeAdvanced));
   vi.mocked(clearSimpleCredentials).mockImplementation(record('clear simple'));
   vi.mocked(deleteCredentialArtifact).mockImplementation(record('delete artifact', async () => artifact));
+  vi.mocked(deleteSimpleCredentialRecord).mockImplementation(record('delete record', async () => simpleRecord));
   const report = {
     isRunning: vi.fn(record('running?', running)),
     setRunning: vi.fn(record('busy')),
@@ -80,7 +85,7 @@ describe('the question before deleting', () => {
 });
 
 describe('deleting one credential', () => {
-  it('removes a simple one from this browser, reads the list again and says so', async () => {
+  it('deletes a simple one on the server first, then here, reads the list again and says so', async () => {
     const { calls, report } = flow();
     await deleteSavedCredential(SIMPLE, report);
     expect(calls).toEqual([
@@ -88,6 +93,7 @@ describe('deleting one credential', () => {
       ['busy', true],
       ['dismiss'],
       ['progress', 'Deleting credential...'],
+      ['delete record', 'AQID', 'alice'],
       ['remove simple', 'AQID', 'alice'],
       ['reload'],
       ['status', 'Deletion successful.', 'success'],
@@ -96,25 +102,57 @@ describe('deleting one credential', () => {
     ]);
   });
 
-  it('removes a simple one by its credential id or id, for its account', async () => {
+  it('deletes a simple one by its credential id or id, for its account', async () => {
     const { report } = flow();
     await deleteSavedCredential({ type: 'simple', credentialId: 'X', userName: 'u' }, report);
     await deleteSavedCredential({ type: 'simple', id: 'Y', username: 'v' }, report);
+    expect(vi.mocked(deleteSimpleCredentialRecord).mock.calls).toEqual([['X', 'u'], ['Y', 'v']]);
     expect(vi.mocked(removeSimpleCredential).mock.calls).toEqual([['X', 'u'], ['Y', 'v']]);
   });
 
-  it('says when this browser kept a simple one', async () => {
+  it('keeps a simple one the server refused to delete, with the server\'s reason or a sentence', async () => {
+    const refused = flow({ record: { status: 'failed', error: 'The stored credentials could not be read. Please try again.' } });
+    await deleteSavedCredential(SIMPLE, refused.report);
+    expect(statusOf(refused.report)).toEqual(['The stored credentials could not be read. Please try again.', 'error']);
+    expect(removeSimpleCredential).not.toHaveBeenCalled();
+
+    const silent = flow({ record: { status: 'failed' } });
+    await deleteSavedCredential(SIMPLE, silent.report);
+    expect(statusOf(silent.report)).toEqual([DELETE_TEXT.serverRefused, 'error']);
+  });
+
+  it('warns when the server no longer had a simple one, and removes it here', async () => {
+    const { report } = flow({ record: { status: 'absent' } });
+    await deleteSavedCredential(SIMPLE, report);
+    expect(removeSimpleCredential).toHaveBeenCalledWith('AQID', 'alice');
+    expect(statusOf(report)).toEqual([DELETE_TEXT.alreadyAbsent, 'warning']);
+  });
+
+  it('says when the server deleted a simple one but this browser kept it', async () => {
     const { report } = flow({ removeSimple: false });
     await deleteSavedCredential(SIMPLE, report);
-    expect(statusOf(report)).toEqual([DELETE_TEXT.notRemovedLocally, 'error']);
+    expect(statusOf(report)).toEqual([DELETE_TEXT.removedFromServerOnly, 'error']);
     expect(report.reload).not.toHaveBeenCalled();
+  });
+
+  it('removes a simple one that names no account or no id from this browser only', async () => {
+    const removed = flow();
+    await deleteSavedCredential({ type: 'simple', credentialId: 'X', email: '  ' }, removed.report);
+    await deleteSavedCredential({ type: 'simple', email: 'alice' }, removed.report);
+    expect(deleteSimpleCredentialRecord).not.toHaveBeenCalled();
+    expect(vi.mocked(removeSimpleCredential).mock.calls).toEqual([['X', '  '], [undefined, 'alice']]);
+    expect(statusOf(removed.report)).toEqual(['Deletion successful.', 'success']);
+
+    const kept = flow({ removeSimple: false });
+    await deleteSavedCredential({ type: 'simple', credentialId: 'X' }, kept.report);
+    expect(statusOf(kept.report)).toEqual([DELETE_TEXT.notRemovedLocally, 'error']);
   });
 
   it('deletes an advanced one on the server first, then here', async () => {
     const { report } = flow();
     await deleteSavedCredential(ADVANCED, report);
-    expect(deleteCredentialArtifact).toHaveBeenCalledWith(' s-1 ');
-    expect(removeAdvancedCredential).toHaveBeenCalledWith('BAUG', ' s-1 ');
+    expect(deleteCredentialArtifact).toHaveBeenCalledWith('s-1');
+    expect(removeAdvancedCredential).toHaveBeenCalledWith('BAUG', 's-1');
     expect(statusOf(report)).toEqual(['Deletion successful.', 'success']);
   });
 
@@ -145,8 +183,9 @@ describe('deleting one credential', () => {
   it('removes an advanced one the server never held from this browser only', async () => {
     const removed = flow();
     await deleteSavedCredential({ type: 'advanced', id: 'CAkK' }, removed.report);
+    await deleteSavedCredential({ type: 'advanced', id: 'DAsM', storageId: '  ' }, removed.report);
     expect(deleteCredentialArtifact).not.toHaveBeenCalled();
-    expect(removeAdvancedCredential).toHaveBeenCalledWith('CAkK', null);
+    expect(vi.mocked(removeAdvancedCredential).mock.calls).toEqual([['CAkK', null], ['DAsM', null]]);
     expect(statusOf(removed.report)).toEqual(['Deletion successful.', 'success']);
 
     const kept = flow({ removeAdvanced: false });
