@@ -1,3 +1,4 @@
+import { Buffer } from 'node:buffer';
 import { readFileSync } from 'node:fs';
 
 import { describe, expect, it } from 'vitest';
@@ -7,6 +8,7 @@ import {
   sanitiseRegistrationDetailSnapshot,
   stripKeysRecursively,
 } from './snapshot-sanitize.js';
+import { wholeCertificate } from '@/test/logic/credentials/certificates.js';
 import { repoFile } from '@/test/logic/repo-file.js';
 
 // What a saved registration snapshot keeps (credentials/storage/local/snapshot-sanitize.js).
@@ -17,6 +19,8 @@ const GOLDEN = JSON.parse(
 );
 const CERTIFICATE = GOLDEN.requests[1].body.relyingParty.attestationCertificates[0];
 const { derBase64: CERTIFICATE_DER, ...CERTIFICATE_WITHOUT_DER } = CERTIFICATE;
+// The same DER as the hex the page reads it into.
+const CERTIFICATE_HEX = Buffer.from(CERTIFICATE_DER, 'base64').toString('hex');
 
 const CREDENTIAL = {
   id: 'HhfJJzOBVmmUZYuGYc2aY9SMJiNMjQ1Y0QppVmqI4yI',
@@ -112,22 +116,26 @@ describe('attestation certificates in a snapshot', () => {
     expect(entry.parsedX5c.extensions).toEqual(CERTIFICATE.extensions);
   });
 
-  it('keeps a certificate parsed under parsedX5c, without its DER', () => {
-    const [entry] = keptState({ attestationCertificates: [{ parsedX5c: CERTIFICATE }] }).attestationCertificates;
+  it('keeps a certificate parsed under parsedX5c, without its DER in either spelling', () => {
+    const certificates = [{ parsedX5c: { ...CERTIFICATE, raw: CERTIFICATE_HEX }, raw: CERTIFICATE_HEX }];
+
+    const [entry] = keptState({ attestationCertificates: certificates }).attestationCertificates;
 
     expect(entry).toEqual({ parsedX5c: CERTIFICATE_WITHOUT_DER });
   });
 
   it('keeps an entry that was never parsed, without its DER', () => {
-    const pem = CERTIFICATE.pem;
+    const { pem } = wholeCertificate();
 
-    const state = keptState({ attestationCertificates: [{ pem, derBase64: CERTIFICATE_DER }] });
+    const state = keptState({ attestationCertificates: [{ pem, derBase64: CERTIFICATE_DER, raw: CERTIFICATE_HEX }] });
 
     expect(state.attestationCertificates).toEqual([{ pem }]);
   });
 
   it('keeps no entry that held only its DER', () => {
-    const state = keptState({ attestationCertificates: [{ derBase64: CERTIFICATE_DER }], authenticatorDataHex: '0a0b' });
+    const certificates = [{ derBase64: CERTIFICATE_DER }, { raw: CERTIFICATE_HEX }];
+
+    const state = keptState({ attestationCertificates: certificates, authenticatorDataHex: '0a0b' });
 
     expect(state).toEqual({ authenticatorDataHex: '0a0b' });
   });

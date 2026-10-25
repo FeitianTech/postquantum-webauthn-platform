@@ -56,7 +56,10 @@ export const MAX_DETAIL_STRING_LENGTH = 48000;
 export const MAX_AUTH_DATA_HEX_LENGTH = 8192;
 export const MAX_AUTH_DATA_HASH_LENGTH = 1024;
 
+// A certificate's DER, which a snapshot keeps in neither spelling: its base64, nor the
+// hex the page reads it into (normaliseCertificateEntryForModal). Its fingerprints name it.
 export const SNAPSHOT_CERT_STRIP_KEYS = [
     'derBase64',
+    'raw',
 ];
 
