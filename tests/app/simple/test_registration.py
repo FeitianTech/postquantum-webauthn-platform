@@ -296,7 +296,7 @@ def test_simple_register_complete_returns_400_and_cleans_state_when_verification
     monkeypatch.setattr(
         attestation_certificates,
         "extract_attestation_details",
-        lambda _response: ("none", {}, None, None, {}, None, [])
+        lambda _response: ("none", {}, None, None, {}, [])
     )
 
     with entry_app().test_client() as client:
@@ -335,7 +335,7 @@ def test_simple_register_complete_rejects_request_state_fallback_before_verifica
     monkeypatch.setattr(
         attestation_certificates,
         "extract_attestation_details",
-        lambda _response: ("none", {}, None, None, {}, None, [])
+        lambda _response: ("none", {}, None, None, {}, [])
     )
 
     fallback_state = {"challenge": "request-fallback-state"}

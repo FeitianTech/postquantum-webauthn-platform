@@ -48,7 +48,6 @@ def _complete_inputs(response: Any, credential_response: Mapping[str, Any]) -> d
         parsed_attestation_object,
         parsed_client_data_json,
         parsed_extension_results,
-        attestation_certificate_details,
         attestation_certificates_details,
     ) = attestation_certificates.extract_attestation_details(response)
 
@@ -67,7 +66,6 @@ def _complete_inputs(response: Any, credential_response: Mapping[str, Any]) -> d
         "attestation_format": attestation_format,
         "attestation_statement": attestation_statement,
         "parsed_attestation_object": parsed_attestation_object,
-        "attestation_certificate_details": attestation_certificate_details,
         "attestation_certificates_details": attestation_certificates_details,
         "client_data_json": client_data_json,
         "client_extension_results": client_extension_results,

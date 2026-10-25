@@ -259,10 +259,7 @@ describe('registrationResultInput', () => {
     const input = registrationResultInput(credentialJson, answer.relyingParty);
     expect(input.attestationObjectValue).toBe(storedCredential.registrationResponse.response.attestationObject);
     expect(input.authenticatorDataValue).toBe(storedCredential.authenticatorData);
-    expect(input.fallbackCertificates).toEqual([
-      answer.relyingParty.attestationCertificate,
-      ...answer.relyingParty.attestationCertificates,
-    ]);
+    expect(input.fallbackCertificates).toEqual(answer.relyingParty.attestationCertificates);
   });
 
   it('takes the certificates in the registration data too, leaving out empty ones', () => {

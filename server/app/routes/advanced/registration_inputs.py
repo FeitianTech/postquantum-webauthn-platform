@@ -77,7 +77,6 @@ def attestation_inputs(response: Any) -> dict[str, Any]:
         parsed_attestation_object,
         parsed_client_data_json,
         parsed_extension_results,
-        attestation_certificate_details,
         attestation_certificates_details,
     ) = attestation_certificates.extract_attestation_details(response)
 
@@ -92,7 +91,6 @@ def attestation_inputs(response: Any) -> dict[str, Any]:
     return {
         "attestationFormat": attestation_format,
         "attestationStatement": attestation_statement,
-        "attestationCertificateDetails": attestation_certificate_details,
         "attestationCertificatesDetails": attestation_certificates_details,
         "attestationObjectB64": attestation_object_b64,
         "rawAttestationObject": parsed_attestation_object or attestation_object_b64,

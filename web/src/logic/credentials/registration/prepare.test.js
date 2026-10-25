@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { hashAuthenticatorData, prepareRegistrationState } from './prepare.js';
 import { EMPTY_DETAIL_PREPARATION, createRegistrationState } from './state.js';
-import { advancedComplete, goldenDecode, registration } from '@/test/logic/credentials/registration-detail-answers.js';
+import { goldenDecode, registration } from '@/test/logic/credentials/registration-detail-answers.js';
 import { EMPTY_STATE, decodedCertificate, describedCertificate, preparedState } from '@/test/logic/credentials/registration-state.js';
 
 // A registration state filled from a record and the decoder
@@ -295,13 +295,13 @@ describe('prepareRegistrationState', () => {
     expect(state.attestationCertificates).toHaveLength(1);
   });
 
-  it("takes the relying party's certificate when nothing else gave one", async () => {
-    const relyingPartyInfo = advancedComplete().relyingParty;
+  it("takes the certificate an earlier release's relying party named when nothing else gave one", async () => {
+    const certificate = describedCertificate();
     const state = createRegistrationState();
-    await prepareRegistrationState(state, { relyingPartyInfo });
+    await prepareRegistrationState(state, { relyingPartyInfo: { attestationCertificate: certificate } });
     expect(state.attestationCertificates).toEqual([{
-      parsedX5c: relyingPartyInfo.attestationCertificate,
-      pem: relyingPartyInfo.attestationCertificate.pem,
+      parsedX5c: certificate,
+      pem: certificate.pem,
       raw: decodedCertificate().raw,
     }]);
   });

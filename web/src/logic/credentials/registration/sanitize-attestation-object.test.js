@@ -51,7 +51,7 @@ describe('sanitiseAttestationObjectForDisplay', () => {
 
   it('describes each x5c entry by the certificate the view knows at its place', async () => {
     const state = await packedState();
-    const certificate = advancedComplete().relyingParty.attestationCertificate;
+    const certificate = advancedComplete().relyingParty.attestationCertificates[0];
     const shown = sanitiseAttestationObjectForDisplay(state.attestationObject, 'packed', [{ parsedX5c: certificate }]);
     expect(shown.attStmt.x5c).toMatchObject([{ certificateIndex: 1, details: shownDetails(certificate) }]);
   });
@@ -72,7 +72,7 @@ describe('sanitiseAttestationObjectForDisplay', () => {
   });
 
   it('shows the details of a certificate the relying party described', () => {
-    const certificate = advancedComplete().relyingParty.attestationCertificate;
+    const certificate = advancedComplete().relyingParty.attestationCertificates[0];
     const shown = sanitiseAttestationObjectForDisplay({ fmt: 'packed', attStmt: { x5c: ['MIIB'] } }, '', [{ parsedX5c: certificate }]);
     expect(shown.attStmt.x5c).toMatchObject([{ certificateIndex: 1, details: shownDetails(certificate) }]);
   });
@@ -84,7 +84,7 @@ describe('sanitiseAttestationObjectForDisplay', () => {
   });
 
   it('shows a certificate with details by its details alone, not its summary as well', () => {
-    const certificate = advancedComplete().relyingParty.attestationCertificate;
+    const certificate = advancedComplete().relyingParty.attestationCertificates[0];
     expect(certificate.summary).toBeTruthy();
     const shown = sanitiseAttestationObjectForDisplay({ fmt: 'packed', attStmt: { x5c: ['MIIB'] } }, '', [{ parsedX5c: certificate }]);
     expect(shown.attStmt.x5c).toEqual([{ certificateIndex: 1, details: shownDetails(certificate) }]);

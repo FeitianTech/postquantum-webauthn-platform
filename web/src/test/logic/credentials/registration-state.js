@@ -19,7 +19,7 @@ export const EMPTY_STATE = {
 export const decodedCertificate = () => registration('packedX5c').attestationDecode.data.attestationObject.attStmt.x5c[0];
 
 /** The same certificate as register-complete describes it (derBase64, pem, summary, ...). */
-export const describedCertificate = () => advancedComplete().relyingParty.attestationCertificate;
+export const describedCertificate = () => advancedComplete().relyingParty.attestationCertificates[0];
 
 /** A state holding a registration: its attestation object and authenticator data, decoded. */
 export async function preparedState(name = 'packedX5c') {

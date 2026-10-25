@@ -107,7 +107,6 @@ def _record_verified_registration(
         auth_data=auth_data,
         attestation_format=prepared["attestationFormat"],
         attestation_statement=prepared["attestationStatement"],
-        attestation_certificate_details=prepared["attestationCertificateDetails"],
         attestation_certificates_details=prepared["attestationCertificatesDetails"],
         client_extension_results=prepared["clientExtensionResults"],
         credential_info=credential_info,

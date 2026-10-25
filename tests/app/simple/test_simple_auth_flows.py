@@ -157,7 +157,7 @@ def test_simple_register_complete_rejects_request_state_fallback(monkeypatch):
     monkeypatch.setattr(
         attestation_certificates,
         "extract_attestation_details",
-        lambda _response: ("none", {}, None, None, {}, None, [])
+        lambda _response: ("none", {}, None, None, {}, [])
     )
     monkeypatch.setattr(attestation_checks, "perform_attestation_checks", lambda *args, **kwargs: {
         "signature_valid": True,

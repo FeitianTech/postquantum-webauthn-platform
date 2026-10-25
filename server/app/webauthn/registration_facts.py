@@ -214,7 +214,6 @@ def relying_party_info(
     attestation_object: Any = None,
     device: dict[str, Any] | None = None,
     resident_key: bool | None = None,
-    attestation_certificate: Any = None,
     attestation_certificates: Any = None,
 ) -> dict[str, Any]:
     """The relying party's view of the registration, as the answer reports it and the record keeps it.
@@ -253,8 +252,6 @@ def relying_party_info(
     if resident_key is not None:
         rp_info["residentKey"] = resident_key
     rp_info["userHandle"] = byte_forms(user_handle)
-    if attestation_certificate:
-        rp_info["attestationCertificate"] = attestation_certificate
     if attestation_certificates:
         rp_info["attestationCertificates"] = attestation_certificates
     return rp_info

@@ -68,7 +68,7 @@ describe('keepRegistrationSnapshot', () => {
     expect(registrationResultInput(input.credentialJson, relyingParty)).toEqual({
       attestationObjectValue: relyingParty.attestationObject,
       authenticatorDataValue: '',
-      fallbackCertificates: [relyingParty.attestationCertificate, ...relyingParty.attestationCertificates],
+      fallbackCertificates: relyingParty.attestationCertificates,
     });
     expect(decodePayloadThroughApi).toHaveBeenCalledTimes(1);
     expect(decodePayloadThroughApi).toHaveBeenCalledWith(relyingParty.attestationObject);
@@ -101,7 +101,7 @@ describe('keepRegistrationSnapshot', () => {
     const relyingParty = EVERYTHING.complete.body.relyingParty;
     expect(payload.state.attestationObject.fmt).toBe('packed');
     expect(payload.state.attestationCertificates.map(({ parsedX5c }) => parsedX5c.derBase64)).toEqual([
-      relyingParty.attestationCertificate.derBase64,
+      relyingParty.attestationCertificates[0].derBase64,
     ]);
     expect(payload.state.detailPreparation).toEqual({
       attestationObjectValue: relyingParty.attestationObject,

@@ -46,7 +46,6 @@ def build_credential_info(
     public_key = prepared["publicKey"]
     client_extension_results = prepared["clientExtensionResults"]
     attestation_certificates_details = prepared["attestationCertificatesDetails"]
-    attestation_certificate_details = prepared["attestationCertificateDetails"]
     authenticator_attachment_response = prepared["authenticatorAttachmentResponse"]
 
     exclude_credentials_sent = len(public_key.get("excludeCredentials", []))
@@ -98,8 +97,6 @@ def build_credential_info(
     attestation_aaguid.augment_aaguid_fields(credential_info)
     if extensions_summary:
         credential_info["authenticator_extensions"] = extensions_summary
-    if attestation_certificate_details is not None:
-        credential_info["attestation_certificate"] = attestation_certificate_details
     if isinstance(prepared["response"], Mapping):
         credential_info["registration_response"] = json_values.make_json_safe(prepared["response"])
     return credential_info
@@ -266,7 +263,6 @@ def _relying_party_info(
     attestation_checks_safe: Any,
     attestation_summary: Any,
     user_handle: bytes,
-    attestation_certificate_details: Any,
     attestation_certificates_details: Any,
 ) -> dict[str, Any]:
     """The relying party's view of the registration, as the response reports it."""
@@ -294,7 +290,6 @@ def _relying_party_info(
         ),
         resident_key=facts.resident_key,
         user_handle=user_handle,
-        attestation_certificate=attestation_certificate_details,
         attestation_certificates=attestation_certificates_details,
     )
 
@@ -304,7 +299,6 @@ def build_registration_material(
     auth_data: Any,
     attestation_format: Any,
     attestation_statement: Any,
-    attestation_certificate_details: Any,
     attestation_certificates_details: Any,
     client_extension_results: Any,
     credential_info: dict[str, Any],
@@ -331,7 +325,6 @@ def build_registration_material(
         attestation_checks_safe=attestation_checks_safe,
         attestation_summary=attestation_summary,
         user_handle=user_handle,
-        attestation_certificate_details=attestation_certificate_details,
         attestation_certificates_details=attestation_certificates_details,
     )
 

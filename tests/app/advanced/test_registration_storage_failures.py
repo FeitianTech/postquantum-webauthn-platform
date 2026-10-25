@@ -49,7 +49,7 @@ def _install_advanced_register_common_monkeypatches(monkeypatch, auth_data, rp_i
     monkeypatch.setattr(
         attestation_certificates,
         "extract_attestation_details",
-        lambda _response: ("none", {}, None, None, {}, None, [])
+        lambda _response: ("none", {}, None, None, {}, [])
     )
     monkeypatch.setattr(
         attestation_checks,

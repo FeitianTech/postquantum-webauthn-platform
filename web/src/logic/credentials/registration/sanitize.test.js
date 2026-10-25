@@ -69,10 +69,10 @@ describe('removeKeysCaseInsensitive', () => {
 
 describe('stripSignatureFormatting', () => {
   it("removes a certificate signature's colon text and lines, keeping its bytes", () => {
-    const certificate = advancedRelyingParty().attestationCertificate;
+    const certificate = advancedRelyingParty().attestationCertificates[0];
     const target = { attStmt: { x5c: [{ parsedX5c: certificate }] } };
     stripSignatureFormatting(target);
-    const { colon, lines, ...rest } = advancedRelyingParty().attestationCertificate.signature;
+    const { colon, lines, ...rest } = advancedRelyingParty().attestationCertificates[0].signature;
     expect(colon).toBeTruthy();
     expect(lines).toHaveLength(4);
     expect(target.attStmt.x5c[0].parsedX5c.signature).toEqual(rest);
@@ -93,7 +93,7 @@ describe('stripSignatureFormatting', () => {
 
 describe('sanitizeParsedCertificateDetails', () => {
   it("leaves out a certificate's encodings, summary and error", () => {
-    const certificate = advancedRelyingParty().attestationCertificate;
+    const certificate = advancedRelyingParty().attestationCertificates[0];
     const { pem, derBase64, summary, ...rest } = certificate;
     expect([pem, derBase64, summary].every(Boolean)).toBe(true);
     expect(sanitizeParsedCertificateDetails({ ...certificate, der: 'MIIB', raw: '3082', error: 'x' })).toEqual(rest);

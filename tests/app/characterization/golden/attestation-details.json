@@ -32,170 +32,6 @@
      "supported": true
     }
    },
-   {
-    "version": {
-     "display": "3 (0x2)",
-     "numeric": 3,
-     "hex": "0x2"
-    },
-    "serialNumber": {
-     "decimal": "160328274045797298650494485881739657135",
-     "hex": "0x789e1a3657344c52bad22ed1ceb1bfaf"
-    },
-    "signatureAlgorithm": "sha256WithRSAEncryption",
-    "signatureAlgorithmOid": "1.2.840.113549.1.1.11",
-    "signatureAlgorithmDetails": null,
-    "issuer": "CN=NCU-NTC-KEYID-9FBB79AA0F526278BED150929A7171E96A35BEF7",
-    "validity": {
-     "notBefore": "2019-04-01T08:59:40+00:00",
-     "notAfter": "2029-04-01T08:59:40+00:00"
-    },
-    "subject": "",
-    "subjectCommonNames": [],
-    "publicKeyInfo": {
-     "type": "RSA",
-     "keySize": 2048,
-     "subjectPublicKeyInfoBase64": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEApmDR/kFWTCb5Q8cP+J+9ntbZVxkdXsr3Jzk9c8//hePM+5gwAn/oSxccxLCxOBHfTZ3v8rzk2Kj5eXFp97j8JQFtm6aHwAMINpNxYYDI8ezKpEEKmn/gexmK17qU7PdE6b7wJzpeByOkrBl5lMoawOX1lUM5cAzxTq1BmufN6MPoE4l3HV+j0zn40IVukY/TdG+pqUTTwfHGpODOP5m1rFugUWazuGlUBa59N3f5zI46uFcPIZG6Tyz8TFRDN1lvSNPV9fmugFdb+euB1cR36ZxYhUZF1YfdDM3qKw49SC5psyayieZXQeayFD/CvKNcp91g5VSv/cuFAAdi/wmwQQIDAQAB",
-     "algorithm": {
-      "name": "RSASSA-PKCS1-v1_5",
-      "modulusLength": 2048
-     },
-     "publicExponent": 65537,
-     "modulusHex": "0xa660d1fe41564c26f943c70ff89fbd9ed6d957191d5ecaf727393d73cfff85e3ccfb9830027fe84b171cc4b0b13811df4d9deff2bce4d8a8f9797169f7b8fc25016d9ba687c003083693716180c8f1eccaa4410a9a7fe07b198ad7ba94ecf744e9bef0273a5e0723a4ac197994ca1ac0e5f5954339700cf14ead419ae7cde8c3e81389771d5fa3d339f8d0856e918fd3746fa9a944d3c1f1c6a4e0ce3f99b5ac5ba05166b3b8695405ae7d3777f9cc8e3ab8570f2191ba4f2cfc4c544337596f48d3d5f5f9ae80575bf9eb81d5c477e99c58854645d587dd0ccdea2b0e3d482e69b326b289e65741e6b2143fc2bca35ca7dd60e554affdcb85000762ff09b041"
-    },
-    "algorithmInfo": "RSASSA-PKCS1-v1_5_SHA256",
-    "extensions": [
-     {
-      "oid": "2.5.29.15",
-      "name": "keyUsage",
-      "friendlyName": null,
-      "critical": true,
-      "value": "Digital Signature",
-      "displayHeader": null,
-      "includeOidInHeader": true
-     },
-     {
-      "oid": "2.5.29.19",
-      "name": "X509v3 Basic Constraints",
-      "friendlyName": "X509v3 Basic Constraints",
-      "critical": true,
-      "value": {
-       "CA": "FALSE"
-      },
-      "displayHeader": "X509v3 Basic Constraints",
-      "includeOidInHeader": false
-     },
-     {
-      "oid": "2.5.29.32",
-      "name": "certificatePolicies",
-      "friendlyName": null,
-      "critical": true,
-      "value": [
-       "Policy: 1.3.6.1.4.1.311.21.31",
-       "User Notice: TCPA  Trusted  Platform  Identity"
-      ],
-      "displayHeader": null,
-      "includeOidInHeader": true
-     },
-     {
-      "oid": "2.5.29.37",
-      "name": "extendedKeyUsage",
-      "friendlyName": null,
-      "critical": false,
-      "value": [
-       "2.23.133.8.3"
-      ],
-      "displayHeader": null,
-      "includeOidInHeader": true
-     },
-     {
-      "oid": "2.5.29.17",
-      "name": "subjectAltName",
-      "friendlyName": null,
-      "critical": true,
-      "value": [
-       "DirName:2.23.133.2.3=id:13+2.23.133.2.2=NPCT6xx+2.23.133.2.1=id:4E544300"
-      ],
-      "displayHeader": null,
-      "includeOidInHeader": true
-     },
-     {
-      "oid": "2.5.29.35",
-      "name": "Authority key identifier",
-      "friendlyName": "Authority key identifier",
-      "critical": false,
-      "value": {
-       "Hex value": [
-        "c7:99:ef:23:71:32:7c:b2:e9:e0:38:38:d0:a9:00:9f",
-        "e9:ed:29:e7"
-       ]
-      },
-      "displayHeader": null,
-      "includeOidInHeader": true
-     },
-     {
-      "oid": "2.5.29.14",
-      "name": "Subject key id",
-      "friendlyName": "Subject key id",
-      "critical": false,
-      "value": {
-       "Hex value": [
-        "29:fb:5f:05:c6:18:7d:84:63:b8:b2:50:b8:f0:ff:12",
-        "8f:d3:a0:71"
-       ]
-      },
-      "displayHeader": null,
-      "includeOidInHeader": true
-     },
-     {
-      "oid": "1.3.6.1.5.5.7.1.1",
-      "name": "authorityInfoAccess",
-      "friendlyName": null,
-      "critical": false,
-      "value": [
-       "caIssuers - URI:https://azcsprodncuaikpublish.blob.core.windows.net/ncu-ntc-keyid-9fbb79aa0f526278bed150929a7171e96a35bef7/f8505489-025a-4252-8290-94de2c63d096.cer"
-      ],
-      "displayHeader": null,
-      "includeOidInHeader": true
-     }
-    ],
-    "fingerprints": {
-     "sha256": "d06fc274d427dd946423852d7b935043abb39a637ef0e02da425df472be6aee5",
-     "sha1": "11f1ae041712d64ae1fe6f0c3e4a3651978218d6",
-     "md5": "ccb84d54505a03a44d4f030cd36518fb"
-    },
-    "signature": {
-     "algorithm": "sha256WithRSAEncryption",
-     "hash": {
-      "name": "sha256"
-     },
-     "hex": "84bc4b9ac3ab6c2438bdecdd3d99e6179bfc465995481d856683602bdcf0c26327b8ab77f7b695c8c6aab5f283b079c2936929727b839e5bf08c687a33fc59bf281ebf28e9d04e78fd626573028014028badca038e68361017a4501b18d56a6a73e35f00e043d8febb7a4c719c837bc5cb801efe23570d6c8b40699ba411fe66f6fe5558f7d1c56a7646ba483cd601690a9323caba9257ae561781b13c658083ad1281047d94d4c1ab9759d90a16fbe167cec388e7b67027a20dbc1b88986dbb636107ef91ffec22c413ac5fbfec3de9ee4aa1c6e4c173e43246193890c8b024587fcc8028eb379f515de3c678b11dfb81aef3547c3c6e790577d52f775f9148",
-     "colon": "84:bc:4b:9a:c3:ab:6c:24:38:bd:ec:dd:3d:99:e6:17:9b:fc:46:59:95:48:1d:85:66:83:60:2b:dc:f0:c2:63:27:b8:ab:77:f7:b6:95:c8:c6:aa:b5:f2:83:b0:79:c2:93:69:29:72:7b:83:9e:5b:f0:8c:68:7a:33:fc:59:bf:28:1e:bf:28:e9:d0:4e:78:fd:62:65:73:02:80:14:02:8b:ad:ca:03:8e:68:36:10:17:a4:50:1b:18:d5:6a:6a:73:e3:5f:00:e0:43:d8:fe:bb:7a:4c:71:9c:83:7b:c5:cb:80:1e:fe:23:57:0d:6c:8b:40:69:9b:a4:11:fe:66:f6:fe:55:58:f7:d1:c5:6a:76:46:ba:48:3c:d6:01:69:0a:93:23:ca:ba:92:57:ae:56:17:81:b1:3c:65:80:83:ad:12:81:04:7d:94:d4:c1:ab:97:59:d9:0a:16:fb:e1:67:ce:c3:88:e7:b6:70:27:a2:0d:bc:1b:88:98:6d:bb:63:61:07:ef:91:ff:ec:22:c4:13:ac:5f:bf:ec:3d:e9:ee:4a:a1:c6:e4:c1:73:e4:32:46:19:38:90:c8:b0:24:58:7f:cc:80:28:eb:37:9f:51:5d:e3:c6:78:b1:1d:fb:81:ae:f3:54:7c:3c:6e:79:05:77:d5:2f:77:5f:91:48",
-     "lines": [
-      "84:bc:4b:9a:c3:ab:6c:24:38:bd:ec:dd:3d:99:e6:17",
-      "9b:fc:46:59:95:48:1d:85:66:83:60:2b:dc:f0:c2:63",
-      "27:b8:ab:77:f7:b6:95:c8:c6:aa:b5:f2:83:b0:79:c2",
-      "93:69:29:72:7b:83:9e:5b:f0:8c:68:7a:33:fc:59:bf",
-      "28:1e:bf:28:e9:d0:4e:78:fd:62:65:73:02:80:14:02",
-      "8b:ad:ca:03:8e:68:36:10:17:a4:50:1b:18:d5:6a:6a",
-      "73:e3:5f:00:e0:43:d8:fe:bb:7a:4c:71:9c:83:7b:c5",
-      "cb:80:1e:fe:23:57:0d:6c:8b:40:69:9b:a4:11:fe:66",
-      "f6:fe:55:58:f7:d1:c5:6a:76:46:ba:48:3c:d6:01:69",
-      "0a:93:23:ca:ba:92:57:ae:56:17:81:b1:3c:65:80:83",
-      "ad:12:81:04:7d:94:d4:c1:ab:97:59:d9:0a:16:fb:e1",
-      "67:ce:c3:88:e7:b6:70:27:a2:0d:bc:1b:88:98:6d:bb",
-      "63:61:07:ef:91:ff:ec:22:c4:13:ac:5f:bf:ec:3d:e9",
-      "ee:4a:a1:c6:e4:c1:73:e4:32:46:19:38:90:c8:b0:24",
-      "58:7f:cc:80:28:eb:37:9f:51:5d:e3:c6:78:b1:1d:fb",
-      "81:ae:f3:54:7c:3c:6e:79:05:77:d5:2f:77:5f:91:48"
-     ],
-     "oid": "1.2.840.113549.1.1.11",
-     "details": null
-    },
-    "derBase64": "MIIEsjCCA5qgAwIBAgIQeJ4aNlc0TFK60i7RzrG/rzANBgkqhkiG9w0BAQsFADBBMT8wPQYDVQQDEzZOQ1UtTlRDLUtFWUlELTlGQkI3OUFBMEY1MjYyNzhCRUQxNTA5MjlBNzE3MUU5NkEzNUJFRjcwHhcNMTkwNDAxMDg1OTQwWhcNMjkwNDAxMDg1OTQwWjAAMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEApmDR/kFWTCb5Q8cP+J+9ntbZVxkdXsr3Jzk9c8//hePM+5gwAn/oSxccxLCxOBHfTZ3v8rzk2Kj5eXFp97j8JQFtm6aHwAMINpNxYYDI8ezKpEEKmn/gexmK17qU7PdE6b7wJzpeByOkrBl5lMoawOX1lUM5cAzxTq1BmufN6MPoE4l3HV+j0zn40IVukY/TdG+pqUTTwfHGpODOP5m1rFugUWazuGlUBa59N3f5zI46uFcPIZG6Tyz8TFRDN1lvSNPV9fmugFdb+euB1cR36ZxYhUZF1YfdDM3qKw49SC5psyayieZXQeayFD/CvKNcp91g5VSv/cuFAAdi/wmwQQIDAQABo4IB5TCCAeEwDgYDVR0PAQH/BAQDAgeAMAwGA1UdEwEB/wQCMAAwbQYDVR0gAQH/BGMwYTBfBgkrBgEEAYI3FR8wUjBQBggrBgEFBQcCAjBEHkIAVABDAFAAQQAgACAAVAByAHUAcwB0AGUAZAAgACAAUABsAGEAdABmAG8AcgBtACAAIABJAGQAZQBuAHQAaQB0AHkwEAYDVR0lBAkwBwYFZ4EFCAMwSgYDVR0RAQH/BEAwPqQ8MDoxODAOBgVngQUCAwwFaWQ6MTMwEAYFZ4EFAgIMB05QQ1Q2eHgwFAYFZ4EFAgEMC2lkOjRFNTQ0MzAwMB8GA1UdIwQYMBaAFMeZ7yNxMnyy6eA4ONCpAJ/p7SnnMB0GA1UdDgQWBBQp+18Fxhh9hGO4slC48P8Sj9OgcTCBswYIKwYBBQUHAQEEgaYwgaMwgaAGCCsGAQUFBzAChoGTaHR0cHM6Ly9hemNzcHJvZG5jdWFpa3B1Ymxpc2guYmxvYi5jb3JlLndpbmRvd3MubmV0L25jdS1udGMta2V5aWQtOWZiYjc5YWEwZjUyNjI3OGJlZDE1MDkyOWE3MTcxZTk2YTM1YmVmNy9mODUwNTQ4OS0wMjVhLTQyNTItODI5MC05NGRlMmM2M2QwOTYuY2VyMA0GCSqGSIb3DQEBCwUAA4IBAQCEvEuaw6tsJDi97N09meYXm/xGWZVIHYVmg2Ar3PDCYye4q3f3tpXIxqq18oOwecKTaSlye4OeW/CMaHoz/Fm/KB6/KOnQTnj9YmVzAoAUAoutygOOaDYQF6RQGxjVampz418A4EPY/rt6THGcg3vFy4Ae/iNXDWyLQGmbpBH+Zvb+VVj30cVqdka6SDzWAWkKkyPKupJXrlYXgbE8ZYCDrRKBBH2U1MGrl1nZChb74WfOw4jntnAnog28G4iYbbtjYQfvkf/sIsQTrF+/7D3p7kqhxuTBc+QyRhk4kMiwJFh/zIAo6zefUV3jxnixHfuBrvNUfDxueQV31S93X5FI",
-    "pem": "-----BEGIN CERTIFICATE-----\nMIIEsjCCA5qgAwIBAgIQeJ4aNlc0TFK60i7RzrG/rzANBgkqhkiG9w0BAQsFADBB\nMT8wPQYDVQQDEzZOQ1UtTlRDLUtFWUlELTlGQkI3OUFBMEY1MjYyNzhCRUQxNTA5\nMjlBNzE3MUU5NkEzNUJFRjcwHhcNMTkwNDAxMDg1OTQwWhcNMjkwNDAxMDg1OTQw\nWjAAMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEApmDR/kFWTCb5Q8cP\n+J+9ntbZVxkdXsr3Jzk9c8//hePM+5gwAn/oSxccxLCxOBHfTZ3v8rzk2Kj5eXFp\n97j8JQFtm6aHwAMINpNxYYDI8ezKpEEKmn/gexmK17qU7PdE6b7wJzpeByOkrBl5\nlMoawOX1lUM5cAzxTq1BmufN6MPoE4l3HV+j0zn40IVukY/TdG+pqUTTwfHGpODO\nP5m1rFugUWazuGlUBa59N3f5zI46uFcPIZG6Tyz8TFRDN1lvSNPV9fmugFdb+euB\n1cR36ZxYhUZF1YfdDM3qKw49SC5psyayieZXQeayFD/CvKNcp91g5VSv/cuFAAdi\n/wmwQQIDAQABo4IB5TCCAeEwDgYDVR0PAQH/BAQDAgeAMAwGA1UdEwEB/wQCMAAw\nbQYDVR0gAQH/BGMwYTBfBgkrBgEEAYI3FR8wUjBQBggrBgEFBQcCAjBEHkIAVABD\nAFAAQQAgACAAVAByAHUAcwB0AGUAZAAgACAAUABsAGEAdABmAG8AcgBtACAAIABJ\nAGQAZQBuAHQAaQB0AHkwEAYDVR0lBAkwBwYFZ4EFCAMwSgYDVR0RAQH/BEAwPqQ8\nMDoxODAOBgVngQUCAwwFaWQ6MTMwEAYFZ4EFAgIMB05QQ1Q2eHgwFAYFZ4EFAgEM\nC2lkOjRFNTQ0MzAwMB8GA1UdIwQYMBaAFMeZ7yNxMnyy6eA4ONCpAJ/p7SnnMB0G\nA1UdDgQWBBQp+18Fxhh9hGO4slC48P8Sj9OgcTCBswYIKwYBBQUHAQEEgaYwgaMw\ngaAGCCsGAQUFBzAChoGTaHR0cHM6Ly9hemNzcHJvZG5jdWFpa3B1Ymxpc2guYmxv\nYi5jb3JlLndpbmRvd3MubmV0L25jdS1udGMta2V5aWQtOWZiYjc5YWEwZjUyNjI3\nOGJlZDE1MDkyOWE3MTcxZTk2YTM1YmVmNy9mODUwNTQ4OS0wMjVhLTQyNTItODI5\nMC05NGRlMmM2M2QwOTYuY2VyMA0GCSqGSIb3DQEBCwUAA4IBAQCEvEuaw6tsJDi9\n7N09meYXm/xGWZVIHYVmg2Ar3PDCYye4q3f3tpXIxqq18oOwecKTaSlye4OeW/CM\naHoz/Fm/KB6/KOnQTnj9YmVzAoAUAoutygOOaDYQF6RQGxjVampz418A4EPY/rt6\nTHGcg3vFy4Ae/iNXDWyLQGmbpBH+Zvb+VVj30cVqdka6SDzWAWkKkyPKupJXrlYX\ngbE8ZYCDrRKBBH2U1MGrl1nZChb74WfOw4jntnAnog28G4iYbbtjYQfvkf/sIsQT\nrF+/7D3p7kqhxuTBc+QyRhk4kMiwJFh/zIAo6zefUV3jxnixHfuBrvNUfDxueQV3\n1S93X5FI\n-----END CERTIFICATE-----",
-    "summary": "Version: 3 (0x2)\nCertificate Serial Number: 160328274045797298650494485881739657135 (0x789e1a3657344c52bad22ed1ceb1bfaf)\nSignature Algorithm: sha256WithRSAEncryption\nIssuer: CN=NCU-NTC-KEYID-9FBB79AA0F526278BED150929A7171E96A35BEF7\n\nValidity:\n    Not Before: 2019-04-01T08:59:40+00:00\n    Not After: 2029-04-01T08:59:40+00:00\n\nSubject: \n\nSubject Public Key Info:\n    Type: RSA\n    Public-Key: (2048 bit)\n    Modulus:\n        a6:60:d1:fe:41:56:4c:26:f9:43:c7:0f:f8:9f:bd:9e\n        d6:d9:57:19:1d:5e:ca:f7:27:39:3d:73:cf:ff:85:e3\n        cc:fb:98:30:02:7f:e8:4b:17:1c:c4:b0:b1:38:11:df\n        4d:9d:ef:f2:bc:e4:d8:a8:f9:79:71:69:f7:b8:fc:25\n        01:6d:9b:a6:87:c0:03:08:36:93:71:61:80:c8:f1:ec\n        ca:a4:41:0a:9a:7f:e0:7b:19:8a:d7:ba:94:ec:f7:44\n        e9:be:f0:27:3a:5e:07:23:a4:ac:19:79:94:ca:1a:c0\n        e5:f5:95:43:39:70:0c:f1:4e:ad:41:9a:e7:cd:e8:c3\n        e8:13:89:77:1d:5f:a3:d3:39:f8:d0:85:6e:91:8f:d3\n        74:6f:a9:a9:44:d3:c1:f1:c6:a4:e0:ce:3f:99:b5:ac\n        5b:a0:51:66:b3:b8:69:54:05:ae:7d:37:77:f9:cc:8e\n        3a:b8:57:0f:21:91:ba:4f:2c:fc:4c:54:43:37:59:6f\n        48:d3:d5:f5:f9:ae:80:57:5b:f9:eb:81:d5:c4:77:e9\n        9c:58:85:46:45:d5:87:dd:0c:cd:ea:2b:0e:3d:48:2e\n        69:b3:26:b2:89:e6:57:41:e6:b2:14:3f:c2:bc:a3:5c\n        a7:dd:60:e5:54:af:fd:cb:85:00:07:62:ff:09:b0:41\n    Exponent: 65537\n\nX509v3 extensions:\n    2.5.29.15 (keyUsage) [critical]:\n        Digital Signature\n    X509v3 Basic Constraints [critical]:\n        CA: FALSE\n    2.5.29.32 (certificatePolicies) [critical]:\n        Policy: 1.3.6.1.4.1.311.21.31\n        User Notice: TCPA  Trusted  Platform  Identity\n    2.5.29.37 (extendedKeyUsage):\n        2.23.133.8.3\n    2.5.29.17 (subjectAltName) [critical]:\n        DirName:2.23.133.2.3=id:13+2.23.133.2.2=NPCT6xx+2.23.133.2.1=id:4E544300\n    2.5.29.35 (Authority key identifier):\n        Hex value:\n            c7:99:ef:23:71:32:7c:b2:e9:e0:38:38:d0:a9:00:9f\n            e9:ed:29:e7\n    2.5.29.14 (Subject key id):\n        Hex value:\n            29:fb:5f:05:c6:18:7d:84:63:b8:b2:50:b8:f0:ff:12\n            8f:d3:a0:71\n    1.3.6.1.5.5.7.1.1 (authorityInfoAccess):\n        caIssuers - URI:https://azcsprodncuaikpublish.blob.core.windows.net/ncu-ntc-keyid-9fbb79aa0f526278bed150929a7171e96a35bef7/f8505489-025a-4252-8290-94de2c63d096.cer\n\nSignature Algorithm: sha256WithRSAEncryption\n    84:bc:4b:9a:c3:ab:6c:24:38:bd:ec:dd:3d:99:e6:17\n    9b:fc:46:59:95:48:1d:85:66:83:60:2b:dc:f0:c2:63\n    27:b8:ab:77:f7:b6:95:c8:c6:aa:b5:f2:83:b0:79:c2\n    93:69:29:72:7b:83:9e:5b:f0:8c:68:7a:33:fc:59:bf\n    28:1e:bf:28:e9:d0:4e:78:fd:62:65:73:02:80:14:02\n    8b:ad:ca:03:8e:68:36:10:17:a4:50:1b:18:d5:6a:6a\n    73:e3:5f:00:e0:43:d8:fe:bb:7a:4c:71:9c:83:7b:c5\n    cb:80:1e:fe:23:57:0d:6c:8b:40:69:9b:a4:11:fe:66\n    f6:fe:55:58:f7:d1:c5:6a:76:46:ba:48:3c:d6:01:69\n    0a:93:23:ca:ba:92:57:ae:56:17:81:b1:3c:65:80:83\n    ad:12:81:04:7d:94:d4:c1:ab:97:59:d9:0a:16:fb:e1\n    67:ce:c3:88:e7:b6:70:27:a2:0d:bc:1b:88:98:6d:bb\n    63:61:07:ef:91:ff:ec:22:c4:13:ac:5f:bf:ec:3d:e9\n    ee:4a:a1:c6:e4:c1:73:e4:32:46:19:38:90:c8:b0:24\n    58:7f:cc:80:28:eb:37:9f:51:5d:e3:c6:78:b1:1d:fb\n    81:ae:f3:54:7c:3c:6e:79:05:77:d5:2f:77:5f:91:48\n\nFingerprint:\n    MD5:\n        cc:b8:4d:54:50:5a:03:a4:4d:4f:03:0c:d3:65:18:fb\n    SHA1:\n        11:f1:ae:04:17:12:d6:4a:e1:fe:6f:0c:3e:4a:36:51\n        97:82:18:d6\n    SHA256:\n        d0:6f:c2:74:d4:27:dd:94:64:23:85:2d:7b:93:50:43\n        ab:b3:9a:63:7e:f0:e0:2d:a4:25:df:47:2b:e6:ae:e5\n\nSubject Key Identifier:\n    29:fb:5f:05:c6:18:7d:84:63:b8:b2:50:b8:f0:ff:12\n    8f:d3:a0:71"
-   },
    [
     {
      "version": {
@@ -570,103 +406,6 @@
      "supported": true
     }
    },
-   {
-    "version": {
-     "display": "3 (0x2)",
-     "numeric": 3,
-     "hex": "0x2"
-    },
-    "serialNumber": {
-     "decimal": "74221602",
-     "hex": "0x46c8822"
-    },
-    "signatureAlgorithm": "sha256WithRSAEncryption",
-    "signatureAlgorithmOid": "1.2.840.113549.1.1.11",
-    "signatureAlgorithmDetails": null,
-    "issuer": "CN=Yubico U2F Root CA Serial 457200631",
-    "validity": {
-     "notBefore": "2014-08-01T00:00:00+00:00",
-     "notAfter": "2050-09-04T00:00:00+00:00"
-    },
-    "subject": "CN=Yubico U2F EE Serial 249182324770",
-    "subjectCommonNames": [
-     "Yubico U2F EE Serial 249182324770"
-    ],
-    "publicKeyInfo": {
-     "type": "ECC",
-     "keySize": 256,
-     "subjectPublicKeyInfoBase64": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEPMq5LMuXKH7o5jlDfiH81rbxZbLVo/PbEx0xwWt0K7R22NHpkIDrVGybvfVW5iEP1CeFiZ54zFievjEPbNuf9A==",
-     "algorithm": {
-      "name": "ECDSA",
-      "namedCurve": "secp256r1"
-     },
-     "curve": "secp256r1",
-     "uncompressedPoint": "04:3c:ca:b9:2c:cb:97:28:7e:e8:e6:39:43:7e:21:fc:d6:b6:f1:65:b2:d5:a3:f3:db:13:1d:31:c1:6b:74:2b:b4:76:d8:d1:e9:90:80:eb:54:6c:9b:bd:f5:56:e6:21:0f:d4:27:85:89:9e:78:cc:58:9e:be:31:0f:6c:db:9f:f4"
-    },
-    "algorithmInfo": "RSASSA-PKCS1-v1_5_SHA256",
-    "extensions": [
-     {
-      "oid": "1.3.6.1.4.1.41482.2",
-      "name": "Yubico: Device identifier",
-      "friendlyName": "Yubico: Device identifier",
-      "critical": false,
-      "value": {
-       "Hex value": "312e332e362e312e342e312e34313438322e312e32",
-       "Device identifier": "1.3.6.1.4.1.41482.1.2"
-      },
-      "displayHeader": null,
-      "includeOidInHeader": true
-     },
-     {
-      "oid": "1.3.6.1.4.1.45724.2.1.1",
-      "name": "FIDO: Transports",
-      "friendlyName": "FIDO: Transports",
-      "critical": false,
-      "value": {
-       "Hex value": "03020430",
-       "Transports": "USB NFC"
-      },
-      "displayHeader": null,
-      "includeOidInHeader": true
-     }
-    ],
-    "fingerprints": {
-     "sha256": "a88d6c0530957076e8fb2a9f9aad5ac3a569e77edb54544a1875ab8b2bc865cd",
-     "sha1": "098d2bf4228e9bbf10bb00c5cd82eb0171d1aeb0",
-     "md5": "7c24966ba5f8c10d63a7cbd9edc85d27"
-    },
-    "signature": {
-     "algorithm": "sha256WithRSAEncryption",
-     "hash": {
-      "name": "sha256"
-     },
-     "hex": "9f9b052248bc4cf42cc5991fcaabac9b651bbe5bdcdc8ef0ad2c1c1ffb36d18715d42e78b249224f92c7e6e7a05c49f0e7e4c881bf2e94f45e4a21833d7456851d0f6c145a29540c874f3092c934b43d222b8962c0f410cef1db75892af116b44a96f5d35adea3822fc7146f6004385bcb69b65c99e7eb6919786703c0d8cd41e8f75cca44aa8ab725ad8e799ff3a8696a6f1b2656e631b1e40183c08fda53fa4a8f85a05693944ae179a1339d002d15cabd810090ec722ef5def9965a371d415d624b68a2707cad97bcdd1785af97e258f33df56a031aa0356d8e8d5ebcadc74e071636c6b110ace5cc9b90dfeacae640ff1bb0f1fe5db4eff7a95f060733f5",
-     "colon": "9f:9b:05:22:48:bc:4c:f4:2c:c5:99:1f:ca:ab:ac:9b:65:1b:be:5b:dc:dc:8e:f0:ad:2c:1c:1f:fb:36:d1:87:15:d4:2e:78:b2:49:22:4f:92:c7:e6:e7:a0:5c:49:f0:e7:e4:c8:81:bf:2e:94:f4:5e:4a:21:83:3d:74:56:85:1d:0f:6c:14:5a:29:54:0c:87:4f:30:92:c9:34:b4:3d:22:2b:89:62:c0:f4:10:ce:f1:db:75:89:2a:f1:16:b4:4a:96:f5:d3:5a:de:a3:82:2f:c7:14:6f:60:04:38:5b:cb:69:b6:5c:99:e7:eb:69:19:78:67:03:c0:d8:cd:41:e8:f7:5c:ca:44:aa:8a:b7:25:ad:8e:79:9f:f3:a8:69:6a:6f:1b:26:56:e6:31:b1:e4:01:83:c0:8f:da:53:fa:4a:8f:85:a0:56:93:94:4a:e1:79:a1:33:9d:00:2d:15:ca:bd:81:00:90:ec:72:2e:f5:de:f9:96:5a:37:1d:41:5d:62:4b:68:a2:70:7c:ad:97:bc:dd:17:85:af:97:e2:58:f3:3d:f5:6a:03:1a:a0:35:6d:8e:8d:5e:bc:ad:c7:4e:07:16:36:c6:b1:10:ac:e5:cc:9b:90:df:ea:ca:e6:40:ff:1b:b0:f1:fe:5d:b4:ef:f7:a9:5f:06:07:33:f5",
-     "lines": [
-      "9f:9b:05:22:48:bc:4c:f4:2c:c5:99:1f:ca:ab:ac:9b",
-      "65:1b:be:5b:dc:dc:8e:f0:ad:2c:1c:1f:fb:36:d1:87",
-      "15:d4:2e:78:b2:49:22:4f:92:c7:e6:e7:a0:5c:49:f0",
-      "e7:e4:c8:81:bf:2e:94:f4:5e:4a:21:83:3d:74:56:85",
-      "1d:0f:6c:14:5a:29:54:0c:87:4f:30:92:c9:34:b4:3d",
-      "22:2b:89:62:c0:f4:10:ce:f1:db:75:89:2a:f1:16:b4",
-      "4a:96:f5:d3:5a:de:a3:82:2f:c7:14:6f:60:04:38:5b",
-      "cb:69:b6:5c:99:e7:eb:69:19:78:67:03:c0:d8:cd:41",
-      "e8:f7:5c:ca:44:aa:8a:b7:25:ad:8e:79:9f:f3:a8:69",
-      "6a:6f:1b:26:56:e6:31:b1:e4:01:83:c0:8f:da:53:fa",
-      "4a:8f:85:a0:56:93:94:4a:e1:79:a1:33:9d:00:2d:15",
-      "ca:bd:81:00:90:ec:72:2e:f5:de:f9:96:5a:37:1d:41",
-      "5d:62:4b:68:a2:70:7c:ad:97:bc:dd:17:85:af:97:e2",
-      "58:f3:3d:f5:6a:03:1a:a0:35:6d:8e:8d:5e:bc:ad:c7",
-      "4e:07:16:36:c6:b1:10:ac:e5:cc:9b:90:df:ea:ca:e6",
-      "40:ff:1b:b0:f1:fe:5d:b4:ef:f7:a9:5f:06:07:33:f5"
-     ],
-     "oid": "1.2.840.113549.1.1.11",
-     "details": null
-    },
-    "derBase64": "MIICSjCCATKgAwIBAgIEBGyIIjANBgkqhkiG9w0BAQsFADAuMSwwKgYDVQQDEyNZdWJpY28gVTJGIFJvb3QgQ0EgU2VyaWFsIDQ1NzIwMDYzMTAgFw0xNDA4MDEwMDAwMDBaGA8yMDUwMDkwNDAwMDAwMFowLDEqMCgGA1UEAwwhWXViaWNvIFUyRiBFRSBTZXJpYWwgMjQ5MTgyMzI0NzcwMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEPMq5LMuXKH7o5jlDfiH81rbxZbLVo/PbEx0xwWt0K7R22NHpkIDrVGybvfVW5iEP1CeFiZ54zFievjEPbNuf9KM7MDkwIgYJKwYBBAGCxAoCBBUxLjMuNi4xLjQuMS40MTQ4Mi4xLjIwEwYLKwYBBAGC5RwCAQEEBAMCBDAwDQYJKoZIhvcNAQELBQADggEBAJ+bBSJIvEz0LMWZH8qrrJtlG75b3NyO8K0sHB/7NtGHFdQueLJJIk+Sx+bnoFxJ8OfkyIG/LpT0Xkohgz10VoUdD2wUWilUDIdPMJLJNLQ9IiuJYsD0EM7x23WJKvEWtEqW9dNa3qOCL8cUb2AEOFvLabZcmefraRl4ZwPA2M1B6PdcykSqirclrY55n/OoaWpvGyZW5jGx5AGDwI/aU/pKj4WgVpOUSuF5oTOdAC0Vyr2BAJDsci713vmWWjcdQV1iS2iicHytl7zdF4Wvl+JY8z31agMaoDVtjo1evK3HTgcWNsaxEKzlzJuQ3+rK5kD/G7Dx/l207/epXwYHM/U=",
-    "pem": "-----BEGIN CERTIFICATE-----\nMIICSjCCATKgAwIBAgIEBGyIIjANBgkqhkiG9w0BAQsFADAuMSwwKgYDVQQDEyNZ\ndWJpY28gVTJGIFJvb3QgQ0EgU2VyaWFsIDQ1NzIwMDYzMTAgFw0xNDA4MDEwMDAw\nMDBaGA8yMDUwMDkwNDAwMDAwMFowLDEqMCgGA1UEAwwhWXViaWNvIFUyRiBFRSBT\nZXJpYWwgMjQ5MTgyMzI0NzcwMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEPMq5\nLMuXKH7o5jlDfiH81rbxZbLVo/PbEx0xwWt0K7R22NHpkIDrVGybvfVW5iEP1CeF\niZ54zFievjEPbNuf9KM7MDkwIgYJKwYBBAGCxAoCBBUxLjMuNi4xLjQuMS40MTQ4\nMi4xLjIwEwYLKwYBBAGC5RwCAQEEBAMCBDAwDQYJKoZIhvcNAQELBQADggEBAJ+b\nBSJIvEz0LMWZH8qrrJtlG75b3NyO8K0sHB/7NtGHFdQueLJJIk+Sx+bnoFxJ8Ofk\nyIG/LpT0Xkohgz10VoUdD2wUWilUDIdPMJLJNLQ9IiuJYsD0EM7x23WJKvEWtEqW\n9dNa3qOCL8cUb2AEOFvLabZcmefraRl4ZwPA2M1B6PdcykSqirclrY55n/OoaWpv\nGyZW5jGx5AGDwI/aU/pKj4WgVpOUSuF5oTOdAC0Vyr2BAJDsci713vmWWjcdQV1i\nS2iicHytl7zdF4Wvl+JY8z31agMaoDVtjo1evK3HTgcWNsaxEKzlzJuQ3+rK5kD/\nG7Dx/l207/epXwYHM/U=\n-----END CERTIFICATE-----",
-    "summary": "Version: 3 (0x2)\nCertificate Serial Number: 74221602 (0x46c8822)\nSignature Algorithm: sha256WithRSAEncryption\nIssuer: CN=Yubico U2F Root CA Serial 457200631\n\nValidity:\n    Not Before: 2014-08-01T00:00:00+00:00\n    Not After: 2050-09-04T00:00:00+00:00\n\nSubject: CN=Yubico U2F EE Serial 249182324770\n\nSubject Public Key Info:\n    Type: ECC\n    Public-Key: (256 bit)\n    pub:\n        04:3c:ca:b9:2c:cb:97:28:7e:e8:e6:39:43:7e:21:fc\n        d6:b6:f1:65:b2:d5:a3:f3:db:13:1d:31:c1:6b:74:2b\n        b4:76:d8:d1:e9:90:80:eb:54:6c:9b:bd:f5:56:e6:21\n        0f:d4:27:85:89:9e:78:cc:58:9e:be:31:0f:6c:db:9f\n        f4\n    Curve: secp256r1\n\nX509v3 extensions:\n    1.3.6.1.4.1.41482.2 (Yubico: Device identifier):\n        Hex value: 312e332e362e312e342e312e34313438322e312e32\n        Device identifier: 1.3.6.1.4.1.41482.1.2\n    1.3.6.1.4.1.45724.2.1.1 (FIDO: Transports):\n        Hex value: 03020430\n        Transports: USB NFC\n\nSignature Algorithm: sha256WithRSAEncryption\n    9f:9b:05:22:48:bc:4c:f4:2c:c5:99:1f:ca:ab:ac:9b\n    65:1b:be:5b:dc:dc:8e:f0:ad:2c:1c:1f:fb:36:d1:87\n    15:d4:2e:78:b2:49:22:4f:92:c7:e6:e7:a0:5c:49:f0\n    e7:e4:c8:81:bf:2e:94:f4:5e:4a:21:83:3d:74:56:85\n    1d:0f:6c:14:5a:29:54:0c:87:4f:30:92:c9:34:b4:3d\n    22:2b:89:62:c0:f4:10:ce:f1:db:75:89:2a:f1:16:b4\n    4a:96:f5:d3:5a:de:a3:82:2f:c7:14:6f:60:04:38:5b\n    cb:69:b6:5c:99:e7:eb:69:19:78:67:03:c0:d8:cd:41\n    e8:f7:5c:ca:44:aa:8a:b7:25:ad:8e:79:9f:f3:a8:69\n    6a:6f:1b:26:56:e6:31:b1:e4:01:83:c0:8f:da:53:fa\n    4a:8f:85:a0:56:93:94:4a:e1:79:a1:33:9d:00:2d:15\n    ca:bd:81:00:90:ec:72:2e:f5:de:f9:96:5a:37:1d:41\n    5d:62:4b:68:a2:70:7c:ad:97:bc:dd:17:85:af:97:e2\n    58:f3:3d:f5:6a:03:1a:a0:35:6d:8e:8d:5e:bc:ad:c7\n    4e:07:16:36:c6:b1:10:ac:e5:cc:9b:90:df:ea:ca:e6\n    40:ff:1b:b0:f1:fe:5d:b4:ef:f7:a9:5f:06:07:33:f5\n\nFingerprint:\n    MD5:\n        7c:24:96:6b:a5:f8:c1:0d:63:a7:cb:d9:ed:c8:5d:27\n    SHA1:\n        09:8d:2b:f4:22:8e:9b:bf:10:bb:00:c5:cd:82:eb:01\n        71:d1:ae:b0\n    SHA256:\n        a8:8d:6c:05:30:95:70:76:e8:fb:2a:9f:9a:ad:5a:c3\n        a5:69:e7:7e:db:54:54:4a:18:75:ab:8b:2b:c8:65:cd"
-   },
    [
     {
      "version": {
@@ -791,125 +530,6 @@
     "largeBlob": {
      "supported": true
     }
-   },
-   {
-    "version": {
-     "display": "3 (0x2)",
-     "numeric": 3,
-     "hex": "0x2"
-    },
-    "serialNumber": {
-     "decimal": "489763597",
-     "hex": "0x1d31330d"
-    },
-    "signatureAlgorithm": "sha256WithRSAEncryption",
-    "signatureAlgorithmOid": "1.2.840.113549.1.1.11",
-    "signatureAlgorithmDetails": null,
-    "issuer": "CN=Yubico Preview FIDO Attestation",
-    "validity": {
-     "notBefore": "2018-03-28T06:39:24+00:00",
-     "notAfter": "2019-03-28T06:39:24+00:00"
-    },
-    "subject": "CN=Yubico U2F EE Serial 489763597,OU=Authenticator Attestation,O=Yubico AB,C=SE",
-    "subjectCommonNames": [
-     "Yubico U2F EE Serial 489763597"
-    ],
-    "publicKeyInfo": {
-     "type": "ECC",
-     "keySize": 256,
-     "subjectPublicKeyInfoBase64": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEfXHoNnyv0Ops8NYeTGpBa6W7bY+tUtsjia0Hlp8PRjv93d3CnTnTGZFj7klXWjM2wEszCdYH9hYMgeAjNz4Blw==",
-     "algorithm": {
-      "name": "ECDSA",
-      "namedCurve": "secp256r1"
-     },
-     "curve": "secp256r1",
-     "uncompressedPoint": "04:7d:71:e8:36:7c:af:d0:ea:6c:f0:d6:1e:4c:6a:41:6b:a5:bb:6d:8f:ad:52:db:23:89:ad:07:96:9f:0f:46:3b:fd:dd:dd:c2:9d:39:d3:19:91:63:ee:49:57:5a:33:36:c0:4b:33:09:d6:07:f6:16:0c:81:e0:23:37:3e:01:97"
-    },
-    "algorithmInfo": "RSASSA-PKCS1-v1_5_SHA256",
-    "extensions": [
-     {
-      "oid": "1.3.6.1.4.1.41482.2",
-      "name": "Yubico: Device identifier",
-      "friendlyName": "Yubico: Device identifier",
-      "critical": false,
-      "value": {
-       "Hex value": "312e332e362e312e342e312e34313438322e312e32",
-       "Device identifier": "1.3.6.1.4.1.41482.1.2"
-      },
-      "displayHeader": null,
-      "includeOidInHeader": true
-     },
-     {
-      "oid": "1.3.6.1.4.1.45724.2.1.1",
-      "name": "FIDO: Transports",
-      "friendlyName": "FIDO: Transports",
-      "critical": false,
-      "value": {
-       "Hex value": "03020430",
-       "Transports": "USB NFC"
-      },
-      "displayHeader": null,
-      "includeOidInHeader": true
-     },
-     {
-      "oid": "1.3.6.1.4.1.45724.1.1.4",
-      "name": "FIDO: Device AAGUID",
-      "friendlyName": "FIDO: Device AAGUID",
-      "critical": false,
-      "value": {
-       "AAGUID": "f8a011f38c0a4d15800617111f9edc7d"
-      },
-      "displayHeader": null,
-      "includeOidInHeader": true
-     },
-     {
-      "oid": "2.5.29.19",
-      "name": "X509v3 Basic Constraints",
-      "friendlyName": "X509v3 Basic Constraints",
-      "critical": true,
-      "value": {
-       "CA": "FALSE"
-      },
-      "displayHeader": "X509v3 Basic Constraints",
-      "includeOidInHeader": false
-     }
-    ],
-    "fingerprints": {
-     "sha256": "cb3645299b81be94c780eae789c5fabba2ccfc5059aaa21dd7e3564b10ce480c",
-     "sha1": "3a59814c22d3c5cf5d0e687dba02b9ac46574d76",
-     "md5": "c3d3834e80e9a879c79d4c993db40ff8"
-    },
-    "signature": {
-     "algorithm": "sha256WithRSAEncryption",
-     "hash": {
-      "name": "sha256"
-     },
-     "hex": "9b904ceadbe1f1985486fead02baeaa77e5ab4e6e52b7e6a2666a4dc06e241578169193b63dadec5b2b78605a128b2e03f7fe2a98eaeb4219f52220995f400ce15d630cf0598ba662d7162459f1ad1fc623067376d4e4091be65ac1a33d8561b9996c0529ec1816d1710786384d5e8783aa1f7474cb99fe8f5a63a79ff454380361c299d67cb5cc7c79f0d8c09f8849b0500f6d625408c77cbbc26ddee11cb581beb7947137ad4f05aaf38bd98da10042ddcac277604a395a5b3eaa88a5c8bb27ab59c8127d59d6bbba5f11506bf7b75fda7561a0837c46f025fd54dcf1014fc8d17c859507ac57d4b1dea99485df0ba8f34d00103c3eef2ef3bbfec7a6613de",
-     "colon": "9b:90:4c:ea:db:e1:f1:98:54:86:fe:ad:02:ba:ea:a7:7e:5a:b4:e6:e5:2b:7e:6a:26:66:a4:dc:06:e2:41:57:81:69:19:3b:63:da:de:c5:b2:b7:86:05:a1:28:b2:e0:3f:7f:e2:a9:8e:ae:b4:21:9f:52:22:09:95:f4:00:ce:15:d6:30:cf:05:98:ba:66:2d:71:62:45:9f:1a:d1:fc:62:30:67:37:6d:4e:40:91:be:65:ac:1a:33:d8:56:1b:99:96:c0:52:9e:c1:81:6d:17:10:78:63:84:d5:e8:78:3a:a1:f7:47:4c:b9:9f:e8:f5:a6:3a:79:ff:45:43:80:36:1c:29:9d:67:cb:5c:c7:c7:9f:0d:8c:09:f8:84:9b:05:00:f6:d6:25:40:8c:77:cb:bc:26:dd:ee:11:cb:58:1b:eb:79:47:13:7a:d4:f0:5a:af:38:bd:98:da:10:04:2d:dc:ac:27:76:04:a3:95:a5:b3:ea:a8:8a:5c:8b:b2:7a:b5:9c:81:27:d5:9d:6b:bb:a5:f1:15:06:bf:7b:75:fd:a7:56:1a:08:37:c4:6f:02:5f:d5:4d:cf:10:14:fc:8d:17:c8:59:50:7a:c5:7d:4b:1d:ea:99:48:5d:f0:ba:8f:34:d0:01:03:c3:ee:f2:ef:3b:bf:ec:7a:66:13:de",
-     "lines": [
-      "9b:90:4c:ea:db:e1:f1:98:54:86:fe:ad:02:ba:ea:a7",
-      "7e:5a:b4:e6:e5:2b:7e:6a:26:66:a4:dc:06:e2:41:57",
-      "81:69:19:3b:63:da:de:c5:b2:b7:86:05:a1:28:b2:e0",
-      "3f:7f:e2:a9:8e:ae:b4:21:9f:52:22:09:95:f4:00:ce",
-      "15:d6:30:cf:05:98:ba:66:2d:71:62:45:9f:1a:d1:fc",
-      "62:30:67:37:6d:4e:40:91:be:65:ac:1a:33:d8:56:1b",
-      "99:96:c0:52:9e:c1:81:6d:17:10:78:63:84:d5:e8:78",
-      "3a:a1:f7:47:4c:b9:9f:e8:f5:a6:3a:79:ff:45:43:80",
-      "36:1c:29:9d:67:cb:5c:c7:c7:9f:0d:8c:09:f8:84:9b",
-      "05:00:f6:d6:25:40:8c:77:cb:bc:26:dd:ee:11:cb:58",
-      "1b:eb:79:47:13:7a:d4:f0:5a:af:38:bd:98:da:10:04",
-      "2d:dc:ac:27:76:04:a3:95:a5:b3:ea:a8:8a:5c:8b:b2",
-      "7a:b5:9c:81:27:d5:9d:6b:bb:a5:f1:15:06:bf:7b:75",
-      "fd:a7:56:1a:08:37:c4:6f:02:5f:d5:4d:cf:10:14:fc",
-      "8d:17:c8:59:50:7a:c5:7d:4b:1d:ea:99:48:5d:f0:ba",
-      "8f:34:d0:01:03:c3:ee:f2:ef:3b:bf:ec:7a:66:13:de"
-     ],
-     "oid": "1.2.840.113549.1.1.11",
-     "details": null
-    },
-    "derBase64": "MIICtzCCAZ+gAwIBAgIEHTEzDTANBgkqhkiG9w0BAQsFADAqMSgwJgYDVQQDDB9ZdWJpY28gUHJldmlldyBGSURPIEF0dGVzdGF0aW9uMB4XDTE4MDMyODA2MzkyNFoXDTE5MDMyODA2MzkyNFowbjELMAkGA1UEBhMCU0UxEjAQBgNVBAoMCVl1YmljbyBBQjEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweWXViaWNvIFUyRiBFRSBTZXJpYWwgNDg5NzYzNTk3MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEfXHoNnyv0Ops8NYeTGpBa6W7bY+tUtsjia0Hlp8PRjv93d3CnTnTGZFj7klXWjM2wEszCdYH9hYMgeAjNz4Bl6NsMGowIgYJKwYBBAGCxAoCBBUxLjMuNi4xLjQuMS40MTQ4Mi4xLjIwEwYLKwYBBAGC5RwCAQEEBAMCBDAwIQYLKwYBBAGC5RwBAQQEEgQQ+KAR84wKTRWABhcRH57cfTAMBgNVHRMBAf8EAjAAMA0GCSqGSIb3DQEBCwUAA4IBAQCbkEzq2+HxmFSG/q0Cuuqnflq05uUrfmomZqTcBuJBV4FpGTtj2t7FsreGBaEosuA/f+Kpjq60IZ9SIgmV9ADOFdYwzwWYumYtcWJFnxrR/GIwZzdtTkCRvmWsGjPYVhuZlsBSnsGBbRcQeGOE1eh4OqH3R0y5n+j1pjp5/0VDgDYcKZ1ny1zHx58NjAn4hJsFAPbWJUCMd8u8Jt3uEctYG+t5RxN61PBarzi9mNoQBC3crCd2BKOVpbPqqIpci7J6tZyBJ9Wda7ul8RUGv3t1/adWGgg3xG8CX9VNzxAU/I0XyFlQesV9Sx3qmUhd8LqPNNABA8Pu8u87v+x6ZhPe",
-    "pem": "-----BEGIN CERTIFICATE-----\nMIICtzCCAZ+gAwIBAgIEHTEzDTANBgkqhkiG9w0BAQsFADAqMSgwJgYDVQQDDB9Z\ndWJpY28gUHJldmlldyBGSURPIEF0dGVzdGF0aW9uMB4XDTE4MDMyODA2MzkyNFoX\nDTE5MDMyODA2MzkyNFowbjELMAkGA1UEBhMCU0UxEjAQBgNVBAoMCVl1YmljbyBB\nQjEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwwe\nWXViaWNvIFUyRiBFRSBTZXJpYWwgNDg5NzYzNTk3MFkwEwYHKoZIzj0CAQYIKoZI\nzj0DAQcDQgAEfXHoNnyv0Ops8NYeTGpBa6W7bY+tUtsjia0Hlp8PRjv93d3CnTnT\nGZFj7klXWjM2wEszCdYH9hYMgeAjNz4Bl6NsMGowIgYJKwYBBAGCxAoCBBUxLjMu\nNi4xLjQuMS40MTQ4Mi4xLjIwEwYLKwYBBAGC5RwCAQEEBAMCBDAwIQYLKwYBBAGC\n5RwBAQQEEgQQ+KAR84wKTRWABhcRH57cfTAMBgNVHRMBAf8EAjAAMA0GCSqGSIb3\nDQEBCwUAA4IBAQCbkEzq2+HxmFSG/q0Cuuqnflq05uUrfmomZqTcBuJBV4FpGTtj\n2t7FsreGBaEosuA/f+Kpjq60IZ9SIgmV9ADOFdYwzwWYumYtcWJFnxrR/GIwZzdt\nTkCRvmWsGjPYVhuZlsBSnsGBbRcQeGOE1eh4OqH3R0y5n+j1pjp5/0VDgDYcKZ1n\ny1zHx58NjAn4hJsFAPbWJUCMd8u8Jt3uEctYG+t5RxN61PBarzi9mNoQBC3crCd2\nBKOVpbPqqIpci7J6tZyBJ9Wda7ul8RUGv3t1/adWGgg3xG8CX9VNzxAU/I0XyFlQ\nesV9Sx3qmUhd8LqPNNABA8Pu8u87v+x6ZhPe\n-----END CERTIFICATE-----",
-    "summary": "Version: 3 (0x2)\nCertificate Serial Number: 489763597 (0x1d31330d)\nSignature Algorithm: sha256WithRSAEncryption\nIssuer: CN=Yubico Preview FIDO Attestation\n\nValidity:\n    Not Before: 2018-03-28T06:39:24+00:00\n    Not After: 2019-03-28T06:39:24+00:00\n\nSubject: CN=Yubico U2F EE Serial 489763597,OU=Authenticator Attestation,O=Yubico AB,C=SE\n\nSubject Public Key Info:\n    Type: ECC\n    Public-Key: (256 bit)\n    pub:\n        04:7d:71:e8:36:7c:af:d0:ea:6c:f0:d6:1e:4c:6a:41\n        6b:a5:bb:6d:8f:ad:52:db:23:89:ad:07:96:9f:0f:46\n        3b:fd:dd:dd:c2:9d:39:d3:19:91:63:ee:49:57:5a:33\n        36:c0:4b:33:09:d6:07:f6:16:0c:81:e0:23:37:3e:01\n        97\n    Curve: secp256r1\n\nX509v3 extensions:\n    1.3.6.1.4.1.41482.2 (Yubico: Device identifier):\n        Hex value: 312e332e362e312e342e312e34313438322e312e32\n        Device identifier: 1.3.6.1.4.1.41482.1.2\n    1.3.6.1.4.1.45724.2.1.1 (FIDO: Transports):\n        Hex value: 03020430\n        Transports: USB NFC\n    1.3.6.1.4.1.45724.1.1.4 (FIDO: Device AAGUID):\n        AAGUID: f8a011f38c0a4d15800617111f9edc7d\n    X509v3 Basic Constraints [critical]:\n        CA: FALSE\n\nSignature Algorithm: sha256WithRSAEncryption\n    9b:90:4c:ea:db:e1:f1:98:54:86:fe:ad:02:ba:ea:a7\n    7e:5a:b4:e6:e5:2b:7e:6a:26:66:a4:dc:06:e2:41:57\n    81:69:19:3b:63:da:de:c5:b2:b7:86:05:a1:28:b2:e0\n    3f:7f:e2:a9:8e:ae:b4:21:9f:52:22:09:95:f4:00:ce\n    15:d6:30:cf:05:98:ba:66:2d:71:62:45:9f:1a:d1:fc\n    62:30:67:37:6d:4e:40:91:be:65:ac:1a:33:d8:56:1b\n    99:96:c0:52:9e:c1:81:6d:17:10:78:63:84:d5:e8:78\n    3a:a1:f7:47:4c:b9:9f:e8:f5:a6:3a:79:ff:45:43:80\n    36:1c:29:9d:67:cb:5c:c7:c7:9f:0d:8c:09:f8:84:9b\n    05:00:f6:d6:25:40:8c:77:cb:bc:26:dd:ee:11:cb:58\n    1b:eb:79:47:13:7a:d4:f0:5a:af:38:bd:98:da:10:04\n    2d:dc:ac:27:76:04:a3:95:a5:b3:ea:a8:8a:5c:8b:b2\n    7a:b5:9c:81:27:d5:9d:6b:bb:a5:f1:15:06:bf:7b:75\n    fd:a7:56:1a:08:37:c4:6f:02:5f:d5:4d:cf:10:14:fc\n    8d:17:c8:59:50:7a:c5:7d:4b:1d:ea:99:48:5d:f0:ba\n    8f:34:d0:01:03:c3:ee:f2:ef:3b:bf:ec:7a:66:13:de\n\nFingerprint:\n    MD5:\n        c3:d3:83:4e:80:e9:a8:79:c7:9d:4c:99:3d:b4:0f:f8\n    SHA1:\n        3a:59:81:4c:22:d3:c5:cf:5d:0e:68:7d:ba:02:b9:ac\n        46:57:4d:76\n    SHA256:\n        cb:36:45:29:9b:81:be:94:c7:80:ea:e7:89:c5:fa:bb\n        a2:cc:fc:50:59:aa:a2:1d:d7:e3:56:4b:10:ce:48:0c"
    },
    [
     {
@@ -1057,101 +677,6 @@
     "largeBlob": {
      "supported": true
     }
-   },
-   {
-    "version": {
-     "display": "3 (0x2)",
-     "numeric": 3,
-     "hex": "0x2"
-    },
-    "serialNumber": {
-     "decimal": "1609259244031",
-     "hex": "0x176af5359ff"
-    },
-    "signatureAlgorithm": "ecdsa-with-SHA256",
-    "signatureAlgorithmOid": "1.2.840.10045.4.3.2",
-    "signatureAlgorithmDetails": null,
-    "issuer": "ST=California,O=Apple Inc.,CN=Apple WebAuthn CA 1",
-    "validity": {
-     "notBefore": "2020-12-28T16:27:24+00:00",
-     "notAfter": "2020-12-31T16:27:24+00:00"
-    },
-    "subject": "ST=California,O=Apple Inc.,OU=AAA Certification,CN=809fbc110ea85f23a8b245aec616350f37dfe962122736e41f8bdcef346a80d9",
-    "subjectCommonNames": [
-     "809fbc110ea85f23a8b245aec616350f37dfe962122736e41f8bdcef346a80d9"
-    ],
-    "publicKeyInfo": {
-     "type": "ECC",
-     "keySize": 256,
-     "subjectPublicKeyInfoBase64": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEH0ai8Vn941RZjN1H4AXxtufJ8A7SqUHseojSIvW89V1rB4vFsL6VUthal0kh9buEjiu8OuzW9xo4bSyH1ur9Nw==",
-     "algorithm": {
-      "name": "ECDSA",
-      "namedCurve": "secp256r1"
-     },
-     "curve": "secp256r1",
-     "uncompressedPoint": "04:1f:46:a2:f1:59:fd:e3:54:59:8c:dd:47:e0:05:f1:b6:e7:c9:f0:0e:d2:a9:41:ec:7a:88:d2:22:f5:bc:f5:5d:6b:07:8b:c5:b0:be:95:52:d8:5a:97:49:21:f5:bb:84:8e:2b:bc:3a:ec:d6:f7:1a:38:6d:2c:87:d6:ea:fd:37"
-    },
-    "algorithmInfo": "ECDSA_SHA256",
-    "extensions": [
-     {
-      "oid": "2.5.29.19",
-      "name": "X509v3 Basic Constraints",
-      "friendlyName": "X509v3 Basic Constraints",
-      "critical": true,
-      "value": {
-       "CA": "FALSE"
-      },
-      "displayHeader": "X509v3 Basic Constraints",
-      "includeOidInHeader": false
-     },
-     {
-      "oid": "2.5.29.15",
-      "name": "keyUsage",
-      "friendlyName": null,
-      "critical": true,
-      "value": "Digital Signature, Non Repudiation, Key Encipherment, Data Encipherment",
-      "displayHeader": null,
-      "includeOidInHeader": true
-     },
-     {
-      "oid": "1.2.840.113635.100.8.2",
-      "name": "Unknown OID",
-      "friendlyName": null,
-      "critical": false,
-      "value": {
-       "Hex value": "3024a1220420e56fb6212b3aae885294464fb10184b7fea62c48a6d78e61194e07ae6dacc132"
-      },
-      "displayHeader": null,
-      "includeOidInHeader": true
-     }
-    ],
-    "fingerprints": {
-     "sha256": "63ff4c82b40d50e6b3d7837317fb418baad8447bbfe5c2c6fc8f8f7079924180",
-     "sha1": "750d563fcfbf4f6a62bd669a12f06d51bdf44b38",
-     "md5": "4f7cc1b47c3a72436c4a0f11f75fc4a8"
-    },
-    "signature": {
-     "algorithm": "ecdsa-with-SHA256",
-     "hash": {
-      "name": "sha256"
-     },
-     "hex": "306402301de8f0f238eee4f5ae80c59290b51e8c3f79397bf198e444ba162d4fccaab8558b072cf00a7c662f9058ff2a98af61ae0230149403b9643066e73a98d3659563dc4da49bf84e82b2b5bbeaf57755646fa243f36344d44b80a5798203bca023e030c7",
-     "colon": "30:64:02:30:1d:e8:f0:f2:38:ee:e4:f5:ae:80:c5:92:90:b5:1e:8c:3f:79:39:7b:f1:98:e4:44:ba:16:2d:4f:cc:aa:b8:55:8b:07:2c:f0:0a:7c:66:2f:90:58:ff:2a:98:af:61:ae:02:30:14:94:03:b9:64:30:66:e7:3a:98:d3:65:95:63:dc:4d:a4:9b:f8:4e:82:b2:b5:bb:ea:f5:77:55:64:6f:a2:43:f3:63:44:d4:4b:80:a5:79:82:03:bc:a0:23:e0:30:c7",
-     "lines": [
-      "30:64:02:30:1d:e8:f0:f2:38:ee:e4:f5:ae:80:c5:92",
-      "90:b5:1e:8c:3f:79:39:7b:f1:98:e4:44:ba:16:2d:4f",
-      "cc:aa:b8:55:8b:07:2c:f0:0a:7c:66:2f:90:58:ff:2a",
-      "98:af:61:ae:02:30:14:94:03:b9:64:30:66:e7:3a:98",
-      "d3:65:95:63:dc:4d:a4:9b:f8:4e:82:b2:b5:bb:ea:f5",
-      "77:55:64:6f:a2:43:f3:63:44:d4:4b:80:a5:79:82:03",
-      "bc:a0:23:e0:30:c7"
-     ],
-     "oid": "1.2.840.10045.4.3.2",
-     "details": null
-    },
-    "derBase64": "MIICQjCCAcmgAwIBAgIGAXavU1n/MAoGCCqGSM49BAMCMEgxHDAaBgNVBAMME0FwcGxlIFdlYkF1dGhuIENBIDExEzARBgNVBAoMCkFwcGxlIEluYy4xEzARBgNVBAgMCkNhbGlmb3JuaWEwHhcNMjAxMjI4MTYyNzI0WhcNMjAxMjMxMTYyNzI0WjCBkTFJMEcGA1UEAwxAODA5ZmJjMTEwZWE4NWYyM2E4YjI0NWFlYzYxNjM1MGYzN2RmZTk2MjEyMjczNmU0MWY4YmRjZWYzNDZhODBkOTEaMBgGA1UECwwRQUFBIENlcnRpZmljYXRpb24xEzARBgNVBAoMCkFwcGxlIEluYy4xEzARBgNVBAgMCkNhbGlmb3JuaWEwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAQfRqLxWf3jVFmM3UfgBfG258nwDtKpQex6iNIi9bz1XWsHi8WwvpVS2FqXSSH1u4SOK7w67Nb3GjhtLIfW6v03o1UwUzAMBgNVHRMBAf8EAjAAMA4GA1UdDwEB/wQEAwIE8DAzBgkqhkiG92NkCAIEJjAkoSIEIOVvtiErOq6IUpRGT7EBhLf+pixIpteOYRlOB65trMEyMAoGCCqGSM49BAMCA2cAMGQCMB3o8PI47uT1roDFkpC1How/eTl78ZjkRLoWLU/MqrhViwcs8Ap8Zi+QWP8qmK9hrgIwFJQDuWQwZuc6mNNllWPcTaSb+E6CsrW76vV3VWRvokPzY0TUS4CleYIDvKAj4DDH",
-    "pem": "-----BEGIN CERTIFICATE-----\nMIICQjCCAcmgAwIBAgIGAXavU1n/MAoGCCqGSM49BAMCMEgxHDAaBgNVBAMME0Fw\ncGxlIFdlYkF1dGhuIENBIDExEzARBgNVBAoMCkFwcGxlIEluYy4xEzARBgNVBAgM\nCkNhbGlmb3JuaWEwHhcNMjAxMjI4MTYyNzI0WhcNMjAxMjMxMTYyNzI0WjCBkTFJ\nMEcGA1UEAwxAODA5ZmJjMTEwZWE4NWYyM2E4YjI0NWFlYzYxNjM1MGYzN2RmZTk2\nMjEyMjczNmU0MWY4YmRjZWYzNDZhODBkOTEaMBgGA1UECwwRQUFBIENlcnRpZmlj\nYXRpb24xEzARBgNVBAoMCkFwcGxlIEluYy4xEzARBgNVBAgMCkNhbGlmb3JuaWEw\nWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAQfRqLxWf3jVFmM3UfgBfG258nwDtKp\nQex6iNIi9bz1XWsHi8WwvpVS2FqXSSH1u4SOK7w67Nb3GjhtLIfW6v03o1UwUzAM\nBgNVHRMBAf8EAjAAMA4GA1UdDwEB/wQEAwIE8DAzBgkqhkiG92NkCAIEJjAkoSIE\nIOVvtiErOq6IUpRGT7EBhLf+pixIpteOYRlOB65trMEyMAoGCCqGSM49BAMCA2cA\nMGQCMB3o8PI47uT1roDFkpC1How/eTl78ZjkRLoWLU/MqrhViwcs8Ap8Zi+QWP8q\nmK9hrgIwFJQDuWQwZuc6mNNllWPcTaSb+E6CsrW76vV3VWRvokPzY0TUS4CleYID\nvKAj4DDH\n-----END CERTIFICATE-----",
-    "summary": "Version: 3 (0x2)\nCertificate Serial Number: 1609259244031 (0x176af5359ff)\nSignature Algorithm: ecdsa-with-SHA256\nIssuer: ST=California,O=Apple Inc.,CN=Apple WebAuthn CA 1\n\nValidity:\n    Not Before: 2020-12-28T16:27:24+00:00\n    Not After: 2020-12-31T16:27:24+00:00\n\nSubject: ST=California,O=Apple Inc.,OU=AAA Certification,CN=809fbc110ea85f23a8b245aec616350f37dfe962122736e41f8bdcef346a80d9\n\nSubject Public Key Info:\n    Type: ECC\n    Public-Key: (256 bit)\n    pub:\n        04:1f:46:a2:f1:59:fd:e3:54:59:8c:dd:47:e0:05:f1\n        b6:e7:c9:f0:0e:d2:a9:41:ec:7a:88:d2:22:f5:bc:f5\n        5d:6b:07:8b:c5:b0:be:95:52:d8:5a:97:49:21:f5:bb\n        84:8e:2b:bc:3a:ec:d6:f7:1a:38:6d:2c:87:d6:ea:fd\n        37\n    Curve: secp256r1\n\nX509v3 extensions:\n    X509v3 Basic Constraints [critical]:\n        CA: FALSE\n    2.5.29.15 (keyUsage) [critical]:\n        Digital Signature, Non Repudiation, Key Encipherment, Data Encipherment\n    1.2.840.113635.100.8.2 (Unknown OID):\n        Hex value: 3024a1220420e56fb6212b3aae885294464fb10184b7fea62c48a6d78e61194e07ae6dacc132\n\nSignature Algorithm: ecdsa-with-SHA256\n    30:64:02:30:1d:e8:f0:f2:38:ee:e4:f5:ae:80:c5:92\n    90:b5:1e:8c:3f:79:39:7b:f1:98:e4:44:ba:16:2d:4f\n    cc:aa:b8:55:8b:07:2c:f0:0a:7c:66:2f:90:58:ff:2a\n    98:af:61:ae:02:30:14:94:03:b9:64:30:66:e7:3a:98\n    d3:65:95:63:dc:4d:a4:9b:f8:4e:82:b2:b5:bb:ea:f5\n    77:55:64:6f:a2:43:f3:63:44:d4:4b:80:a5:79:82:03\n    bc:a0:23:e0:30:c7\n\nFingerprint:\n    MD5:\n        4f:7c:c1:b4:7c:3a:72:43:6c:4a:0f:11:f7:5f:c4:a8\n    SHA1:\n        75:0d:56:3f:cf:bf:4f:6a:62:bd:66:9a:12:f0:6d:51\n        bd:f4:4b:38\n    SHA256:\n        63:ff:4c:82:b4:0d:50:e6:b3:d7:83:73:17:fb:41:8b\n        aa:d8:44:7b:bf:e5:c2:c6:fc:8f:8f:70:79:92:41:80"
    },
    [
     {
@@ -1384,7 +909,6 @@
      "supported": true
     }
    },
-   null,
    []
   ]
  },
@@ -1411,127 +935,6 @@
     "largeBlob": {
      "supported": true
     }
-   },
-   {
-    "version": {
-     "display": "3 (0x2)",
-     "numeric": 3,
-     "hex": "0x2"
-    },
-    "serialNumber": {
-     "decimal": "42499587947131211642598361230399932095",
-     "hex": "0x1ff91f76b63f44812f998b250b0286bf"
-    },
-    "signatureAlgorithm": "ecdsa-with-SHA256",
-    "signatureAlgorithmOid": "1.2.840.10045.4.3.2",
-    "signatureAlgorithmDetails": null,
-    "issuer": "C=AA,OU=Authenticator Attestation CA,O=W3C,CN=WebAuthn test vectors",
-    "validity": {
-     "notBefore": "2024-01-01T00:00:00+00:00",
-     "notAfter": "3024-01-01T00:00:00+00:00"
-    },
-    "subject": "C=AA,OU=Authenticator Attestation,O=W3C,CN=WebAuthn test vectors",
-    "subjectCommonNames": [
-     "WebAuthn test vectors"
-    ],
-    "publicKeyInfo": {
-     "type": "ECC",
-     "keySize": 256,
-     "subjectPublicKeyInfoBase64": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEmRaWVwNtCJoqmCGn0AY9NB8aRhM4k1ljbvq188vxrM/dkcVVQxduqZtkRAbdHdY3dLavZax1ngb/QLHIqwLfaw==",
-     "algorithm": {
-      "name": "ECDSA",
-      "namedCurve": "secp256r1"
-     },
-     "curve": "secp256r1",
-     "uncompressedPoint": "04:99:16:96:57:03:6d:08:9a:2a:98:21:a7:d0:06:3d:34:1f:1a:46:13:38:93:59:63:6e:fa:b5:f3:cb:f1:ac:cf:dd:91:c5:55:43:17:6e:a9:9b:64:44:06:dd:1d:d6:37:74:b6:af:65:ac:75:9e:06:ff:40:b1:c8:ab:02:df:6b"
-    },
-    "algorithmInfo": "ECDSA_SHA256",
-    "extensions": [
-     {
-      "oid": "2.5.29.19",
-      "name": "X509v3 Basic Constraints",
-      "friendlyName": "X509v3 Basic Constraints",
-      "critical": true,
-      "value": {
-       "CA": "FALSE"
-      },
-      "displayHeader": "X509v3 Basic Constraints",
-      "includeOidInHeader": false
-     },
-     {
-      "oid": "2.5.29.15",
-      "name": "keyUsage",
-      "friendlyName": null,
-      "critical": true,
-      "value": "Digital Signature",
-      "displayHeader": null,
-      "includeOidInHeader": true
-     },
-     {
-      "oid": "2.5.29.14",
-      "name": "Subject key id",
-      "friendlyName": "Subject key id",
-      "critical": false,
-      "value": {
-       "Hex value": [
-        "1a:c8:1e:50:64:1e:8d:13:39:ab:9f:7e:b2:5f:0c:d5",
-        "aa:c0:54:b0"
-       ]
-      },
-      "displayHeader": null,
-      "includeOidInHeader": true
-     },
-     {
-      "oid": "2.5.29.35",
-      "name": "Authority key identifier",
-      "friendlyName": "Authority key identifier",
-      "critical": false,
-      "value": {
-       "Hex value": [
-        "45:af:f7:15:b0:dd:78:67:41:fe:e9:96:eb:c1:65:47",
-        "a3:93:1b:1e"
-       ]
-      },
-      "displayHeader": null,
-      "includeOidInHeader": true
-     },
-     {
-      "oid": "1.3.6.1.4.1.11129.2.1.17",
-      "name": "Unknown OID",
-      "friendlyName": null,
-      "critical": false,
-      "value": {
-       "Hex value": "30430202012c0a01000201000a01000420b435028d7b6a8f83bb461d41c19b053a9d3cdb30351a4f374cd4cde8dbefb60604003000300ea1053103020102bf853e03020100"
-      },
-      "displayHeader": null,
-      "includeOidInHeader": true
-     }
-    ],
-    "fingerprints": {
-     "sha256": "e5f6a65648684459620ce34d7b2c0095cd6560e1c1692964c78df724ba0616af",
-     "sha1": "8afa5c86f6acbae9e1aee52dfb67b44e148c1de5",
-     "md5": "026bd77797a45366e9403d3b323d1f82"
-    },
-    "signature": {
-     "algorithm": "ecdsa-with-SHA256",
-     "hash": {
-      "name": "sha256"
-     },
-     "hex": "304502201354f9149996f6e1830852da629b86d37c10da0ffe17471c67d48765ed83f63b02210086db5746944cecdfce071d9e041072ceac3d1c504382f205676e9a1f02d76325",
-     "colon": "30:45:02:20:13:54:f9:14:99:96:f6:e1:83:08:52:da:62:9b:86:d3:7c:10:da:0f:fe:17:47:1c:67:d4:87:65:ed:83:f6:3b:02:21:00:86:db:57:46:94:4c:ec:df:ce:07:1d:9e:04:10:72:ce:ac:3d:1c:50:43:82:f2:05:67:6e:9a:1f:02:d7:63:25",
-     "lines": [
-      "30:45:02:20:13:54:f9:14:99:96:f6:e1:83:08:52:da",
-      "62:9b:86:d3:7c:10:da:0f:fe:17:47:1c:67:d4:87:65",
-      "ed:83:f6:3b:02:21:00:86:db:57:46:94:4c:ec:df:ce",
-      "07:1d:9e:04:10:72:ce:ac:3d:1c:50:43:82:f2:05:67",
-      "6e:9a:1f:02:d7:63:25"
-     ],
-     "oid": "1.2.840.10045.4.3.2",
-     "details": null
-    },
-    "derBase64": "MIICeDCCAh6gAwIBAgIQH/kfdrY/RIEvmYslCwKGvzAKBggqhkjOPQQDAjBiMR4wHAYDVQQDDBVXZWJBdXRobiB0ZXN0IHZlY3RvcnMxDDAKBgNVBAoMA1czQzElMCMGA1UECwwcQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbiBDQTELMAkGA1UEBhMCQUEwIBcNMjQwMTAxMDAwMDAwWhgPMzAyNDAxMDEwMDAwMDBaMF8xHjAcBgNVBAMMFVdlYkF1dGhuIHRlc3QgdmVjdG9yczEMMAoGA1UECgwDVzNDMSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMQswCQYDVQQGEwJBQTBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABJkWllcDbQiaKpghp9AGPTQfGkYTOJNZY276tfPL8azP3ZHFVUMXbqmbZEQG3R3WN3S2r2WsdZ4G/0CxyKsC32ujgbYwgbMwDAYDVR0TAQH/BAIwADAOBgNVHQ8BAf8EBAMCB4AwHQYDVR0OBBYEFBrIHlBkHo0TOauffrJfDNWqwFSwMB8GA1UdIwQYMBaAFEWv9xWw3XhnQf7pluvBZUejkxseMFMGCisGAQQB1nkCAREERTBDAgIBLAoBAAIBAAoBAAQgtDUCjXtqj4O7Rh1BwZsFOp082zA1Gk83TNTN6NvvtgYEADAAMA6hBTEDAgECv4U+AwIBADAKBggqhkjOPQQDAgNIADBFAiATVPkUmZb24YMIUtpim4bTfBDaD/4XRxxn1Idl7YP2OwIhAIbbV0aUTOzfzgcdngQQcs6sPRxQQ4LyBWdumh8C12Ml",
-    "pem": "-----BEGIN CERTIFICATE-----\nMIICeDCCAh6gAwIBAgIQH/kfdrY/RIEvmYslCwKGvzAKBggqhkjOPQQDAjBiMR4w\nHAYDVQQDDBVXZWJBdXRobiB0ZXN0IHZlY3RvcnMxDDAKBgNVBAoMA1czQzElMCMG\nA1UECwwcQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbiBDQTELMAkGA1UEBhMCQUEw\nIBcNMjQwMTAxMDAwMDAwWhgPMzAyNDAxMDEwMDAwMDBaMF8xHjAcBgNVBAMMFVdl\nYkF1dGhuIHRlc3QgdmVjdG9yczEMMAoGA1UECgwDVzNDMSIwIAYDVQQLDBlBdXRo\nZW50aWNhdG9yIEF0dGVzdGF0aW9uMQswCQYDVQQGEwJBQTBZMBMGByqGSM49AgEG\nCCqGSM49AwEHA0IABJkWllcDbQiaKpghp9AGPTQfGkYTOJNZY276tfPL8azP3ZHF\nVUMXbqmbZEQG3R3WN3S2r2WsdZ4G/0CxyKsC32ujgbYwgbMwDAYDVR0TAQH/BAIw\nADAOBgNVHQ8BAf8EBAMCB4AwHQYDVR0OBBYEFBrIHlBkHo0TOauffrJfDNWqwFSw\nMB8GA1UdIwQYMBaAFEWv9xWw3XhnQf7pluvBZUejkxseMFMGCisGAQQB1nkCAREE\nRTBDAgIBLAoBAAIBAAoBAAQgtDUCjXtqj4O7Rh1BwZsFOp082zA1Gk83TNTN6Nvv\ntgYEADAAMA6hBTEDAgECv4U+AwIBADAKBggqhkjOPQQDAgNIADBFAiATVPkUmZb2\n4YMIUtpim4bTfBDaD/4XRxxn1Idl7YP2OwIhAIbbV0aUTOzfzgcdngQQcs6sPRxQ\nQ4LyBWdumh8C12Ml\n-----END CERTIFICATE-----",
-    "summary": "Version: 3 (0x2)\nCertificate Serial Number: 42499587947131211642598361230399932095 (0x1ff91f76b63f44812f998b250b0286bf)\nSignature Algorithm: ecdsa-with-SHA256\nIssuer: C=AA,OU=Authenticator Attestation CA,O=W3C,CN=WebAuthn test vectors\n\nValidity:\n    Not Before: 2024-01-01T00:00:00+00:00\n    Not After: 3024-01-01T00:00:00+00:00\n\nSubject: C=AA,OU=Authenticator Attestation,O=W3C,CN=WebAuthn test vectors\n\nSubject Public Key Info:\n    Type: ECC\n    Public-Key: (256 bit)\n    pub:\n        04:99:16:96:57:03:6d:08:9a:2a:98:21:a7:d0:06:3d\n        34:1f:1a:46:13:38:93:59:63:6e:fa:b5:f3:cb:f1:ac\n        cf:dd:91:c5:55:43:17:6e:a9:9b:64:44:06:dd:1d:d6\n        37:74:b6:af:65:ac:75:9e:06:ff:40:b1:c8:ab:02:df\n        6b\n    Curve: secp256r1\n\nX509v3 extensions:\n    X509v3 Basic Constraints [critical]:\n        CA: FALSE\n    2.5.29.15 (keyUsage) [critical]:\n        Digital Signature\n    2.5.29.14 (Subject key id):\n        Hex value:\n            1a:c8:1e:50:64:1e:8d:13:39:ab:9f:7e:b2:5f:0c:d5\n            aa:c0:54:b0\n    2.5.29.35 (Authority key identifier):\n        Hex value:\n            45:af:f7:15:b0:dd:78:67:41:fe:e9:96:eb:c1:65:47\n            a3:93:1b:1e\n    1.3.6.1.4.1.11129.2.1.17 (Unknown OID):\n        Hex value: 30430202012c0a01000201000a01000420b435028d7b6a8f83bb461d41c19b053a9d3cdb30351a4f374cd4cde8dbefb60604003000300ea1053103020102bf853e03020100\n\nSignature Algorithm: ecdsa-with-SHA256\n    30:45:02:20:13:54:f9:14:99:96:f6:e1:83:08:52:da\n    62:9b:86:d3:7c:10:da:0f:fe:17:47:1c:67:d4:87:65\n    ed:83:f6:3b:02:21:00:86:db:57:46:94:4c:ec:df:ce\n    07:1d:9e:04:10:72:ce:ac:3d:1c:50:43:82:f2:05:67\n    6e:9a:1f:02:d7:63:25\n\nFingerprint:\n    MD5:\n        02:6b:d7:77:97:a4:53:66:e9:40:3d:3b:32:3d:1f:82\n    SHA1:\n        8a:fa:5c:86:f6:ac:ba:e9:e1:ae:e5:2d:fb:67:b4:4e\n        14:8c:1d:e5\n    SHA256:\n        e5:f6:a6:56:48:68:44:59:62:0c:e3:4d:7b:2c:00:95\n        cd:65:60:e1:c1:69:29:64:c7:8d:f7:24:ba:06:16:af\n\nSubject Key Identifier:\n    1a:c8:1e:50:64:1e:8d:13:39:ab:9f:7e:b2:5f:0c:d5\n    aa:c0:54:b0"
    },
    [
     {
@@ -1677,7 +1080,6 @@
      "supported": true
     }
    },
-   null,
    []
   ]
  },
@@ -1695,7 +1097,6 @@
      "supported": true
     }
    },
-   null,
    []
   ]
  },
@@ -1726,87 +1127,6 @@
     "largeBlob": {
      "supported": true
     }
-   },
-   {
-    "version": {
-     "display": "3 (0x2)",
-     "numeric": 3,
-     "hex": "0x2"
-    },
-    "serialNumber": {
-     "decimal": "7855",
-     "hex": "0x1eaf"
-    },
-    "signatureAlgorithm": "ed25519",
-    "signatureAlgorithmOid": "1.3.101.112",
-    "signatureAlgorithmDetails": null,
-    "issuer": "CN=Characterization Test CA",
-    "validity": {
-     "notBefore": "2020-01-01T00:00:00+00:00",
-     "notAfter": "2099-12-31T00:00:00+00:00"
-    },
-    "subject": "CN=Characterization Attestation Leaf,OU=Authenticator Attestation,O=Characterization Test,C=SE",
-    "subjectCommonNames": [
-     "Characterization Attestation Leaf"
-    ],
-    "publicKeyInfo": {
-     "type": "ECC",
-     "keySize": 256,
-     "subjectPublicKeyInfoBase64": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEZBoo8EShnYtAg7HcnNArsKmvundF5ndTJe06OX2xiC8zT1B2FQcOxykxFXDPSzKd5ER60LnCSL/3BrGuW9chxg==",
-     "algorithm": {
-      "name": "ECDSA",
-      "namedCurve": "secp256r1"
-     },
-     "curve": "secp256r1",
-     "uncompressedPoint": "04:64:1a:28:f0:44:a1:9d:8b:40:83:b1:dc:9c:d0:2b:b0:a9:af:ba:77:45:e6:77:53:25:ed:3a:39:7d:b1:88:2f:33:4f:50:76:15:07:0e:c7:29:31:15:70:cf:4b:32:9d:e4:44:7a:d0:b9:c2:48:bf:f7:06:b1:ae:5b:d7:21:c6"
-    },
-    "algorithmInfo": "ED25519_SHA512",
-    "extensions": [
-     {
-      "oid": "2.5.29.19",
-      "name": "X509v3 Basic Constraints",
-      "friendlyName": "X509v3 Basic Constraints",
-      "critical": true,
-      "value": {
-       "CA": "FALSE"
-      },
-      "displayHeader": "X509v3 Basic Constraints",
-      "includeOidInHeader": false
-     },
-     {
-      "oid": "1.3.6.1.4.1.45724.1.1.4",
-      "name": "FIDO: Device AAGUID",
-      "friendlyName": "FIDO: Device AAGUID",
-      "critical": false,
-      "value": {
-       "AAGUID": "00000000000000000000000000000000"
-      },
-      "displayHeader": null,
-      "includeOidInHeader": true
-     }
-    ],
-    "fingerprints": {
-     "sha256": "4605557f7d928f3bbefe2d59728e53d21e4697d87da416c33ebe30e8c5826587",
-     "sha1": "1e44f5f9dfedf9c25eb7a4693638ff1bf6a0923f",
-     "md5": "4f3e7e2ed640540f9893b1616fca4709"
-    },
-    "signature": {
-     "algorithm": "ed25519",
-     "hash": null,
-     "hex": "80ee45b06dd8c2601234713ba83f5e720401da694b70d0a85a6709ef356be953859cc0f269d78c35401285313ede8603171c565b553aa2d312fcb2ad5bc4400a",
-     "colon": "80:ee:45:b0:6d:d8:c2:60:12:34:71:3b:a8:3f:5e:72:04:01:da:69:4b:70:d0:a8:5a:67:09:ef:35:6b:e9:53:85:9c:c0:f2:69:d7:8c:35:40:12:85:31:3e:de:86:03:17:1c:56:5b:55:3a:a2:d3:12:fc:b2:ad:5b:c4:40:0a",
-     "lines": [
-      "80:ee:45:b0:6d:d8:c2:60:12:34:71:3b:a8:3f:5e:72",
-      "04:01:da:69:4b:70:d0:a8:5a:67:09:ef:35:6b:e9:53",
-      "85:9c:c0:f2:69:d7:8c:35:40:12:85:31:3e:de:86:03",
-      "17:1c:56:5b:55:3a:a2:d3:12:fc:b2:ad:5b:c4:40:0a"
-     ],
-     "oid": "1.3.101.112",
-     "details": null
-    },
-    "derBase64": "MIIBtDCCAWagAwIBAgICHq8wBQYDK2VwMCMxITAfBgNVBAMMGENoYXJhY3Rlcml6YXRpb24gVGVzdCBDQTAgFw0yMDAxMDEwMDAwMDBaGA8yMDk5MTIzMTAwMDAwMFowfTELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEqMCgGA1UEAwwhQ2hhcmFjdGVyaXphdGlvbiBBdHRlc3RhdGlvbiBMZWFmMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEZBoo8EShnYtAg7HcnNArsKmvundF5ndTJe06OX2xiC8zT1B2FQcOxykxFXDPSzKd5ER60LnCSL/3BrGuW9chxqMzMDEwDAYDVR0TAQH/BAIwADAhBgsrBgEEAYLlHAEBBAQSBBAAAAAAAAAAAAAAAAAAAAAAMAUGAytlcANBAIDuRbBt2MJgEjRxO6g/XnIEAdppS3DQqFpnCe81a+lThZzA8mnXjDVAEoUxPt6GAxccVltVOqLTEvyyrVvEQAo=",
-    "pem": "-----BEGIN CERTIFICATE-----\nMIIBtDCCAWagAwIBAgICHq8wBQYDK2VwMCMxITAfBgNVBAMMGENoYXJhY3Rlcml6\nYXRpb24gVGVzdCBDQTAgFw0yMDAxMDEwMDAwMDBaGA8yMDk5MTIzMTAwMDAwMFow\nfTELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEi\nMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEqMCgGA1UEAwwhQ2hh\ncmFjdGVyaXphdGlvbiBBdHRlc3RhdGlvbiBMZWFmMFkwEwYHKoZIzj0CAQYIKoZI\nzj0DAQcDQgAEZBoo8EShnYtAg7HcnNArsKmvundF5ndTJe06OX2xiC8zT1B2FQcO\nxykxFXDPSzKd5ER60LnCSL/3BrGuW9chxqMzMDEwDAYDVR0TAQH/BAIwADAhBgsr\nBgEEAYLlHAEBBAQSBBAAAAAAAAAAAAAAAAAAAAAAMAUGAytlcANBAIDuRbBt2MJg\nEjRxO6g/XnIEAdppS3DQqFpnCe81a+lThZzA8mnXjDVAEoUxPt6GAxccVltVOqLT\nEvyyrVvEQAo=\n-----END CERTIFICATE-----",
-    "summary": "Version: 3 (0x2)\nCertificate Serial Number: 7855 (0x1eaf)\nSignature Algorithm: ed25519\nIssuer: CN=Characterization Test CA\n\nValidity:\n    Not Before: 2020-01-01T00:00:00+00:00\n    Not After: 2099-12-31T00:00:00+00:00\n\nSubject: CN=Characterization Attestation Leaf,OU=Authenticator Attestation,O=Characterization Test,C=SE\n\nSubject Public Key Info:\n    Type: ECC\n    Public-Key: (256 bit)\n    pub:\n        04:64:1a:28:f0:44:a1:9d:8b:40:83:b1:dc:9c:d0:2b\n        b0:a9:af:ba:77:45:e6:77:53:25:ed:3a:39:7d:b1:88\n        2f:33:4f:50:76:15:07:0e:c7:29:31:15:70:cf:4b:32\n        9d:e4:44:7a:d0:b9:c2:48:bf:f7:06:b1:ae:5b:d7:21\n        c6\n    Curve: secp256r1\n\nX509v3 extensions:\n    X509v3 Basic Constraints [critical]:\n        CA: FALSE\n    1.3.6.1.4.1.45724.1.1.4 (FIDO: Device AAGUID):\n        AAGUID: 00000000000000000000000000000000\n\nSignature Algorithm: ed25519\n    80:ee:45:b0:6d:d8:c2:60:12:34:71:3b:a8:3f:5e:72\n    04:01:da:69:4b:70:d0:a8:5a:67:09:ef:35:6b:e9:53\n    85:9c:c0:f2:69:d7:8c:35:40:12:85:31:3e:de:86:03\n    17:1c:56:5b:55:3a:a2:d3:12:fc:b2:ad:5b:c4:40:0a\n\nFingerprint:\n    MD5:\n        4f:3e:7e:2e:d6:40:54:0f:98:93:b1:61:6f:ca:47:09\n    SHA1:\n        1e:44:f5:f9:df:ed:f9:c2:5e:b7:a4:69:36:38:ff:1b\n        f6:a0:92:3f\n    SHA256:\n        46:05:55:7f:7d:92:8f:3b:be:fe:2d:59:72:8e:53:d2\n        1e:46:97:d8:7d:a4:16:c3:3e:be:30:e8:c5:82:65:87"
    },
    [
     {
@@ -1922,7 +1242,6 @@
    null,
    null,
    {},
-   null,
    []
   ]
  },
@@ -1933,7 +1252,6 @@
    null,
    null,
    {},
-   null,
    []
   ]
  },
@@ -1944,7 +1262,6 @@
    null,
    null,
    {},
-   null,
    []
   ]
  }

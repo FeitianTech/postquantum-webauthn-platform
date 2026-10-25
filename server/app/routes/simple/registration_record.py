@@ -45,7 +45,6 @@ class SimpleRegistration:
     attestation_format: Any
     attestation_statement: Any
     parsed_attestation_object: Any
-    attestation_certificate_details: Any
     attestation_certificates_details: Any
     client_data_json: Any
     client_extension_results: Any
