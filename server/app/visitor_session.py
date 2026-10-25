@@ -274,8 +274,10 @@ def note_activity(session_id: str) -> None:
 
     # Refreshing the marker is a storage write, so it is done at most once per
     # throttle window per namespace. A namespace this request minted holds
-    # nothing yet: it needs no marker until it writes data (writes refresh it).
+    # nothing yet, so it is not marked, and not counted as marked either: the
+    # visitor's next request marks it. A namespace written once and never marked
+    # would be kept until its newest object's time says it is idle.
     minted = has_request_context() and getattr(g, "_mds_session_new", None) == normalised
-    if _due_for_touch(normalised, time.time()) and not minted:
+    if not minted and _due_for_touch(normalised, time.time()):
         _touch_last_access(normalised)
     schedule_cleanup()

@@ -85,6 +85,17 @@ def test_new_session_does_not_write_marker(touches):
     assert touches == []
 
 
+def test_the_request_after_the_one_that_minted_a_namespace_marks_it(touches):
+    # As a registration's complete follows the begin that minted the namespace.
+    client = entry_app().test_client()
+    assert client.post("/api/register/begin?email=user@example.com", json={"credentials": []}).status_code == 200
+    assert touches == []
+
+    client.get("/api/mds/metadata/info")
+
+    assert touches == [visitor_namespace.of(client)]
+
+
 def test_touch_outside_request_context_is_throttled_too(touches):
     visitor_session.note_activity("session-a")
     visitor_session.note_activity("session-a")
