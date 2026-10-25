@@ -274,7 +274,9 @@ its logic out here first.
   orchestrators over modules named for their stage, `routes/simple/stored_sign_count.py` the
   Simple tab's counter check against the stored record, and that record, `counter_record`: the
   credential's ID, its counter, its registration's time and user handle, nothing else (records
-  stored whole before are brought to it as their file is written); `routes/simple/account.py` the username
+  stored whole before are brought to it as their file is written); `routes/simple/deletion.py`
+  the DELETE that removes a record when the page deletes its credential (compare-and-swap,
+  answering `deleted` / `absent` / `failed` as the artifact DELETE does); `routes/simple/account.py` the username
   both Simple begins check before any options (what the store accepts, trimmed, at most 64
   bytes), which each complete must name again, and the user handle a Simple registration
   issues: an HMAC-SHA256 of the visitor's namespace and the username under the app's secret,

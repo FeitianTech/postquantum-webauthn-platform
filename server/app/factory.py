@@ -34,6 +34,7 @@ from .routes.advanced import artifacts as advanced_artifacts
 from .routes.advanced import authentication as advanced_authentication
 from .routes.advanced import registration as advanced_registration
 from .routes.simple import authentication as simple_authentication
+from .routes.simple import deletion as simple_deletion
 from .routes.simple import registration as simple_registration
 
 __all__ = ["INIT_STEPS", "create_app"]
@@ -59,6 +60,7 @@ def _register_blueprints(app: Flask) -> None:
         codec.bp,
         simple_registration.bp,
         simple_authentication.bp,
+        simple_deletion.bp,
         csp_report.bp,
         web_export_routes.bp,
     ):

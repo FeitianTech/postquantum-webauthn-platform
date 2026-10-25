@@ -86,6 +86,7 @@ def test_hooks_and_blueprints_are_registered_in_order(app):
         "codec",
         "simple_registration",
         "simple_authentication",
+        "simple_deletion",
         "csp_report",
         "web_export",
     ]

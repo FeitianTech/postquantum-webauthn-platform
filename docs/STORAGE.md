@@ -37,6 +37,12 @@ every registration and authentication. A record an earlier version stored whole
 is read the same way and brought to that form the next time its list is written;
 one whose credential ID cannot be read is kept as it is.
 
+Deleting a saved Simple credential in the page deletes its record too
+(`DELETE /api/simple/credentials/<credentialId>?email=<username>`,
+`routes/simple/deletion.py`): by compare-and-swap on the list, the username read as
+the store names the file (so a record saved before the begins' 64-byte rule can go
+too), answering `deleted`, `absent` or `failed` as the artifact DELETE does.
+
 ## Credential artifacts
 
 Credential artifacts (`server/app/storage/credential_artifacts.py`) are kept per session
