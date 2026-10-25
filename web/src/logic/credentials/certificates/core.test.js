@@ -8,7 +8,7 @@ import {
   normalisePemString,
   partitionCertificateEntries,
 } from './core.js';
-import { certificate, savedRecord } from '@/test/logic/credentials/certificates.js';
+import { certificate, savedRecord, wholeCertificate } from '@/test/logic/credentials/certificates.js';
 
 /** A certificate the server could not parse, as it describes one. */
 const unparsed = (raw) => ({ parsedX5c: { parseError: 'error parsing asn1 value', raw } });
@@ -47,7 +47,7 @@ describe('normaliseHexFingerprint', () => {
 
 describe('normalisePemString', () => {
   it("strips a PEM's armour and line breaks down to its base64", () => {
-    const cert = certificate();
+    const cert = wholeCertificate();
     expect(normalisePemString(cert.pem)).toBe(cert.derBase64);
   });
 
@@ -62,11 +62,11 @@ describe('deriveCertificateIdentity', () => {
   });
 
   it('names an entry by its raw hex first', () => {
-    expect(deriveCertificateIdentity({ raw: '30 82\n01 B4', pem: certificate().pem })).toBe('raw:308201b4');
+    expect(deriveCertificateIdentity({ raw: '30 82\n01 B4', pem: wholeCertificate().pem })).toBe('raw:308201b4');
   });
 
   it('names an entry by its PEM when its raw hex is blank', () => {
-    const cert = certificate();
+    const cert = wholeCertificate();
     expect(deriveCertificateIdentity({ raw: '  ', pem: cert.pem })).toBe(`pem:${cert.derBase64}`);
   });
 
@@ -85,7 +85,7 @@ describe('deriveCertificateIdentity', () => {
   });
 
   it('names a parsed certificate by its PEM when it has no DER', () => {
-    const cert = certificate();
+    const cert = wholeCertificate();
     expect(deriveCertificateIdentity({ parsedX5c: { pem: cert.pem } })).toBe(`pem:${cert.derBase64}`);
   });
 
@@ -110,10 +110,18 @@ describe('normaliseCertificateEntryForModal', () => {
   });
 
   it('keeps parsed details with their PEM and the raw bytes of their DER', () => {
-    const cert = certificate();
+    const cert = wholeCertificate();
     const normalised = normaliseCertificateEntryForModal({ parsedX5c: cert });
     expect(normalised.parsedX5c).toBe(cert);
     expect(normalised.pem).toBe(cert.pem);
+    expect(normalised.raw).toMatch(/^308201b4/);
+    expect(normalised.raw.endsWith(cert.signature.hex)).toBe(true);
+  });
+
+  it("gives a registration's certificate, which keeps no PEM, the raw bytes of its DER alone", () => {
+    const cert = certificate();
+    const normalised = normaliseCertificateEntryForModal({ parsedX5c: cert });
+    expect(normalised).not.toHaveProperty('pem');
     expect(normalised.raw).toMatch(/^308201b4/);
     expect(normalised.raw.endsWith(cert.signature.hex)).toBe(true);
   });

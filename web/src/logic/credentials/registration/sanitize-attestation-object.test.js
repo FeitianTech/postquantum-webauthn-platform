@@ -4,6 +4,7 @@ import { prepareRegistrationState } from './prepare.js';
 import { createRegistrationState } from './state.js';
 import { sanitiseAttestationObjectForDisplay } from './sanitize-attestation-object.js';
 import { sanitizeParsedCertificateDetails } from './sanitize.js';
+import { wholeCertificate } from '@/test/logic/credentials/certificates.js';
 import { advancedComplete, goldenDecode, registration } from '@/test/logic/credentials/registration-detail-answers.js';
 
 // The attestation object as the registration view shows it
@@ -84,7 +85,7 @@ describe('sanitiseAttestationObjectForDisplay', () => {
   });
 
   it('shows a certificate with details by its details alone, not its summary as well', () => {
-    const certificate = advancedComplete().relyingParty.attestationCertificates[0];
+    const certificate = wholeCertificate();
     expect(certificate.summary).toBeTruthy();
     const shown = sanitiseAttestationObjectForDisplay({ fmt: 'packed', attStmt: { x5c: ['MIIB'] } }, '', [{ parsedX5c: certificate }]);
     expect(shown.attStmt.x5c).toEqual([{ certificateIndex: 1, details: shownDetails(certificate) }]);

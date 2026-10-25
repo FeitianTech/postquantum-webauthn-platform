@@ -1,19 +1,14 @@
-import { readFileSync } from 'node:fs';
-
 import { describe, expect, it } from 'vitest';
 
 import { formatCertificateDetails } from './text.js';
-import { repoFile } from '@/test/logic/repo-file.js';
+import { wholeCertificates } from '@/test/logic/credentials/certificates.js';
 
 // A certificate as text (credentials/certificates/text.js), as the
 // registration view's certificate shows it.
 
-// Every certificate the server's characterization parsed (device captures and the
-// ones its tests build), as serialize_attestation_certificate gives them, with the
-// server's summary; tests/app/characterization keeps the file equal to the server.
-const CORPUS = Object.entries(
-  JSON.parse(readFileSync(repoFile('tests/app/characterization/golden/certificates.json'), 'utf8')),
-).filter(([, details]) => details && !details.parseError);
+// Every certificate the server's characterization read (device captures and the ones
+// its tests build), serialised whole, with the server's summary.
+const CORPUS = Object.entries(wholeCertificates()).filter(([, details]) => details && !details.parseError);
 
 /**
  * The certificate as a registration keeps it (webauthn/attestation/certificates.py):

@@ -8,13 +8,10 @@ import {
   stripCertificateCollections,
   stripSignatureFormatting,
 } from './sanitize.js';
-import { advancedComplete } from '@/test/logic/credentials/registration-detail-answers.js';
+import { wholeCertificate } from '@/test/logic/credentials/certificates.js';
 
 // What the registration view leaves out of the data it shows
 // (credentials/registration/sanitize.js).
-
-/** The advanced registration's relying party, as register-complete answers it (with its certificates). */
-const advancedRelyingParty = () => advancedComplete().relyingParty;
 
 describe('stripCertificateCollections', () => {
   it('removes the certificate lists at every depth', () => {
@@ -69,10 +66,10 @@ describe('removeKeysCaseInsensitive', () => {
 
 describe('stripSignatureFormatting', () => {
   it("removes a certificate signature's colon text and lines, keeping its bytes", () => {
-    const certificate = advancedRelyingParty().attestationCertificates[0];
+    const certificate = wholeCertificate();
     const target = { attStmt: { x5c: [{ parsedX5c: certificate }] } };
     stripSignatureFormatting(target);
-    const { colon, lines, ...rest } = advancedRelyingParty().attestationCertificates[0].signature;
+    const { colon, lines, ...rest } = wholeCertificate().signature;
     expect(colon).toBeTruthy();
     expect(lines).toHaveLength(4);
     expect(target.attStmt.x5c[0].parsedX5c.signature).toEqual(rest);
@@ -93,7 +90,7 @@ describe('stripSignatureFormatting', () => {
 
 describe('sanitizeParsedCertificateDetails', () => {
   it("leaves out a certificate's encodings, summary and error", () => {
-    const certificate = advancedRelyingParty().attestationCertificates[0];
+    const certificate = wholeCertificate();
     const { pem, derBase64, summary, ...rest } = certificate;
     expect([pem, derBase64, summary].every(Boolean)).toBe(true);
     expect(sanitizeParsedCertificateDetails({ ...certificate, der: 'MIIB', raw: '3082', error: 'x' })).toEqual(rest);

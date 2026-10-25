@@ -117,6 +117,32 @@ def test_each_x5c_entry_is_serialised_or_reported_as_what_went_wrong():
     assert chain[3]["subject"] == "CN=Leaf,OU=Authenticator Attestation,O=Characterization Test,C=SE"
 
 
+def _without(mapping, *keys):
+    return {key: value for key, value in mapping.items() if key not in keys}
+
+
+def test_a_registration_keeps_each_certificate_value_in_one_form():
+    generated = material.generated_certificates()
+    chain = [generated["generated-ml-dsa-44"], generated["generated-ed25519"], CERTIFICATE, b"junk"]
+    full = [attestation_certificates.serialize_attestation_certificate(der) for der in chain]
+
+    *_, kept = attestation_certificates.extract_attestation_details(_registration_with_x5c(chain))
+
+    mldsa, ed25519, ec, junk = full
+    assert kept[0] == {
+        **_without(mldsa, "pem", "summary"),
+        "signature": _without(mldsa["signature"], "colon", "lines"),
+        "publicKeyInfo": _without(mldsa["publicKeyInfo"], "publicKeyHex", "publicKeyHexLines"),
+    }
+    # An EdDSA key's hex is its only raw form: it stays.
+    assert kept[1] == {**_without(ed25519, "pem", "summary"), "signature": _without(ed25519["signature"], "colon", "lines")}
+    assert "publicKeyHex" in kept[1]["publicKeyInfo"]
+    assert kept[2] == {**_without(ec, "pem", "summary"), "signature": _without(ec["signature"], "colon", "lines")}
+    # One cryptography could not read keeps its DER once too, and the error.
+    assert kept[3] == _without(junk, "pem", "raw", "summary")
+    assert kept[3]["derBase64"] == base64.b64encode(b"junk").decode()
+
+
 @pytest.mark.parametrize("entry", [5, [0x30, 0x00], True], ids=["int", "list", "bool"])
 def test_an_x5c_entry_that_is_no_byte_string_text_or_view_is_undecodable(entry):
     *_, chain = attestation_certificates.extract_attestation_details(_registration_with_x5c([entry]))

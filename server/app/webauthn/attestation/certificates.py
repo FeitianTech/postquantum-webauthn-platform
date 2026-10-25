@@ -316,8 +316,29 @@ def _no_attestation_details() -> tuple[str, dict[str, Any], None, None, dict[str
     return "none", {}, None, None, {}, []
 
 
+def _registration_view(details: dict[str, Any]) -> dict[str, Any]:
+    """A certificate's view as a registration keeps it: each value in one form.
+
+    What the page writes from another of its fields is left out: the PEM and the
+    DER's hex (the DER is ``derBase64``), the summary (from the fields, by
+    web/src/logic/credentials/certificates/text.js), the signature's colon text and
+    lines (from its hex), and a public key's hex beside its base64.
+    """
+
+    view = {key: value for key, value in details.items() if key not in ("pem", "raw", "summary")}
+    if "signature" in view:
+        view["signature"] = {key: value for key, value in view["signature"].items() if key not in ("colon", "lines")}
+    public_key = view["publicKeyInfo"]
+    if "publicKeyBase64" in public_key:
+        view["publicKeyInfo"] = {
+            key: value for key, value in public_key.items() if key not in ("publicKeyHex", "publicKeyHexLines")
+        }
+    return view
+
+
 def _serialized_certificate_chain(attestation_statement: Any) -> list[dict[str, Any]]:
-    """Each x5c certificate serialised, or an error entry where it cannot be.
+    """Each x5c certificate's view as a registration keeps it, or an error entry where
+    it cannot be read.
 
     A chain longer than ``MAX_ATTESTATION_CHAIN_LENGTH`` keeps its first
     certificates, and one error entry says the rest were not read.
@@ -352,6 +373,8 @@ def _serialized_certificate_chain(attestation_statement: Any) -> list[dict[str, 
                 certificate_details = {
                     "error": "Unable to parse attestation certificate.",
                 }
+            else:
+                certificate_details = _registration_view(certificate_details)
 
         attestation_certificates.append(certificate_details)
     if len(cert_chain) > MAX_ATTESTATION_CHAIN_LENGTH:
