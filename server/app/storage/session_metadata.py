@@ -220,6 +220,9 @@ def touch_last_access(session_id: str, *, timestamp: float | None = None) -> Non
 
 
 def resolve_last_access(session_id: str) -> float | None:
+    """When the namespace was last used: its marker's time, else its newest object's or file's
+    (one written but never marked, as a touch that failed leaves it); None when it holds nothing."""
+
     if common.using_gcs():
         marker_name = _last_access_blob(session_id)
         payload = download_bytes(marker_name)
@@ -230,7 +233,11 @@ def resolve_last_access(session_id: str) -> float | None:
                     return float(data["timestamp"])
             except Exception:
                 pass
-        return blob_updated_timestamp(marker_name)
+        marker_time = blob_updated_timestamp(marker_name)
+        if marker_time is not None:
+            return marker_time
+        times = [stat.updated for stat in list_blob_stats(_user_root_prefix(session_id) + "/") if stat.updated is not None]
+        return max(times) if times else None
 
     directory = _local_session_directory(session_id)
     if not directory:

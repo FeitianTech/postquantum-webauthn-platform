@@ -20,11 +20,13 @@ from flask import session
 from server.app import visitor_session
 from server.app.config import paths
 from server.app.storage import common as storage_common
-from server.app.storage import session_metadata
+from server.app.storage import github_mirror, session_metadata
 from server.app.storage import session_metadata as session_store
 from tests.app import visitor_namespace
+from tests.app.advanced.registration_ceremony import register
 from tests.app.entry_app import entry_app
 from tests.app.security.ceremony_helpers import Authenticator, register_simple
+from tests.app.storage import fake_gcs
 
 
 @pytest.fixture
@@ -406,3 +408,23 @@ def test_a_new_visitors_namespace_is_swept_from_local_disk_once_idle(own_stores,
 
     assert not (own_stores / "session-credentials" / namespace).exists()
     assert namespace not in session_metadata.list_sessions()
+
+
+@pytest.mark.parametrize("tab", ["simple", "advanced"])
+def test_a_new_visitors_namespace_on_cloud_storage_is_swept_once_idle(monkeypatch, metadata_state, make_app, tab):
+    bucket = fake_gcs.install(monkeypatch, "every store")
+    monkeypatch.setattr(github_mirror, "record_registration_event", lambda _event: None)
+    monkeypatch.setattr(visitor_session, "CLEANUP_ASYNC", False)
+    client = make_app().test_client()
+    if tab == "simple":
+        register_simple(client, Authenticator())
+    else:
+        storage_id = register(client).get_json()["storedCredential"]["storageId"]
+        assert client.put(f"/api/advanced/credential-artifacts/{storage_id}/snapshot", json={"snapshot": {"view": 1}}).status_code == 200
+    namespace = visitor_namespace.of(client)
+    assert any(name.startswith(f"user-data/{namespace}/") for name in bucket.objects)
+
+    visitor_session.CLEANUP.last_run = 0.0
+    visitor_session._maybe_cleanup(now=time.time() + visitor_session.INACTIVE_AGE.total_seconds() + 60)
+
+    assert [name for name in bucket.objects if name.startswith(f"user-data/{namespace}/")] == []

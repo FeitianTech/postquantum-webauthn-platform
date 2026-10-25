@@ -72,8 +72,17 @@ def test_a_marker_without_a_timestamp_gives_the_time_it_was_written(bucket, mark
     assert session_store.resolve_last_access(SESSION) == bucket.updated[MARKER].timestamp()
 
 
-def test_a_namespace_without_a_marker_has_no_last_access(bucket):
+def test_a_namespace_without_a_marker_was_last_used_when_its_newest_object_was_written(bucket):
     assert session_store.resolve_last_access(SESSION) is None
+
+    # Written by a begin and its complete within one throttle window, and never marked.
+    credentials = f"user-data/{SESSION}/credentials/alice_credential_data.json"
+    artifact = f"user-data/{SESSION}/credential-artifacts/stored.json"
+    bucket.put(credentials, b"{}")
+    bucket.put(artifact, b"{}")
+    bucket.updated[credentials] = bucket.updated[credentials].replace(year=2020)
+
+    assert session_store.resolve_last_access(SESSION) == bucket.updated[artifact].timestamp()
 
 
 def test_the_uploads_are_the_metadata_folders_files_without_markers_or_folders(bucket):
@@ -429,6 +438,21 @@ def test_on_disk_a_namespace_folder_that_cannot_be_removed_is_kept_and_the_other
 
     assert [folder.exists() for folder in folders] == [False, True, False]
     assert "Failed to remove metadata session" in caplog.text
+
+
+def test_on_disk_a_namespace_whose_folder_goes_while_it_is_read_has_no_last_access(on_disk, own_stores, monkeypatch):
+    _namespace_in_every_store(own_stores, "session-local")
+    real_scandir = os.scandir
+
+    def _gone(path):
+        if "session-credentials" in str(path):
+            raise FileNotFoundError(path)
+        return real_scandir(path)
+
+    monkeypatch.setattr(os, "scandir", _gone)
+
+    # Unknown, so the sweep keeps it until it looks again.
+    assert session_store.resolve_last_access("session-local") is None
 
 
 def test_on_disk_a_namespace_without_a_marker_was_last_used_when_its_newest_file_in_any_store_was(on_disk, own_stores):
