@@ -1,218 +1,162 @@
 // A certificate as text, as the registration view's certificate shows it: the
-// decoder's summary when it gave one, else an OpenSSL-like text built from its
-// fields. DOM-free: both interfaces import it.
+// summary a record from an earlier release kept, else the same text written from
+// the certificate's fields, line for line as the server writes its summary
+// (webauthn/attestation/certificate_summary.py). A registration keeps one form of
+// each value, the signature's hex and the public key's base64, and the lines of
+// hex are written from those. DOM-free: both interfaces import it.
+import {base64ToBytes} from '../../shared/base64.js';
+import {bytesToHex} from '../../shared/bytes.js';
 
-function appendKeyValueLines(output, value, indentLevel = 0) {
-    if (value === null || value === undefined) {
-        return;
+const SUBJECT_KEY_IDENTIFIER_OID = '2.5.29.14';
+
+// The type the server gives an EdDSA key (its class's name), and the type its summary names.
+const EDDSA_TYPES = Object.freeze({ Ed25519PublicKey: 'Ed25519', Ed448PublicKey: 'Ed448' });
+
+// Hex text's digits, as the server reads hex with separators: whitespace, a leading
+// 0x and colons aside, an odd count led by a zero; null when it is not hex.
+function hexDigits(value) {
+    if (typeof value !== 'string') {
+        return null;
     }
-
-    const indent = '    '.repeat(indentLevel);
-
-    if (typeof value === 'string' || typeof value === 'number') {
-        if (String(value).trim() !== '') {
-            output.push(`${indent}${value}`);
-        }
-        return;
+    const digits = value.replace(/\s+/g, '').replace(/^0[xX]|:/g, '');
+    if (!/^[0-9a-fA-F]*$/.test(digits)) {
+        return null;
     }
-
-    if (typeof value === 'boolean') {
-        output.push(`${indent}${value}`);
-        return;
-    }
-
-    if (Array.isArray(value)) {
-        if (value.length === 0) {
-            return;
-        }
-
-        const filtered = value.filter(item => item !== null && item !== undefined);
-        if (filtered.length === 0) {
-            return;
-        }
-
-        const allScalars = filtered.every(item => {
-            return (
-                typeof item === 'string' ||
-                typeof item === 'number' ||
-                typeof item === 'boolean'
-            );
-        });
-
-        if (allScalars) {
-            filtered.forEach(item => {
-                output.push(`${indent}${item}`);
-            });
-        } else {
-            filtered.forEach(item => {
-                if (typeof item === 'object') {
-                    output.push(`${indent}-`);
-                    appendKeyValueLines(output, item, indentLevel + 1);
-                } else {
-                    output.push(`${indent}- ${item}`);
-                }
-            });
-        }
-        return;
-    }
-
-    if (typeof value === 'object') {
-        const entries = Object.entries(value).filter(([key, val]) => {
-            if (val === null || val === undefined || val === '') {
-                return false;
-            }
-            if (typeof key === 'string' && key.toLowerCase().includes('base64')) {
-                return false;
-            }
-            return true;
-        });
-
-        if (entries.length === 0) {
-            return;
-        }
-
-        entries.forEach(([key, val]) => {
-            if (typeof val === 'object') {
-                if (Array.isArray(val)) {
-                    if (val.length === 0) {
-                        return;
-                    }
-                    output.push(`${indent}${key}:`);
-                    appendKeyValueLines(output, val, indentLevel + 1);
-                } else {
-                    const nestedEntries = Object.entries(val).filter(([, nestedVal]) => nestedVal !== null && nestedVal !== undefined && nestedVal !== '');
-                    if (nestedEntries.length === 0) {
-                        return;
-                    }
-                    output.push(`${indent}${key}:`);
-                    appendKeyValueLines(output, val, indentLevel + 1);
-                }
-            } else {
-                output.push(`${indent}${key}: ${val}`);
-            }
-        });
-        return;
-    }
-
-    output.push(`${indent}${String(value)}`);
+    return (digits.length % 2 ? `0${digits}` : digits).toLowerCase();
 }
 
-// A fingerprint's hex, given as text, in lines of 16 colon-separated bytes.
-function hexToColonLines(hexString, bytesPerLine = 16) {
-    let clean = hexString.replace(/[^0-9a-fA-F]/g, '').toLowerCase();
-    if (!clean) {
+// Hex digits as the server writes bytes: colon-separated, sixteen bytes to a line.
+function hexLines(digits) {
+    const lines = [];
+    for (let start = 0; start < (digits || '').length; start += 32) {
+        lines.push(digits.slice(start, start + 32).replace(/(..)(?!$)/g, '$1:'));
+    }
+    return lines;
+}
+
+// Standard base64's bytes in those lines; none when it does not decode.
+function base64Lines(value) {
+    try {
+        return hexLines(bytesToHex(base64ToBytes(value)));
+    } catch (error) {
         return [];
     }
-    if (clean.length % 2 !== 0) {
-        clean = `0${clean}`;
-    }
-    const pairs = [];
-    for (let i = 0; i < clean.length; i += 2) {
-        pairs.push(clean.slice(i, i + 2));
-    }
-    const output = [];
-    for (let i = 0; i < pairs.length; i += bytesPerLine) {
-        output.push(pairs.slice(i, i + bytesPerLine).join(':'));
-    }
-    return output;
 }
 
-// The lines written so far: a blank line opens a section, never two in a row.
-function lineWriter() {
-    const lines = [];
-    return {
-        lines,
-        add: line => lines.push(line),
-        blank: () => {
-            if (lines.length && lines[lines.length - 1] !== '') {
-                lines.push('');
+// A value as Python writes it into the text: True and False for booleans.
+function pythonText(value) {
+    return typeof value === 'boolean' ? (value ? 'True' : 'False') : String(value);
+}
+
+// An extension's value as indented lines: a map's keys with their values (none for
+// an empty one), a list item by item, anything else on a line of its own.
+function structuredLines(value, indent) {
+    const pad = '    '.repeat(indent);
+    if (value === null || value === undefined) {
+        return [];
+    }
+    if (Array.isArray(value)) {
+        if (value.every(item => typeof item === 'string')) {
+            return value.filter(item => item !== '').map(item => `${pad}${item}`);
+        }
+        return value.flatMap(item => structuredLines(item, indent));
+    }
+    if (typeof value === 'object') {
+        return Object.entries(value).flatMap(([key, item]) => {
+            if (item === null || item === undefined || item === '') {
+                return [];
             }
-        },
-    };
+            return typeof item === 'object'
+                ? [`${pad}${key}:`, ...structuredLines(item, indent + 1)]
+                : [`${pad}${key}: ${pythonText(item)}`];
+        });
+    }
+    return [`${pad}${pythonText(value)}`];
 }
 
-/** @typedef {ReturnType<typeof lineWriter>} LineWriter */
+// The first lines: version, serial number, signature algorithm, issuer.
+function identityLines(details) {
+    const lines = [];
+    if (details.version && typeof details.version.display === 'string') {
+        lines.push(`Version: ${details.version.display}`);
+    }
+    const serial = details.serialNumber && typeof details.serialNumber === 'object' ? details.serialNumber : {};
+    const [decimal, hex] = [serial.decimal, serial.hex].map(part => (typeof part === 'string' ? part : null));
+    if (decimal !== null || hex !== null) {
+        const both = decimal !== null && hex !== null;
+        lines.push(`Certificate Serial Number: ${both ? `${decimal} (${hex})` : decimal ?? hex}`);
+    }
+    if (typeof details.signatureAlgorithm === 'string') {
+        lines.push(`Signature Algorithm: ${details.signatureAlgorithm}`);
+    }
+    if (typeof details.issuer === 'string') {
+        lines.push(`Issuer: ${details.issuer}`);
+    }
+    return lines;
+}
 
-// The version after "Version: ": the server's display, then its hex when the
-// display does not already carry it ("3 (0x2)"); '' for none.
-function versionText(version) {
-    if (typeof version !== 'object') {
-        return String(version).trim() !== '' ? String(version) : '';
+function validityLines(validity) {
+    if (!validity || typeof validity !== 'object') {
+        return [];
     }
-    const parts = [];
-    if (typeof version.display === 'string' && version.display.trim() !== '') {
-        parts.push(version.display.trim());
+    const dates = [['Not Before', validity.notBefore], ['Not After', validity.notAfter]]
+        .filter(([, date]) => typeof date === 'string');
+    return dates.length ? ['Validity:', ...dates.map(([label, date]) => `    ${label}: ${date}`)] : [];
+}
+
+// What the server read of a key: ML-DSA's, or what a key it could not load declares.
+function describedKeyEntries(info, algorithm) {
+    return [
+        ['Type', info.type],
+        ['Algorithm OID', algorithm.oid],
+        ['ML-DSA parameter set', algorithm.mlDsaParameterSet],
+        ['Claimed NIST level', algorithm.claimedNistLevel],
+        ['Signature length (bytes)', algorithm.signatureLengthBytes],
+        ['Public key size (bits)', info.keySize || null],
+        ['Public Key (base64)', info.publicKeyBase64],
+        ['Public Key (hex)', base64Lines(info.publicKeyBase64)],
+        ['Wrapped Public Key (hex)', base64Lines(info.wrappedPublicKeyBase64)],
+    ];
+}
+
+// The key's labels and values, as the server's summary gives them for its type.
+function publicKeyEntries(info) {
+    const algorithm = info.algorithm && typeof info.algorithm === 'object' ? info.algorithm : {};
+    const keySize = info.keySize ? `(${info.keySize} bit)` : null;
+    if (info.mechanismFamily === 'ML-DSA' || typeof algorithm.oid === 'string') {
+        return describedKeyEntries(info, algorithm);
     }
-    if (typeof version.hex === 'string' && version.hex.trim() !== '') {
-        const hex = version.hex.trim();
-        if (!parts.length || (parts[0] !== hex && !parts[0].includes(`(${hex})`))) {
-            parts.push(hex);
+    if (info.type === 'ECC') {
+        return [['Type', 'ECC'], ['Public-Key', keySize], ['pub', hexLines(hexDigits(info.uncompressedPoint))], ['Curve', info.curve]];
+    }
+    if (info.type === 'RSA') {
+        return [
+            ['Type', 'RSA'],
+            ['Public-Key', keySize],
+            ['Modulus', hexLines(hexDigits(info.modulusHex))],
+            ['Exponent', info.publicExponent],
+        ];
+    }
+    if (Object.hasOwn(EDDSA_TYPES, info.type)) {
+        return [['Type', EDDSA_TYPES[info.type]], ['Public Key', hexLines(hexDigits(info.publicKeyHex))]];
+    }
+    return [['Type', info.type]];
+}
+
+// "Subject Public Key Info:", each label with its value, or its lines under it.
+function publicKeyLines(info) {
+    if (!info || typeof info !== 'object') {
+        return [];
+    }
+    const lines = publicKeyEntries(info).flatMap(([label, value]) => {
+        if (value === null || value === undefined || value === '' || (Array.isArray(value) && !value.length)) {
+            return [];
         }
-    }
-    return parts.join(' ');
-}
-
-// The serial number after "Certificate Serial Number: ": decimal / hex; '' for none.
-function serialNumberText(serialNumber) {
-    if (typeof serialNumber !== 'object') {
-        return String(serialNumber).trim() !== '' ? String(serialNumber) : '';
-    }
-    const parts = [];
-    if (typeof serialNumber.decimal === 'string' && serialNumber.decimal.trim() !== '') {
-        parts.push(serialNumber.decimal.trim());
-    }
-    if (typeof serialNumber.hex === 'string' && serialNumber.hex.trim() !== '') {
-        parts.push(serialNumber.hex.trim());
-    }
-    return parts.join(' / ');
-}
-
-/**
- * The first lines: version, serial number, signature algorithm, issuer.
- * @param {LineWriter} out
- */
-function writeIdentity(out, details) {
-    const version = details.version ? versionText(details.version) : '';
-    if (version) {
-        out.add(`Version: ${version}`);
-    }
-    const serialNumber = details.serialNumber ? serialNumberText(details.serialNumber) : '';
-    if (serialNumber) {
-        out.add(`Certificate Serial Number: ${serialNumber}`);
-    }
-    if (typeof details.signatureAlgorithm === 'string' && details.signatureAlgorithm.trim() !== '') {
-        out.add(`Signature Algorithm: ${details.signatureAlgorithm.trim()}`);
-    }
-    if (typeof details.issuer === 'string' && details.issuer.trim() !== '') {
-        out.add(`Issuer: ${details.issuer.trim()}`);
-    }
-}
-
-/**
- * "Validity:" with its two dates, the subject, and "Subject Public Key Info:".
- * @param {LineWriter} out
- */
-function writeSubject(out, details) {
-    const validity = details.validity;
-    if (validity && (validity.notBefore || validity.notAfter)) {
-        out.blank();
-        out.add('Validity:');
-        if (validity.notBefore) {
-            out.add(`    Not Before: ${validity.notBefore}`);
-        }
-        if (validity.notAfter) {
-            out.add(`    Not After: ${validity.notAfter}`);
-        }
-    }
-    if (typeof details.subject === 'string' && details.subject.trim() !== '') {
-        out.blank();
-        out.add(`Subject: ${details.subject.trim()}`);
-    }
-    if (details.publicKeyInfo && typeof details.publicKeyInfo === 'object') {
-        out.blank();
-        out.add('Subject Public Key Info:');
-        appendKeyValueLines(out.lines, details.publicKeyInfo, 1);
-    }
+        return Array.isArray(value)
+            ? [`    ${label}:`, ...value.map(line => `        ${line}`)]
+            : [`    ${label}: ${pythonText(value)}`];
+    });
+    return lines.length ? ['Subject Public Key Info:', ...lines] : [];
 }
 
 // An extension's header: the server's own, else its OID and (name), or either
@@ -266,84 +210,53 @@ function extensionHeader(ext) {
     return ext.critical ? `${header} [critical]` : header;
 }
 
-/**
- * "X509v3 extensions:", each its header and value.
- * @param {LineWriter} out
- */
-function writeExtensions(out, extensions) {
+// "X509v3 extensions:", each its header and value.
+function extensionLines(extensions) {
     if (!Array.isArray(extensions) || !extensions.length) {
-        return;
+        return [];
     }
-    out.blank();
-    out.add('X509v3 extensions:');
-    extensions.forEach(ext => {
-        if (!ext || typeof ext !== 'object') {
-            return;
-        }
-        out.add(`    ${extensionHeader(ext)}:`);
-        if ('value' in ext) {
-            appendKeyValueLines(out.lines, ext.value, 2);
-        }
-    });
+    return ['X509v3 extensions:', ...extensions
+        .filter(ext => ext && typeof ext === 'object')
+        .flatMap(ext => [`    ${extensionHeader(ext)}:`, ...structuredLines(ext.value, 2)])];
 }
 
-/**
- * The signature: its algorithm, then its bytes in lines (or in one colon line).
- * @param {LineWriter} out
- */
-function writeSignature(out, details) {
-    if (!details.signature || typeof details.signature !== 'object') {
-        return;
+// The signature's bytes in lines, under the certificate's signature algorithm.
+function signatureLines(details) {
+    const lines = hexLines(hexDigits(details.signature && details.signature.hex));
+    if (!lines.length) {
+        return [];
     }
-    const algorithm = typeof details.signature.algorithm === 'string'
-        ? details.signature.algorithm.trim()
-        : '';
-    const signatureLines = Array.isArray(details.signature.lines)
-        ? details.signature.lines.filter(line => typeof line === 'string' && line.trim() !== '')
-        : [];
-    const signatureColon = typeof details.signature.colon === 'string'
-        ? details.signature.colon.trim()
-        : '';
-
-    if (algorithm || signatureLines.length || signatureColon) {
-        out.blank();
-        const algorithmLabel = algorithm || (typeof details.signatureAlgorithm === 'string' ? details.signatureAlgorithm.trim() : 'Signature');
-        out.add(`Signature Algorithm: ${algorithmLabel}`);
-        if (signatureLines.length) {
-            signatureLines.forEach(line => out.add(`    ${line}`));
-        } else if (signatureColon) {
-            out.add(`    ${signatureColon}`);
-        }
-    }
+    const algorithm = typeof details.signatureAlgorithm === 'string' ? details.signatureAlgorithm : '';
+    return [`Signature Algorithm: ${algorithm}`, ...lines.map(line => `    ${line}`)];
 }
 
-/**
- * "Fingerprint:", each digest's name and its bytes in colon lines.
- * @param {LineWriter} out
- */
-function writeFingerprints(out, fingerprints) {
+// "Fingerprint:", MD5, SHA1 and SHA256 in that order, each in its lines (a value
+// that is no hex as it is).
+function fingerprintLines(fingerprints) {
     if (!fingerprints || typeof fingerprints !== 'object') {
-        return;
+        return [];
     }
-    const fingerprintEntries = Object.entries(fingerprints)
-        .filter(([, value]) => typeof value === 'string' && value.trim() !== '');
+    const lines = ['md5', 'sha1', 'sha256'].flatMap(name => {
+        const value = fingerprints[name];
+        if (typeof value !== 'string' || value === '') {
+            return [];
+        }
+        const digits = hexDigits(value);
+        const valueLines = digits === null ? [value] : hexLines(digits);
+        return [`    ${name.toUpperCase()}:`, ...valueLines.map(line => `        ${line}`)];
+    });
+    return lines.length ? ['Fingerprint:', ...lines] : [];
+}
 
-    if (fingerprintEntries.length) {
-        out.blank();
-        out.add('Fingerprint:');
-        fingerprintEntries.forEach(([algorithm, value]) => {
-            const label = typeof algorithm === 'string' && algorithm.trim() !== ''
-                ? algorithm.trim().toUpperCase()
-                : 'VALUE';
-            const colonLines = hexToColonLines(value);
-            out.add(`    ${label}:`);
-            if (colonLines.length) {
-                colonLines.forEach(line => out.add(`        ${line}`));
-            } else {
-                out.add(`        ${value}`);
-            }
-        });
-    }
+// The subject key identifier's lines, from its extension's value.
+function subjectKeyIdentifierLines(extensions) {
+    const extension = Array.isArray(extensions)
+        ? extensions.find(ext => ext && ext.oid === SUBJECT_KEY_IDENTIFIER_OID)
+        : null;
+    const lines = extension && extension.value && Array.isArray(extension.value['Hex value'])
+        ? extension.value['Hex value']
+        : [];
+    return lines.length ? ['Subject Key Identifier:', ...lines.map(line => `    ${line}`)] : [];
 }
 
 export function formatCertificateDetails(details) {
@@ -355,11 +268,15 @@ export function formatCertificateDetails(details) {
         return details.summary.trim();
     }
 
-    const out = lineWriter();
-    writeIdentity(out, details);
-    writeSubject(out, details);
-    writeExtensions(out, details.extensions);
-    writeSignature(out, details);
-    writeFingerprints(out, details.fingerprints);
-    return out.lines.join('\n').trim();
+    const sections = [
+        identityLines(details),
+        validityLines(details.validity),
+        typeof details.subject === 'string' ? [`Subject: ${details.subject}`] : [],
+        publicKeyLines(details.publicKeyInfo),
+        extensionLines(details.extensions),
+        signatureLines(details),
+        fingerprintLines(details.fingerprints),
+        subjectKeyIdentifierLines(details.extensions),
+    ];
+    return sections.filter(lines => lines.length).map(lines => lines.join('\n')).join('\n\n').trim();
 }

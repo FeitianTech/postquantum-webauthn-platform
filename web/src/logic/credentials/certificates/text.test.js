@@ -1,19 +1,42 @@
+import { readFileSync } from 'node:fs';
+
 import { describe, expect, it } from 'vitest';
 
 import { formatCertificateDetails } from './text.js';
-import { advancedComplete, registration } from '@/test/logic/credentials/registration-detail-answers.js';
+import { repoFile } from '@/test/logic/repo-file.js';
 
 // A certificate as text (credentials/certificates/text.js), as the
 // registration view's certificate shows it.
 
-/** The attestation certificate as the decoder parsed it (POST /api/codec): no summary. */
-const decodedCertificate = () => registration('packedX5c').attestationDecode.data.attestationObject.attStmt.x5c[0].parsedX5c;
+// Every certificate the server's characterization parsed (device captures and the
+// ones its tests build), as serialize_attestation_certificate gives them, with the
+// server's summary; tests/app/characterization keeps the file equal to the server.
+const CORPUS = Object.entries(
+  JSON.parse(readFileSync(repoFile('tests/app/characterization/golden/certificates.json'), 'utf8')),
+).filter(([, details]) => details && !details.parseError);
 
-/** The same certificate as register-complete describes it, with the server's summary. */
-const describedCertificate = () => advancedComplete().relyingParty.attestationCertificate;
+/**
+ * The certificate as a registration keeps it (webauthn/attestation/certificates.py):
+ * no summary or PEM, the signature's hex alone, the public key's base64 without its hex.
+ */
+function registrationCopy(details) {
+  const copy = structuredClone(details);
+  delete copy.summary;
+  delete copy.pem;
+  delete copy.signature.colon;
+  delete copy.signature.lines;
+  if (copy.publicKeyInfo.publicKeyBase64) {
+    delete copy.publicKeyInfo.publicKeyHex;
+    delete copy.publicKeyInfo.publicKeyHexLines;
+  }
+  return copy;
+}
 
 /** The text for details holding only the given extension. */
 const extensionText = (extension) => formatCertificateDetails({ extensions: [extension] });
+
+/** The text for details holding only the given public key info. */
+const publicKeyText = (info) => formatCertificateDetails({ publicKeyInfo: info });
 
 describe('formatCertificateDetails', () => {
   it('has no text without details', () => {
@@ -21,157 +44,83 @@ describe('formatCertificateDetails', () => {
     expect(formatCertificateDetails('Version: 3')).toBe('');
   });
 
-  it("gives the decoder's summary when it has one", () => {
-    const certificate = describedCertificate();
-    expect(formatCertificateDetails({ ...certificate, summary: `\n${certificate.summary}\n` })).toBe(certificate.summary);
+  it('gives the summary a record kept', () => {
+    const [, details] = CORPUS[0];
+    expect(formatCertificateDetails({ summary: `\n${details.summary}\n` })).toBe(details.summary);
   });
 
-  it('builds an OpenSSL-like text from the fields when there is no summary', () => {
-    expect(formatCertificateDetails(decodedCertificate())).toBe([
-      'Version: 3 (0x2)',
-      'Certificate Serial Number: 7855 / 0x1eaf',
-      'Signature Algorithm: ed25519',
-      'Issuer: CN=Characterization Test CA',
-      '',
-      'Validity:',
-      '    Not Before: 2020-01-01T00:00:00+00:00',
-      '    Not After: 2099-12-31T00:00:00+00:00',
-      '',
-      'Subject: CN=Characterization Attestation Leaf,OU=Authenticator Attestation,O=Characterization Test,C=SE',
-      '',
-      'Subject Public Key Info:',
-      '    algorithm:',
-      '        name: ECDSA',
-      '        namedCurve: secp256r1',
-      '    curve: secp256r1',
-      '    keySize: 256',
-      '    type: ECC',
-      '    uncompressedPoint: 04:64:1a:28:f0:44:a1:9d:8b:40:83:b1:dc:9c:d0:2b:b0:a9:af:ba:77:45:e6:77:53:25:ed:3a:39:7d:b1:88:2f:33:4f:50:76:15:07:0e:c7:29:31:15:70:cf:4b:32:9d:e4:44:7a:d0:b9:c2:48:bf:f7:06:b1:ae:5b:d7:21:c6',
-      '',
-      'X509v3 extensions:',
-      '    X509v3 Basic Constraints [critical]:',
-      '        CA: FALSE',
-      '    1.3.6.1.4.1.45724.1.1.4 (FIDO: Device AAGUID):',
-      '        AAGUID: 00112233445566778899aabbccddeeff',
-      '',
-      'Signature Algorithm: ed25519',
-      '    97:ef:c8:b1:16:2d:d6:c6:27:ad:aa:5d:d4:d3:2d:98',
-      '    33:d7:1a:74:2d:85:a9:9b:f8:fc:5b:9f:ee:dc:f0:52',
-      '    97:59:d4:54:ba:10:3d:f6:52:fb:a0:7e:c4:44:ab:53',
-      '    3c:16:03:69:ab:55:11:b2:d8:d8:bc:33:7f:73:9c:07',
-      '',
-      'Fingerprint:',
-      '    MD5:',
-      '        ed:83:57:b0:48:fe:55:52:67:1d:d9:40:36:1e:a1:ba',
-      '    SHA1:',
-      '        ee:e4:2e:39:bd:27:2a:7b:08:15:0a:28:73:ff:48:31',
-      '        21:68:fe:ba',
-      '    SHA256:',
-      '        e5:d9:8c:65:07:23:83:3d:e4:89:25:5a:07:81:64:b1',
-      '        e0:ab:91:fb:27:ae:62:01:1c:a6:a9:9b:8c:a6:c5:21',
-    ].join('\n'));
+  it.each(CORPUS)("writes %s's text as the server's summary, from what a registration keeps", (name, details) => {
+    expect(formatCertificateDetails(registrationCopy(details))).toBe(details.summary);
   });
 
-  it('builds the text when the summary is blank', () => {
-    const certificate = decodedCertificate();
-    expect(formatCertificateDetails({ ...certificate, summary: '  ' })).toBe(formatCertificateDetails(certificate));
+  it('writes the same text from details that keep every form', () => {
+    CORPUS.forEach(([, details]) => {
+      expect(formatCertificateDetails({ ...details, summary: '  ' })).toBe(details.summary);
+    });
   });
 
-  it('has no text for details with no field it writes', () => {
-    expect(formatCertificateDetails({ algorithmInfo: 'ED25519_SHA512' })).toBe('');
+  it('has no text for a certificate the server could not read, only its error', () => {
+    expect(formatCertificateDetails({ error: 'Unable to decode attestation certificate bytes.' })).toBe('');
   });
 });
 
-describe('the version', () => {
-  it('does not repeat a hex that is the display', () => {
-    expect(formatCertificateDetails({ version: { display: '0x2', hex: '0x2' } })).toBe('Version: 0x2');
+describe('the identity and the dates', () => {
+  it('writes the serial number it has when the other spelling is missing', () => {
+    expect(formatCertificateDetails({ serialNumber: { decimal: '7855', hex: 7855 } })).toBe('Certificate Serial Number: 7855');
+    expect(formatCertificateDetails({ serialNumber: { hex: '0x1eaf' } })).toBe('Certificate Serial Number: 0x1eaf');
   });
 
-  it('does not repeat a hex the display already gives in parentheses', () => {
-    expect(formatCertificateDetails({ version: { display: '3 (0x2)', hex: '0x2' } })).toBe('Version: 3 (0x2)');
+  it('leaves out a version, serial number, algorithm or name that is not text', () => {
+    expect(formatCertificateDetails({ version: 3, serialNumber: '7855', signatureAlgorithm: 5, issuer: null, subject: {} })).toBe('');
   });
 
-  it('adds the hex after a display that does not give it', () => {
-    expect(formatCertificateDetails({ version: { display: '3', hex: '0x2' } })).toBe('Version: 3 0x2');
+  it('writes the names as they are, an empty one too', () => {
+    expect(formatCertificateDetails({ issuer: 'CN=CA ', subject: '' })).toBe('Issuer: CN=CA \n\nSubject:');
   });
 
-  it('writes the hex alone when there is no display', () => {
-    expect(formatCertificateDetails({ version: { display: ' ', hex: '0x2' } })).toBe('Version: 0x2');
-  });
-
-  it('leaves out a version with neither a display nor a hex', () => {
-    expect(formatCertificateDetails({ version: { numeric: 3, hex: 2 } })).toBe('');
-  });
-
-  it('writes a version given as a number or text', () => {
-    expect(formatCertificateDetails({ version: 3 })).toBe('Version: 3');
-  });
-
-  it('leaves out a blank version', () => {
-    expect(formatCertificateDetails({ version: '  ' })).toBe('');
-  });
-});
-
-describe('the serial number', () => {
-  it('writes the decimal alone when there is no hex', () => {
-    expect(formatCertificateDetails({ serialNumber: { decimal: '7855', hex: ' ' } })).toBe('Certificate Serial Number: 7855');
-  });
-
-  it('writes the hex alone when there is no decimal', () => {
-    expect(formatCertificateDetails({ serialNumber: { decimal: 7855, hex: '0x1eaf' } })).toBe('Certificate Serial Number: 0x1eaf');
-  });
-
-  it('leaves out a serial number with neither', () => {
-    expect(formatCertificateDetails({ serialNumber: {} })).toBe('');
-  });
-
-  it('writes a serial number given as text', () => {
-    expect(formatCertificateDetails({ serialNumber: '7855' })).toBe('Certificate Serial Number: 7855');
-  });
-
-  it('leaves out a blank serial number', () => {
-    expect(formatCertificateDetails({ serialNumber: ' ' })).toBe('');
-  });
-});
-
-describe('the names and dates', () => {
-  it('leaves out an algorithm, issuer or subject that is blank or not text', () => {
-    expect(formatCertificateDetails({ signatureAlgorithm: 5, issuer: ' ', subject: null })).toBe('');
-  });
-
-  it('writes the one validity date it has', () => {
+  it('writes the validity dates it has', () => {
     expect(formatCertificateDetails({ validity: { notAfter: '2099-12-31' } })).toBe('Validity:\n    Not After: 2099-12-31');
-    expect(formatCertificateDetails({ validity: { notBefore: '2020-01-01' } })).toBe('Validity:\n    Not Before: 2020-01-01');
+    expect(formatCertificateDetails({ validity: { notBefore: '', notAfter: 5 } })).toBe('Validity:\n    Not Before:');
   });
 
   it('leaves out a validity without dates', () => {
-    expect(formatCertificateDetails({ validity: { notBefore: '', notAfter: null } })).toBe('');
-  });
-
-  it('puts a blank line between the sections', () => {
-    expect(formatCertificateDetails({ issuer: 'CN=CA', subject: 'CN=Leaf' })).toBe('Issuer: CN=CA\n\nSubject: CN=Leaf');
+    expect(formatCertificateDetails({ validity: { notBefore: null } })).toBe('');
+    expect(formatCertificateDetails({ validity: '2020' })).toBe('');
   });
 });
 
-describe('the public key info', () => {
-  it('leaves out a public key info that is not a map', () => {
-    expect(formatCertificateDetails({ publicKeyInfo: 'ECC' })).toBe('');
+describe('the public key', () => {
+  it('leaves out a public key info that is not a map, or holds nothing to write', () => {
+    expect(publicKeyText('ECC')).toBe('');
+    expect(publicKeyText({ type: '' })).toBe('');
   });
 
-  it('gives the heading alone for a public key info with nothing in it', () => {
-    expect(formatCertificateDetails({ publicKeyInfo: { type: null, curve: '' } })).toBe('Subject Public Key Info:');
-  });
-
-  it('lists the items of a list under its key', () => {
-    expect(formatCertificateDetails({ publicKeyInfo: { usages: ['sign', 'verify'] } })).toBe(
-      'Subject Public Key Info:\n    usages:\n        sign\n        verify',
+  it('writes what the server read of a key it could not load', () => {
+    expect(publicKeyText({ type: 'Unknown', algorithm: { name: 'Unknown', oid: '1.2.840.10045.2.9' } })).toBe(
+      'Subject Public Key Info:\n    Type: Unknown\n    Algorithm OID: 1.2.840.10045.2.9',
     );
   });
 
-  it('leaves out an empty list and a map with nothing in it', () => {
-    expect(formatCertificateDetails({ publicKeyInfo: { usages: [], algorithm: { name: '' }, type: 'ECC' } })).toBe(
-      'Subject Public Key Info:\n    type: ECC',
+  it("writes a key's wrapped form in lines", () => {
+    expect(publicKeyText({ type: 'X', algorithm: { oid: '1.2' }, keySize: 0, wrappedPublicKeyBase64: 'AQI=' })).toBe(
+      'Subject Public Key Info:\n    Type: X\n    Algorithm OID: 1.2\n    Wrapped Public Key (hex):\n        01:02',
     );
+  });
+
+  it('writes no lines for a key whose base64 does not decode', () => {
+    expect(publicKeyText({ type: 'ML-DSA', mechanismFamily: 'ML-DSA', algorithm: 'ML-DSA', publicKeyBase64: 'AQI' })).toBe(
+      'Subject Public Key Info:\n    Type: ML-DSA\n    Public Key (base64): AQI',
+    );
+  });
+
+  it('names a key of another type by its type alone', () => {
+    expect(publicKeyText({ type: 'DSAPublicKey', keySize: 2048, algorithm: { name: 'DSAPublicKey' } })).toBe(
+      'Subject Public Key Info:\n    Type: DSAPublicKey',
+    );
+  });
+
+  it('leaves out what an EC key does not say', () => {
+    expect(publicKeyText({ type: 'ECC', uncompressedPoint: 'not hex' })).toBe('Subject Public Key Info:\n    Type: ECC');
   });
 });
 
@@ -217,97 +166,91 @@ describe('the extensions', () => {
     );
   });
 
-  it('writes a value that is text, a number or a boolean on its own line', () => {
+  it('writes a value that is text, a number or a boolean on its own line, as Python writes it', () => {
     expect(formatCertificateDetails({
       extensions: [{ name: 'A', value: 'Digital Signature' }, { name: 'B', value: 5 }, { name: 'C', value: true }],
-    })).toBe('X509v3 extensions:\n    A:\n        Digital Signature\n    B:\n        5\n    C:\n        true');
+    })).toBe('X509v3 extensions:\n    A:\n        Digital Signature\n    B:\n        5\n    C:\n        True');
   });
 
-  it('writes the header alone for an empty value', () => {
-    expect(formatCertificateDetails({
-      extensions: [{ name: 'A', value: ' ' }, { name: 'B', value: [] }, { name: 'C', value: null }, { name: 'D', value: {} }],
-    })).toBe('X509v3 extensions:\n    A:\n    B:\n    C:\n    D:');
-  });
-
-  it('lists the plain items of a list, leaving out the empty places', () => {
-    expect(extensionText({ name: 'A', value: ['sign', null, 2, false] })).toBe(
-      'X509v3 extensions:\n    A:\n        sign\n        2\n        false',
+  it('writes an empty text value as an indented blank line', () => {
+    expect(formatCertificateDetails({ extensions: [{ name: 'Key Usage', value: '' }, { name: 'B', value: 'x' }] })).toBe(
+      'X509v3 extensions:\n    Key Usage:\n        \n    B:\n        x',
     );
-    expect(extensionText({ name: 'A', value: [null, undefined] })).toBe('X509v3 extensions:\n    A:');
   });
 
-  it('marks each map of a mixed list with a dash, and each plain item after one', () => {
-    expect(extensionText({ name: 'Policies', value: [{ policy: '1.2.3' }, 'any', {}] })).toBe([
-      'X509v3 extensions:',
-      '    Policies:',
-      '        -',
-      '            policy: 1.2.3',
-      '        - any',
-      '        -',
-    ].join('\n'));
+  it('lists the non-empty items of a list of text', () => {
+    expect(extensionText({ name: 'A', value: ['sign', '', 'verify'] })).toBe('X509v3 extensions:\n    A:\n        sign\n        verify');
   });
 
-  it('writes a nested map under its key, leaving out empty lists and maps', () => {
+  it('writes each item of another list as a value of its own', () => {
+    expect(extensionText({ name: 'SCTs', value: [{ Version: 'v1', Empty: '' }, null, '', false] })).toBe(
+      'X509v3 extensions:\n    SCTs:\n        Version: v1\n        \n        False',
+    );
+  });
+
+  it('writes a map under its key, its empty values left out and an empty map or list as its key alone', () => {
     expect(extensionText({
       name: 'A',
-      value: { policy: { id: '1.2' }, empty: {}, blank: { id: '' }, none: [], items: ['x'] },
+      value: { 'Hex value': ['01:02'], blank: '', none: null, lists: [], maps: {}, 'Path Length': 0 },
     })).toBe([
       'X509v3 extensions:',
       '    A:',
-      '        policy:',
-      '            id: 1.2',
-      '        items:',
-      '            x',
+      '        Hex value:',
+      '            01:02',
+      '        lists:',
+      '        maps:',
+      '        Path Length: 0',
     ].join('\n'));
-  });
-
-  it('writes a value of another kind as its text', () => {
-    expect(extensionText({ name: 'A', value: 10n })).toBe('X509v3 extensions:\n    A:\n        10');
   });
 });
 
 describe('the signature', () => {
-  it('writes the signature as one line when it has no lines', () => {
-    expect(formatCertificateDetails({ signature: { algorithm: 'ed25519', colon: '97:ef' } })).toBe(
-      'Signature Algorithm: ed25519\n    97:ef',
-    );
-  });
-
-  it("names the certificate's signature algorithm when the signature does not", () => {
-    expect(formatCertificateDetails({ signatureAlgorithm: 'ed25519', signature: { colon: '97:ef' } })).toBe(
+  it("writes the signature's hex in lines under the certificate's signature algorithm", () => {
+    expect(formatCertificateDetails({ signatureAlgorithm: 'ed25519', signature: { hex: '97ef' } })).toBe(
       'Signature Algorithm: ed25519\n\nSignature Algorithm: ed25519\n    97:ef',
     );
   });
 
-  it('calls the algorithm Signature when nothing names it, and skips blank lines', () => {
-    expect(formatCertificateDetails({ signature: { lines: ['97:ef', ' ', 5] } })).toBe(
-      'Signature Algorithm: Signature\n    97:ef',
-    );
+  it('writes the lines under an empty name when the certificate names no algorithm', () => {
+    expect(formatCertificateDetails({ signature: { algorithm: 'ed25519', hex: '0102' } })).toBe('Signature Algorithm: \n    01:02');
   });
 
-  it('writes the algorithm alone when the signature has no bytes', () => {
-    expect(formatCertificateDetails({ signature: { algorithm: 'ed25519' } })).toBe('Signature Algorithm: ed25519');
-  });
-
-  it('leaves out a signature with nothing to write', () => {
-    expect(formatCertificateDetails({ signature: { algorithm: 5, lines: '97:ef', colon: 7 } })).toBe('');
+  it('leaves out a signature without bytes', () => {
+    expect(formatCertificateDetails({ signature: { algorithm: 'ed25519', hex: '' } })).toBe('');
+    expect(formatCertificateDetails({ signature: null })).toBe('');
   });
 });
 
 describe('the fingerprints', () => {
-  it('writes an odd-length fingerprint with a leading zero', () => {
-    expect(formatCertificateDetails({ fingerprints: { sha1: 'abc' } })).toBe('Fingerprint:\n    SHA1:\n        0a:bc');
+  it('writes MD5, SHA1 and SHA256 in that order, whatever order they come in', () => {
+    expect(formatCertificateDetails({ fingerprints: { sha256: '03', sha1: '02', md5: '01', sha512: '04' } })).toBe(
+      'Fingerprint:\n    MD5:\n        01\n    SHA1:\n        02\n    SHA256:\n        03',
+    );
   });
 
-  it('writes a fingerprint that holds no hex as it is', () => {
-    expect(formatCertificateDetails({ fingerprints: { sha1: 'unknown' } })).toBe('Fingerprint:\n    SHA1:\n        unknown');
+  it('writes an odd-length fingerprint with a leading zero, and one that is no hex as it is', () => {
+    expect(formatCertificateDetails({ fingerprints: { sha1: 'abc', md5: 'unknown' } })).toBe(
+      'Fingerprint:\n    MD5:\n        unknown\n    SHA1:\n        0a:bc',
+    );
   });
 
-  it('calls a fingerprint with a blank name VALUE', () => {
-    expect(formatCertificateDetails({ fingerprints: { ' ': 'ab' } })).toBe('Fingerprint:\n    VALUE:\n        ab');
+  it('leaves out the fingerprints that are empty or not text', () => {
+    expect(formatCertificateDetails({ fingerprints: { sha1: 5, md5: '' } })).toBe('');
+    expect(formatCertificateDetails({ fingerprints: 'abc' })).toBe('');
+  });
+});
+
+describe('the subject key identifier', () => {
+  it("writes the identifier's lines from its extension", () => {
+    expect(formatCertificateDetails({ extensions: [{ oid: '2.5.29.14', name: 'SKI', value: { 'Hex value': ['01:02'] } }] })).toBe(
+      'X509v3 extensions:\n    2.5.29.14 (SKI):\n        Hex value:\n            01:02\n\nSubject Key Identifier:\n    01:02',
+    );
   });
 
-  it('leaves out the fingerprints that are blank or not text', () => {
-    expect(formatCertificateDetails({ fingerprints: { sha1: 5, md5: ' ' } })).toBe('');
+  it('leaves it out when the extension holds no lines', () => {
+    expect(formatCertificateDetails({ extensions: [{ oid: '2.5.29.14', name: 'SKI', value: { 'Hex value': '' } }] })).toBe(
+      'X509v3 extensions:\n    2.5.29.14 (SKI):',
+    );
+    expect(formatCertificateDetails({ extensions: [{ oid: '2.5.29.14', name: 'SKI' }] })).toBe('X509v3 extensions:\n    2.5.29.14 (SKI):');
   });
 });
