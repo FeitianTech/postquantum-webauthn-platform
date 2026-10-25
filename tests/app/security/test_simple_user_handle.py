@@ -75,7 +75,7 @@ def test_the_stored_user_handle_is_the_one_the_authenticator_was_given(credentia
     assert answer["storedCredential"]["userHandle"] == handle
     assert answer["relyingParty"]["userHandle"]["base64url"] == handle
     [record] = storage_credentials.readkey(SIMPLE_EMAIL, session_id=visitor_namespace.of(client))
-    assert record["user_info"]["user_handle"] == unb64u(handle)
+    assert record["user_handle"] == unb64u(handle)
 
 
 def test_the_same_username_in_another_visitors_namespace_gets_another_user_handle(credential_store):
@@ -91,7 +91,7 @@ def test_a_credential_stored_with_the_username_as_its_user_handle_still_authenti
     # As records were stored before: the username's bytes as the user handle.
     namespace = visitor_namespace.of(client)
     records, version = storage_credentials.read_for_update(SIMPLE_EMAIL, session_id=namespace)
-    records[0]["user_info"]["user_handle"] = SIMPLE_EMAIL.encode()
+    records[0]["user_handle"] = SIMPLE_EMAIL.encode()
     assert storage_credentials.save_if_unchanged(SIMPLE_EMAIL, records, version, session_id=namespace)
 
     response = authenticate_simple(client, authenticator, counter=2)

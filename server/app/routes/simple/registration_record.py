@@ -2,8 +2,9 @@
 
 Each step reads and fills one ``SimpleRegistration``: the attestation summary
 and the credential's info and properties, the authenticator data, the
-relying-party and debug views, then the credential the browser keeps. The
-stored record is JSON, so the order these add keys in is part of the output.
+relying-party and debug views, then the credential the browser keeps, which the
+answer carries. It is JSON, so the order these add keys in is part of the output.
+The server's own record of the credential is ``stored_sign_count.counter_record``.
 """
 from __future__ import annotations
 
@@ -119,8 +120,6 @@ def _attestation_summary(reg: SimpleRegistration) -> tuple[dict[str, Any], Any, 
 
 def _credential_info(reg: SimpleRegistration) -> dict[str, Any]:
     return {
-        "credential_data": reg.auth_data.credential_data,
-        "auth_data": reg.auth_data,
         "user_info": {
             "name": reg.uname,
             "display_name": reg.uname,
@@ -129,14 +128,6 @@ def _credential_info(reg: SimpleRegistration) -> dict[str, Any]:
         "registration_time": time.time(),
         "client_data_json": reg.client_data_json or "",
         "attestation_object": reg.raw_attestation_object_b64 or "",
-        "attestation_object_raw": reg.raw_attestation_object_b64 or "",
-        "attestation_format": reg.attestation_format,
-        "attestation_statement": reg.attestation_statement,
-        "attestation_certificate": reg.attestation_certificate_details,
-        "attestation_certificates": reg.attestation_certificates_details,
-        "client_extension_outputs": reg.client_extension_results,
-        "authenticator_attachment": reg.authenticator_attachment_response,
-        "request_params": registration_request.request_params(),
         "properties": {
             "excludeCredentialsSentCount": reg.exclude_credentials_count,
             "excludeCredentialsUsed": reg.exclude_credentials_count > 0,
@@ -175,10 +166,7 @@ def initialize_registration_context(reg: SimpleRegistration) -> None:
         getattr(reg.auth_data.credential_data, "public_key", {}),
     )
 
-    credential_info["attestation_object_decoded"] = json_values.make_json_safe(reg.parsed_attestation_object)
-
     if reg.attestation_certificates_details:
-        credential_info["attestationCertificates"] = reg.attestation_certificates_details
         credential_properties["attestationCertificates"] = reg.attestation_certificates_details
 
     if isinstance(reg.response, Mapping):
@@ -207,9 +195,6 @@ def populate_authenticator_data_context(reg: SimpleRegistration) -> None:
         authenticator_data_raw = encode_base64url(auth_data_bytes)
         authenticator_data_hex = auth_data_bytes.hex()
         authenticator_data_hash = hashlib.sha256(auth_data_bytes).hexdigest()
-        reg.credential_info["authenticator_data_raw"] = authenticator_data_raw
-        reg.credential_info["authenticator_data_hex"] = authenticator_data_hex
-        reg.credential_info["authenticator_data_hash"] = authenticator_data_hash
         reg.credential_properties["authenticatorDataHash"] = authenticator_data_hash
 
     algo = reg.auth_data.credential_data.public_key[3]
@@ -308,7 +293,6 @@ def populate_rp_debug_context(reg: SimpleRegistration) -> None:
         aaguid=(aaguid_bytes, aaguid_hex, aaguid_guid),
         large_blob_result=large_blob_result,
     )
-    reg.credential_info["relying_party"] = json_values.make_json_safe(rp_info)
     debug_info = _debug_info(reg)
 
     reg.credential_id_hex = credential_id_forms["hex"]

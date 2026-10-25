@@ -11,12 +11,40 @@ from server.app.routes.simple import stored_sign_count
 from tests.app.security.ceremony_helpers import RP_ID, Authenticator, b64u
 
 
-def test_a_record_names_its_credential_only_by_its_credential_datas_bytes():
+def test_a_record_names_its_credential_by_its_own_id_or_else_its_credential_datas_bytes():
     registered = AuthenticatorData(Authenticator(credential_id=b"\x07" * 16).authenticator_data())
 
+    assert stored_sign_count.record_credential_id({"credential_id": b"\x08" * 16}) == b"\x08" * 16
     assert stored_sign_count.record_credential_id({"credential_data": registered.credential_data}) == b"\x07" * 16
+    assert stored_sign_count.record_credential_id({"credential_id": "not bytes"}) is None
     assert stored_sign_count.record_credential_id(["not", "a", "record"]) is None
     assert stored_sign_count.record_credential_id({}) is None
+
+
+def test_a_record_stored_whole_keeps_only_what_the_counter_check_reads_with_its_time_and_handle():
+    registered = AuthenticatorData(Authenticator(credential_id=b"\x07" * 16).authenticator_data(counter=4))
+    whole = {
+        "credential_data": registered.credential_data,
+        "auth_data": registered,
+        "user_info": {"name": "user@example.com", "user_handle": b"handle"},
+        "registration_time": 1.5,
+        "attestation_object": "o2NmbXRkbm9uZQ",
+        "properties": {"attestationChecks": {}},
+    }
+    slim = {"credential_id": b"\x07" * 16, "sign_count": 4, "registration_time": 1.5, "user_handle": b"handle"}
+
+    assert stored_sign_count.as_counter_record(whole) == slim
+    assert stored_sign_count.as_counter_record({**whole, "sign_count": 9})["sign_count"] == 9
+    # Brought to that form once, it stays as it is.
+    assert stored_sign_count.as_counter_record(slim) == slim
+    assert stored_sign_count.counter_record(b"\x07" * 16, 4, 1.5, b"handle") == slim
+
+
+def test_a_record_whose_credential_cannot_be_read_is_kept_as_it_is():
+    unreadable = {"credential_data": b"degraded to its bytes", "sign_count": 3}
+
+    assert stored_sign_count.as_counter_record(unreadable) is unreadable
+    assert stored_sign_count.as_counter_record("not a record") == "not a record"
 
 
 def test_a_record_without_a_counter_of_its_own_has_its_authenticator_datas():

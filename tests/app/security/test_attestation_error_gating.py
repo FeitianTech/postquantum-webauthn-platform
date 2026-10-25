@@ -155,8 +155,9 @@ def test_a_packed_self_attestation_registers_in_the_simple_tab_with_its_trust_fi
     assert checks["errors"] == []
     assert checks["warnings"] == ["metadata_not_available", "trust_path_missing"]
     assert body["warnings"] == ["metadata_not_available", "trust_path_missing"]
-    stored = simple_storage["credentials"][-1]["properties"]
-    assert stored["attestationWarnings"] == ["metadata_not_available", "trust_path_missing"]
+    # What this browser keeps of the credential carries them too.
+    kept = body["storedCredential"]["properties"]
+    assert kept["attestationWarnings"] == ["metadata_not_available", "trust_path_missing"]
 
 
 def test_with_metadata_a_self_attestation_registers_with_no_root_as_a_warning(simple_storage, mds_fixture_snapshot):

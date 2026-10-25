@@ -10,6 +10,12 @@ is authoritative; the browser copy is attacker-controllable, so it may only
 ever make the check *stricter*. The stored value is therefore the larger of the
 two, and a missing copy simply does not contribute.
 
+The server's record keeps what this check reads, the credential's ID and its
+counter, and beside them when it was registered and its user handle
+(``counter_record``): nothing else of the registration, which the browser keeps.
+A record an earlier version stored whole is read the same way, and brought to
+that form when its file is next written (``as_counter_record``).
+
 "Missing" means the server's records were read and hold no record for the
 credential. Records that could not be read are not missing: the assertion is
 rejected with 503, since the browser's copy alone can be omitted or lowered."""
@@ -59,7 +65,8 @@ def enforce_sign_count(uname: Any, credential_id: bytes, sign_count: int, client
             return None, verdict
         server_record[RECORD_SIGN_COUNT_KEY] = sign_count
         try:
-            if credentials.save_if_unchanged(uname, server_records, version, session_id=metadata_session_id):
+            saved = [as_counter_record(record) for record in server_records]
+            if credentials.save_if_unchanged(uname, saved, version, session_id=metadata_session_id):
                 return None, verdict
         except Exception:
             logger.exception(
@@ -133,6 +140,7 @@ def _regressed_counter_rejection(authenticated_id: str, stored_sign_count: int, 
 
 
 RECORD_SIGN_COUNT_KEY = "sign_count"
+RECORD_CREDENTIAL_ID_KEY = "credential_id"
 # A lost compare-and-swap is retried once; losing twice rejects the assertion.
 _SIGN_COUNT_SAVE_ATTEMPTS = 2
 
@@ -143,10 +151,38 @@ def _as_counter(value: Any) -> int | None:
     return value
 
 
+def counter_record(credential_id: bytes, sign_count: int | None, registration_time: Any, user_handle: Any) -> dict[str, Any]:
+    """The record the server keeps of a Simple credential."""
+
+    return {
+        RECORD_CREDENTIAL_ID_KEY: bytes(credential_id),
+        RECORD_SIGN_COUNT_KEY: sign_count,
+        "registration_time": registration_time,
+        "user_handle": user_handle,
+    }
+
+
+def as_counter_record(record: Any) -> Any:
+    """``record`` in the form ``counter_record`` gives; one whose credential ID cannot be read, as it is."""
+
+    credential_id = record_credential_id(record)
+    if credential_id is None:
+        return record
+    user_handle = record.get("user_handle")
+    user_info = record.get("user_info")
+    if user_handle is None and isinstance(user_info, Mapping):
+        user_handle = user_info.get("user_handle")
+    return counter_record(credential_id, record_sign_count(record), record.get("registration_time"), user_handle)
+
+
 def record_credential_id(record: Any) -> bytes | None:
+    """The credential ID a record names: its own, or (stored whole) its credential data's."""
+
     if not isinstance(record, Mapping):
         return None
-    credential_id = getattr(record.get("credential_data"), "credential_id", None)
+    credential_id = record.get(RECORD_CREDENTIAL_ID_KEY)
+    if credential_id is None:
+        credential_id = getattr(record.get("credential_data"), "credential_id", None)
     if isinstance(credential_id, (bytes, bytearray, memoryview)):
         return bytes(credential_id)
     return None

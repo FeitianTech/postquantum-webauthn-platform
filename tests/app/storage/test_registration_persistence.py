@@ -11,12 +11,12 @@ from tests.app.security import ceremony_helpers as ceremony
 
 
 def test_real_registration_round_trips_through_the_json_store(monkeypatch, tmp_path):
-    """A genuinely-signed registration must persist and read back intact.
+    """A genuinely-signed registration persists its counter record and reads it back intact.
 
-    The unit tests above pin the codec; this one proves the codec covers what
-    the register flow actually stores -- ``AttestedCredentialData``,
-    ``AuthenticatorData``, COSE maps keyed by integers and raw attestation
-    bytes -- and that the app still reads the result back.
+    The record is what the counter check reads, with the registration's time and
+    user handle: the credential ID and the user handle as bytes, the counter, the
+    time. The store's codec keeps fido2's own types for records stored whole by
+    earlier versions (``test_record_format.py``).
     """
 
     root = tmp_path / "instance" / "session-credentials"
@@ -53,6 +53,7 @@ def test_real_registration_round_trips_through_the_json_store(monkeypatch, tmp_p
     # The store reads it back from the session folder it wrote it into.
     records = credentials.readkey("alice@example.com", session_id=written[0].parent.name)
     assert len(records) == 1
-    credential_data = records[0]["credential_data"]
-    assert credential_data.credential_id == authenticator.credential_id
-    assert credential_data.public_key[3] == -7
+    assert sorted(records[0]) == ["credential_id", "registration_time", "sign_count", "user_handle"]
+    assert records[0]["credential_id"] == authenticator.credential_id
+    assert records[0]["sign_count"] == 0
+    assert len(records[0]["user_handle"]) == 32

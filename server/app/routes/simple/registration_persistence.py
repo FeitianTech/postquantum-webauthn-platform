@@ -2,20 +2,22 @@
 
 The user's credential list is appended to by compare-and-swap, so concurrent
 registrations for one user all keep their credential; then the device log is
-updated.
+updated. Each record keeps what the counter check reads
+(``stored_sign_count.counter_record``), and the list's older records are brought
+to that form as it is written.
 """
 from __future__ import annotations
 
 import logging
-from collections.abc import Mapping
 from typing import Any
 
 from flask import jsonify
 
-from ... import json_values, visitor_session
+from ... import visitor_session
 from ...storage import credentials, github_mirror
 from ...storage.common import InvalidStorageIdentifier, StorageReadError
 from ...webauthn import client_binary
+from . import stored_sign_count
 from .registration_record import SimpleRegistration
 
 logger = logging.getLogger(__name__)
@@ -29,31 +31,13 @@ _PERSIST_FAILED = "Unable to persist registered credential."
 
 
 def _build_credential_entry(reg: SimpleRegistration) -> dict[str, Any]:
-    credential_entry = {
-        "credential_data": reg.auth_data.credential_data,
-        "auth_data": reg.auth_data,
+    return stored_sign_count.counter_record(
+        reg.auth_data.credential_data.credential_id,
         # Advanced on every successful authentication; see authenticate.
-        "sign_count": int(getattr(reg.auth_data, "counter", 0)),
-        "user_info": reg.credential_info["user_info"],
-        "registration_time": reg.credential_info["registration_time"],
-        "client_data_json": reg.credential_info.get("client_data_json", ""),
-        "attestation_object": reg.credential_info.get("attestation_object", ""),
-        "attestation_object_raw": reg.credential_info.get("attestation_object_raw", ""),
-        "attestation_format": reg.attestation_format,
-        "attestation_statement": reg.attestation_statement,
-        "attestation_certificate": reg.attestation_certificate_details,
-        "attestation_certificates": reg.attestation_certificates_details,
-        "client_extension_outputs": reg.client_extension_results,
-        "authenticator_attachment": reg.authenticator_attachment_response,
-        "request_params": reg.credential_info.get("request_params", {}),
-        "properties": reg.credential_properties,
-        "relying_party": reg.credential_info.get("relying_party"),
-        "registration_response": reg.credential_info.get("registration_response"),
-    }
-
-    # The attestation object fido2 verified: extracting the registration never fails after that.
-    credential_entry["attestation_object_decoded"] = json_values.make_json_safe(reg.parsed_attestation_object)
-    return credential_entry
+        int(getattr(reg.auth_data, "counter", 0)),
+        reg.credential_info["registration_time"],
+        reg.user_id,
+    )
 
 
 def _credential_is_stored(uname: str, credential_id: bytes, metadata_session_id: str) -> bool:
@@ -63,11 +47,7 @@ def _credential_is_stored(uname: str, credential_id: bytes, metadata_session_id:
         records = credentials.readkey(uname, session_id=metadata_session_id)
     except Exception:
         return False
-    return any(
-        bytes(getattr(record.get("credential_data"), "credential_id", b"") or b"") == credential_id
-        for record in records
-        if isinstance(record, Mapping)
-    )
+    return any(stored_sign_count.record_credential_id(record) == credential_id for record in records)
 
 
 def _persist_registered_credential_entry(reg: SimpleRegistration) -> Any | None:
@@ -92,8 +72,9 @@ def _persist_registered_credential_entry(reg: SimpleRegistration) -> Any | None:
             logger.exception("Failed to read the stored credentials of %s", uname)
             return jsonify({"error": _PERSIST_FAILED}), 500
 
+        saved = [*(stored_sign_count.as_counter_record(record) for record in records), credential_entry]
         try:
-            if credentials.save_if_unchanged(uname, [*records, credential_entry], version, session_id=metadata_session_id):
+            if credentials.save_if_unchanged(uname, saved, version, session_id=metadata_session_id):
                 return None
         except Exception:
             if _credential_is_stored(uname, bytes(reg.auth_data.credential_data.credential_id), metadata_session_id):

@@ -272,13 +272,14 @@ its logic out here first.
   explorer's files and the verifier's index).
 - Routes: `routes/simple/` and `routes/advanced/` (begin/complete; the bodies are short
   orchestrators over modules named for their stage, `routes/simple/stored_sign_count.py` the
-  Simple tab's counter check against the stored record; `routes/simple/account.py` the username
+  Simple tab's counter check against the stored record, and that record, `counter_record`: the
+  credential's ID, its counter, its registration's time and user handle, nothing else (records
+  stored whole before are brought to it as their file is written); `routes/simple/account.py` the username
   both Simple begins check before any options (what the store accepts, trimmed, at most 64
   bytes), which each complete must name again, and the user handle a Simple registration
   issues: an HMAC-SHA256 of the visitor's namespace and the username under the app's secret,
   so that begin mints the namespace, kept in the session for complete to store;
-  `routes/simple/registration_request.py` what a Simple registration asks for, which its record
-  repeats; each Simple ceremony keeps its state under its own session key; the try blocks and
+  `routes/simple/registration_request.py` what a Simple registration asks for; each Simple ceremony keeps its state under its own session key; the try blocks and
   the order of session reads are behaviour; a registration complete reads the attestation
   (`extract_attestation_details`) only once the state is consumed and fido2 accepted the
   response; the Simple tab refuses a registration only on an integrity error, every other

@@ -12,9 +12,12 @@ means read back from disk.
 from __future__ import annotations
 
 import pytest
+from fido2.webauthn import AuthenticatorData
 
+from server.app.routes.simple import stored_sign_count
 from server.app.storage import credentials as storage
 from server.app.storage import github_mirror
+from tests.app import visitor_namespace
 from tests.app.entry_app import entry_app
 
 from .ceremony_helpers import (
@@ -45,7 +48,7 @@ def credential_store(tmp_path, monkeypatch):
         assert len(session_dirs) == 1, session_dirs
         records = storage.readkey(EMAIL, session_id=session_dirs[0])
         for record in records:
-            if bytes(record["credential_data"].credential_id) == credential_id:
+            if stored_sign_count.record_credential_id(record) == credential_id:
                 return record.get("sign_count")
         raise AssertionError("credential not found in the store")
 
@@ -334,3 +337,34 @@ def test_advanced_authenticator_data_not_in_base64url_reports_no_counter():
     assert response.status_code == 200, response.get_json()
     assert response.get_json()["status"] == "OK"
     assert "signCount" not in response.get_json()
+
+
+def test_an_authentication_keeps_a_record_stored_whole_as_its_counter_record(credential_store):
+    authenticator = Authenticator()
+    client = entry_app().test_client()
+    _register(client, authenticator, counter=5)
+    # As versions before the counter record kept it: the whole registration.
+    namespace = visitor_namespace.of(client)
+    registered = AuthenticatorData(authenticator.authenticator_data(counter=5))
+    records, version = storage.read_for_update(EMAIL, session_id=namespace)
+    whole = {
+        "credential_data": registered.credential_data,
+        "auth_data": registered,
+        "sign_count": 5,
+        "user_info": {"name": EMAIL, "user_handle": records[0]["user_handle"]},
+        "registration_time": records[0]["registration_time"],
+        "attestation_object": "o2NmbXRkbm9uZQ",
+    }
+    assert storage.save_if_unchanged(EMAIL, [whole], version, session_id=namespace)
+
+    response = authenticate_simple(client, authenticator, counter=6)
+
+    assert response.status_code == 200, response.get_json()
+    assert storage.readkey(EMAIL, session_id=namespace) == [
+        {
+            "credential_id": authenticator.credential_id,
+            "sign_count": 6,
+            "registration_time": records[0]["registration_time"],
+            "user_handle": records[0]["user_handle"],
+        }
+    ]

@@ -6,6 +6,7 @@ import time
 from urllib.parse import urlencode
 
 import pytest
+from fido2.webauthn import AuthenticatorData
 
 from server.app.config import relying_party
 from server.app.routes.simple import account
@@ -22,6 +23,7 @@ from tests.app.security.ceremony_helpers import (
     unb64u,
 )
 from tests.app.storage.codec_examples import _stored_credential_entry
+from tests.app.storage.credential_seed import seed_records
 
 EMAIL = "user@example.com"
 
@@ -146,28 +148,35 @@ def test_a_registration_records_how_many_credentials_its_begin_excluded(credenti
     assert complete.get_json()["excludeCredentialsUsed"] is True
 
 
-def test_the_record_says_what_the_begin_asked_for(credential_store):
+def test_the_answer_says_the_resident_key_the_begin_asked_for_and_the_server_keeps_only_the_counter(credential_store):
     client = entry_app().test_client()
     begin = client.post(f"/api/register/begin?email={EMAIL}", json={"credentials": []})
     options = begin.get_json()["publicKey"]
+    authenticator = Authenticator()
     complete = client.post(
         f"/api/register/complete?email={EMAIL}",
-        json=registration_payload(Authenticator(), challenge=unb64u(options["challenge"])),
+        json=registration_payload(authenticator, challenge=unb64u(options["challenge"])),
         headers={"Origin": ORIGIN},
     )
 
-    [record] = storage_credentials.readkey(EMAIL, session_id=visitor_namespace.of(client))
-    asked = record["request_params"]
     selection = options["authenticatorSelection"]
-    assert (asked["user_verification"], asked["authenticator_attachment"], asked["resident_key"]) == (
-        selection["userVerification"],
-        selection["authenticatorAttachment"],
-        selection["residentKey"],
+    assert (selection["userVerification"], selection["authenticatorAttachment"], selection["residentKey"]) == (
+        "discouraged",
+        "cross-platform",
+        "discouraged",
     )
     # No timeout and no attestation preference is sent: the browser's default, "none".
-    assert "timeout" not in options and asked["timeout"] is None
-    assert "attestation" not in options and asked["attestation"] == "none"
+    assert "timeout" not in options and "attestation" not in options
     assert complete.get_json()["storedCredential"]["properties"]["residentKeyRequested"] == selection["residentKey"]
+    # The browser keeps the registration; the server, what the counter check reads.
+    [record] = storage_credentials.readkey(EMAIL, session_id=visitor_namespace.of(client))
+    assert record == {
+        "credential_id": authenticator.credential_id,
+        "sign_count": 0,
+        "registration_time": record["registration_time"],
+        "user_handle": unb64u(options["user"]["id"]),
+    }
+    assert isinstance(record["registration_time"], float)
 
 
 def test_a_begin_asks_for_cred_props_and_complete_reports_its_rk(credential_store):
@@ -181,8 +190,6 @@ def test_a_begin_asks_for_cred_props_and_complete_reports_its_rk(credential_stor
     assert options["extensions"] == {"credProps": True}
     assert complete.status_code == 200, complete.get_json()
     assert complete.get_json()["actualResidentKey"] is True
-    [record] = storage_credentials.readkey(EMAIL, session_id=visitor_namespace.of(client))
-    assert record["request_params"]["extensions"] == {"credProps": True}
 
 
 def test_a_complete_body_that_is_no_object_finds_no_registration_state():
@@ -385,3 +392,39 @@ def test_simple_register_begin_accepts_existing_credentials_alias(monkeypatch):
 
         with client.session_transaction() as session_state:
             assert "simple_credentials" not in session_state
+
+
+def test_a_registration_keeps_its_usernames_records_stored_whole_as_counter_records(credential_store):
+    client = entry_app().test_client()
+    begin = client.post(f"/api/register/begin?email={EMAIL}", json={"credentials": []})
+    namespace = visitor_namespace.of(client)
+    # A credential registered by a version that stored the registration whole.
+    registered = AuthenticatorData(Authenticator(credential_id=b"\x01" * 32).authenticator_data(counter=7))
+    whole = {
+        "credential_data": registered.credential_data,
+        "auth_data": registered,
+        "sign_count": 7,
+        "user_info": {"name": EMAIL, "user_handle": b"\x09" * 32},
+        "registration_time": 1_700_000_000.0,
+        "attestation_object": "o2NmbXRkbm9uZQ",
+        "properties": {"attestationChecks": {}},
+    }
+    seed_records(storage_credentials, EMAIL, [whole], session_id=namespace)
+
+    complete = client.post(
+        f"/api/register/complete?email={EMAIL}",
+        json=registration_payload(
+            Authenticator(credential_id=b"\x02" * 32), challenge=unb64u(begin.get_json()["publicKey"]["challenge"])
+        ),
+        headers={"Origin": ORIGIN},
+    )
+
+    assert complete.status_code == 200, complete.get_json()
+    older, newer = storage_credentials.readkey(EMAIL, session_id=namespace)
+    assert older == {
+        "credential_id": b"\x01" * 32,
+        "sign_count": 7,
+        "registration_time": 1_700_000_000.0,
+        "user_handle": b"\x09" * 32,
+    }
+    assert sorted(newer) == sorted(older) and newer["credential_id"] == b"\x02" * 32

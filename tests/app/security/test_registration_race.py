@@ -19,6 +19,7 @@ import threading
 
 import pytest
 
+from server.app.routes.simple import stored_sign_count
 from server.app.storage import cloud, github_mirror
 from server.app.storage import common as storage_common
 from server.app.storage import credentials as storage_credentials
@@ -65,7 +66,7 @@ def _register(client, authenticator):
 
 def _stored_ids(client) -> list[bytes]:
     namespace = visitor_namespace.of(client)
-    return sorted(bytes(record["credential_data"].credential_id) for record in storage_credentials.readkey(EMAIL, session_id=namespace))
+    return sorted(stored_sign_count.record_credential_id(record) for record in storage_credentials.readkey(EMAIL, session_id=namespace))
 
 
 def test_eight_registrations_for_one_user_at_once_all_keep_their_credential(app, monkeypatch, credential_store):

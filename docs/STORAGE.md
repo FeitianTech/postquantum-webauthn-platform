@@ -26,6 +26,17 @@ is logged by file or object name (never its content) and skipped.
 `read_for_update` refuses a copy it cannot decode
 (`credentials.CredentialsUndecodable`) rather than let the save replace it unread.
 
+## The Simple record
+
+A Simple registration keeps, in its username's list, only what the counter check
+reads (`routes/simple/stored_sign_count.counter_record`): the credential's ID and
+its signature counter, with its registration's time and user handle. The browser
+keeps the registration itself; nothing on the server read the rest back, and it
+made a record of 72 KB to 1 MB for one ML-DSA-87 registration, rewritten whole at
+every registration and authentication. A record an earlier version stored whole
+is read the same way and brought to that form the next time its list is written;
+one whose credential ID cannot be read is kept as it is.
+
 ## Credential artifacts
 
 Credential artifacts (`server/app/storage/credential_artifacts.py`) are kept per session
