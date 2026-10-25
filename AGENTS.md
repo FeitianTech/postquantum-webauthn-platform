@@ -338,7 +338,8 @@ its logic out here first.
   credential the page sends back, read into its key material for both tabs),
   `webauthn/registration_facts.py` (what a verified registration's authData and extension
   outputs say, the relying party's view of it and the saved credential record, each in one key
-  order for both tabs). `config/logs.py` holds `fido2.server`'s logger at WARNING: fido2 logs
+  order for both tabs; the record keeps each part once, its attestation object only in the
+  browser's response: docs/STORAGE.md). `config/logs.py` holds `fido2.server`'s logger at WARNING: fido2 logs
   credential IDs at INFO.
 - `storage/` (`credentials.py`, `credential_artifacts.py`, `session_metadata.py`,
   `github_mirror.py`, over `cloud.py`, `common.py` and `record_format.py`): every read-modify-write is
