@@ -45,6 +45,7 @@ __all__ = [
     "store_credential_artifact",
     "load_credential_artifact",
     "delete_credential_artifact_with_status",
+    "refuse_when_full",
     "usage",
 ]
 
@@ -83,6 +84,10 @@ _COUNT_FULL = (
 _BYTES_PAST = (
     "Saving this credential would take this browser's saved credentials past the {size} this "
     "server keeps for one visitor. Delete ones you no longer use and try again."
+)
+_BYTES_FULL = (
+    "This browser's saved credentials already take the {size} this server keeps for one visitor. "
+    "Delete ones you no longer use and try again."
 )
 
 
@@ -242,6 +247,22 @@ def usage(session_id: str) -> dict[str, int]:
         return {}
     except OSError as exc:
         raise StorageReadError(f"the artifacts of {session_id} could not be listed") from exc
+
+
+def refuse_when_full(session_id: str | None, quota: Quota) -> None:
+    """Refuse, before a registration begins, a namespace whose artifacts already fill its quota.
+
+    So the authenticator is not asked for a credential the store would refuse.
+    A visitor without a namespace has stored nothing.
+    """
+
+    if not session_id:
+        return
+    stored = usage(session_id)
+    if len(stored) >= quota.count:
+        raise StorageQuotaExceeded(409, _COUNT_FULL.format(count=f"{quota.count:,}"))
+    if sum(stored.values()) >= quota.total_bytes:
+        raise StorageQuotaExceeded(413, _BYTES_FULL.format(size=describe_size(quota.total_bytes)))
 
 
 def _check_quota(quota: Quota | None, session_id: str, storage_id: str, size: int) -> None:

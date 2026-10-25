@@ -46,7 +46,10 @@ past one raises `common.StorageQuotaExceeded` before anything is written, and
 
 - Credential artifacts: 1,000 in a namespace, and 256 MiB of them. A new artifact
   past the count is refused, and so is a write that would take the namespace's
-  artifacts past the bytes; a write that shrinks an artifact never is.
+  artifacts past the bytes; a write that shrinks an artifact never is. An Advanced
+  registration's begin refuses a namespace they already fill, so the authenticator
+  is not asked for a credential that could not be kept; its complete refuses one
+  that filled meanwhile, with the challenge's trace.
 
 The counts and sizes come from a listing of the namespace's objects
 (`cloud.list_blob_stats`; a scandir locally, which leaves `.lock` and `.tmp` files

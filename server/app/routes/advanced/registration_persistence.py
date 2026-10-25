@@ -1,8 +1,8 @@
 """Advanced registration complete: storing the credential artifact and answering.
 
-``finalize_registration_completion`` stores the artifact (a failure is a 500 and
-nothing else happens), records the device-log event, and builds the OK answer
-from the artifact's summary.
+``finalize_registration_completion`` stores the artifact (a failure is a 500, one
+past the namespace's quota a 409 or 413, and nothing else happens), records the
+device-log event, and builds the OK answer from the artifact's summary.
 """
 from __future__ import annotations
 
@@ -10,9 +10,11 @@ import json
 import logging
 from typing import Any
 
-from flask import jsonify
+from flask import current_app, jsonify
 
+from ...config import request_limits
 from ...storage import credential_artifacts, github_mirror
+from ...storage.common import StorageQuotaExceeded
 from ...webauthn import client_binary
 from . import summary
 
@@ -40,7 +42,11 @@ def _store_artifact(
             storage_id,
             artifact_payload,
             session_id=metadata_session_id,
+            quota=request_limits.artifacts_quota(current_app.config),
         )
+    except StorageQuotaExceeded as exc:
+        # Past the namespace's quota: the visitor's sentence, which the route sends with its trace.
+        return None, None, (jsonify({"error": exc.sentence}), exc.status)
     except Exception:
         logger.exception(
             "Failed to store advanced credential artifact for user %s",

@@ -328,7 +328,8 @@ its logic out here first.
 - `storage/` (`credentials.py`, `credential_artifacts.py`, `session_metadata.py`,
   `github_mirror.py`, over `cloud.py`, `common.py` and `record_format.py`): every read-modify-write is
   compare-and-swap; a failed read raises `StorageReadError` (503), never a shorter list; a write past
-  a namespace's quota raises `StorageQuotaExceeded` (409 for a count, 413 for bytes). **Read
+  a namespace's quota raises `StorageQuotaExceeded` (409 for a count, 413 for bytes), and a begin
+  refuses a namespace already full, before the authenticator is asked. **Read
   `docs/STORAGE.md` first.** `decoder/`: the Codec's server side (`decode/text.py` the entry,
   `decode/answer.py` what it answers, `encode/text.py` the encoder's, `values.py` the leaf both
   share); it shows what was sent and

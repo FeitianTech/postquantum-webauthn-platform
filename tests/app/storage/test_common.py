@@ -85,3 +85,11 @@ def test_assert_contained_blob_name_rejects_escapes():
         storage_common.assert_contained_blob_name("user-data/ok", prefix="user-data")
         == "user-data/ok"
     )
+
+
+@pytest.mark.parametrize(
+    ("size", "said"),
+    [(256 * 1024 * 1024, "256 MiB"), (1024 * 1024, "1 MiB"), (2048, "2,048 bytes"), (3 * 1024 * 1024 + 1, "3,145,729 bytes")],
+)
+def test_a_size_is_said_in_mib_when_it_is_a_whole_number_of_them(size, said):
+    assert storage_common.describe_size(size) == said

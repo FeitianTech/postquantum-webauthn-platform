@@ -8,7 +8,7 @@ import types
 from fido2 import cbor
 
 from server.app import visitor_session
-from server.app.config import relying_party
+from server.app.config import relying_party, request_limits
 from server.app.routes.advanced import algorithms as advanced_algorithms
 from server.app.webauthn.attestation import certificates as attestation_certificates
 from tests.app.entry_app import entry_app
@@ -544,3 +544,62 @@ def test_advanced_register_begin_rejects_invalid_binary_wrapper_in_user_id():
 
     assert response.status_code == 400
     assert "Invalid user ID format" in response.get_json()["error"]
+
+
+_COUNT_FULL = (
+    "This browser already keeps 1 saved credentials on this server, the most it keeps for one visitor. "
+    "Delete ones you no longer use and try again."
+)
+
+
+def test_begin_refuses_a_visitor_whose_artifacts_fill_the_count_before_the_authenticator_is_asked(make_app, advanced_stores):
+    client = make_app({request_limits.STORED_ARTIFACTS_KEY: 1}).test_client()
+    assert register(client).status_code == 200
+
+    begin = client.post("/api/advanced/register/begin", json={"publicKey": advanced_public_key_options(challenge=b"\x73" * 32)})
+
+    assert begin.status_code == 409
+    assert begin.get_json() == {"error": _COUNT_FULL}
+    with client.session_transaction() as session:
+        assert "advanced_state" not in session
+
+
+def test_begin_refuses_a_visitor_whose_artifacts_fill_the_bytes(make_app, advanced_stores):
+    client = make_app().test_client()
+    assert register(client).status_code == 200
+    # The registration's artifact, about 9 KB, is past this quota.
+    client.application.config[request_limits.STORED_ARTIFACT_BYTES_KEY] = 1024
+
+    begin = client.post("/api/advanced/register/begin", json={"publicKey": advanced_public_key_options(challenge=b"\x73" * 32)})
+
+    assert begin.status_code == 413
+    assert begin.get_json() == {
+        "error": (
+            "This browser's saved credentials already take the 1,024 bytes this server keeps for one visitor. "
+            "Delete ones you no longer use and try again."
+        )
+    }
+
+
+def test_a_complete_whose_artifacts_filled_meanwhile_is_refused_with_its_trace_and_stores_nothing(
+    make_app, advanced_stores, tmp_path
+):
+    client = make_app({request_limits.STORED_ARTIFACTS_KEY: 1}).test_client()
+    begin = client.post("/api/advanced/register/begin", json={"publicKey": advanced_public_key_options(challenge=b"\x73" * 32)})
+    assert begin.status_code == 200
+    challenge = unb64u(begin.get_json()["publicKey"]["challenge"])
+    # Another tab of this browser fills the namespace between the begin and the complete.
+    assert client.put("/api/advanced/credential-artifacts/other", json={"artifact": {"x": 1}}).status_code == 200
+
+    complete = client.post(
+        "/api/advanced/register/complete",
+        json={
+            "publicKey": advanced_public_key_options(challenge=challenge),
+            "__credential_response": registration_payload(Authenticator(), challenge=challenge),
+        },
+        headers={"Origin": ORIGIN},
+    )
+
+    assert complete.status_code == 409
+    assert complete.get_json() == {"error": _COUNT_FULL, "challengeSource": "server-session", "challengeStatus": "fresh"}
+    assert len(list((tmp_path / "credential-artifacts").rglob("*.json"))) == 1

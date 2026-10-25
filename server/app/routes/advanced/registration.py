@@ -5,11 +5,13 @@ from collections.abc import Mapping
 from typing import Any
 
 from fido2.webauthn import PublicKeyCredentialUserEntity
-from flask import Blueprint, jsonify, session
+from flask import Blueprint, current_app, jsonify, session
 
-from ... import json_values
+from ... import json_values, visitor_session
 from ...challenge_registry import consume_ceremony_state, stamp_ceremony_state
+from ...config import request_limits
 from ...mds import provisioning as mds_provisioning
+from ...storage import credential_artifacts
 from ...webauthn.attachments import request_hints
 from ...webauthn.attestation import request_expectations
 from .. import ceremony_session, json_body
@@ -164,6 +166,11 @@ def _what_the_checks_read(data: Mapping[str, Any]) -> dict[str, Any]:
 @bp.route("/api/advanced/register/begin", methods=["POST"])
 @ceremony_session.ceremony_begin
 def advanced_register_begin():
+    # A namespace whose artifacts fill its quota is refused before the authenticator is asked
+    # (StorageQuotaExceeded, answered by routes/errors.py).
+    credential_artifacts.refuse_when_full(
+        visitor_session.current_id(), request_limits.artifacts_quota(current_app.config)
+    )
     data = json_body.json_object()
     begin_request, error_response = registration_options.parse_begin_request(data)
     if error_response is not None:
