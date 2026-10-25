@@ -262,13 +262,13 @@ describe('registrationResultInput', () => {
     expect(input.fallbackCertificates).toEqual(answer.relyingParty.attestationCertificates);
   });
 
-  it('takes the certificates in the registration data too, leaving out empty ones', () => {
-    const [a, b, c] = ['a', 'b', 'c'].map((name) => ({ name }));
+  it('takes the certificates the relying party names, leaving out empty ones', () => {
+    const [a, b] = ['a', 'b'].map((name) => ({ name }));
     const input = registrationResultInput({}, {
-      attestationCertificates: [a, null],
-      registrationData: { attestationCertificate: b, attestationCertificates: [c] },
+      attestationCertificates: [a, null, b],
+      attestationCertificate: { name: 'what an earlier answer named twice' },
     });
-    expect(input.fallbackCertificates).toEqual([a, b, c]);
+    expect(input.fallbackCertificates).toEqual([a, b]);
   });
 
   it('gives nothing to decode without a response or a relying party', () => {

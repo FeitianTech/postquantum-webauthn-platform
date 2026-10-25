@@ -128,19 +128,14 @@ export async function composeRegistration({
 
 /**
  * What an advanced registration's answer gives its registration view: the
- * browser's attestation object and authenticator data, and the relying party's
- * certificates, at its root or in its registration data.
+ * browser's attestation object and authenticator data, and the certificates the
+ * relying party names (the record keeps them once, in its properties).
  */
 export function registrationResultInput(credentialJson, relyingPartyInfo) {
     return {
         attestationObjectValue: credentialJson?.response?.attestationObject || '',
         authenticatorDataValue: credentialJson?.response?.authenticatorData || '',
-        fallbackCertificates: collectTruthyEntries(
-            relyingPartyInfo?.attestationCertificate,
-            relyingPartyInfo?.attestationCertificates,
-            relyingPartyInfo?.registrationData?.attestationCertificate,
-            relyingPartyInfo?.registrationData?.attestationCertificates,
-        ),
+        fallbackCertificates: collectTruthyEntries(relyingPartyInfo?.attestationCertificates),
     };
 }
 
