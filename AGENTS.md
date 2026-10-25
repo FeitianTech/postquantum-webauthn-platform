@@ -187,11 +187,13 @@ its logic out here first.
   answers read by `storage/deletion-request.js`), then from this browser), the algorithm tag, whether a credential
   is discoverable (`resident-key.js`: credProps.rk as the browser reported it, else unknown; a
   stored `residentKey` is never read, since earlier versions derived it from BE or the request),
-  hydration from a server artifact (`hydrate.js`), and (`registration/`, `certificates/`, `detail/`) a
+  hydration from a server artifact (`hydrate.js`), a certificate's text (`certificates/text.js`: the
+  summary a record from an earlier release kept, else the server's summary written from the fields a
+  registration keeps), and (`registration/`, `certificates/`, `detail/`) a
   credential's details and registration view as data (`registration/view.js` composes the view
   from `registration/describe.js`'s parts and `registration/relying-party.js`'s copy of the
   relying party), which `detail/compose.js` composes into a registration state of its own. Registration snapshots (`schemaVersion` 2) hold the
-  registration as data, never markup; older composed HTML is never read.
+  registration as data, never markup, and its certificates without their DER; older composed HTML is never read.
 - `codec/`: the Codec's requests, results and values. `mds/`: the MDS
   explorer's loading (the list fetched ahead, without the cookie: `prefetchExplorerList`), filters,
   sort, columns, rows, entry (its detail from the file its row names, else resolve:
@@ -322,7 +324,9 @@ its logic out here first.
   `UNREADABLE_EXTENSIONS`, what cryptography raises reading a loaded certificate's extensions,
   caught wherever they are read, and the limits both x5c readers, `certificates.py` and
   `trust.py`, apply: a certificate of at most 64 KiB, a chain's first 10 entries; an x5c entry
-  is read only from bytes, text or a certificate view, never with `bytes(value)`),
+  is read only from bytes, text or a certificate view, never with `bytes(value)`; a certificate's
+  view is whole for the Codec and the MDS pages, and a registration keeps each value in one form,
+  `certificates._registration_view`, once: docs/STORAGE.md),
   `webauthn/signature_algorithms.py`
   (the one spelling of a signature algorithm), `webauthn/cose_algorithms.py` (a named COSE
   algorithm read, for both tabs), `webauthn/attachments.py` (the authenticator attachment

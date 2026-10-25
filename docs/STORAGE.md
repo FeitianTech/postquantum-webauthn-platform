@@ -54,6 +54,23 @@ as absent. A merge that cannot read the record, or whose record does not decode,
 refuses rather than overwrite it, and one whose write raised is re-read: it counts
 as stored if the record holds every merged value.
 
+## A registration's certificates
+
+A registration's attestation certificates are kept once in what it stores and
+answers: in the record's `properties.attestationCertificates` on both tabs (the
+Advanced artifact, the Simple answer's `storedCredential`), and in the Advanced
+answer's `relyingParty.attestationCertificates`, where the page's result reads them.
+Each keeps every value in one form (`webauthn/attestation/certificates._registration_view`):
+its DER as `derBase64`, its signature's hex, a public key's base64. The PEM, the
+summary and the lines of hex are left out, and the page writes them from those fields
+(`web/src/logic/credentials/certificates/text.js`, equal to the server's summary over
+every certificate the characterization reads). A registration snapshot the page
+uploads keeps the certificates without their DER. With every form, kept three times,
+one ML-DSA-87 registration with a leaf, intermediate and root stored a 992 KB artifact
+and answered 568 KB; it stores 291 KB and answers 203 KB (Simple: 515 KB, now 263 KB).
+Artifacts and records stored before keep their copies as they are, and the page still
+reads them.
+
 ## Quotas
 
 What one visitor's namespace keeps is bounded; each limit is read from the
