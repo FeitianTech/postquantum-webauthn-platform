@@ -21,6 +21,17 @@ from ..storage import common as storage_common
 from ..storage import session_metadata
 from . import entries
 
+# What the visitor reads when an upload would take their namespace past its quota. Each says what
+# to do; the MDS page shows it as it is.
+_ENTRIES_PAST = (
+    "Nothing was saved: these {entries} would take this browser's uploads past the {count} "
+    "metadata entries this server keeps for one visitor. Delete uploads you no longer use and try again."
+)
+_BYTES_PAST = (
+    "Nothing was saved: these {size} of metadata would take this browser's uploads past the {limit} "
+    "this server keeps for one visitor. Delete uploads you no longer use and try again."
+)
+
 logger = logging.getLogger(__name__)
 
 # An upload is <uuid>.json, with its info (original name, time) beside it in <uuid>.json.meta.json.
@@ -110,6 +121,41 @@ def _load_session_metadata_info(session_id: str, filename: str) -> dict[str, Any
     return payload
 
 
+def stored_json(raw_payload: Mapping[str, Any]) -> bytes:
+    """The bytes an uploaded entry is stored as; ``ValueError`` for one JSON cannot hold."""
+
+    try:
+        serialisable_payload = json.loads(json.dumps(raw_payload))
+    except (TypeError, ValueError) as exc:
+        raise ValueError("Metadata JSON contains unsupported types.") from exc
+    return (json.dumps(serialisable_payload, indent=2, sort_keys=True) + "\n").encode("utf-8")
+
+
+def refuse_past_quota(session_id: str, raw_payloads: list[Mapping[str, Any]], quota: storage_common.Quota) -> None:
+    """Refuse, before any is saved, entries that would take the namespace's uploads past its quota.
+
+    Raises ``StorageQuotaExceeded``: 409 past the count of entries, 413 past their
+    bytes (each upload's own file; its info file beside it is not counted). An entry
+    JSON cannot hold is not counted: it is refused when it is saved.
+    """
+
+    sizes = []
+    for raw_payload in raw_payloads:
+        try:
+            sizes.append(len(stored_json(raw_payload)))
+        except ValueError:
+            continue
+    if not sizes:
+        return
+    stored = [size for name, size in session_metadata.file_sizes(session_id).items() if _is_upload(name)]
+    if len(stored) + len(sizes) > quota.count:
+        counted = f"{len(sizes):,} metadata {'entry' if len(sizes) == 1 else 'entries'}"
+        raise storage_common.StorageQuotaExceeded(409, _ENTRIES_PAST.format(entries=counted, count=f"{quota.count:,}"))
+    if sum(stored) + sum(sizes) > quota.total_bytes:
+        size, limit = storage_common.describe_size(sum(sizes)), storage_common.describe_size(quota.total_bytes)
+        raise storage_common.StorageQuotaExceeded(413, _BYTES_PAST.format(size=size, limit=limit))
+
+
 def save_session_metadata_item(
     raw_payload: Mapping[str, Any],
     *,
@@ -119,20 +165,15 @@ def save_session_metadata_item(
     directory = _session_metadata_directory(session_id, create=True)
 
     entry, legal_header, payload = entries.build_metadata_entry_components(raw_payload)
-
-    try:
-        serialisable_payload = json.loads(json.dumps(raw_payload))
-    except (TypeError, ValueError) as exc:
-        raise ValueError("Metadata JSON contains unsupported types.") from exc
+    json_payload = stored_json(raw_payload)
 
     stored_filename = f"{uuid.uuid4().hex}{_SESSION_METADATA_SUFFIX}"
-    json_payload = json.dumps(serialisable_payload, indent=2, sort_keys=True) + "\n"
 
     try:
         session_metadata.write_file(
             directory,
             stored_filename,
-            json_payload.encode("utf-8"),
+            json_payload,
             content_type="application/json",
         )
     except Exception as exc:

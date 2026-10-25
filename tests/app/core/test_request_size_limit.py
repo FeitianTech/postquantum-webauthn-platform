@@ -76,9 +76,15 @@ def test_the_namespace_quotas_are_the_defaults_unless_the_environment_sets_them(
     app = make_app()
     assert request_limits.artifacts_quota(app.config) == (1000, 256 * _MIB)
 
+    assert request_limits.metadata_quota(app.config) == (2000, 64 * _MIB)
+
     monkeypatch.setenv("FIDO_SERVER_MAX_STORED_ARTIFACTS", "10")
     monkeypatch.setenv("FIDO_SERVER_MAX_STORED_ARTIFACT_BYTES", "4096")
-    assert request_limits.artifacts_quota(make_app().config) == (10, 4096)
+    monkeypatch.setenv("FIDO_SERVER_MAX_STORED_METADATA_ENTRIES", "20")
+    monkeypatch.setenv("FIDO_SERVER_MAX_STORED_METADATA_BYTES", "8192")
+    app = make_app()
+    assert request_limits.artifacts_quota(app.config) == (10, 4096)
+    assert request_limits.metadata_quota(app.config) == (20, 8192)
 
 
 _ROUTE_LIMITS = [

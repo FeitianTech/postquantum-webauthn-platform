@@ -50,6 +50,10 @@ past one raises `common.StorageQuotaExceeded` before anything is written, and
   registration's begin refuses a namespace they already fill, so the authenticator
   is not asked for a credential that could not be kept; its complete refuses one
   that filled meanwhile, with the challenge's trace.
+- Uploaded metadata: 2,000 entries in a namespace (each entry is a file of its own,
+  with an info file beside it that is not counted), and 64 MiB of them. An upload
+  whose entries would pass either is refused whole, before any file is saved or
+  copied to the device log (`mds/uploads.refuse_past_quota`).
 
 The counts and sizes come from a listing of the namespace's objects
 (`cloud.list_blob_stats`; a scandir locally, which leaves `.lock` and `.tmp` files

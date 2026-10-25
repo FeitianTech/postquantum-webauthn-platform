@@ -287,3 +287,42 @@ def test_delete_session_metadata_item_validates_session_filename_and_storage_err
 
         with pytest.raises(RuntimeError, match="Failed to delete"):
             mds_uploads.delete_session_metadata_item("present.json", session_id=session_id)
+
+
+QUOTA = storage_common.Quota(count=2, total_bytes=4096)
+
+
+def test_entries_past_the_namespaces_count_are_refused_with_a_409(storage):
+    _stored(storage, info="{}")
+
+    with pytest.raises(storage_common.StorageQuotaExceeded) as refused:
+        mds_uploads.refuse_past_quota(SESSION, [STATEMENT, STATEMENT], QUOTA)
+
+    # The upload's info file beside it is not counted.
+    assert refused.value.status == 409
+    assert refused.value.sentence == (
+        "Nothing was saved: these 2 metadata entries would take this browser's uploads past the 2 metadata "
+        "entries this server keeps for one visitor. Delete uploads you no longer use and try again."
+    )
+    mds_uploads.refuse_past_quota(SESSION, [STATEMENT], QUOTA)
+
+
+def test_entries_past_the_namespaces_bytes_are_refused_with_a_413(storage):
+    large = {**STATEMENT, "legalHeader": "x" * 5000}
+
+    with pytest.raises(storage_common.StorageQuotaExceeded) as refused:
+        mds_uploads.refuse_past_quota(SESSION, [large], QUOTA)
+
+    size = len(mds_uploads.stored_json(large))
+    assert refused.value.status == 413
+    assert refused.value.sentence == (
+        f"Nothing was saved: these {size:,} bytes of metadata would take this browser's uploads past the 4,096 bytes "
+        "this server keeps for one visitor. Delete uploads you no longer use and try again."
+    )
+
+
+def test_an_entry_json_cannot_hold_is_not_counted_and_none_is_no_upload(storage):
+    unsupported = {"aaguid": object()}
+
+    for payloads in ([unsupported, unsupported, unsupported], []):
+        mds_uploads.refuse_past_quota(SESSION, payloads, storage_common.Quota(count=0, total_bytes=0))

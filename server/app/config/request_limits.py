@@ -42,7 +42,10 @@ Measured: an advanced registration's artifact is about 10 KB for a classical
 credential and 1 MB for that ML-DSA-87 attestation with its chain, about
 1.3 MB with the page's snapshot; the e2e runs keep one artifact per namespace,
 the goldens four; a heavy visitor's 200 registrations, 20 of them ML-DSA-87
-with chains, about 35 MB. So 1,000 artifacts and 256 MiB of them.
+with chains, about 35 MB. So 1,000 artifacts and 256 MiB of them. Uploaded
+metadata is kept one file per entry: the whole MDS metadata, 518 entries, about
+7 MB; the e2e runs keep one entry per namespace. So 2,000 entries and 64 MiB of
+them.
 """
 from __future__ import annotations
 
@@ -60,6 +63,8 @@ DEFAULT_MAX_CODEC_REQUEST_BYTES = _MIB
 DEFAULT_MAX_REGISTRATION_RESPONSE_BYTES = 256 * 1024
 DEFAULT_MAX_STORED_ARTIFACTS = 1000
 DEFAULT_MAX_STORED_ARTIFACT_BYTES = 256 * _MIB
+DEFAULT_MAX_STORED_METADATA_ENTRIES = 2000
+DEFAULT_MAX_STORED_METADATA_BYTES = 64 * _MIB
 
 # The app.config key the metadata upload reads its limit from.
 METADATA_UPLOAD_LIMIT_KEY = "MAX_METADATA_UPLOAD_LENGTH"
@@ -71,6 +76,9 @@ REGISTRATION_RESPONSE_LIMIT_KEY = "MAX_REGISTRATION_RESPONSE_LENGTH"
 # The app.config keys of the namespace's quota of credential artifacts: how many, how many bytes.
 STORED_ARTIFACTS_KEY = "MAX_STORED_ARTIFACTS"
 STORED_ARTIFACT_BYTES_KEY = "MAX_STORED_ARTIFACT_BYTES"
+# The app.config keys of the namespace's quota of uploaded metadata: how many entries, how many bytes.
+STORED_METADATA_ENTRIES_KEY = "MAX_STORED_METADATA_ENTRIES"
+STORED_METADATA_BYTES_KEY = "MAX_STORED_METADATA_BYTES"
 
 
 def _positive_int(name: str, default: int) -> int:
@@ -100,6 +108,10 @@ def config_from_env() -> dict[str, Any]:
         ),
         STORED_ARTIFACTS_KEY: _positive_int("FIDO_SERVER_MAX_STORED_ARTIFACTS", DEFAULT_MAX_STORED_ARTIFACTS),
         STORED_ARTIFACT_BYTES_KEY: _positive_int("FIDO_SERVER_MAX_STORED_ARTIFACT_BYTES", DEFAULT_MAX_STORED_ARTIFACT_BYTES),
+        STORED_METADATA_ENTRIES_KEY: _positive_int(
+            "FIDO_SERVER_MAX_STORED_METADATA_ENTRIES", DEFAULT_MAX_STORED_METADATA_ENTRIES
+        ),
+        STORED_METADATA_BYTES_KEY: _positive_int("FIDO_SERVER_MAX_STORED_METADATA_BYTES", DEFAULT_MAX_STORED_METADATA_BYTES),
     }
 
 
@@ -107,3 +119,9 @@ def artifacts_quota(config: Mapping[str, Any]) -> Quota:
     """The namespace's quota of credential artifacts, as ``config`` (``app.config``) holds it."""
 
     return Quota(config[STORED_ARTIFACTS_KEY], config[STORED_ARTIFACT_BYTES_KEY])
+
+
+def metadata_quota(config: Mapping[str, Any]) -> Quota:
+    """The namespace's quota of uploaded metadata entries, as ``config`` (``app.config``) holds it."""
+
+    return Quota(config[STORED_METADATA_ENTRIES_KEY], config[STORED_METADATA_BYTES_KEY])

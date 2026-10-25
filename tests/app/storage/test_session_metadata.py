@@ -144,6 +144,26 @@ def test_uploads_that_cannot_be_listed_raise_rather_than_seem_none(bucket, monke
         session_store.list_files(SESSION)
 
 
+def test_the_uploads_sizes_come_from_one_listing_of_the_metadata_folder(bucket):
+    bucket.put(f"{METADATA}/entry.json", b"12345")
+    bucket.put(f"{METADATA}/entry.json.meta.json", b"{}")
+    bucket.put(f"{METADATA}/folder/", b"")
+    bucket.put(MARKER, b"{}")
+
+    assert session_store.file_sizes(SESSION) == {"entry.json": 5, "entry.json.meta.json": 2}
+    assert bucket.list_calls[-1] == (f"{METADATA}/", None)
+
+
+def test_uploads_whose_sizes_cannot_be_listed_raise_rather_than_seem_none(bucket, monkeypatch):
+    def _refused(_bucket, **_options):
+        raise fake_gcs.ServiceUnavailable("listing failed")
+
+    monkeypatch.setattr(fake_gcs.Bucket, "list_blobs", _refused)
+
+    with pytest.raises(storage_common.StorageReadError, match="could not be listed"):
+        session_store.file_sizes(SESSION)
+
+
 def test_a_namespace_on_cloud_storage_is_never_pruned(bucket):
     bucket.put(MARKER, b"{}")
 
@@ -206,6 +226,24 @@ def test_on_disk_the_namespaces_are_the_stores_visible_folders(on_disk):
     (on_disk / "file.txt").write_text("x")
 
     assert session_store.list_sessions() == ["s1", "s2"]
+
+
+def test_on_disk_the_uploads_sizes_are_the_namespaces_visible_files(on_disk, monkeypatch):
+    folder = on_disk / "session-a"
+    (folder / "nested").mkdir(parents=True)
+    (folder / "entry.json").write_bytes(b"12345")
+    (folder / ".last-access").write_bytes(b"")
+
+    assert session_store.file_sizes("session-a") == {"entry.json": 5}
+    assert session_store.file_sizes("session-none") == {}
+    assert session_store.file_sizes("../escape") == {}
+
+    def _refused(path):
+        raise PermissionError(path)
+
+    monkeypatch.setattr(os, "scandir", _refused)
+    with pytest.raises(storage_common.StorageReadError, match="could not be listed"):
+        session_store.file_sizes("session-a")
 
 
 def test_on_disk_the_uploads_are_the_namespaces_visible_files(on_disk):

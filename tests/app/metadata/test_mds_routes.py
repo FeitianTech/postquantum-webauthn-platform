@@ -10,6 +10,7 @@ from types import SimpleNamespace
 import pytest
 
 from server.app import visitor_session
+from server.app.config import request_limits
 from server.app.mds import effective as mds_effective
 from server.app.mds import entries as mds_entries
 from server.app.mds import uploads as mds_uploads
@@ -56,6 +57,32 @@ def test_an_upload_still_mints_the_namespace_it_is_stored_under(mds_fixture_snap
     assert response.status_code == 200, response.get_json()
     assert client.get_cookie("fido.mds.session") is not None
     assert len(session_metadata.list_sessions()) == 1
+
+
+def test_an_upload_past_the_visitors_quota_saves_and_copies_nothing(mds_fixture_snapshot, make_app, monkeypatch):
+    copied = []
+    monkeypatch.setattr(github_mirror, "maybe_store_uploaded_metadata_file", lambda name, _data: copied.append(name))
+    client = make_app({request_limits.STORED_METADATA_ENTRIES_KEY: 2}).test_client()
+    two = {"entries": [minimal_entry("One"), minimal_entry("Two")]}
+
+    def _upload(*files):
+        data = {"files": [(io.BytesIO(json.dumps(content).encode()), name) for name, content in files]}
+        return client.post("/api/mds/metadata/upload", data=data, content_type="multipart/form-data")
+
+    assert _upload(("kept.json", minimal_entry("Kept"))).status_code == 200
+    response = _upload(("two.json", two), ("broken.json", "not an object"))
+
+    assert response.status_code == 409
+    assert response.get_json() == {
+        "error": (
+            "Nothing was saved: these 2 metadata entries would take this browser's uploads past the 2 metadata "
+            "entries this server keeps for one visitor. Delete uploads you no longer use and try again."
+        )
+    }
+    assert [item["source"]["originalFilename"] for item in client.get("/api/mds/metadata/custom").get_json()["items"]] == [
+        "kept.json"
+    ]
+    assert copied == ["kept.json"]
 
 
 def test_an_uploaded_file_nested_too_deep_is_refused_and_nothing_is_saved(mds_fixture_snapshot, client):

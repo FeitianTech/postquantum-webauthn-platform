@@ -13,6 +13,7 @@ from typing import Any, NamedTuple
 from flask import Blueprint, current_app, jsonify, request
 
 from .. import encoding, visitor_session
+from ..config import request_limits
 from ..config.request_limits import METADATA_UPLOAD_LIMIT_KEY
 from ..mds import cache as mds_cache
 from ..mds import effective as mds_effective
@@ -217,7 +218,7 @@ def _save_uploaded_file(uploaded: _UploadedFile, saved_items: list[Any], errors:
 def api_upload_custom_metadata():
     # Its own limit, before the body is read: the whole MDS metadata (config/request_limits.py).
     request.max_content_length = current_app.config[METADATA_UPLOAD_LIMIT_KEY]
-    visitor_session.ensure_id()
+    namespace = visitor_session.ensure_id()
 
     file_entries = request.files.getlist("files") if request.files else []
     if not file_entries:
@@ -226,6 +227,12 @@ def api_upload_custom_metadata():
     # Every file is read before any is saved; each file's sentences stay in its place.
     read_files = [_read_uploaded_file(storage) for storage in file_entries]
     errors_by_file = [[refusal] if refusal is not None else [] for _uploaded, refusal in read_files]
+    # Past the namespace's quota nothing is saved or copied (StorageQuotaExceeded: routes/errors.py).
+    mds_uploads.refuse_past_quota(
+        namespace,
+        [entry for uploaded, _refusal in read_files if uploaded is not None for entry in uploaded.entries],
+        request_limits.metadata_quota(current_app.config),
+    )
 
     saved_items: list[Any] = []
     for (uploaded, _refusal), file_errors in zip(read_files, errors_by_file, strict=True):
