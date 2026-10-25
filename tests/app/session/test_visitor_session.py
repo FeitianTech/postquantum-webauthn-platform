@@ -314,8 +314,7 @@ def test_a_sweep_that_cannot_list_the_namespaces_deletes_nothing(fast_cleanup_in
     assert visitor_session.CLEANUP.last_run == 2_000_000.0
 
 
-def test_a_sweep_waits_out_its_interval_after_the_last_one(monkeypatch, tmp_path, metadata_state):
-    monkeypatch.setenv("FIDO_SERVER_SESSION_METADATA_DIR", str(tmp_path))
+def test_a_sweep_waits_out_its_interval_after_the_last_one(monkeypatch, own_stores, metadata_state):
     monkeypatch.setattr(storage_common, "using_gcs", lambda: False)
     session_metadata.touch_last_access("idle", timestamp=100.0)
     last_run = 2_000_000.0

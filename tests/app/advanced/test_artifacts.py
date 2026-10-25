@@ -81,7 +81,7 @@ def test_put_snapshot_route_returns_400_when_store_fails(monkeypatch):
     assert response.get_json() == {"error": "Unable to store artifact snapshot."}
 
 
-def test_a_snapshot_the_store_cannot_be_made_for_is_not_stored(monkeypatch, advanced_stores, tmp_path):
+def test_a_snapshot_the_store_cannot_be_made_for_is_not_stored(monkeypatch, own_stores, tmp_path):
     # The artifact store's folder is a file: nothing can be made under it.
     blocked = tmp_path / "artifacts-blocked"
     blocked.write_text("not a folder")
@@ -186,7 +186,7 @@ def test_a_visitor_without_a_namespace_reads_and_deletes_without_being_given_one
         ("PUT", "/api/advanced/credential-artifacts/cred-1", {"artifact": {"kept": True}}),
     ],
 )
-def test_the_visitors_artifacts_are_never_cached_and_keyed_on_the_cookie(advanced_stores, method, path, body):
+def test_the_visitors_artifacts_are_never_cached_and_keyed_on_the_cookie(own_stores, method, path, body):
     with entry_app().test_client() as client:
         response = client.open(path, method=method, json=body)
 
@@ -194,7 +194,7 @@ def test_the_visitors_artifacts_are_never_cached_and_keyed_on_the_cookie(advance
     assert "Cookie" in response.headers["Vary"]
 
 
-def test_an_artifact_is_stored_merged_snapshotted_read_and_deleted_in_the_visitors_store(advanced_stores):
+def test_an_artifact_is_stored_merged_snapshotted_read_and_deleted_in_the_visitors_store(own_stores):
     base = "/api/advanced/credential-artifacts"
     client = entry_app().test_client()
 
@@ -218,7 +218,7 @@ def test_an_artifact_is_stored_merged_snapshotted_read_and_deleted_in_the_visito
     assert client.get(f"{base}/cred-1").status_code == 404
 
 
-def test_an_artifact_past_the_visitors_count_is_refused_with_the_sentence_the_page_shows(make_app, advanced_stores):
+def test_an_artifact_past_the_visitors_count_is_refused_with_the_sentence_the_page_shows(make_app, own_stores):
     base = "/api/advanced/credential-artifacts"
     client = make_app({request_limits.STORED_ARTIFACTS_KEY: 2}).test_client()
     for storage_id in ("cred-1", "cred-2"):
@@ -238,7 +238,7 @@ def test_an_artifact_past_the_visitors_count_is_refused_with_the_sentence_the_pa
     assert client.put(f"{base}/cred-2/snapshot", json={"snapshot": {"view": 1}}).status_code == 200
 
 
-def test_an_artifact_past_the_visitors_bytes_is_refused_with_a_413(make_app, advanced_stores):
+def test_an_artifact_past_the_visitors_bytes_is_refused_with_a_413(make_app, own_stores):
     base = "/api/advanced/credential-artifacts"
     client = make_app({request_limits.STORED_ARTIFACT_BYTES_KEY: 2048}).test_client()
     assert client.put(f"{base}/cred-1", json={"artifact": {"x": 1}}).status_code == 200

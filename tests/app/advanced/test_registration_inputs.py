@@ -53,7 +53,7 @@ def test_a_response_member_that_is_no_object_is_read_as_none(inner):
     assert response.get_json()["error"].startswith("Registration state not found")
 
 
-def test_an_authenticator_selection_that_is_no_object_asks_for_no_resident_key(advanced_stores):
+def test_an_authenticator_selection_that_is_no_object_asks_for_no_resident_key(own_stores):
     response = register(entry_app().test_client(), public_key_changes={"authenticatorSelection": "not an object"})
 
     assert response.status_code == 200, response.get_json()
@@ -101,7 +101,7 @@ def _padded_response(challenge, size):
     return credential
 
 
-def test_a_credential_response_at_its_limit_is_read(make_app, advanced_stores):
+def test_a_credential_response_at_its_limit_is_read(make_app, own_stores):
     client = make_app({request_limits.REGISTRATION_RESPONSE_LIMIT_KEY: 4096}).test_client()
     challenge = _begin_with(client, advanced_public_key_options(challenge=b"\x73" * 32))
 
@@ -114,7 +114,7 @@ def test_a_credential_response_at_its_limit_is_read(make_app, advanced_stores):
     assert response.status_code == 200, response.get_json()
 
 
-def test_a_credential_response_over_its_limit_is_refused_with_its_size_and_nothing_is_stored(make_app, advanced_stores, tmp_path):
+def test_a_credential_response_over_its_limit_is_refused_with_its_size_and_nothing_is_stored(make_app, own_stores, tmp_path):
     client = make_app({request_limits.REGISTRATION_RESPONSE_LIMIT_KEY: 4096}).test_client()
     challenge = _begin_with(client, advanced_public_key_options(challenge=b"\x73" * 32))
 
@@ -137,7 +137,7 @@ def test_a_credential_response_over_its_limit_is_refused_with_its_size_and_nothi
     assert list((tmp_path / "credential-artifacts").rglob("*.json")) == []
 
 
-def test_the_editors_request_beside_the_response_is_not_measured(make_app, advanced_stores):
+def test_the_editors_request_beside_the_response_is_not_measured(make_app, own_stores):
     client = make_app({request_limits.REGISTRATION_RESPONSE_LIMIT_KEY: 4096}).test_client()
     # Two fake exclude IDs of 4,096 bytes: the body is twice the limit, the response far under it.
     exclude = [{"type": "public-key", "id": {"$hex": (bytes([index]) * 4096).hex()}} for index in range(2)]

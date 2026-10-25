@@ -27,7 +27,7 @@ def _with_public_key(public_key):
         ("custom-policy", "custom-policy"),
     ],
 )
-def test_the_requested_cred_protect_policy_is_reported_by_name(advanced_stores, requested, reported):
+def test_the_requested_cred_protect_policy_is_reported_by_name(own_stores, requested, reported):
     response = register(entry_app().test_client(), public_key_changes={"extensions": {"credProtect": requested}})
 
     assert response.status_code == 200, response.get_json()
@@ -75,7 +75,7 @@ def test_an_rp_id_hash_the_checks_left_open_is_compared_with_the_rp_id():
 
 
 @pytest.mark.parametrize(("excluded", "used"), [([], False), ([{"type": "public-key", "id": "44" * 16}], True)])
-def test_the_record_says_an_exclude_list_was_used_when_the_request_sent_one(advanced_stores, excluded, used):
+def test_the_record_says_an_exclude_list_was_used_when_the_request_sent_one(own_stores, excluded, used):
     response = register(entry_app().test_client(), public_key_changes={"excludeCredentials": excluded})
 
     assert response.status_code == 200, response.get_json()
@@ -84,7 +84,7 @@ def test_the_record_says_an_exclude_list_was_used_when_the_request_sent_one(adva
     assert response.get_json()["excludeCredentialsUsed"] is used
 
 
-def test_a_registration_without_cred_props_reports_no_resident_key(advanced_stores):
+def test_a_registration_without_cred_props_reports_no_resident_key(own_stores):
     # The authenticator verified the user (UV) and the request required a resident key:
     # neither says whether the credential is discoverable.
     response = register(

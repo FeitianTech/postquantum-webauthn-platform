@@ -32,7 +32,7 @@ def _with_cred_protect_output(authenticator):
     return bytes(auth_data) + cbor.encode({"credProtect": 2})
 
 
-def test_authenticator_extension_outputs_are_reported_with_the_registration(advanced_stores):
+def test_authenticator_extension_outputs_are_reported_with_the_registration(own_stores):
     response = register(entry_app().test_client(), auth_data=_with_cred_protect_output)
 
     assert response.status_code == 200, response.get_json()
@@ -42,14 +42,14 @@ def test_authenticator_extension_outputs_are_reported_with_the_registration(adva
     }
 
 
-def test_a_registration_without_extension_outputs_reports_none(advanced_stores):
+def test_a_registration_without_extension_outputs_reports_none(own_stores):
     response = register(entry_app().test_client())
 
     assert response.status_code == 200, response.get_json()
     assert "authenticatorExtensions" not in response.get_json()["relyingParty"]["registrationData"]
 
 
-def test_requested_extensions_that_are_no_object_fail_the_registration(advanced_stores):
+def test_requested_extensions_that_are_no_object_fail_the_registration(own_stores):
     response = register(entry_app().test_client(), public_key_changes={"extensions": "not an object"})
 
     assert response.status_code == 400
@@ -57,7 +57,7 @@ def test_requested_extensions_that_are_no_object_fail_the_registration(advanced_
     assert response.get_json()["challengeStatus"] == "fresh"
 
 
-def test_a_4096_byte_excluded_id_still_fits_the_session_cookie(advanced_stores):
+def test_a_4096_byte_excluded_id_still_fits_the_session_cookie(own_stores):
     # The largest fake credential ID the Advanced form adds (logic/advanced/fake-credentials.js).
     excluded = [{"type": "public-key", "id": {"$base64url": b64u(hashlib.shake_256(b"fake").digest(4096))}}]
     client = entry_app().test_client()
@@ -552,7 +552,7 @@ _COUNT_FULL = (
 )
 
 
-def test_begin_refuses_a_visitor_whose_artifacts_fill_the_count_before_the_authenticator_is_asked(make_app, advanced_stores):
+def test_begin_refuses_a_visitor_whose_artifacts_fill_the_count_before_the_authenticator_is_asked(make_app, own_stores):
     client = make_app({request_limits.STORED_ARTIFACTS_KEY: 1}).test_client()
     assert register(client).status_code == 200
 
@@ -564,7 +564,7 @@ def test_begin_refuses_a_visitor_whose_artifacts_fill_the_count_before_the_authe
         assert "advanced_state" not in session
 
 
-def test_begin_refuses_a_visitor_whose_artifacts_fill_the_bytes(make_app, advanced_stores):
+def test_begin_refuses_a_visitor_whose_artifacts_fill_the_bytes(make_app, own_stores):
     client = make_app().test_client()
     assert register(client).status_code == 200
     # The registration's artifact, about 9 KB, is past this quota.
@@ -582,7 +582,7 @@ def test_begin_refuses_a_visitor_whose_artifacts_fill_the_bytes(make_app, advanc
 
 
 def test_a_complete_whose_artifacts_filled_meanwhile_is_refused_with_its_trace_and_stores_nothing(
-    make_app, advanced_stores, tmp_path
+    make_app, own_stores, tmp_path
 ):
     client = make_app({request_limits.STORED_ARTIFACTS_KEY: 1}).test_client()
     begin = client.post("/api/advanced/register/begin", json={"publicKey": advanced_public_key_options(challenge=b"\x73" * 32)})

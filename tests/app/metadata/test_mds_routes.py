@@ -23,10 +23,8 @@ from tests.app.metadata.upload_entries import minimal_entry
 
 
 @pytest.fixture(autouse=True)
-def _own_namespaces(monkeypatch, tmp_path):
-    """This test's own uploads store, so the namespaces listed are only the ones it made."""
-
-    monkeypatch.setenv("FIDO_SERVER_SESSION_METADATA_DIR", str(tmp_path / "session-metadata"))
+def _own_namespaces(own_stores):
+    """This test's own stores, so the namespaces listed are only the ones it made."""
 
 
 _READS = [

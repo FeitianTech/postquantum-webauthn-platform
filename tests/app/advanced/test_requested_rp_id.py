@@ -23,7 +23,7 @@ REQUESTED = "example.com"
 
 
 @pytest.fixture
-def site(make_app, advanced_stores):
+def site(make_app, own_stores):
     app = make_app({"FIDO_SERVER_ALLOWED_ORIGINS": SITE, "FIDO_SERVER_RP_ID": "app.example.com"})
     return app.test_client()
 

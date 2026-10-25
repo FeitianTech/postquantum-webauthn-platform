@@ -173,10 +173,13 @@ def test_a_namespace_on_cloud_storage_is_never_pruned(bucket):
 
 
 @pytest.fixture
-def on_disk(monkeypatch, tmp_path):
-    monkeypatch.setenv("FIDO_SERVER_SESSION_METADATA_DIR", str(tmp_path))
+def on_disk(monkeypatch, own_stores):
+    """The uploads store's folder, made, on disk, among this test's own three stores."""
+
     monkeypatch.setattr(storage_common, "using_gcs", lambda: False)
-    return tmp_path
+    root = own_stores / "session-metadata"
+    root.mkdir()
+    return root
 
 
 def test_on_disk_a_name_that_is_no_namespace_holds_nothing_and_changes_nothing(on_disk):

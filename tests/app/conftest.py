@@ -10,6 +10,7 @@ from typing import Any
 import pytest
 
 from server.app import factory, visitor_session
+from server.app.config import paths
 from server.app.decoder.decode import text as decode_text
 from server.app.mds import cache as mds_cache
 from server.app.mds import provisioning as mds_provisioning
@@ -68,6 +69,18 @@ def client(app):
     """A test client for ``app``."""
 
     return app.test_client()
+
+
+@pytest.fixture
+def own_stores(monkeypatch, tmp_path):
+    """The three local stores in this test's directory (``tmp_path/<store folder>``); no
+    registration is mirrored to GitHub. The run's own stores hold every earlier test's
+    namespaces: a test that lists or sweeps namespaces sees only those it made here."""
+
+    for setting, folder in paths.LOCAL_STORES:
+        monkeypatch.setenv(setting, str(tmp_path / folder))
+    monkeypatch.setattr(github_mirror, "record_registration_event", lambda _event: None)
+    return tmp_path
 
 
 @pytest.fixture
@@ -146,10 +159,9 @@ def fake_decoders(monkeypatch):
 
 
 @pytest.fixture
-def session_metadata_dir(monkeypatch, tmp_path):
-    session_dir = tmp_path / "session-metadata"
+def session_metadata_dir(own_stores):
+    """The uploads store's folder, made, among this test's own three stores."""
+
+    session_dir = own_stores / "session-metadata"
     session_dir.mkdir()
-
-    monkeypatch.setenv("FIDO_SERVER_SESSION_METADATA_DIR", str(session_dir))
-
     return session_dir
