@@ -236,7 +236,7 @@ its logic out here first.
   only when an allowed origin can use it, `requested_rp_id_refusal`), `paths.py` (the project and instance roots; `store_dir`: every local
   store under `instance/`, its setting read when used), `request_limits.py` (8 MiB, the metadata
   upload 16 MiB, `/api/codec` 1 MiB, a registration's credential response 256 KiB (a Simple
-  complete's body); 413 in JSON; and the codec's 20,000 items read per request,
+  complete's body, an Advanced complete's `__credential_response`); 413 in JSON; and the codec's 20,000 items read per request,
   `decoder/item_budget.py`, 422 past it), `web_export.py`. Importing it configures nothing, and
   the package re-exports nothing: routes call `relying_party.create_fido_server` and
   `origins.determine_expected_origin` through their modules, where tests patch them. Tests reach

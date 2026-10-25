@@ -4,18 +4,20 @@
 resident-key requirement) and ``resolve_state_and_registration_server`` picks the
 ceremony state and RP and has fido2 verify the registration. Both answer 400 for
 a request that cannot go further; the order of their session reads is part of
-the route's behaviour. ``attestation_inputs`` reads the attestation and client
-data only after that: it parses every x5c certificate the response carries.
+the route's behaviour. A credential response over its limit is refused first, with
+a 413. ``attestation_inputs`` reads the attestation and client data only after
+that: it parses every x5c certificate the response carries.
 """
 from __future__ import annotations
 
+import json
 from collections.abc import Mapping, MutableMapping
 from typing import Any
 
-from flask import jsonify, session
+from flask import current_app, jsonify, session
 
 from ... import visitor_session
-from ...config import relying_party
+from ...config import relying_party, request_limits
 from ...webauthn.attachments import (
     attachment_hint_violation,
     normalize_attachment,
@@ -104,12 +106,40 @@ def attestation_inputs(response: Any) -> dict[str, Any]:
     }
 
 
+def _response_too_large(response: Any) -> Any | None:
+    """The 413 for a credential response over its limit (``config/request_limits.py``), else None.
+
+    The response alone is measured, as compact JSON: the artifact and the answer copy it whole,
+    while the editor's request beside it in the body, which may carry many fake exclude IDs, is
+    not kept.
+    """
+
+    limit = current_app.config[request_limits.REGISTRATION_RESPONSE_LIMIT_KEY]
+    size = len(json.dumps(response, ensure_ascii=False, separators=(",", ":")).encode("utf-8"))
+    if size <= limit:
+        return None
+    return (
+        jsonify(
+            {
+                "error": (
+                    f"This registration's response is {size:,} bytes, more than the {limit:,} this server "
+                    "reads for one. Ask for no attestation and try again."
+                )
+            }
+        ),
+        413,
+    )
+
+
 def prepare_register_complete_inputs(
     data: Mapping[str, Any],
 ) -> tuple[dict[str, Any] | None, Any | None]:
     response = data.get("__credential_response") if isinstance(data, Mapping) else None
     if not response:
         return None, (jsonify({"error": "Credential response is required"}), 400)
+    too_large = _response_too_large(response)
+    if too_large is not None:
+        return None, too_large
 
     original_request = {key: value for key, value in data.items() if not key.startswith("__")}
 

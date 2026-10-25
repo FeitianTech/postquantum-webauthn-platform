@@ -17,7 +17,9 @@ The sizes the limits are chosen from (measured):
   about 7.4 MB;
 - a Simple registration's complete, which is the credential's response alone:
   40,544 bytes for that ML-DSA-87 attestation and its chain, and under 11 KB
-  from a browser, which the Simple tab asks for no attestation.
+  from a browser, which the Simple tab asks for no attestation; an advanced
+  complete sends the editor's request beside the response, 528 KB with 64 fake
+  exclude IDs of 4,096 bytes, none of which the artifact keeps.
 
 So 8 MiB for every route; 16 MiB for the metadata upload; 1 MiB for
 ``/api/codec``, whose inputs are at most about 60 KB and which reads each one
@@ -25,7 +27,9 @@ several times; and 256 KiB for a registration's credential response. The
 stored record and the answer copy that response whole, and each certificate in
 it again in several forms: a crafted one under 8 MiB was stored as 12 MB and
 answered as 15 MB. The upload, the codec and the Simple registration's complete
-set their own limit on the request before reading it. Each can be set in the
+set their own limit on the request before reading it; the advanced registration's
+complete measures its ``__credential_response`` once its ceremony's state is
+consumed, so that refusal carries the challenge's trace. Each can be set in the
 environment.
 
 ``/api/codec`` also reads at most ``MAX_CODEC_ITEMS`` items for one request,

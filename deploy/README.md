@@ -120,7 +120,7 @@ warning. "On Cloud Run" means `K_SERVICE` is set, which Cloud Run does.
 | `FIDO_SERVER_CONTENT_SECURITY_POLICY` | the strict policy | Replaces the enforced Content-Security-Policy (`server/app/config/security_headers.py`) |
 | `FIDO_SERVER_MAX_REQUEST_BYTES` | 8 MiB | The largest request body; larger answers 413 |
 | `FIDO_SERVER_MAX_METADATA_UPLOAD_BYTES` | 16 MiB | The largest metadata upload |
-| `FIDO_SERVER_MAX_REGISTRATION_RESPONSE_BYTES` | 256 KiB | The largest credential response a registration completes with (a Simple complete's whole body); larger answers 413 |
+| `FIDO_SERVER_MAX_REGISTRATION_RESPONSE_BYTES` | 256 KiB | The largest credential response a registration completes with (a Simple complete's whole body, an Advanced complete's `__credential_response`); larger answers 413 |
 | `FIDO_SERVER_GCS_ENABLED` | off | Keep the stores and the MDS snapshot in Cloud Storage |
 | `FIDO_SERVER_GCS_BUCKET` | none | The bucket; Cloud Storage is used only when it is set too |
 | `FIDO_SERVER_GCS_PROJECT` | the credentials' | The Cloud Storage client's project |
