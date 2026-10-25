@@ -12,6 +12,7 @@ import tracemalloc
 
 import pytest
 
+from server.app.config import request_limits
 from server.app.routes import json_body
 
 # The routes that take no JSON: the metadata upload takes a form, the CSP reports their own type.
@@ -154,7 +155,9 @@ def test_a_body_that_does_not_say_it_is_json_is_not_read(app):
 def test_every_route_refuses_a_json_body_nested_too_deep_with_a_400_in_json(app, make_app, depth, encoding, monkeypatch, tmp_path):
     for name in ("CREDENTIAL", "CREDENTIAL_ARTIFACT", "SESSION_METADATA"):
         monkeypatch.setenv(f"FIDO_SERVER_{name}_DIR", str(tmp_path / name.lower()))
-    client = make_app().test_client()
+    # The Simple registration's complete reads at most 256 KiB, less than the deepest bodies here
+    # in UTF-16 or UTF-32: given the general limit, every route reads them.
+    client = make_app({request_limits.REGISTRATION_RESPONSE_LIMIT_KEY: request_limits.DEFAULT_MAX_REQUEST_BYTES}).test_client()
     # After an escaped quote, read byte by byte, UTF-16 and UTF-32 look like a string around the brackets.
     body = ('["\\"", "x", ' + "[" * depth + "]" * depth + ', "y"]').encode(encoding)
 

@@ -10,7 +10,7 @@ from fido2.webauthn import (
     PublicKeyCredentialType,
     PublicKeyCredentialUserEntity,
 )
-from flask import Blueprint, jsonify, request, session
+from flask import Blueprint, current_app, jsonify, request, session
 
 from ... import json_values, visitor_session
 from ...challenge_registry import (
@@ -19,7 +19,7 @@ from ...challenge_registry import (
     consume_ceremony_state,
     stamp_ceremony_state,
 )
-from ...config import origins, relying_party
+from ...config import origins, relying_party, request_limits
 from ...mds import provisioning as mds_provisioning
 from ...webauthn.attachments import normalize_attachment
 from ...webauthn.attestation import aaguid as attestation_aaguid
@@ -222,6 +222,9 @@ def _attestation_error_response(attestation_checks: Mapping[str, Any]) -> Any:
 @bp.route("/api/register/complete", methods=["POST"])
 @mds_provisioning.waits_for_the_snapshot
 def register_complete():
+    # Its own limit, before the body is read: the body is the credential's response, which the
+    # record and the answer copy (config/request_limits.py).
+    request.max_content_length = current_app.config[request_limits.REGISTRATION_RESPONSE_LIMIT_KEY]
     response = json_body.json_object()
     inner_response = response.get("response")
     credential_response = inner_response if isinstance(inner_response, Mapping) else {}

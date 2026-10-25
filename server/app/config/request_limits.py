@@ -1,4 +1,4 @@
-"""How large a request body the app reads: ``MAX_CONTENT_LENGTH``, and the metadata upload's and the codec's own.
+"""How large a request body the app reads: ``MAX_CONTENT_LENGTH``, and the metadata upload's, the codec's and a registration's own.
 
 A body over the limit is answered 413 before any route reads it
 (``routes/errors.py`` answers it as JSON). Without one, only Cloud Run's 32 MiB
@@ -14,12 +14,19 @@ The sizes the limits are chosen from (measured):
   ML-DSA-87, bounded by what the browser's local storage holds (about 5 MB);
 - a result snapshot at the page's caps: under 1 MB;
 - the metadata upload of the whole MDS metadata (fido-mds3.verified.json):
-  about 7.4 MB.
+  about 7.4 MB;
+- a Simple registration's complete, which is the credential's response alone:
+  40,544 bytes for that ML-DSA-87 attestation and its chain, and under 11 KB
+  from a browser, which the Simple tab asks for no attestation.
 
-So 8 MiB for every route; 16 MiB for the metadata upload; and 1 MiB for
+So 8 MiB for every route; 16 MiB for the metadata upload; 1 MiB for
 ``/api/codec``, whose inputs are at most about 60 KB and which reads each one
-several times. The upload and the codec set their own limit on the request
-before reading it. All three can be set in the environment.
+several times; and 256 KiB for a registration's credential response. The
+stored record and the answer copy that response whole, and each certificate in
+it again in several forms: a crafted one under 8 MiB was stored as 12 MB and
+answered as 15 MB. The upload, the codec and the Simple registration's complete
+set their own limit on the request before reading it. Each can be set in the
+environment.
 
 ``/api/codec`` also reads at most ``MAX_CODEC_ITEMS`` items for one request,
 20,000 unless the environment says otherwise (``decoder/item_budget.py`` says
@@ -36,12 +43,15 @@ _MIB = 1024 * 1024
 DEFAULT_MAX_REQUEST_BYTES = 8 * _MIB
 DEFAULT_MAX_METADATA_UPLOAD_BYTES = 16 * _MIB
 DEFAULT_MAX_CODEC_REQUEST_BYTES = _MIB
+DEFAULT_MAX_REGISTRATION_RESPONSE_BYTES = 256 * 1024
 
 # The app.config key the metadata upload reads its limit from.
 METADATA_UPLOAD_LIMIT_KEY = "MAX_METADATA_UPLOAD_LENGTH"
 # The app.config keys /api/codec reads its own limit and its item budget from.
 CODEC_REQUEST_LIMIT_KEY = "MAX_CODEC_REQUEST_LENGTH"
 CODEC_ITEM_LIMIT_KEY = "MAX_CODEC_ITEMS"
+# The app.config key a registration's complete reads the limit of its credential response from.
+REGISTRATION_RESPONSE_LIMIT_KEY = "MAX_REGISTRATION_RESPONSE_LENGTH"
 
 
 def _positive_int(name: str, default: int) -> int:
@@ -66,4 +76,7 @@ def config_from_env() -> dict[str, Any]:
         ),
         CODEC_REQUEST_LIMIT_KEY: _positive_int("FIDO_SERVER_MAX_CODEC_REQUEST_BYTES", DEFAULT_MAX_CODEC_REQUEST_BYTES),
         CODEC_ITEM_LIMIT_KEY: _positive_int("FIDO_SERVER_MAX_CODEC_ITEMS", item_budget.DEFAULT_MAX_ITEMS),
+        REGISTRATION_RESPONSE_LIMIT_KEY: _positive_int(
+            "FIDO_SERVER_MAX_REGISTRATION_RESPONSE_BYTES", DEFAULT_MAX_REGISTRATION_RESPONSE_BYTES
+        ),
     }

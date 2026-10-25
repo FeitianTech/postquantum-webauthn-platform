@@ -2,8 +2,9 @@
 
 8 MiB for every route; 16 MiB for the metadata upload, which takes the whole
 MDS metadata (about 7.4 MB); 1 MiB for the codec, whose inputs are at most
-about 60 KB. A body over the limit is answered 413, as JSON, before any route
-reads it. The bodies are built to a byte-exact size, and to fail quickly once
+about 60 KB; 256 KiB for a Simple registration's complete, which is the
+credential's response alone. A body over the limit is answered 413, as JSON,
+before any route reads it. The bodies are built to a byte-exact size, and to fail quickly once
 read: a payload that is blank but for one character, a metadata file that is
 blank but for one character.
 """
@@ -19,6 +20,7 @@ _MIB = 1024 * 1024
 _LIMIT = 8 * _MIB
 _UPLOAD_LIMIT = 16 * _MIB
 _CODEC_LIMIT = _MIB
+_REGISTRATION_LIMIT = 256 * 1024
 
 
 def _json_body(size: int) -> bytes:
@@ -51,23 +53,30 @@ def test_the_limits_are_the_defaults_unless_the_environment_sets_them(make_app, 
     assert app.config[request_limits.METADATA_UPLOAD_LIMIT_KEY] == _UPLOAD_LIMIT
     assert app.config[request_limits.CODEC_REQUEST_LIMIT_KEY] == _CODEC_LIMIT
     assert app.config[request_limits.CODEC_ITEM_LIMIT_KEY] == 20_000
+    assert app.config[request_limits.REGISTRATION_RESPONSE_LIMIT_KEY] == _REGISTRATION_LIMIT
 
     monkeypatch.setenv("FIDO_SERVER_MAX_REQUEST_BYTES", "4096")
     monkeypatch.setenv("FIDO_SERVER_MAX_METADATA_UPLOAD_BYTES", "8192")
     monkeypatch.setenv("FIDO_SERVER_MAX_CODEC_REQUEST_BYTES", "2048")
     monkeypatch.setenv("FIDO_SERVER_MAX_CODEC_ITEMS", "500")
+    monkeypatch.setenv("FIDO_SERVER_MAX_REGISTRATION_RESPONSE_BYTES", "1024")
     app = make_app()
     assert app.config["MAX_CONTENT_LENGTH"] == 4096
     assert app.config[request_limits.METADATA_UPLOAD_LIMIT_KEY] == 8192
     assert app.config[request_limits.CODEC_REQUEST_LIMIT_KEY] == 2048
     assert app.config[request_limits.CODEC_ITEM_LIMIT_KEY] == 500
+    assert app.config[request_limits.REGISTRATION_RESPONSE_LIMIT_KEY] == 1024
 
     for invalid in ("", "0", "-5", "lots"):
         monkeypatch.setenv("FIDO_SERVER_MAX_REQUEST_BYTES", invalid)
         assert make_app().config["MAX_CONTENT_LENGTH"] == _LIMIT
 
 
-_ROUTE_LIMITS = [("/api/codec", _CODEC_LIMIT), ("/api/advanced/register/complete", _LIMIT)]
+_ROUTE_LIMITS = [
+    ("/api/codec", _CODEC_LIMIT),
+    ("/api/register/complete?email=user@example.com", _REGISTRATION_LIMIT),
+    ("/api/advanced/register/complete", _LIMIT),
+]
 
 
 @pytest.mark.parametrize(("path", "limit"), _ROUTE_LIMITS)
@@ -75,7 +84,7 @@ def test_a_body_at_the_limit_is_read(client, path, limit):
     response = client.post(path, data=_json_body(limit), content_type="application/json")
 
     # Read, and answered by the route: the decoder cannot read "x", and the
-    # registration has no ceremony to complete.
+    # registrations have no ceremony to complete.
     assert response.status_code in (400, 422)
     assert "error" in response.get_json()
 
@@ -84,7 +93,8 @@ def test_a_body_at_the_limit_is_read(client, path, limit):
 def test_a_body_over_the_limit_is_refused_as_json(client, path, limit):
     response = client.post(path, data=_json_body(limit + 1), content_type="application/json")
 
-    # The codec's body is far under the general limit, and refused by its own.
+    # The codec's and the Simple registration's bodies are far under the general
+    # limit, and refused by their own.
     assert response.status_code == 413
     assert response.get_json() == {
         "error": f"The request is larger than the limit of {limit} bytes this server accepts."
