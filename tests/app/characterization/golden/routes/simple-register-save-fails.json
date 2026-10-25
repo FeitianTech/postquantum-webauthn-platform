@@ -182,7 +182,7 @@
     ],
     [
      "Content-Length",
-     "12336"
+     "12310"
     ],
     [
      "X-Content-Type-Options",
@@ -225,7 +225,7 @@
      "contents": null
     }
    ],
-   "bodySha256": "944e04bd8de961183a287b8a835a853219dd81add63e20dd59b8c91972814997",
+   "bodySha256": "52f115f0c4fa209dc18fa6e9e8ceacbfb59c32148cac23c9d3d45e12ee43a3b2",
    "body": {
     "actualResidentKey": null,
     "algo": "ES256 (ECDSA)",
@@ -355,7 +355,6 @@
      "aaguid": "AAAAAAAAAAAAAAAAAAAAAA",
      "aaguidHex": "00000000000000000000000000000000",
      "attestationFormat": "none",
-     "attestationStatement": {},
      "authenticatorAttachment": null,
      "authenticatorData": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAAAAAAAAAAAAAAAAAAAAAAAAIG7xFN50LXI2vQ7midDxwH6OXkBsoMJdqoq81-VwvQohpQECAyYgASFYIAfVYnvHdGJSEXI-LQxWQQEbIHufII8HpwWLbW_JAmsQIlgg07NoYlNzDOW4jodt19K-TBvWMpY7oWbRMfKQY3xE-A4",
      "authenticatorDataHash": "ee4828188e4d5f3b89f73142cc5fc2ff45c6a486b9076123b4e03721f51bcc1e",
@@ -1008,7 +1007,7 @@
     ],
     [
      "Content-Length",
-     "12336"
+     "12310"
     ],
     [
      "X-Content-Type-Options",
@@ -1051,7 +1050,7 @@
      "contents": null
     }
    ],
-   "bodySha256": "8bc47e4105324fd560a2d2844d532042d36eada9b45f1b77e86127fd544e28f9",
+   "bodySha256": "61154994d11bfc9c5987ebac1e926fb8dd39215c9b856fa79a5b249053223cb7",
    "body": {
     "actualResidentKey": null,
     "algo": "ES256 (ECDSA)",
@@ -1181,7 +1180,6 @@
      "aaguid": "AAAAAAAAAAAAAAAAAAAAAA",
      "aaguidHex": "00000000000000000000000000000000",
      "attestationFormat": "none",
-     "attestationStatement": {},
      "authenticatorAttachment": null,
      "authenticatorData": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAAAAAAAAAAAAAAAAAAAAAAAAIFOf5RaeLiOi8Os9otLhjbs0fzs5lJX8buIls83YqJlXpQECAyYgASFYIChnOZ_FrciM_toXPg6Xng8w731UCLPW7Hwx-lTAEmhdIlggrTV6YKhtwAoGgWepwHwcTNoXFjYYSHIixAw14GJDj28",
      "authenticatorDataHash": "a9939fba2a0873e08d6f9f28796feb869b333557d7cf158e4d25344be908ff2d",

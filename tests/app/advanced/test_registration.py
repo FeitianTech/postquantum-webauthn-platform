@@ -450,7 +450,7 @@ def test_advanced_register_complete_prefers_session_attachment_scope_over_tamper
     monkeypatch.setattr(
         attestation_certificates,
         "extract_attestation_details",
-        lambda _response: ("none", {}, None, {}, [])
+        lambda _response: ("none", None, {}, [])
     )
 
     class _FailingServer:

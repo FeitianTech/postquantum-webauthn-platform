@@ -22,7 +22,6 @@ def _registration(*, auth_data_class=AuthenticatorData, **changes):
         "exclude_credentials_count": 0,
         "response": {},
         "attestation_format": "none",
-        "attestation_statement": {},
         "attestation_certificates_details": [],
         "client_data_json": "",
         "client_extension_results": {},

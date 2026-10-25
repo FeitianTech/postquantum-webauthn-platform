@@ -47,7 +47,6 @@ STORED_CREDENTIAL_KEYS = (
     "createdAt",
     "clientExtensionOutputs",
     "attestationFormat",
-    "attestationStatement",
     "authenticatorData",
     "authenticatorDataHex",
     "authenticatorDataHash",

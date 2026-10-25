@@ -182,7 +182,7 @@
     ],
     [
      "Content-Length",
-     "15854"
+     "15828"
     ],
     [
      "X-Content-Type-Options",
@@ -225,7 +225,7 @@
      "contents": null
     }
    ],
-   "bodySha256": "0aa3dc85cb681575cf42cdedc4a013ea76c806284b2196e9d3ba444a1d446706",
+   "bodySha256": "7e701c0a0a9d88871ffe735a98ca6e30eaef3bef56fdd9a28cc0a1796be7d921",
    "body": {
     "actualResidentKey": null,
     "algo": "RS256 (RSA)",
@@ -355,7 +355,6 @@
      "aaguid": "AAAAAAAAAAAAAAAAAAAAAA",
      "aaguidHex": "00000000000000000000000000000000",
      "attestationFormat": "none",
-     "attestationStatement": {},
      "authenticatorAttachment": null,
      "authenticatorData": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAAAAAAAAAAAAAAAAAAAAAAAAILyvhX14Qdiv5r04k9W5QTHXkITZSwVMzI3mHDggW0kZpAEDAzkBACBZAQCaZSZ-O2sO-GTk8XnTLoi20KdmGoc6vCdwodt5qVOYwMNV9YVtTyEx2nFILcAGoxdlPs6TYvsuX4IsbgwcgY6tLogaCJOGj6hLf8z330BfMB6utLWMAtrYt9ELI4r0bbZCwMvlSZm2csidB_FAAERTSZJHku1CN7ZAo0WJ7GLlKzkEONQ5beeyu6SaWye92Xqih7ufskDvK23fST5uPvsKItcQSZsCrIaZeAB-7srs-AKnsSjzy_P-jKsliuFocXeFeooArMUBp2AckFVAEKzPSOkeSL2jn1TkW5gUbMuiFW7okchQ7CegfC60ur9nvd57wZd4ZRfnZIUYh1yOyybxIUMBAAE",
      "authenticatorDataHash": "fd85c4c61899742da699350285e7ecfbf9563a09c90ca6f0f555ab448bf6909f",

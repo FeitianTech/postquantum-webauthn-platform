@@ -312,8 +312,8 @@ def _coerce_attestation_certificate_bytes(value: Any) -> bytes | None:
     return None
 
 
-def _no_attestation_details() -> tuple[str, dict[str, Any], None, dict[str, Any], list[dict[str, Any]]]:
-    return "none", {}, None, {}, []
+def _no_attestation_details() -> tuple[str, None, dict[str, Any], list[dict[str, Any]]]:
+    return "none", None, {}, []
 
 
 def _registration_view(details: dict[str, Any]) -> dict[str, Any]:
@@ -388,14 +388,13 @@ def extract_attestation_details(
     response: Any,
 ) -> tuple[
     str,
-    dict[str, Any],
     str | None,
     dict[str, Any],
     list[dict[str, Any]],
 ]:
     """Parse attestation information from a registration response structure: its
-    format, statement, client data, extension outputs, and each x5c certificate (the
-    leaf first)."""
+    format, client data, extension outputs, and each x5c certificate of its statement
+    (the leaf first)."""
 
     if not isinstance(response, dict):
         return _no_attestation_details()
@@ -409,12 +408,9 @@ def extract_attestation_details(
 
     attestation_object = registration.response.attestation_object
     attestation_format = getattr(attestation_object, "fmt", None) or "none"
-    attestation_statement = attestation_object.att_stmt or {}
-
     return (
         attestation_format,
-        attestation_statement,
         registration.response.client_data.b64,
         dict(registration.client_extension_results),
-        _serialized_certificate_chain(attestation_statement),
+        _serialized_certificate_chain(attestation_object.att_stmt or {}),
     )

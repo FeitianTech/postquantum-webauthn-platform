@@ -642,7 +642,7 @@
    "stored": [
     {
      "file": "artifacts/VRJf72bDgaMlsA4lFvicETd02L9bX7zOxiqEty5JtjQ/226feaa5be0796b1c34f27fe5a7101b8fdbbd7e38874fdd5f6d9a257f0a0a268.json",
-     "sha256": "de9b89cc457f83adeff17578fe487cc1829bf849d2e20a92de93f8acdca11df7",
+     "sha256": "dc8fcb15449b259d42bb5a37bfd49a530a80b12684dccf0e71a7d8b0a0951560",
      "content": {
       "storageId": "HhfJJzOBVmmUZYuGYc2aY9SM::1a0c4506c00::02f5575ac1c848f2bfd09f36c6fe1da5",
       "createdAt": 1790000000.0,
@@ -689,13 +689,6 @@
          }
         },
         "attestationFormat": "packed",
-        "attestationStatement": {
-         "alg": -7,
-         "sig": "MEUCIQDZHVKJasQ6gvWfEVcUbcrsctkvMsJIwOnIF13jG1W7swIgaEmO4_QBsgb0YhHQRdAh1yRl7_juQrY6tw0SsAnSQO4",
-         "x5c": [
-          "MIIBtDCCAWagAwIBAgICHq8wBQYDK2VwMCMxITAfBgNVBAMMGENoYXJhY3Rlcml6YXRpb24gVGVzdCBDQTAgFw0yMDAxMDEwMDAwMDBaGA8yMDk5MTIzMTAwMDAwMFowfTELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEqMCgGA1UEAwwhQ2hhcmFjdGVyaXphdGlvbiBBdHRlc3RhdGlvbiBMZWFmMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEZBoo8EShnYtAg7HcnNArsKmvundF5ndTJe06OX2xiC8zT1B2FQcOxykxFXDPSzKd5ER60LnCSL_3BrGuW9chxqMzMDEwDAYDVR0TAQH_BAIwADAhBgsrBgEEAYLlHAEBBAQSBBAAESIzRFVmd4iZqrvM3e7_MAUGAytlcANBAJfvyLEWLdbGJ62qXdTTLZgz1xp0LYWpm_j8W5_u3PBSl1nUVLoQPfZS-6B-xESrUzwWA2mrVRGy2Ni8M39znAc"
-         ]
-        },
         "authenticatorData": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763450000000000112233445566778899aabbccddeeff00201e17c9273381566994658b8661cd9a63d48c26234c8d0d58d10a69566a88e322a5010203262001215820e130b9786ff150cdc115abfa5bd9c91ddce21b94a9f149c4c745bf6786844b2f225820b43766e0ebca3cca5c44dee8ac4c4a8098d693a22880b6df53f7c7032acdd2e7",
         "authenticatorDataHash": "29b306e7891724b1258da352e87b4eb123f31e1e171625e68e039cdeedac9bdd",
         "clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIiwiY2hhbGxlbmdlIjoiTVRFeE1URXhNVEV4TVRFeE1URXhNVEV4TVRFeE1URXhNVEV4TVRFeE1URSIsIm9yaWdpbiI6Imh0dHA6Ly9sb2NhbGhvc3QiLCJjcm9zc09yaWdpbiI6ZmFsc2V9",

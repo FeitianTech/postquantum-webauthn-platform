@@ -43,7 +43,6 @@ class SimpleRegistration:
     # What the request carried and fido2 verified.
     response: Any
     attestation_format: Any
-    attestation_statement: Any
     attestation_certificates_details: Any
     client_data_json: Any
     client_extension_results: Any
@@ -322,7 +321,6 @@ def build_stored_credential_context(reg: SimpleRegistration) -> None:
         "createdAt": reg.credential_info["registration_time"],
         "clientExtensionOutputs": json_values.make_json_safe(reg.client_extension_results),
         "attestationFormat": reg.attestation_format,
-        "attestationStatement": json_values.make_json_safe(reg.attestation_statement),
         "properties": json_values.make_json_safe(reg.credential_properties),
         "publicKeyCose": json_values.make_json_safe(reg.cose_public_key),
         "publicKeyBytes": encode_base64url(reg.public_key_bytes),

@@ -73,7 +73,6 @@ def attestation_inputs(response: Any) -> dict[str, Any]:
     credential_response = inner_response if isinstance(inner_response, Mapping) else {}
     (
         attestation_format,
-        attestation_statement,
         parsed_client_data_json,
         parsed_extension_results,
         attestation_certificates_details,
@@ -89,7 +88,6 @@ def attestation_inputs(response: Any) -> dict[str, Any]:
 
     return {
         "attestationFormat": attestation_format,
-        "attestationStatement": attestation_statement,
         "attestationCertificatesDetails": attestation_certificates_details,
         "attestationObjectB64": attestation_object_b64,
         "clientDataJsonB64": client_data_json_b64,

@@ -464,7 +464,7 @@
    "stored": [
     {
      "file": "artifacts/szCDHLxETTCKJ8LLZMt8h4oRkUkXqEH-veDgEl9PHMI/8cedae684cc0008b408c5da52374f9d489ef8111f09983afd2201521ec297c09.json",
-     "sha256": "e8fb252852dba5b0322aed4016407c055f066b06b8cfb6ccb6490c438c27ccd0",
+     "sha256": "b86200605b244de37f103817ecec6ff5d265b1efa0cce20a0c4f70fd31d6886e",
      "content": {
       "storageId": "THBi3GyG-MexchMynbz3x5Nv::1a0c4506c00::abb1b052d88044e486bb1446aa6a1e87",
       "createdAt": 1790000000.0,
@@ -498,7 +498,6 @@
         "createdAt": 1790000000.0,
         "clientExtensionOutputs": {},
         "attestationFormat": "none",
-        "attestationStatement": {},
         "authenticatorData": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763450000000700112233445566778899aabbccddeeff00204c7062dc6c86f8c7b17213329dbcf7c7936f19ee621923c90d8a411af2fb8bd6a50102032620012158203300a95fdc7aeee2ec6c3db2eb6ae0f8c43ca6db8ea993a18cd9591d37bcfc022258208af903bbac153ffa0110ac47115baba84aa9e10ef3911cb1466a9ac158b0d8b8",
         "authenticatorDataHash": "35e7921c9a11ca76baebcda053d2ac87f6372546283c31c01e13db1b2cec1dad",
         "clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIiwiY2hhbGxlbmdlIjoiTVRFeE1URXhNVEV4TVRFeE1URXhNVEV4TVRFeE1URXhNVEV4TVRFeE1URSIsIm9yaWdpbiI6Imh0dHA6Ly9sb2NhbGhvc3QiLCJjcm9zc09yaWdpbiI6ZmFsc2V9",

@@ -182,7 +182,7 @@
     ],
     [
      "Content-Length",
-     "12336"
+     "12310"
     ],
     [
      "X-Content-Type-Options",
@@ -225,7 +225,7 @@
      "contents": null
     }
    ],
-   "bodySha256": "ecbaab1957bd4e10488831b02e4aa57893f5753307916e2d37133401d8603129",
+   "bodySha256": "c25d0d6ae5167312c31314c975db2efdbfce392960d72b66ae51d43103e08035",
    "body": {
     "actualResidentKey": null,
     "algo": "ES256 (ECDSA)",
@@ -355,7 +355,6 @@
      "aaguid": "ABEiM0RVZneImaq7zN3u_w",
      "aaguidHex": "00112233445566778899aabbccddeeff",
      "attestationFormat": "none",
-     "attestationStatement": {},
      "authenticatorAttachment": null,
      "authenticatorData": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAwARIjNEVWZ3iJmqu8zd7v8AILdEGYnr8E6pkK3IicCfki_UbQYUYkAJRicKzplLeAvCpQECAyYgASFYIPDte-PayVxRRiRWM2MbJGm8Xoc9mWIcRP91SxI3Nky3IlggnDCAjTfqetN-WL7xzeN1aOWECKdsq7aX4wvHzQTJq5w",
      "authenticatorDataHash": "297080a4f3e0523a089304b168f8b23de6bbec610a499d227b7e2466f4a31b0d",

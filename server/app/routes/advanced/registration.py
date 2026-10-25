@@ -106,7 +106,6 @@ def _record_verified_registration(
     material = registration_record.build_registration_material(
         auth_data=auth_data,
         attestation_format=prepared["attestationFormat"],
-        attestation_statement=prepared["attestationStatement"],
         client_extension_results=prepared["clientExtensionResults"],
         credential_info=credential_info,
         response=response,

@@ -182,7 +182,7 @@
     ],
     [
      "Content-Length",
-     "12940"
+     "12914"
     ],
     [
      "X-Content-Type-Options",
@@ -225,7 +225,7 @@
      "contents": null
     }
    ],
-   "bodySha256": "a07e9d1deb72c0de4f5081f69797ff7893f2fd3ad1392a14f5f1bb6c070cb643",
+   "bodySha256": "0be24735a8e37df1f9f041cef844e69a76de8e48a1d82021000dcf7e2308590c",
    "body": {
     "actualResidentKey": true,
     "algo": "ES256 (ECDSA)",
@@ -359,7 +359,6 @@
      "aaguid": "AAAAAAAAAAAAAAAAAAAAAA",
      "aaguidHex": "00000000000000000000000000000000",
      "attestationFormat": "none",
-     "attestationStatement": {},
      "authenticatorAttachment": "cross-platform",
      "authenticatorData": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAAAAAAAAAAAAAAAAAAAAAAAAIPLzBSSPdpXp7C3wMcGHZcVpmA_8_8QIaczd_7bpBQdmpQECAyYgASFYIFqwCf_U5cMd-3T3vwujIs6WSVOQ8xBdzP7CI-cI9IkXIlgg-to_bMDlpB-QDYZohrD3zDV2OVYRUOAbDviJiUk25lc",
      "authenticatorDataHash": "ea2bd0455532b4ef044fe841fac085d8aff31cd6c9463a8ab1b0464d06574d79",
@@ -1307,7 +1306,7 @@
    "stored": [
     {
      "file": "artifacts/OiCtZ_OoWGuo9RiesCHMbTh5TJTbSdiGbnyVqb8n1CI/ff6154861a1b425a93ad598e301e8b2f1e01a2051e583dea0d332f2a5b93a938.json",
-     "sha256": "4d6412a8f238bc8c854e2adb7534a3599873766d5f87f3324dc1795a732abb86",
+     "sha256": "8168c3d43fc3d236a05fce1291615d1360242ed15c59242d904033ec73f6b75d",
      "content": {
       "storageId": "nIBBTTKLdrgEbFE3KOkYJDeg::1a0c4506c00::c7e8d9e5046d4f0a8f7d23f9dffb5b95",
       "createdAt": 1790000000.0,
@@ -1356,7 +1355,6 @@
          }
         },
         "attestationFormat": "none",
-        "attestationStatement": {},
         "authenticatorData": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d976345000000000000000000000000000000000000000000209c80414d328b76b8046c513728e9182437a0c04762346cc0b5048c946761608ba50102032620012158207e1fb6938da4e7c2316228b74a40e4cf9b65beef775e2527fa4715e18d78b2da2258204d1e9d1b47d2fba31ace0332508d76577c178d0892c6bc1fca0bbf848bb4fedd",
         "authenticatorDataHash": "a3a1b8ffa5e947aba37321d2ab2501eaa3206cb786161916f5cd077a4ca79dcc",
         "clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIiwiY2hhbGxlbmdlIjoiTVRFeE1URXhNVEV4TVRFeE1URXhNVEV4TVRFeE1URXhNVEV4TVRFeE1URSIsIm9yaWdpbiI6Imh0dHA6Ly9sb2NhbGhvc3QiLCJjcm9zc09yaWdpbiI6ZmFsc2V9",

@@ -490,7 +490,7 @@
    "stored": [
     {
      "file": "artifacts/D_4GU6mjgNxOcyimZ4RAj7hEZv7zFbYaXIA8xL53Sj0/2ca9f82170cb7466b12500d502684ebcefc5ce5311b00db084db4be249812728.json",
-     "sha256": "a26d8e01b6ed7cf9c7472c6605df11ef7e185f33f54f7129bf890280c32a29a0",
+     "sha256": "e07cc8d83f123aaa3a89243118d8e64216ad52275e4954a0b4c694106ed5847c",
      "content": {
       "storageId": "FUDL9FtaCCi0t5cmftvdu_uF::1a0c4506c00::8519419803004b79b63be7ab3de1d328",
       "createdAt": 1790000000.0,
@@ -536,7 +536,6 @@
          }
         },
         "attestationFormat": "none",
-        "attestationStatement": {},
         "authenticatorData": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763450000000000112233445566778899aabbccddeeff00201540cbf45b5a0828b4b797267edbddbbfb85e86b3c0065c3fc2905f0fa57efa5a50102032620012158203cf828cd5a36779f26fa967bb1a20e22127efee1d68709d7afb7ac022558a9bf225820e01b0b99621b0f37de796c50f67712d8cc3695d34488688e54847cc37d106e5c",
         "authenticatorDataHash": "56b2826f059c9418adc7c44809a548de27c27ffad305c6752ebd0bbf9d78bbd5",
         "clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIiwiY2hhbGxlbmdlIjoiTVRFeE1URXhNVEV4TVRFeE1URXhNVEV4TVRFeE1URXhNVEV4TVRFeE1URSIsIm9yaWdpbiI6Imh0dHA6Ly9sb2NhbGhvc3QiLCJjcm9zc09yaWdpbiI6ZmFsc2V9",
@@ -1251,7 +1250,7 @@
    "stored": [
     {
      "file": "artifacts/D_4GU6mjgNxOcyimZ4RAj7hEZv7zFbYaXIA8xL53Sj0/f3d6d3d45cf2f84ae334987bde4a464dc295db4fb6bc78ce60bcd2433d591831.json",
-     "sha256": "67ff635f0612a985ec59ee59a315a5ca35d320cf37e7f0a682e9cac2de25061f",
+     "sha256": "3d22ad489473157400ae4fc9c405925f1cf869a46917423a8f4b3fb330b36323",
      "content": {
       "storageId": "n7wy1DpbX_5tdftEzGtCpie2::1a0c4506c00::c0908714dc8f4c09ada5e8aadacf9b9f",
       "createdAt": 1790000000.0,
@@ -1286,7 +1285,6 @@
         "createdAt": 1790000000.0,
         "clientExtensionOutputs": {},
         "attestationFormat": "none",
-        "attestationStatement": {},
         "authenticatorData": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763450000000000112233445566778899aabbccddeeff00209fbc32d43a5b5ffe6d75fb44cc6b42a627b6e526e4f0b9317a95043b276bf547a5010203262001215820d44c1c013a17a00f4eb4c48b6365664bc0ac5f19b08d8c78833b7847dce9b4f62258209d46c2643078a8d85319896312cac8872c501280d6df1304aad8186054e01dcd",
         "authenticatorDataHash": "fbf822b7b685c1ae704753a1e59f55205bceaf02cbd657d7df24de72b3bc84c9",
         "clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIiwiY2hhbGxlbmdlIjoiTVRFeE1URXhNVEV4TVRFeE1URXhNVEV4TVRFeE1URXhNVEV4TVRFeE1URSIsIm9yaWdpbiI6Imh0dHA6Ly9sb2NhbGhvc3QiLCJjcm9zc09yaWdpbiI6ZmFsc2V9",
