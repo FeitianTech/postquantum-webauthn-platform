@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Mapping
-from typing import Any
+from typing import Any, NamedTuple
 
 from flask import Blueprint, current_app, jsonify, request
 
@@ -149,6 +149,69 @@ def _read_metadata_json(text: str) -> Any:
     return json.loads(text, parse_constant=_refuse_json_constant)
 
 
+class _UploadedFile(NamedTuple):
+    """One uploaded file read as metadata: its name, its bytes and the entries it holds."""
+
+    name: str
+    raw_bytes: bytes
+    entries: list[Mapping[str, Any]]
+
+
+def _read_uploaded_file(storage: Any) -> tuple[_UploadedFile | None, str | None]:
+    """One file of an upload, read and expanded into its entries; or the sentence that refuses it."""
+
+    trimmed = (storage.filename or "").strip() or "metadata.json"
+    if not trimmed.lower().endswith(".json"):
+        return None, f"{trimmed} is not a JSON file."
+
+    try:
+        raw_bytes = storage.read()
+    except Exception as exc:  # pylint: disable=broad-except
+        return None, f"Failed to read {trimmed}: {exc}"
+
+    try:
+        text = raw_bytes.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        return None, f"{trimmed} is not valid UTF-8 JSON."
+
+    try:
+        payload: dict[str, Any] = _read_metadata_json(text)
+    except ValueError as exc:
+        return None, f"{trimmed}: {exc}"
+
+    if not isinstance(payload, dict):
+        return None, f"{trimmed} must contain a JSON object."
+
+    try:
+        entry_payloads = mds_entries.expand_metadata_entry_payloads(payload)
+    except (TypeError, ValueError) as exc:
+        return None, f"{trimmed}: {exc}"
+    return _UploadedFile(trimmed, raw_bytes, list(entry_payloads)), None
+
+
+def _save_uploaded_file(uploaded: _UploadedFile, saved_items: list[Any], errors: list[str]) -> Any | None:
+    """Copy one read file to the device log and save its entries; the 500 to answer when the store fails."""
+
+    github_mirror.maybe_store_uploaded_metadata_file(uploaded.name, uploaded.raw_bytes)
+
+    for index, entry_payload in enumerate(uploaded.entries, start=1):
+        display_name = uploaded.name if len(uploaded.entries) == 1 else f"{uploaded.name} (entry {index})"
+
+        try:
+            item = mds_uploads.save_session_metadata_item(
+                entry_payload,
+                original_filename=display_name,
+            )
+        except ValueError as exc:
+            errors.append(f"{display_name}: {exc}")
+            continue
+        except RuntimeError as exc:
+            return jsonify({"error": str(exc)}), 500
+
+        saved_items.append(mds_uploads.serialize_session_metadata_item(item))
+    return None
+
+
 @bp.route("/api/mds/metadata/upload", methods=["POST"])
 @mds_provisioning.waits_for_the_snapshot
 def api_upload_custom_metadata():
@@ -160,70 +223,18 @@ def api_upload_custom_metadata():
     if not file_entries:
         return jsonify({"items": [], "errors": ["No JSON files were provided."]}), 400
 
-    saved_items = []
-    errors = []
+    # Every file is read before any is saved; each file's sentences stay in its place.
+    read_files = [_read_uploaded_file(storage) for storage in file_entries]
+    errors_by_file = [[refusal] if refusal is not None else [] for _uploaded, refusal in read_files]
 
-    for storage in file_entries:
-        filename = storage.filename or ""
-        trimmed = filename.strip()
-        if not trimmed:
-            trimmed = "metadata.json"
+    saved_items: list[Any] = []
+    for (uploaded, _refusal), file_errors in zip(read_files, errors_by_file, strict=True):
+        if uploaded is not None:
+            failure = _save_uploaded_file(uploaded, saved_items, file_errors)
+            if failure is not None:
+                return failure
 
-        if not trimmed.lower().endswith(".json"):
-            errors.append(f"{trimmed} is not a JSON file.")
-            continue
-
-        try:
-            raw_bytes = storage.read()
-        except Exception as exc:  # pylint: disable=broad-except
-            errors.append(f"Failed to read {trimmed}: {exc}")
-            continue
-
-        try:
-            text = raw_bytes.decode("utf-8-sig")
-        except UnicodeDecodeError:
-            errors.append(f"{trimmed} is not valid UTF-8 JSON.")
-            continue
-
-        try:
-            payload: dict[str, Any] = _read_metadata_json(text)
-        except ValueError as exc:
-            errors.append(f"{trimmed}: {exc}")
-            continue
-
-        if not isinstance(payload, dict):
-            errors.append(f"{trimmed} must contain a JSON object.")
-            continue
-
-        try:
-            entry_payloads = mds_entries.expand_metadata_entry_payloads(payload)
-        except (TypeError, ValueError) as exc:
-            errors.append(f"{trimmed}: {exc}")
-            continue
-
-        github_mirror.maybe_store_uploaded_metadata_file(trimmed, raw_bytes)
-
-        for index, entry_payload in enumerate(entry_payloads, start=1):
-            display_name = (
-                trimmed
-                if len(entry_payloads) == 1
-                else f"{trimmed} (entry {index})"
-            )
-
-            try:
-                item = mds_uploads.save_session_metadata_item(
-                    entry_payload,
-                    original_filename=display_name,
-                )
-            except ValueError as exc:
-                errors.append(f"{display_name}: {exc}")
-                continue
-            except RuntimeError as exc:
-                return jsonify({"error": str(exc)}), 500
-
-            saved_items.append(mds_uploads.serialize_session_metadata_item(item))
-
-    return _upload_answer(saved_items, errors)
+    return _upload_answer(saved_items, [error for file_errors in errors_by_file for error in file_errors])
 
 
 def _upload_answer(saved_items: list[Any], errors: list[str]):
