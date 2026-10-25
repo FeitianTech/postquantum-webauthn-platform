@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { clearSimpleCredentials, getAllSimpleCredentials, getSimpleCredentialsForEmail, prepareCredentialsForServer, removeSimpleCredential, saveSimpleCredential, updateSimpleCredentialSignCount } from './simple-credentials.js';
+import { clearSimpleCredentials, getAllSimpleCredentials, getSimpleCredentialsForEmail, prepareCredentialsForServer, removeSimpleCredential, saveSimpleCredential, simpleUsername, updateSimpleCredentialSignCount } from './simple-credentials.js';
 import { seedUnifiedCredentialRecords } from './storage-core.js';
 import { repoFile } from '@/test/logic/repo-file.js';
 import { getAllAdvancedCredentials, saveAdvancedCredential } from './advanced-credentials.js';
@@ -61,9 +61,17 @@ describe('simple credentials for an email', () => {
   it('include a record saved without an email, by its userName', () => {
     store([withAccount(ES256, { userName: 'user@example.com' })]);
 
-    const found = getSimpleCredentialsForEmail('User@Example.com');
+    const found = getSimpleCredentialsForEmail(' user@example.com ');
 
     expect(found.map(record => record.credentialIdBase64Url)).toEqual([ES256_ID]);
+  });
+
+  it('are an exact username\'s: Alice\'s are not alice\'s, as the server keeps them apart', () => {
+    store([withAccount(ES256, { email: 'Alice' }), withAccount(ED25519, { email: 'alice' })]);
+
+    expect(getSimpleCredentialsForEmail('Alice').map(record => record.credentialIdBase64Url)).toEqual([ES256_ID]);
+    expect(getSimpleCredentialsForEmail('alice').map(record => record.credentialIdBase64Url)).toEqual([ED25519_ID]);
+    expect(getSimpleCredentialsForEmail('ALICE')).toEqual([]);
   });
 
   it('include a record saved with only a username, by it', () => {
@@ -161,7 +169,14 @@ describe('removing a simple credential', () => {
   it('matches the account by userName when the record has no email', () => {
     store([withAccount(ES256, { userName: 'user@example.com' })]);
 
-    expect(removeSimpleCredential(ES256_ID, 'USER@example.com')).toBe(true);
+    expect(removeSimpleCredential(ES256_ID, 'user@example.com\n')).toBe(true);
+  });
+
+  it('keeps Alice\'s credential when alice\'s is to be removed', () => {
+    store([withAccount(ES256, { email: 'Alice' })]);
+
+    expect(removeSimpleCredential(ES256_ID, 'alice')).toBe(false);
+    expect(removeSimpleCredential(ES256_ID, 'Alice')).toBe(true);
   });
 
   it('matches the account by username when the record has neither email nor userName', () => {
@@ -212,6 +227,14 @@ describe('updating a simple credential\'s signature counter', () => {
     expect(updateSimpleCredentialSignCount('user@example.com', ES256_ID, 8)).toBe(false);
   });
 
+  it('leaves Alice\'s counter when alice\'s is updated', () => {
+    store([withAccount(ES256, { email: 'Alice' })]);
+
+    expect(updateSimpleCredentialSignCount('alice', ES256_ID, 8)).toBe(false);
+    expect(updateSimpleCredentialSignCount(' Alice ', ES256_ID, 8)).toBe(true);
+    expect(savedIdsAndCounts()).toEqual([[ES256_ID, 8]]);
+  });
+
   it('leaves the advanced records of other credentials alone', () => {
     store([ES256, ADVANCED, ADVANCED_WITHOUT_ID]);
 
@@ -259,7 +282,7 @@ describe("stored credentials: simple", () => {
           aaguid: 'aaguid-1',
         });
     expect(saved.credentialIdBase64Url).toBe('cred-1');
-    expect(getSimpleCredentialsForEmail('USER@example.com')).toHaveLength(1);
+    expect(getSimpleCredentialsForEmail('user@example.com')).toHaveLength(1);
     expect(prepareCredentialsForServer(getAllSimpleCredentials())).toEqual([
           {
             credentialId: 'cred-1',
@@ -408,5 +431,19 @@ describe("stored credentials: base64", () => {
         );
     expect(updated).toBe(true);
     expect(getAllSimpleCredentials()[0].signCount).toBe(5);
+  });
+});
+
+describe('a typed Simple username', () => {
+  // The table the server's tests read too (tests/app/simple/test_account.py).
+  const { names } = JSON.parse(readFileSync(repoFile('tests/fixtures/simple-usernames.json'), 'utf8'));
+
+  it.each(names.filter(name => name.read !== null))('is read as the server reads it: %j', ({ typed, read }) => {
+    expect(simpleUsername(typed)).toBe(read);
+  });
+
+  it('is empty when there is none', () => {
+    expect(simpleUsername(null)).toBe('');
+    expect(simpleUsername(undefined)).toBe('');
   });
 });

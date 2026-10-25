@@ -74,6 +74,13 @@ describe('registering a passkey', () => {
     expect(sent(0).body).toEqual({ credentials: [{ credentialId: 'AQIDBA', aaguid: null, publicKey: 'pQE', signCount: 0 }] });
   });
 
+  it('sends none of alice\'s passkeys for Alice: another account, as on the server', async () => {
+    answering(REGISTER[0], REGISTER[1]);
+    await registerSimplePasskey('Alice');
+
+    expect(sent(0).body).toEqual({ credentials: [] });
+  });
+
   it('hands the authenticator the server\'s options as bytes', async () => {
     answering(REGISTER[0], REGISTER[1]);
     await registerSimplePasskey('alice');
@@ -207,8 +214,9 @@ describe('authenticating with a passkey', () => {
 describe('keeping a registration', () => {
   it('saves the server\'s record in this browser, for the name it was registered under', () => {
     seedUnifiedCredentialRecords([]);
-    keepSimpleCredential(REGISTER[1].body.storedCredential, 'alice@example.com');
+    keepSimpleCredential(REGISTER[1].body.storedCredential, ' alice@example.com\n');
     const [kept] = getAllSimpleCredentials();
+    // Named as the server read the username: trimmed, its case as typed.
     expect(kept).toMatchObject({ type: 'simple', email: 'alice@example.com', credentialId: REGISTER[1].body.storedCredential.credentialId });
   });
 });

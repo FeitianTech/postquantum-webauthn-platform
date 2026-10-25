@@ -15,6 +15,7 @@ import {
     getSimpleCredentialsForEmail,
     prepareCredentialsForServer,
     saveSimpleCredential,
+    simpleUsername,
 } from '../credentials/storage/local/simple-credentials.js';
 
 /** @import { CeremonyResultInput } from '../shared/ceremony-result.js' */
@@ -199,10 +200,11 @@ export async function authenticateSimplePasskey(email, { onProgress = () => {} }
 }
 
 /**
- * Keeps what a registration saved in this browser: the server's record, for this email.
+ * Keeps what a registration saved in this browser: the server's record, for this email
+ * as the server read it (trimmed: simpleUsername).
  * @param {Record<string, unknown>} storedCredential
  * @param {string} email
  */
 export function keepSimpleCredential(storedCredential, email) {
-    saveSimpleCredential({ ...storedCredential, email });
+    saveSimpleCredential({ ...storedCredential, email: simpleUsername(email) });
 }

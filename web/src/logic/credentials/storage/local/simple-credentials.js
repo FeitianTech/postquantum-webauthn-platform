@@ -10,20 +10,33 @@ import {
 import { readUnifiedCredentialRecords } from './storage-core.js';
 import { prepareAdvancedCredentialForStorage } from './advanced-storage-shaping.js';
 
+/**
+ * A Simple username as the server reads it (routes/simple/account.py): trimmed as
+ * String.prototype.trim trims, then compared exactly, so "Alice" and "alice" are
+ * two accounts here as there (tests/fixtures/simple-usernames.json holds both sides).
+ * @param {unknown} value
+ * @returns {string}
+ */
+export function simpleUsername(value) {
+    return value === null || value === undefined ? '' : String(value).trim();
+}
+
+/** The username a saved record names: its email, else its userName, else its username. */
+function savedUsername(record) {
+    return simpleUsername(record.email || record.userName || record.username);
+}
+
 export function getAllSimpleCredentials() {
     const { simple } = partitionRecords(readUnifiedCredentialRecords());
     return simple.map(record => ({ ...record }));
 }
 
 export function getSimpleCredentialsForEmail(email) {
-    if (!email) {
+    const username = simpleUsername(email);
+    if (!username) {
         return [];
     }
-    const normalised = String(email).toLowerCase();
-    return getAllSimpleCredentials().filter(cred => {
-        const storedEmail = cred.email || cred.userName || cred.username;
-        return storedEmail && String(storedEmail).toLowerCase() === normalised;
-    });
+    return getAllSimpleCredentials().filter(cred => savedUsername(cred) === username);
 }
 
 export function saveSimpleCredential(rawCredential) {
@@ -88,18 +101,14 @@ export function removeSimpleCredential(credentialId, email) {
     }
 
     const { simple: simpleStored, advanced: advancedStored } = partitionRecords(readUnifiedCredentialRecords());
-    const normalisedEmail = email ? String(email).toLowerCase() : null;
+    const username = simpleUsername(email);
 
     const filteredSimple = simpleStored.filter(record => {
         const recordId = normaliseCredentialId(record);
         if (recordId !== id) {
             return true;
         }
-        if (normalisedEmail) {
-            const recordEmail = record.email || record.userName || record.username;
-            return String(recordEmail || '').toLowerCase() !== normalisedEmail;
-        }
-        return false;
+        return Boolean(username) && savedUsername(record) !== username;
     });
 
     const changed = filteredSimple.length !== simpleStored.length;
@@ -125,19 +134,13 @@ export function updateSimpleCredentialSignCount(email, credentialId, signCount) 
     }
 
     const { simple: simpleStored, advanced: advancedStored } = partitionRecords(readUnifiedCredentialRecords());
-    const normalisedEmail = email ? String(email).toLowerCase() : null;
+    const username = simpleUsername(email);
     let updated = false;
 
     const updatedSimple = simpleStored.map(record => {
         const recordId = normaliseCredentialId(record);
-        if (recordId !== id) {
+        if (recordId !== id || (username && savedUsername(record) !== username)) {
             return record;
-        }
-        if (normalisedEmail) {
-            const recordEmail = record.email || record.userName || record.username;
-            if (String(recordEmail || '').toLowerCase() !== normalisedEmail) {
-                return record;
-            }
         }
         const clone = { ...record };
         clone.signCount = computeUpdatedSignCount(clone.signCount, signCount);

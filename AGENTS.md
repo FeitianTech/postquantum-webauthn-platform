@@ -170,7 +170,9 @@ its logic out here first.
   cached until another tab changes it (`followStoredCredentialChanges`); tests seed it with
   `seedUnifiedCredentialRecords`. `local/record-migration.js` brings records saved by earlier
   versions to today's format as they are read: when a stored format changes, add a step there
-  with an old-format fixture in `src/test/logic/credentials/storage/`.
+  with an old-format fixture in `src/test/logic/credentials/storage/`. A Simple username is
+  `local/simple-credentials.js`'s `simpleUsername`: trimmed as the server trims it, then compared
+  exactly, so "Alice" and "alice" are two accounts, as on the server.
 - `simple/ceremony.js`: the Simple tab's two ceremonies (requests, every step's sentence); a
   registration sends what the browser keeps of the username's passkeys, which begin excludes.
 - `advanced/`: the Advanced tab. `registration/` and `authentication/` each hold their
