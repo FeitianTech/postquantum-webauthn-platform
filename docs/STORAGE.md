@@ -65,6 +65,9 @@ past one raises `common.StorageQuotaExceeded` before anything is written, and
   with an info file beside it that is not counted), and 64 MiB of them. An upload
   whose entries would pass either is refused whole, before any file is saved or
   copied to the device log (`mds/uploads.refuse_past_quota`).
+- Simple credentials: 100 in one username's list. The registration's begin refuses
+  a full list before the authenticator is asked, and its complete checks the list
+  its compare-and-swap would replace, so that count is exact.
 
 The counts and sizes come from a listing of the namespace's objects
 (`cloud.list_blob_stats`; a scandir locally, which leaves `.lock` and `.tmp` files

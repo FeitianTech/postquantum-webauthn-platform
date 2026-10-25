@@ -287,6 +287,9 @@ def register_begin():
     username, refusal = account.read_username(request.args.get("email"))
     if refusal is not None:
         return jsonify({"error": refusal}), 400
+    full = registration_persistence.refusal_when_full(username)
+    if full is not None:
+        return full
     payload = json_body.json_object()
 
     existing_credentials_raw: list[Any] = []

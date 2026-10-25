@@ -45,7 +45,8 @@ the goldens four; a heavy visitor's 200 registrations, 20 of them ML-DSA-87
 with chains, about 35 MB. So 1,000 artifacts and 256 MiB of them. Uploaded
 metadata is kept one file per entry: the whole MDS metadata, 518 entries, about
 7 MB; the e2e runs keep one entry per namespace. So 2,000 entries and 64 MiB of
-them.
+them. A Simple username's list: the goldens hold two credentials under one, the
+e2e runs one, a tester with every authenticator they own perhaps five. So 100.
 """
 from __future__ import annotations
 
@@ -65,6 +66,7 @@ DEFAULT_MAX_STORED_ARTIFACTS = 1000
 DEFAULT_MAX_STORED_ARTIFACT_BYTES = 256 * _MIB
 DEFAULT_MAX_STORED_METADATA_ENTRIES = 2000
 DEFAULT_MAX_STORED_METADATA_BYTES = 64 * _MIB
+DEFAULT_MAX_SIMPLE_CREDENTIALS_PER_USERNAME = 100
 
 # The app.config key the metadata upload reads its limit from.
 METADATA_UPLOAD_LIMIT_KEY = "MAX_METADATA_UPLOAD_LENGTH"
@@ -79,6 +81,8 @@ STORED_ARTIFACT_BYTES_KEY = "MAX_STORED_ARTIFACT_BYTES"
 # The app.config keys of the namespace's quota of uploaded metadata: how many entries, how many bytes.
 STORED_METADATA_ENTRIES_KEY = "MAX_STORED_METADATA_ENTRIES"
 STORED_METADATA_BYTES_KEY = "MAX_STORED_METADATA_BYTES"
+# The app.config key of how many Simple credentials one username's list keeps.
+SIMPLE_CREDENTIALS_PER_USERNAME_KEY = "MAX_SIMPLE_CREDENTIALS_PER_USERNAME"
 
 
 def _positive_int(name: str, default: int) -> int:
@@ -112,6 +116,9 @@ def config_from_env() -> dict[str, Any]:
             "FIDO_SERVER_MAX_STORED_METADATA_ENTRIES", DEFAULT_MAX_STORED_METADATA_ENTRIES
         ),
         STORED_METADATA_BYTES_KEY: _positive_int("FIDO_SERVER_MAX_STORED_METADATA_BYTES", DEFAULT_MAX_STORED_METADATA_BYTES),
+        SIMPLE_CREDENTIALS_PER_USERNAME_KEY: _positive_int(
+            "FIDO_SERVER_MAX_SIMPLE_CREDENTIALS_PER_USERNAME", DEFAULT_MAX_SIMPLE_CREDENTIALS_PER_USERNAME
+        ),
     }
 
 

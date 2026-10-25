@@ -11,9 +11,10 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from flask import jsonify
+from flask import current_app, jsonify
 
 from ... import visitor_session
+from ...config import request_limits
 from ...storage import credentials, github_mirror
 from ...storage.common import InvalidStorageIdentifier, StorageReadError
 from ...webauthn import client_binary
@@ -28,6 +29,30 @@ logger = logging.getLogger(__name__)
 # times each. Eight covers eight at once in one browser namespace.
 _CREDENTIAL_SAVE_ATTEMPTS = 8
 _PERSIST_FAILED = "Unable to persist registered credential."
+# Says what to do, so the page adds no advice of its own (shared/failed-response.js).
+_USERNAME_FULL = (
+    "This username already has {count} passkeys saved on this server, the most it keeps for one username. "
+    "Delete one you no longer use and try again."
+)
+
+
+def _username_full(records: list) -> Any | None:
+    """The 409 when a username's list already holds as many credentials as it keeps (config/request_limits.py)."""
+
+    limit = current_app.config[request_limits.SIMPLE_CREDENTIALS_PER_USERNAME_KEY]
+    if len(records) < limit:
+        return None
+    return jsonify({"error": _USERNAME_FULL.format(count=f"{limit:,}")}), 409
+
+
+def refusal_when_full(username: str) -> Any | None:
+    """Before a registration begins: the 409 when the username's list is full, so the authenticator
+    is not asked for a credential that would not be kept. A visitor without a namespace has none."""
+
+    namespace = visitor_session.current_id()
+    if not namespace:
+        return None
+    return _username_full(credentials.readkey(username, session_id=namespace))
 
 
 def _build_credential_entry(reg: SimpleRegistration) -> dict[str, Any]:
@@ -72,6 +97,10 @@ def _persist_registered_credential_entry(reg: SimpleRegistration) -> Any | None:
             logger.exception("Failed to read the stored credentials of %s", uname)
             return jsonify({"error": _PERSIST_FAILED}), 500
 
+        # Judged on the list this save would replace: compare-and-swap keeps it exact.
+        full = _username_full(records)
+        if full is not None:
+            return full
         saved = [*(stored_sign_count.as_counter_record(record) for record in records), credential_entry]
         try:
             if credentials.save_if_unchanged(uname, saved, version, session_id=metadata_session_id):

@@ -8,8 +8,8 @@ from urllib.parse import urlencode
 import pytest
 from fido2.webauthn import AuthenticatorData
 
-from server.app.config import relying_party
-from server.app.routes.simple import account
+from server.app.config import relying_party, request_limits
+from server.app.routes.simple import account, stored_sign_count
 from server.app.storage import credentials as storage_credentials
 from server.app.webauthn.attestation import certificates as attestation_certificates
 from tests.app import visitor_namespace
@@ -19,6 +19,7 @@ from tests.app.security.ceremony_helpers import (
     Authenticator,
     b64u,
     begin_simple_registration,
+    register_simple,
     registration_payload,
     unb64u,
 )
@@ -428,3 +429,43 @@ def test_a_registration_keeps_its_usernames_records_stored_whole_as_counter_reco
         "user_handle": b"\x09" * 32,
     }
     assert sorted(newer) == sorted(older) and newer["credential_id"] == b"\x02" * 32
+
+
+_USERNAME_FULL = (
+    "This username already has 2 passkeys saved on this server, the most it keeps for one username. "
+    "Delete one you no longer use and try again."
+)
+
+
+def test_a_begin_for_a_username_whose_list_is_full_is_refused_before_the_authenticator_is_asked(make_app, credential_store):
+    client = make_app({request_limits.SIMPLE_CREDENTIALS_PER_USERNAME_KEY: 2}).test_client()
+    for index in (1, 2):
+        register_simple(client, Authenticator(credential_id=bytes([index]) * 32), email=EMAIL)
+
+    begin = client.post(f"/api/register/begin?email={EMAIL}", json={"credentials": []})
+
+    assert begin.status_code == 409
+    assert begin.get_json() == {"error": _USERNAME_FULL}
+    with client.session_transaction() as session:
+        assert "simple_register_state" not in session
+    # Another username's list is its own.
+    assert client.post("/api/register/begin?email=other@example.com", json={"credentials": []}).status_code == 200
+
+
+def test_a_complete_whose_usernames_list_filled_meanwhile_is_refused_and_keeps_the_list(make_app, credential_store):
+    client = make_app({request_limits.SIMPLE_CREDENTIALS_PER_USERNAME_KEY: 2}).test_client()
+    begin = client.post(f"/api/register/begin?email={EMAIL}", json={"credentials": []})
+    namespace = visitor_namespace.of(client)
+    # Another tab of this browser registered two meanwhile.
+    others = [stored_sign_count.counter_record(bytes([index]) * 32, 0, 1.0, b"handle") for index in (8, 9)]
+    seed_records(storage_credentials, EMAIL, others, session_id=namespace)
+
+    complete = client.post(
+        f"/api/register/complete?email={EMAIL}",
+        json=registration_payload(Authenticator(), challenge=unb64u(begin.get_json()["publicKey"]["challenge"])),
+        headers={"Origin": ORIGIN},
+    )
+
+    assert complete.status_code == 409
+    assert complete.get_json() == {"error": _USERNAME_FULL}
+    assert storage_credentials.readkey(EMAIL, session_id=namespace) == others
