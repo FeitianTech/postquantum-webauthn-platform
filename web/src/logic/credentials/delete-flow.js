@@ -3,7 +3,7 @@
 // report says where messages and progress go.
 import { deleteCredentialArtifact } from './storage/artifacts-client.js';
 import { getAllAdvancedCredentials, removeAdvancedCredential } from './storage/local/advanced-credentials.js';
-import { clearSimpleCredentials, getAllSimpleCredentials, removeSimpleCredential, simpleUsername } from './storage/local/simple-credentials.js';
+import { getAllSimpleCredentials, removeSimpleCredential, simpleUsername } from './storage/local/simple-credentials.js';
 import { deleteSimpleCredentialRecord } from './storage/simple-records-client.js';
 
 /**
@@ -150,8 +150,37 @@ export async function deleteSavedCredential(credential, report) {
 }
 
 /**
- * Deletes every saved credential: the simple ones from this browser, each
- * advanced one from the server's storage and then from this browser.
+ * Deletes saved credentials, each where it is kept. A username's simple ones are
+ * one list on the server, which each deletion rewrites by compare-and-swap, so
+ * they go one at a time; other usernames' and the advanced ones go at once.
+ * @param {Record<string, any>[]} simpleCredentials
+ * @param {Array<Record<string, any> | null>} advancedCredentials
+ * @returns {Promise<DeletionOutcome[]>}
+ */
+async function deleteAll(simpleCredentials, advancedCredentials) {
+    /** @type {Map<string, Record<string, any>[]>} */
+    const byUsername = new Map();
+    simpleCredentials.forEach(credential => {
+        const username = simpleUsername(credential.email || credential.userName || credential.username);
+        byUsername.set(username, [...(byUsername.get(username) || []), credential]);
+    });
+    const inTurn = async credentials => {
+        const outcomes = [];
+        for (const credential of credentials) {
+            outcomes.push(await deleteEverywhere(credential));
+        }
+        return outcomes;
+    };
+    const outcomes = await Promise.all([
+        ...[...byUsername.values()].map(inTurn),
+        ...advancedCredentials.map(credential => inTurn([credential || {}])),
+    ]);
+    return outcomes.flat();
+}
+
+/**
+ * Deletes every saved credential, each from the server's storage first when it
+ * keeps a copy, then from this browser.
  * @param {DeletionReport} report
  * @returns {Promise<void>}
  */
@@ -163,11 +192,7 @@ export async function clearSavedCredentials(report) {
 
     const simpleCredentials = getAllSimpleCredentials();
     const advancedCredentials = getAllAdvancedCredentials();
-
-    const simpleCount = simpleCredentials.length;
-    const advancedCount = advancedCredentials.length;
-
-    if (simpleCount === 0 && advancedCount === 0) {
+    if (simpleCredentials.length === 0 && advancedCredentials.length === 0) {
         report.status(DELETE_TEXT.nothingToClear, 'info');
         return;
     }
@@ -176,57 +201,10 @@ export async function clearSavedCredentials(report) {
     report.dismiss();
     report.progress(DELETE_TEXT.clearing);
 
-    let absentCount = 0;
-    let failedCount = 0;
-
     try {
-        if (simpleCount > 0) {
-            clearSimpleCredentials();
-        }
-
-        const advancedDeleteOperations = advancedCredentials.map(async credential => {
-            const identifier = credential?.credentialIdBase64Url || credential?.credentialId || credential?.id;
-            const storageId = (credential && typeof credential === 'object' && (credential.storageId || credential.localStorageId)) || null;
-
-            if (!storageId || typeof storageId !== 'string' || !storageId.trim()) {
-                const removedLocal = removeAdvancedCredential(identifier, null);
-                return {
-                    status: removedLocal ? 'deleted' : 'failed',
-                };
-            }
-
-            const deleteResult = await deleteCredentialArtifact(storageId.trim());
-            if (deleteResult.status === 'failed') {
-                return {
-                    status: 'failed',
-                    error: deleteResult.error || DELETE_TEXT.serverRefused,
-                };
-            }
-
-            const removedLocal = removeAdvancedCredential(identifier, storageId.trim());
-            if (!removedLocal) {
-                return {
-                    status: 'failed',
-                    error: DELETE_TEXT.removedFromServerOnly,
-                };
-            }
-
-            return {
-                status: deleteResult.status,
-            };
-        });
-
-        const advancedResults = await Promise.all(advancedDeleteOperations);
-        advancedResults.forEach(result => {
-            if (result.status === 'deleted') {
-                return;
-            }
-            if (result.status === 'absent') {
-                absentCount += 1;
-                return;
-            }
-            failedCount += 1;
-        });
+        const outcomes = await deleteAll(simpleCredentials, advancedCredentials);
+        const absentCount = outcomes.filter(outcome => outcome.status === 'absent').length;
+        const failedCount = outcomes.filter(outcome => !['deleted', 'absent'].includes(outcome.status)).length;
 
         await report.reload();
 

@@ -207,7 +207,7 @@ test.describe('/#simple', () => {
     );
   });
 
-  test('clears every credential, and warns of an advanced one the server no longer held', async ({ page }) => {
+  test('clears every credential, and warns of the ones the server no longer held', async ({ page }) => {
     await openPage(page);
     await keep(page, [
       { ...goldenStoredCredential('simple-register-es256'), type: 'simple' },
@@ -216,10 +216,11 @@ test.describe('/#simple', () => {
     await page.reload();
     await expect(rows(page)).toHaveCount(2);
 
+    // This run's server holds neither: a Simple record or an Advanced artifact.
     await list(page).getByRole('button', { name: 'Clear All' }).click();
     await page.getByRole('alertdialog', { name: 'Clear All' }).getByRole('button', { name: 'Clear All' }).click();
     await expect(list(page).locator('[data-notice="warning"]')).toHaveText(
-      'Clearing complete. 1 credential was already absent from server storage.',
+      'Clearing complete. 2 credentials were already absent from server storage.',
     );
     await expect(list(page).getByText('No credentials registered yet.')).toBeVisible();
     expect(await storedCount(page)).toBe(0);

@@ -9,7 +9,7 @@ import {
 } from './delete-flow.js';
 import { deleteCredentialArtifact } from './storage/artifacts-client.js';
 import { getAllAdvancedCredentials, removeAdvancedCredential } from './storage/local/advanced-credentials.js';
-import { clearSimpleCredentials, getAllSimpleCredentials, removeSimpleCredential } from './storage/local/simple-credentials.js';
+import { getAllSimpleCredentials, removeSimpleCredential } from './storage/local/simple-credentials.js';
 import { deleteSimpleCredentialRecord } from './storage/simple-records-client.js';
 
 // Deleting a saved credential and clearing them all (credentials/delete-flow.js):
@@ -24,7 +24,6 @@ vi.mock('./storage/local/advanced-credentials.js', () => ({
 }));
 vi.mock('./storage/local/simple-credentials.js', async (importOriginal) => ({
   ...(await importOriginal()),
-  clearSimpleCredentials: vi.fn(),
   getAllSimpleCredentials: vi.fn(),
   removeSimpleCredential: vi.fn(),
 }));
@@ -52,7 +51,6 @@ function flow({
   vi.mocked(getAllAdvancedCredentials).mockImplementation(record('advanced', advanced));
   vi.mocked(removeSimpleCredential).mockImplementation(record('remove simple', removeSimple));
   vi.mocked(removeAdvancedCredential).mockImplementation(record('remove advanced', removeAdvanced));
-  vi.mocked(clearSimpleCredentials).mockImplementation(record('clear simple'));
   vi.mocked(deleteCredentialArtifact).mockImplementation(record('delete artifact', async () => artifact));
   vi.mocked(deleteSimpleCredentialRecord).mockImplementation(record('delete record', async () => simpleRecord));
   const report = {
@@ -205,16 +203,42 @@ describe('deleting one credential', () => {
 });
 
 describe('clearing every credential', () => {
-  it('clears the simple ones, deletes each advanced one, reads the list again and says so', async () => {
+  it('deletes each one on the server first, then here, reads the list again and says so', async () => {
     const { calls, report } = flow();
     await clearSavedCredentials(report);
-    expect(calls.map(([name]) => name)).toEqual([
-      'running?', 'simple', 'advanced', 'busy', 'dismiss', 'progress', 'clear simple',
-      'delete artifact', 'remove advanced', 'reload', 'status', 'progress', 'busy',
-    ]);
+    expect(calls.slice(0, 6).map(([name]) => name)).toEqual(['running?', 'simple', 'advanced', 'busy', 'dismiss', 'progress']);
+    expect(calls.slice(-4).map(([name]) => name)).toEqual(['reload', 'status', 'progress', 'busy']);
     expect(report.progress).toHaveBeenCalledWith('Clearing all credentials...');
+    expect(deleteSimpleCredentialRecord).toHaveBeenCalledWith('AQID', 'alice');
+    expect(removeSimpleCredential).toHaveBeenCalledWith('AQID', 'alice');
     expect(deleteCredentialArtifact).toHaveBeenCalledWith('s-1');
     expect(removeAdvancedCredential).toHaveBeenCalledWith('BAUG', 's-1');
+    expect(statusOf(report)).toEqual(['Deletion successful.', 'success']);
+  });
+
+  it('deletes one username\'s simple ones one at a time, and other usernames\' meanwhile', async () => {
+    const held = [];
+    const { calls, report } = flow({
+      simple: [SIMPLE, { ...SIMPLE, credentialIdBase64Url: 'BBBB' }, { ...SIMPLE, credentialIdBase64Url: 'CCCC', email: 'Alice' }],
+      advanced: [],
+    });
+    vi.mocked(deleteSimpleCredentialRecord).mockImplementation((id, username) => {
+      calls.push(['delete record', id, username]);
+      return new Promise(resolve => held.push(() => resolve({ status: 'deleted' })));
+    });
+
+    const clearing = clearSavedCredentials(report);
+    await vi.waitFor(() => expect(held).toHaveLength(2));
+    // alice's first and Alice's: another account, another list on the server.
+    expect(calls.filter(([name]) => name === 'delete record')).toEqual([
+      ['delete record', 'AQID', 'alice'],
+      ['delete record', 'CCCC', 'Alice'],
+    ]);
+    held.shift()();
+    await vi.waitFor(() => expect(held).toHaveLength(2));
+    expect(calls.filter(([name]) => name === 'delete record').at(-1)).toEqual(['delete record', 'BBBB', 'alice']);
+    held.forEach(release => release());
+    await clearing;
     expect(statusOf(report)).toEqual(['Deletion successful.', 'success']);
   });
 
@@ -229,17 +253,19 @@ describe('clearing every credential', () => {
     const { report } = flow({ running: true });
     await clearSavedCredentials(report);
     expect(statusOf(report)).toEqual([DELETE_TEXT.inProgress, 'info']);
-    expect(clearSimpleCredentials).not.toHaveBeenCalled();
+    expect(deleteSimpleCredentialRecord).not.toHaveBeenCalled();
   });
 
-  it('removes an advanced one the server never held from this browser only', async () => {
+  it('removes one the server never held from this browser only', async () => {
     const { report } = flow({
-      simple: [],
+      simple: [{ type: 'simple', credentialId: 'EEEE' }],
       advanced: [{ id: 'CAkK', storageId: '  ' }, { credentialIdBase64Url: 'DAsM' }, null],
       removeAdvanced: (id) => id === 'CAkK',
     });
     await clearSavedCredentials(report);
     expect(deleteCredentialArtifact).not.toHaveBeenCalled();
+    expect(deleteSimpleCredentialRecord).not.toHaveBeenCalled();
+    expect(vi.mocked(removeSimpleCredential).mock.calls).toEqual([['EEEE', undefined]]);
     expect(vi.mocked(removeAdvancedCredential).mock.calls).toEqual([['CAkK', null], ['DAsM', null], [undefined, null]]);
     expect(statusOf(report)).toEqual([
       'Clearing completed with issues: 2 credentials could not be deleted from server storage and were kept.',
@@ -255,6 +281,11 @@ describe('clearing every credential', () => {
       'error',
     ]);
 
+    const simpleRefused = flow({ advanced: [], record: { status: 'failed', error: 'Unable to delete credential from server storage.' } });
+    await clearSavedCredentials(simpleRefused.report);
+    expect(statusOf(simpleRefused.report)[1]).toBe('error');
+    expect(removeSimpleCredential).not.toHaveBeenCalled();
+
     const kept = flow({ simple: [], removeAdvanced: false });
     await clearSavedCredentials(kept.report);
     expect(statusOf(kept.report)[1]).toBe('error');
@@ -265,10 +296,7 @@ describe('clearing every credential', () => {
     await clearSavedCredentials(one.report);
     expect(statusOf(one.report)).toEqual(['Clearing complete. 1 credential was already absent from server storage.', 'warning']);
 
-    const two = flow({
-      advanced: [ADVANCED, { ...ADVANCED, credentialId: 'CAkK', storageId: 's-2' }],
-      artifact: { status: 'absent' },
-    });
+    const two = flow({ record: { status: 'absent' }, artifact: { status: 'absent' } });
     await clearSavedCredentials(two.report);
     expect(statusOf(two.report)).toEqual(['Clearing complete. 2 credentials were already absent from server storage.', 'warning']);
   });

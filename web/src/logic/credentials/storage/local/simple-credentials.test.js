@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { clearSimpleCredentials, getAllSimpleCredentials, getSimpleCredentialsForEmail, prepareCredentialsForServer, removeSimpleCredential, saveSimpleCredential, simpleUsername, updateSimpleCredentialSignCount } from './simple-credentials.js';
+import { getAllSimpleCredentials, getSimpleCredentialsForEmail, prepareCredentialsForServer, removeSimpleCredential, saveSimpleCredential, simpleUsername, updateSimpleCredentialSignCount } from './simple-credentials.js';
 import { seedUnifiedCredentialRecords } from './storage-core.js';
 import { repoFile } from '@/test/logic/repo-file.js';
 import { getAllAdvancedCredentials, saveAdvancedCredential } from './advanced-credentials.js';
@@ -337,28 +337,6 @@ describe("stored credentials: simple", () => {
     expect(removeSimpleCredential('simple-email-1', 'wrong@example.com')).toBe(false);
     expect(removeSimpleCredential('simple-email-1', 'owner@example.com')).toBe(true);
     expect(getAllSimpleCredentials()).toHaveLength(0);
-  });
-
-  it("clears simple credentials while keeping the advanced partition", async () => {
-    seedUnifiedCredentialRecords([
-          null,
-          'not-an-object',
-          {
-            type: 'simple',
-            credentialId: 'boot-simple',
-            email: 'boot@example.com',
-            publicKey: 'cHVibGlj',
-          },
-          {
-            type: 'advanced',
-            credentialId: 'boot-advanced',
-            storageId: 'boot-advanced::storage',
-            publicKey: 'cHVibGlj',
-          },
-        ]);
-    clearSimpleCredentials();
-    expect(getAllSimpleCredentials()).toHaveLength(0);
-    expect(getAllAdvancedCredentials()).toHaveLength(1);
   });
 
   it("counts a sign-in held in the advanced partition", async () => {

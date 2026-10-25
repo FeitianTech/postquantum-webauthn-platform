@@ -120,13 +120,6 @@ export function removeSimpleCredential(credentialId, email) {
     return changed;
 }
 
-export function clearSimpleCredentials() {
-    const { advanced } = partitionRecords(readUnifiedCredentialRecords());
-    persistCredentialPartitions([], advanced, {
-        prepareAdvancedCredentialForStorage,
-    });
-}
-
 export function updateSimpleCredentialSignCount(email, credentialId, signCount) {
     const id = credentialId ? String(credentialId) : '';
     if (!id) {
