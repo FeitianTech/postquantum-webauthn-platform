@@ -7,7 +7,7 @@ import os
 import shutil
 import time
 
-from ..config.paths import store_dir
+from ..config.paths import METADATA_STORE, store_dir
 from . import common
 from .cloud import (
     blob_exists,
@@ -49,7 +49,7 @@ _LAST_ACCESS_BLOB = ".last-access"
 def session_metadata_dir() -> str:
     """Where the visitors' uploads are kept locally (``FIDO_SERVER_SESSION_METADATA_DIR``)."""
 
-    return store_dir("FIDO_SERVER_SESSION_METADATA_DIR", "session-metadata")
+    return store_dir(*METADATA_STORE)
 
 
 

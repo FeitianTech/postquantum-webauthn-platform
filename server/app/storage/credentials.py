@@ -17,7 +17,7 @@ import logging
 from typing import Any
 
 from .. import visitor_session
-from ..config.paths import store_dir
+from ..config.paths import CREDENTIAL_STORE, store_dir
 from ..json_values import make_json_safe
 from . import common, record_format
 from .cloud import (
@@ -56,7 +56,7 @@ def _local_credential_base() -> str:
     """The local store's root: under the instance folder (gitignored), not next to
     the source. ``FIDO_SERVER_CREDENTIAL_DIR`` moves it, e.g. onto a mounted volume."""
 
-    return store_dir("FIDO_SERVER_CREDENTIAL_DIR", "session-credentials")
+    return store_dir(*CREDENTIAL_STORE)
 
 
 _JSON_SUFFIX = "_credential_data.json"

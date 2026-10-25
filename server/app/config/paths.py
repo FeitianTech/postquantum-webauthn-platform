@@ -29,3 +29,11 @@ def store_dir(setting: str, name: str) -> str:
     else ``instance/<name>``. Read on each call, never at import."""
 
     return os.environ.get(setting) or os.path.join(INSTANCE_ROOT, name)
+
+
+# The local stores, each a folder of the visitors' namespaces: the setting that
+# moves one, and its folder under instance/ (``store_dir(*CREDENTIAL_STORE)``).
+METADATA_STORE = ("FIDO_SERVER_SESSION_METADATA_DIR", "session-metadata")
+CREDENTIAL_STORE = ("FIDO_SERVER_CREDENTIAL_DIR", "session-credentials")
+ARTIFACT_STORE = ("FIDO_SERVER_CREDENTIAL_ARTIFACT_DIR", "credential-artifacts")
+LOCAL_STORES = (METADATA_STORE, CREDENTIAL_STORE, ARTIFACT_STORE)

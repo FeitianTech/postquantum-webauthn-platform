@@ -17,7 +17,7 @@ import time
 from typing import Any
 
 from .. import visitor_session
-from ..config.paths import store_dir
+from ..config.paths import ARTIFACT_STORE, store_dir
 from . import common
 from .cloud import (
     blob_exists,
@@ -63,7 +63,7 @@ class ArtifactUndecodable(Exception):
 
 
 def _artifact_dir() -> str:
-    return store_dir("FIDO_SERVER_CREDENTIAL_ARTIFACT_DIR", "credential-artifacts")
+    return store_dir(*ARTIFACT_STORE)
 
 
 _ARTIFACT_SUBDIR = "credential-artifacts"
