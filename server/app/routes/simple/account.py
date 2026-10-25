@@ -3,8 +3,11 @@
 The username names the account's stored records, a file locally and an object on
 Cloud Storage. So both begins refuse a name the store would refuse, before any
 options are issued: once the authenticator has made a credential, nothing about
-the name may fail. The user handle is what a registration gives the
-authenticator as ``user.id``: one per account, which does not reveal the name.
+the name may fail. A username is the typed name trimmed as the page trims it,
+then compared exactly: "Alice" and "alice" are two accounts, on the server as in
+the browser (``tests/fixtures/simple-usernames.json`` holds both sides to it).
+The user handle is what a registration gives the authenticator as ``user.id``:
+one per account, which does not reveal the name.
 """
 from __future__ import annotations
 
@@ -28,16 +31,28 @@ USERNAME_RULES = (
 )
 
 
-def read_username(value: Any) -> tuple[str | None, str | None]:
-    """``value`` as a ceremony's username, trimmed as the store trims it; or the sentence that refuses it."""
+# What JavaScript's String.prototype.trim removes, ECMA-262's WhiteSpace and LineTerminator: the
+# page trims a typed username so (credentials/storage/local/simple-credentials.js), and so does this.
+_TRIMMED = (
+    "\t\n\v\f\r \xa0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a"
+    "\u2028\u2029\u202f\u205f\u3000\ufeff"
+)
 
-    if not isinstance(value, str) or not value.strip():
+
+def read_username(value: Any) -> tuple[str | None, str | None]:
+    """``value`` as a ceremony's username, trimmed as the page trims it; or the sentence that refuses it."""
+
+    if not isinstance(value, str) or not value.strip(_TRIMMED):
         return None, USERNAME_REQUIRED
+    trimmed = value.strip(_TRIMMED)
     try:
-        username = storage_common.validate_storage_component(value)
+        username = storage_common.validate_storage_component(trimmed)
     except storage_common.InvalidStorageIdentifier:
         return None, USERNAME_RULES
-    if len(username.encode("utf-8")) > USERNAME_MAX_BYTES:
+    # The store trims again what Python counts as white space, which at an end of the name can only
+    # be a control character JavaScript keeps (U+001C to U+001F, U+0085): refused, so the file the
+    # store names is the name the page compares.
+    if username != trimmed or len(username.encode("utf-8")) > USERNAME_MAX_BYTES:
         return None, USERNAME_RULES
     return username, None
 

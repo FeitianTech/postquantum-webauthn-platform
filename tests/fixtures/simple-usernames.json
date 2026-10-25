@@ -1,0 +1,53 @@
+{
+  "about": "A typed Simple username as both sides read it: the server's routes/simple/account.read_username, the page's simpleUsername (credentials/storage/local/simple-credentials.js). read is null where the server refuses the name, so no credential is ever saved under it. Both sides then compare exactly.",
+  "names": [
+    {
+      "typed": "Alice",
+      "read": "Alice"
+    },
+    {
+      "typed": "alice",
+      "read": "alice"
+    },
+    {
+      "typed": "  Alice\t\n",
+      "read": "Alice"
+    },
+    {
+      "typed": "\u00a0Alice\u3000",
+      "read": "Alice"
+    },
+    {
+      "typed": "\u2028Alice\u2029",
+      "read": "Alice"
+    },
+    {
+      "typed": "\ufeffAlice\ufeff",
+      "read": "Alice"
+    },
+    {
+      "typed": "Al ice",
+      "read": "Al ice"
+    },
+    {
+      "typed": "Al\u0085ice",
+      "read": "Al\u0085ice"
+    },
+    {
+      "typed": "\u00c5lice",
+      "read": "\u00c5lice"
+    },
+    {
+      "typed": "Alice\u0085",
+      "read": null
+    },
+    {
+      "typed": "\u001cAlice",
+      "read": null
+    },
+    {
+      "typed": " \t ",
+      "read": null
+    }
+  ]
+}

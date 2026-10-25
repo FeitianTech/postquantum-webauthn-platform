@@ -3,10 +3,15 @@ from __future__ import annotations
 
 import hashlib
 import hmac
+import json
+from pathlib import Path
 
 import pytest
 
 from server.app.routes.simple import account
+
+# The table the page's tests read too (web/src/logic/credentials/storage/local/simple-credentials.test.js).
+_USERNAMES = json.loads((Path(__file__).parents[2] / "fixtures" / "simple-usernames.json").read_text())["names"]
 
 
 @pytest.mark.parametrize("value", [None, "", "   "])
@@ -21,6 +26,11 @@ def test_a_name_the_store_refuses_is_refused_with_the_rules(value):
 
 def test_a_username_is_trimmed_as_the_store_trims_it():
     assert account.read_username("  alice@example.com \n") == ("alice@example.com", None)
+
+
+@pytest.mark.parametrize("name", _USERNAMES, ids=[repr(name["typed"]) for name in _USERNAMES])
+def test_a_username_is_read_as_the_page_reads_it_and_never_folded(name):
+    assert account.read_username(name["typed"])[0] == name["read"]
 
 
 def test_a_username_may_be_64_bytes_long_and_no_longer():

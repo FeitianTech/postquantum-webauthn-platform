@@ -277,8 +277,9 @@ its logic out here first.
   stored whole before are brought to it as their file is written); `routes/simple/deletion.py`
   the DELETE that removes a record when the page deletes its credential (compare-and-swap,
   answering `deleted` / `absent` / `failed` as the artifact DELETE does); `routes/simple/account.py` the username
-  both Simple begins check before any options (what the store accepts, trimmed, at most 64
-  bytes), which each complete must name again, and the user handle a Simple registration
+  both Simple begins check before any options (trimmed as JavaScript's `trim()` trims, what the
+  store accepts, at most 64 bytes; then compared exactly, so "Alice" and "alice" are two accounts,
+  as in the browser: `tests/fixtures/simple-usernames.json`), which each complete must name again, and the user handle a Simple registration
   issues: an HMAC-SHA256 of the visitor's namespace and the username under the app's secret,
   so that begin mints the namespace, kept in the session for complete to store;
   `routes/simple/registration_request.py` what a Simple registration asks for; each Simple ceremony keeps its state under its own session key; the try blocks and

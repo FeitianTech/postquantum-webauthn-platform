@@ -92,6 +92,12 @@ names as prefixes (`cloud.list_prefixes`), so a flat object is not a session.
 A name the store refuses raises `common.InvalidStorageIdentifier`, a `ValueError`
 that `routes/errors.py` answers with 400 and no traceback.
 
+A Simple username names its list's file as it is, once trimmed: "Alice" and
+"alice" are two accounts. Cloud Storage keeps their lists apart; on a
+case-insensitive disk (macOS's default) they share one local file, whose records are
+still told apart by credential ID, and whose length the per-username quota counts
+for both.
+
 ## The session and the namespace cookie
 
 Two cookies, both signed with the app's secret, `HttpOnly`, `SameSite=Lax`, and
