@@ -28,6 +28,7 @@ import os
 from flask import Blueprint, abort, current_app, request, send_file
 from werkzeug.security import safe_join
 
+from .. import accept_encoding
 from ..config.web_export import WEB_EXPORT_ROOT_KEY
 
 __all__ = ["IMMUTABLE_CACHE_CONTROL", "REVALIDATE_CACHE_CONTROL", "bp", "send_precompressed"]
@@ -101,7 +102,7 @@ def send_precompressed(path: str, cache_control: str):
     mimetype = mimetypes.guess_type(path)[0] or "application/octet-stream"
     gzip_path = f"{path}.gz"
     has_gzip_variant = os.path.isfile(gzip_path)
-    use_gzip = has_gzip_variant and "gzip" in request.headers.get("Accept-Encoding", "").lower()
+    use_gzip = has_gzip_variant and accept_encoding.gzip_accepted(request.headers.get("Accept-Encoding"))
 
     response = send_file(
         gzip_path if use_gzip else path,

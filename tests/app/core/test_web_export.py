@@ -93,6 +93,15 @@ def test_hashed_assets_are_immutable_for_a_year_and_precompressed(site):
     assert again.status_code == 304
 
 
+@pytest.mark.parametrize("accepted", ["gzip;q=0", "identity", "br", "gzip;q=0.5, identity"])
+def test_a_client_that_refuses_gzip_gets_the_file_not_its_gz_copy(site, accepted):
+    response = site.get("/_next/static/chunks/main-abc123.js", headers={"Accept-Encoding": accepted})
+
+    assert "Content-Encoding" not in response.headers
+    assert response.data == CHUNK
+    assert "Accept-Encoding" in response.headers["Vary"]
+
+
 def test_a_font_under_next_static_is_immutable_too(site):
     response = site.get("/_next/static/media/geist.woff2")
 
