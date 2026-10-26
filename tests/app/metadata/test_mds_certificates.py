@@ -37,7 +37,9 @@ def test_an_upload_with_such_a_root_is_listed_and_resolved(mds_fixture_snapshot,
     )
 
     assert upload.status_code == 200, upload.get_json()
-    assert client.get("/api/mds/metadata/explorer/full").status_code == 200
+    listed = client.get("/api/mds/metadata/explorer/custom")
+    assert listed.status_code == 200
+    assert [row["name"] for row in listed.get_json()["entries"]] == ["Unreadable root"]
     resolved = client.get(f"/api/mds/metadata/resolve?aaguid={entry['aaguid']}")
     assert resolved.status_code == 200
 

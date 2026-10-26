@@ -26,9 +26,10 @@ def _serialise_compact_json(value: object) -> str:
 
 
 def _finalise_base_full_snapshot(snapshot: dict[str, object]) -> dict[str, object]:
-    """Add the entry-count fields the explorer API reports for a session without uploads,
-    and the format of what this code derives (``explorer_files.DERIVED_FORMAT``): the
-    server derives a file of another format again (``cache._load_base_full_snapshot``)."""
+    """Add the entry counts of a session without uploads, which the list's meta carries
+    (the page counts what it shows itself), and the format of what this code derives
+    (``explorer_files.DERIVED_FORMAT``): the server derives a file of another format
+    again (``cache._load_base_full_snapshot``)."""
 
     entries = snapshot.get("entries")
     entry_count = len(entries) if isinstance(entries, list) else 0

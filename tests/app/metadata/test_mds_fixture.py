@@ -74,10 +74,6 @@ def test_the_upload_is_one_entry_the_snapshot_does_not_hold():
 def test_flask_serves_the_fixture(mds_fixture_snapshot, client):
     entries = _full_snapshot()["entries"]
 
-    answer = client.get("/api/mds/metadata/explorer/full")
-    assert answer.status_code == 200
-    assert [entry["entryId"] for entry in answer.get_json()["entries"]] == [entry["entryId"] for entry in entries]
-
     with client.get("/assets/mds/fido-mds3.explorer.list.json", headers={"Accept-Encoding": "identity"}) as listed:
         assert listed.status_code == 200
         assert [row["entryId"] for row in json.loads(listed.data)["entries"]] == [entry["entryId"] for entry in entries]
@@ -120,7 +116,8 @@ def test_an_uploaded_statement_joins_the_fixture(mds_fixture_snapshot, client):
 @pytest.mark.parametrize("name", mds_files.SNAPSHOT_FILENAMES)
 def test_serving_the_fixture_never_writes_to_it(mds_fixture_snapshot, client, name):
     before = (mds_fixture.SNAPSHOT_DIR / name).read_bytes()
-    client.get("/api/mds/metadata/explorer/full")
+    client.get("/assets/mds/fido-mds3.explorer.list.json")
+    client.get("/api/mds/metadata/explorer/custom")
     assert (mds_fixture.SNAPSHOT_DIR / name).read_bytes() == before
     assert (mds_fixture_snapshot / name).read_bytes() == before
 

@@ -59,9 +59,6 @@ def test_a_newer_set_in_the_bucket_reaches_a_running_instance(instance, client):
     with client.get(url, headers={"Accept-Encoding": "identity"}) as listed:
         assert listed.headers["Cache-Control"] == "no-cache"
         assert json.loads(listed.data)["meta"]["no"] == 8
-    # The explorer's own rows follow too.
-    rows = client.get("/api/mds/metadata/explorer/full").get_json()
-    assert rows["meta"]["no"] == 8 and len(rows["entries"]) == 3
     # Taken from the set's BLOB and meta alone, the rest derived.
     taken = {name for name, _options in bucket.download_options if name.startswith("mds/sets/")}
     assert {name.rsplit("/", 1)[1] for name in taken} == {mds_files.BLOB, mds_files.VERIFIED_META}

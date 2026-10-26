@@ -29,7 +29,7 @@ def _own_namespaces(own_stores):
 
 _READS = [
     ("GET", "/api/mds/metadata/info", 200),
-    ("GET", "/api/mds/metadata/explorer/full", 200),
+    ("GET", "/api/mds/metadata/explorer/full", 410),
     ("GET", "/api/mds/metadata/explorer/custom", 200),
     ("GET", "/api/mds/metadata/resolve?aaguid=f1d0f1d0-0000-4000-8000-000000000001", 200),
     ("GET", "/api/mds/metadata/custom", 200),
@@ -124,13 +124,12 @@ def test_without_a_snapshot_the_visitors_explorer_rows_are_answered_all_the_same
     assert response.get_json()["meta"]["baseEntryCount"] == 0
 
 
-def test_the_full_explorer_is_never_cached_and_keyed_on_the_cookie(mds_fixture_snapshot, client):
+def test_a_page_older_than_the_server_is_told_to_reload_it(client):
     response = client.get("/api/mds/metadata/explorer/full")
 
-    assert response.status_code == 200
-    assert len(response.get_json()["entries"]) == 32
+    assert response.status_code == 410
+    assert response.get_json() == {"error": "This page is older than the server: reload it."}
     assert response.headers["Cache-Control"] == "no-store"
-    assert response.headers["Vary"] == "Cookie"
 
 
 def test_an_aaguid_no_entry_has_is_not_found(mds_fixture_snapshot, client):
@@ -357,13 +356,3 @@ def test_deleting_an_upload_answers_by_what_the_store_says(monkeypatch, visitor,
 
     assert response.status_code == status
     assert response.get_json() == answer
-
-
-def test_without_a_snapshot_the_full_explorer_is_not_available(monkeypatch):
-    monkeypatch.setattr(visitor_session, "ensure_id", lambda: "session-id")
-    monkeypatch.setattr(mds_effective, "load_effective_full_snapshot", lambda: {})
-
-    response = entry_app().test_client().get("/api/mds/metadata/explorer/full")
-
-    assert response.status_code == 404
-    assert response.get_json() == {"error": "Verified metadata snapshot is not available."}

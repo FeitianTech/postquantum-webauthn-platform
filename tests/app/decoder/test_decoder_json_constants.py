@@ -14,7 +14,6 @@ import json
 import pytest
 
 from server.app import visitor_session
-from server.app.mds import effective as mds_effective
 from server.app.mds import entries as mds_entries
 from server.app.mds import uploads as mds_uploads
 from server.app.storage import github_mirror
@@ -126,7 +125,6 @@ def test_an_uploaded_metadata_file_with_nan_is_refused(client, monkeypatch):
     monkeypatch.setattr(github_mirror, "maybe_store_uploaded_metadata_file", lambda *_args, **_kwargs: False)
     monkeypatch.setattr(mds_uploads, "save_session_metadata_item", lambda payload, original_filename=None: saved.append(payload))
     monkeypatch.setattr(mds_uploads, "serialize_session_metadata_item", lambda _item: {"storedFilename": "custom.json"})
-    monkeypatch.setattr(mds_effective, "load_effective_full_snapshot", lambda: {"entries": []})
 
     response = client.post(
         "/api/mds/metadata/upload",

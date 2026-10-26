@@ -1,4 +1,5 @@
-"""Effective snapshot composition and metadata entry resolution helpers."""
+"""A visitor's uploads as the explorer lists them (``explorer/custom``), and the lookup of
+an entry with them in front of the packaged ones."""
 from __future__ import annotations
 
 import json
@@ -102,60 +103,6 @@ def _session_rows(
     return rows, aaguids
 
 
-def _compose_effective_snapshot(
-    base_snapshot: Mapping[str, Any] | None,
-    *,
-    include_detail: bool,
-    include_raw_entry: bool = True,
-    compact_detail: bool = False,
-) -> dict[str, Any]:
-    base_meta: dict[str, Any] = {}
-    raw_base_entries: list[Mapping[str, Any]] = []
-
-    if base_snapshot:
-        if isinstance(base_snapshot.get("meta"), Mapping):
-            base_meta = dict(base_snapshot["meta"])
-        raw_entries = base_snapshot.get("entries")
-        if isinstance(raw_entries, list):
-            raw_base_entries = [entry for entry in raw_entries if isinstance(entry, Mapping)]
-
-    session_items = mds_uploads.list_session_metadata_items()
-
-    if not session_items:
-        # Sessions without uploads (nearly all of them) share the cached base
-        # entries; the result is only serialised, so copying 500+ entries per
-        # request is unnecessary.
-        meta = dict(base_meta)
-        meta["entryCount"] = len(raw_base_entries)
-        meta["baseEntryCount"] = len(raw_base_entries)
-        meta["customEntryCount"] = 0
-        meta["hasCustomEntries"] = False
-        return {"meta": meta, "entries": raw_base_entries}
-
-    base_entries = [dict(entry) for entry in raw_base_entries]
-    custom_entries, seen_aaguids = _session_rows(
-        session_items,
-        include_detail=include_detail,
-        include_raw_entry=include_raw_entry,
-        compact_detail=compact_detail,
-    )
-
-    effective_entries = custom_entries[:]
-    for entry in base_entries:
-        aaguid_key = normalise_aaguid_key(entry.get("aaguid"))
-        if aaguid_key and aaguid_key in seen_aaguids:
-            continue
-        effective_entries.append(entry)
-
-    meta = dict(base_meta)
-    meta["entryCount"] = len(effective_entries)
-    meta["baseEntryCount"] = len(base_entries)
-    meta["customEntryCount"] = len(custom_entries)
-    meta["hasCustomEntries"] = bool(custom_entries)
-
-    return {"meta": meta, "entries": effective_entries}
-
-
 def load_custom_entries() -> dict[str, Any]:
     """What the page lacks of the visitor's explorer: their uploads as rows (each with its
     detail, the newest first, one per AAGUID) and the counts of the list they make with
@@ -185,20 +132,6 @@ def load_custom_entries() -> dict[str, Any]:
         },
         "entries": rows,
     }
-
-
-def load_effective_full_snapshot() -> dict[str, Any]:
-    """Every entry this session sees: the packaged list's rows (each without its
-    detail, which its ``detailUrl`` names) and the session's uploads in full."""
-
-    files = mds_cache.load_explorer_files()
-    base_snapshot = files.listed if files is not None else mds_cache._load_base_full_snapshot()[0]
-    return _compose_effective_snapshot(
-        base_snapshot,
-        include_detail=True,
-        include_raw_entry=False,
-        compact_detail=True,
-    )
 
 
 def resolve_effective_metadata_entry(

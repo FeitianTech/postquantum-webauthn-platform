@@ -266,9 +266,10 @@ its logic out here first.
   Cloud Storage, upstream), `cache.py` (the loaders and their one `SnapshotCache`),
   `explorer_files.py` (what browsers load, derived from the full explorer snapshot: the list,
   the icons, each entry's detail; kept per snapshot by `cache.load_explorer_files`),
-  `uploads.py` (a visitor's uploaded metadata), `effective.py` (the snapshot
-  merged with a visitor's uploads), `verifier.py` (the verified entries indexed from their JSON
-  by fido2's keys, each parsed when found, a visitor's uploads in front).
+  `uploads.py` (a visitor's uploaded metadata), `effective.py` (a visitor's uploads as the
+  explorer lists them, `explorer/custom`, and resolve with them in front), `verifier.py` (the
+  verified entries indexed from their JSON by fido2's keys, each parsed when found, a visitor's
+  uploads in front).
 - Leaves the rest import: `encoding.py` (base64, base64url and hex, written and read strictly),
   `json_values.py` (`make_json_safe`, and `as_bytes`, the one reading of a value as bytes),
   `aaguid.py` (an AAGUID's GUID spelling), `env_flags.py`, `accept_encoding.py` (whether a request's
@@ -475,8 +476,9 @@ deliberate change (the characterization goldens show what it changes).
   (`server/app/mds/sets.py`: create-only sets, a generation-checked pointer that only
   moves forward); `tools/update_mds_snapshot.py --publish` publishes a verified snapshot, and a
   running instance takes a newer set from `/api/mds/metadata/info` (`follow_newer_snapshot`).
-- Locally, run `python tools/update_mds_snapshot.py` once. Without a snapshot the explorer APIs
-  answer 200 with no entry and the explorer is empty: the documented fallback, not a bug.
+- Locally, run `python tools/update_mds_snapshot.py` once. Without a snapshot the list answers 404,
+  `explorer/custom` 200 with no packaged entry, and the explorer is empty: the documented fallback,
+  not a bug.
 - Never commit those files, and never write a test that reads the real snapshot directory.
   `docs/MDS_SNAPSHOT.md` has the whole picture.
 

@@ -69,7 +69,8 @@ the full file is there, and, while the session has (or may have) uploads,
 It shows the uploads, then the packaged rows whose AAGUID no upload has: an upload hides
 the packaged entry with its AAGUID. An upload and a delete answer the session's rows as
 `custom`, which the page merges with the list it holds. The info answer's `snapshotUrl`
-and the explorer API's whole list stay for pages loaded before.
+stays for pages loaded before; `/api/mds/metadata/explorer/full`, where such a page asked for
+every row, answers `410` with a sentence telling it to reload.
 
 No route serves a snapshot file, at `/assets/mds/` or at the site's root: the seven
 names, and the `.gz` copy earlier releases wrote beside the full one, are refused there
@@ -92,7 +93,7 @@ indexes the verified entries a registration looks its credential up in
 fido2's dataclasses only when a lookup finds it, never the whole payload.
 
 The routes that read the snapshot (`/api/mds/metadata/info`,
-`explorer/full`, `explorer/custom`, `resolve`, the upload and the delete, the explorer's files
+`explorer/custom`, `resolve`, the upload and the delete, the explorer's files
 under `/assets/mds/`, and both registrations' complete, which look the new
 credential's AAGUID up and record what they found for good) call
 `ensure_snapshot_available()` first (`waits_for_the_snapshot` in `server/app/mds/provisioning.py`):
@@ -157,10 +158,10 @@ and the next check tries again.
 
 ### When no tier succeeds
 
-The application still starts and serves. `/health` and `/` work; the explorer APIs
-answer `200` with no entries (their `404` branch is not reached: the snapshot they
-compose always has its counts), the list's URL answers `404`, and the explorer shows the
-session's uploads alone, or no entries (it says the packaged metadata is unavailable).
+The application still starts and serves. `/health` and `/` work; `explorer/custom`
+answers `200` with the session's uploads and no packaged entry, the list's URL answers
+`404`, and the explorer shows the session's uploads alone, or no entries (it says the
+packaged metadata is unavailable).
 The updater (below) fills it.
 
 ## Working locally without Cloud Storage

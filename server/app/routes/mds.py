@@ -90,15 +90,10 @@ def api_get_metadata_info():
 
 
 @bp.route("/api/mds/metadata/explorer/full", methods=["GET"])
-@mds_provisioning.waits_for_the_snapshot
 def api_get_full_explorer_metadata():
-    snapshot = mds_effective.load_effective_full_snapshot()
-    if not snapshot.get("entries") and not snapshot.get("meta"):
-        return _no_store_json_response(
-            {"error": "Verified metadata snapshot is not available."},
-            status=404,
-        )
-    return _no_store_json_response(snapshot)
+    # Where a page loaded before explorer/custom asked for every row, its own and the
+    # packaged ones: it shows this sentence and keeps the rows it has.
+    return _no_store_json_response({"error": "This page is older than the server: reload it."}, status=410)
 
 
 @bp.route("/api/mds/metadata/explorer/custom", methods=["GET"])

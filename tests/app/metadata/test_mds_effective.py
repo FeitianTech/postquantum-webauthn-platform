@@ -1,4 +1,4 @@
-"""``mds.effective``: the packaged snapshot with a visitor's uploads in front.
+"""``mds.effective``: a visitor's uploads as the explorer lists them, in front of the packaged entries.
 
 An upload takes the place of the packaged entry with its AAGUID, the first upload of
 an AAGUID wins, and a lookup finds the visitor's entry before the packaged one.
@@ -28,27 +28,6 @@ def _upload(description: str, aaguid: str | None = None):
     if aaguid:
         raw["aaguid"] = aaguid
     return mds_uploads.save_session_metadata_item(raw)
-
-
-def test_uploads_come_first_one_per_aaguid_in_place_of_the_packaged_entry(visitor, mds_fixture_snapshot):
-    _upload("Uploaded", PACKAGED)
-    _upload("Uploaded again", PACKAGED)
-    _upload("No AAGUID")
-
-    snapshot = mds_effective.load_effective_full_snapshot()
-
-    assert snapshot["meta"]["baseEntryCount"] == 32
-    assert snapshot["meta"]["customEntryCount"] == 2
-    assert snapshot["meta"]["entryCount"] == 33
-    assert snapshot["meta"]["hasCustomEntries"] is True
-    assert [entry.get("source") for entry in snapshot["entries"][:3]] == ["session", "session", None]
-    assert sum(entry["aaguid"] == PACKAGED for entry in snapshot["entries"]) == 1
-    # The uploads come whole; the packaged entries as the list has them, each
-    # without its detail, which its detailUrl names.
-    uploaded, packaged = snapshot["entries"][0], snapshot["entries"][2]
-    assert uploaded["isLightweightEntry"] is False and uploaded["metadataStatement"]["description"] == "No AAGUID"
-    assert packaged["isLightweightEntry"] is True and "metadataStatement" not in packaged
-    assert packaged["detailUrl"].startswith("/assets/mds/entries/")
 
 
 def _upload_statement(description: str, **statement):
@@ -105,14 +84,6 @@ def test_uploads_with_one_key_identifier_get_an_id_each(visitor, mds_fixture_sna
     assert sorted(ids) == [f"akid:{'ab' * 20}", f"akid:{'ab' * 20}~2"]
 
 
-def test_without_a_snapshot_the_uploads_are_the_whole_snapshot(visitor):
-    _upload("Uploaded", PACKAGED)
-
-    snapshot = mds_effective.load_effective_full_snapshot()
-
-    assert (snapshot["meta"]["entryCount"], snapshot["meta"]["baseEntryCount"]) == (1, 0)
-
-
 def test_an_upload_is_found_before_the_packaged_entry_with_its_aaguid(visitor, mds_fixture_snapshot):
     _upload("Uploaded", PACKAGED)
 
@@ -127,7 +98,7 @@ def test_an_upload_is_resolved_as_the_visitors_explorer_list_holds_it(visitor, m
     _upload("Uploaded", PACKAGED)
 
     resolved = mds_effective.resolve_effective_metadata_entry(aaguid=PACKAGED)
-    listed = mds_effective.load_effective_full_snapshot()["entries"][0]
+    listed = mds_effective.load_custom_entries()["entries"][0]
 
     assert resolved == listed
     assert resolved["rawEntry"] is None
@@ -197,14 +168,6 @@ def test_an_entry_whose_statement_is_no_object_matches_no_aaguid():
     # Readers give a statement object; a direct call gives the matcher another.
     assert mds_effective._entry_matches_lookup({"metadataStatement": 123}, aaguid=PACKAGED) is False
     assert mds_effective._entry_matches_lookup({"metadataStatement": 123}) is False
-
-
-@pytest.mark.parametrize("snapshot", [{"meta": "not-a-mapping", "entries": [{"aaguid": PACKAGED}, "not-a-mapping"]}, {"entries": "not-a-list"}])
-def test_a_snapshot_whose_meta_or_entries_are_not_what_they_should_be_keeps_what_it_can(visitor, snapshot):
-    # The cache hands over the snapshot as read; a direct call gives the composition a malformed one.
-    composed = mds_effective._compose_effective_snapshot(snapshot, include_detail=False)
-
-    assert composed["meta"]["baseEntryCount"] == len([entry for entry in snapshot["entries"] if isinstance(entry, dict)])
 
 
 def test_uploaded_entry_source_names_its_file_and_times():
