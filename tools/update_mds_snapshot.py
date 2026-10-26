@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
 """Refresh the packaged FIDO MDS snapshot if the remote BLOB has changed.
 
-Downloads the BLOB, verifies it against the pinned trust root, and writes the
-snapshot's seven files. ``--verify-only`` writes nothing; ``--publish`` (earlier
+Downloads the BLOB, verifies it against the pinned trust root, checks its signing
+chain against the CRLs at the chain's distribution points, and writes the snapshot's
+seven files. ``--verify-only`` writes nothing; ``--publish`` (earlier
 ``--gcs-upload``) also publishes them to Cloud Storage as a snapshot set
 (``server/app/mds/sets.py``), which every server instance follows. A BLOB whose
 serial is below the local snapshot's, or with ``--publish`` the bucket's, fails the
 run: the FIDO Alliance's serials only go up. One whose ``nextUpdate`` has passed is
-taken with a warning.
+taken with a warning. A certificate on the chain that a CRL lists fails the run, and
+so does one for which no current CRL can be had (``server/app/mds/revocation.py``):
+the check fails closed.
 """
 
 from __future__ import annotations
@@ -29,6 +32,7 @@ if str(REPO_ROOT) not in sys.path:
 from server.app.mds import blob as mds_blob  # noqa: E402
 from server.app.mds import entries as mds_entries  # noqa: E402
 from server.app.mds import files as mds_files  # noqa: E402
+from server.app.mds import revocation as mds_revocation  # noqa: E402
 from server.app.mds import snapshot as mds_snapshot  # noqa: E402
 from server.app.mds.trust import FIDO_METADATA_TRUST_ROOT_CERT  # noqa: E402
 
@@ -38,6 +42,9 @@ MDS_DOWNLOAD_MAX_ATTEMPTS = 5
 MDS_DOWNLOAD_BACKOFF_BASE_SECONDS = 10
 MDS_RETRYABLE_STATUS_CODES = frozenset({429, 500, 502, 503, 504})
 MDS_RETRY_AFTER_CAP_SECONDS = 120
+
+MDS_CRL_TIMEOUT_SECONDS = 30
+MDS_CRL_MAX_BYTES = 16 * 1024 * 1024
 
 
 def _path(name: str) -> Path:
@@ -97,6 +104,19 @@ def _fetch_remote_blob_with_retry() -> tuple[bytes, str | None, str | None]:
             )
             time.sleep(backoff)
     raise RuntimeError("FIDO MDS download retries exhausted")  # pragma: no cover - defensive
+
+
+def _fetch_crl(url: str) -> bytes:
+    """The CRL at a distribution point the BLOB's signing chain names (an http or https
+    URL: ``mds.revocation`` asks for no other), over plain HTTP as CAs publish them,
+    since a CRL is signed; at most ``MDS_CRL_MAX_BYTES``."""
+
+    request = urllib.request.Request(url, headers={"User-Agent": "webauthndev-mds-updater"})
+    with urllib.request.urlopen(request, timeout=MDS_CRL_TIMEOUT_SECONDS) as response:
+        crl = response.read(MDS_CRL_MAX_BYTES + 1)
+    if len(crl) > MDS_CRL_MAX_BYTES:
+        raise ValueError(f"larger than {MDS_CRL_MAX_BYTES} bytes")
+    return crl
 
 
 def _write_if_changed(path: Path, payload: str | bytes) -> bool:
@@ -184,14 +204,15 @@ def _build_verified_snapshot(
     blob: bytes, trust_root: bytes = FIDO_METADATA_TRUST_ROOT_CERT
 ) -> dict[str, object]:
     """The BLOB's payload as the BLOB has it, once ``mds.blob`` has checked its
-    signature against the trust root, and once it reads as fido2's
+    signature against the trust root and its signing chain against the chain's CRLs
+    (each fetched by ``_fetch_crl``), and once it reads as fido2's
     ``MetadataBlobPayload`` (``mds.entries.parse_payload``; a BLOB that does not
     fails here). Its own JSON
     rather than fido2's dataclasses, which drop every field they do not model: a
     status report's ``sunsetDate`` or ``certificationProfiles``, a statement's
     ``friendlyNames``."""
 
-    payload = mds_blob.verify_blob(blob, trust_root)
+    payload = mds_blob.verify_blob(blob, trust_root, fetch_crl=_fetch_crl)
     mds_entries.parse_payload(payload)
     return payload
 
@@ -263,8 +284,9 @@ def _arguments(argv: list[str] | None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         prog="update_mds_snapshot.py",
         description=(
-            "Download the FIDO MDS BLOB, verify it against the pinned trust root, and write "
-            "the snapshot's seven files into FIDO_SERVER_MDS_SNAPSHOT_DIR (else instance/mds-snapshot)."
+            "Download the FIDO MDS BLOB, verify it against the pinned trust root and its signing "
+            "chain against the chain's CRLs, and write the snapshot's seven files into "
+            "FIDO_SERVER_MDS_SNAPSHOT_DIR (else instance/mds-snapshot)."
         ),
     )
     action = parser.add_mutually_exclusive_group()
@@ -295,6 +317,9 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         verified_snapshot = _build_verified_snapshot(new_blob)
+    except mds_revocation.RevocationUnknown as exc:
+        print(f"::error::Could not check the metadata BLOB's signing chain against its CRLs; nothing written: {exc}")
+        return 1
     except Exception as exc:
         print(f"::error::The metadata BLOB failed verification; nothing written: {exc}")
         return 1

@@ -74,26 +74,30 @@ def test_the_updater_imports_without_flask_in_a_fresh_interpreter():
     assert result.stdout.strip() == "[]", result.stdout
 
 
+class _Response:
+    """What ``urlopen`` gives back: ``body`` and ``headers``, as a context manager."""
+
+    def __init__(self, body: bytes, headers: dict[str, str] | None = None):
+        self.body = body
+        self.headers = headers or {}
+
+    def read(self, amount: int = -1) -> bytes:
+        return self.body if amount < 0 else self.body[:amount]
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        return False
+
+
 def test_fetch_remote_blob_uses_expected_request_contract(monkeypatch):
-    class _FakeResponse:
-        def __init__(self):
-            self.headers = {"Last-Modified": "Wed, 01 Apr 2026 12:00:00 GMT", "ETag": '"etag"'}
-
-        def read(self):
-            return b"jwt-bytes"
-
-        def __enter__(self):
-            return self
-
-        def __exit__(self, exc_type, exc, tb):
-            return False
-
     def _fake_urlopen(request, timeout):
         assert request.full_url == updater.MDS_METADATA_URL
         assert timeout == 120
         headers = {k.lower(): v for k, v in request.header_items()}
         assert headers["user-agent"] == "webauthndev-mds-updater"
-        return _FakeResponse()
+        return _Response(b"jwt-bytes", {"Last-Modified": "Wed, 01 Apr 2026 12:00:00 GMT", "ETag": '"etag"'})
 
     monkeypatch.setattr(updater.urllib.request, "urlopen", _fake_urlopen)
 
@@ -101,6 +105,28 @@ def test_fetch_remote_blob_uses_expected_request_contract(monkeypatch):
     assert blob == b"jwt-bytes"
     assert last_modified == "Wed, 01 Apr 2026 12:00:00 GMT"
     assert etag == '"etag"'
+
+
+def test_a_crl_is_asked_of_its_distribution_point_in_the_updaters_name(monkeypatch):
+    def _urlopen(request, timeout):
+        assert request.full_url == mds_fixture.CA_CRL_URL
+        assert timeout == updater.MDS_CRL_TIMEOUT_SECONDS == 30
+        assert {k.lower(): v for k, v in request.header_items()}["user-agent"] == "webauthndev-mds-updater"
+        return _Response(b"crl-bytes")
+
+    monkeypatch.setattr(updater.urllib.request, "urlopen", _urlopen)
+
+    assert updater._fetch_crl(mds_fixture.CA_CRL_URL) == b"crl-bytes"
+
+
+def test_a_crl_larger_than_the_cap_is_refused(monkeypatch):
+    monkeypatch.setattr(updater, "MDS_CRL_MAX_BYTES", 8)
+    served = {mds_fixture.CA_CRL_URL: b"x" * 8, mds_fixture.ROOT_CRL_URL: b"x" * 9}
+    monkeypatch.setattr(updater.urllib.request, "urlopen", lambda request, timeout: _Response(served[request.full_url]))
+
+    assert updater._fetch_crl(mds_fixture.CA_CRL_URL) == b"x" * 8
+    with pytest.raises(ValueError, match="^larger than 8 bytes$"):
+        updater._fetch_crl(mds_fixture.ROOT_CRL_URL)
 
 
 def test_a_file_is_written_only_when_its_bytes_change(tmp_path):
@@ -659,3 +685,71 @@ def test_a_blob_that_fails_verification_writes_and_publishes_nothing(isolated_md
     assert "failed verification; nothing written" in capsys.readouterr().out
     assert bucket.objects == {}
     assert not isolated_mds_paths.exists() or not any(isolated_mds_paths.iterdir())
+
+
+@pytest.fixture
+def signed_by_the_chain(monkeypatch, isolated_mds_paths):
+    """A refresh of a BLOB the fixture's signing chain signed, verified against that
+    chain's root, whose CRLs the returned ``CrlServer`` serves instead of the network."""
+
+    blob = mds_fixture.chain_signed_blob(_payload_with_unmodelled_fields())
+    root = mds_fixture.chain_certificate("root")
+    build = updater._build_verified_snapshot
+    monkeypatch.setattr(updater, "_fetch_remote_blob", lambda: (blob, None, '"etag"'))
+    monkeypatch.setattr(updater, "_build_verified_snapshot", lambda new_blob: build(new_blob, root))
+    served = mds_fixture.CrlServer()
+    monkeypatch.setattr(updater, "_fetch_crl", served)
+    return served
+
+
+def test_a_blob_whose_signing_chain_no_crl_lists_is_written(signed_by_the_chain, capsys):
+    assert updater.main([]) == 0
+
+    assert signed_by_the_chain.fetched == [mds_fixture.CA_CRL_URL, mds_fixture.ROOT_CRL_URL]
+    assert json.loads(_file(mds_files.VERIFIED).read_text(encoding="utf-8")) == _payload_with_unmodelled_fields()
+    assert "Packaged metadata snapshot refreshed." in capsys.readouterr().out
+
+
+_UNCHECKED = "::error::Could not check the metadata BLOB's signing chain against its CRLs; nothing written: "
+
+
+@pytest.mark.parametrize("argv", [[], ["--verify-only"], ["--publish"]])
+@pytest.mark.parametrize(
+    ("change", "said"),
+    [
+        (
+            "the leaf revoked",
+            "::error::The metadata BLOB failed verification; nothing written: mds.fixture.example (serial 1b5b) "
+            f"is revoked (keyCompromise) since 2026-10-01T00:00:00+00:00, by the CRL at {mds_fixture.CA_CRL_URL}",
+        ),
+        (
+            "the root's CRL out of date",
+            f"{_UNCHECKED}No current CRL says whether Fixture MDS CA (serial 1b5a) is revoked: "
+            f"{mds_fixture.ROOT_CRL_URL}: out of date since its nextUpdate, 2026-10-01T00:00:00+00:00",
+        ),
+        (
+            "the CA's CRL unreachable",
+            f"{_UNCHECKED}No current CRL says whether mds.fixture.example (serial 1b5b) is revoked: "
+            f"{mds_fixture.CA_CRL_URL}: {mds_fixture.CA_CRL_URL} is unreachable",
+        ),
+    ],
+)
+def test_a_signing_chain_revoked_or_unchecked_fails_the_run_with_nothing_written(
+    signed_by_the_chain, isolated_mds_paths, bucket, capsys, argv, change, said
+):
+    if change == "the leaf revoked":
+        signed_by_the_chain[mds_fixture.CA_CRL_URL] = mds_fixture.crl(
+            "ca", revoked=[mds_fixture.chain_serial("leaf")], reason=x509.ReasonFlags.key_compromise
+        )
+    elif change == "the root's CRL out of date":
+        signed_by_the_chain[mds_fixture.ROOT_CRL_URL] = mds_fixture.crl(
+            "root", next_update=datetime(2026, 10, 1, tzinfo=timezone.utc)
+        )
+    else:
+        del signed_by_the_chain[mds_fixture.CA_CRL_URL]
+
+    assert updater.main(argv) == 1
+
+    assert capsys.readouterr().out.strip() == said
+    assert not isolated_mds_paths.exists() or not any(isolated_mds_paths.iterdir())
+    assert bucket.objects == {}
