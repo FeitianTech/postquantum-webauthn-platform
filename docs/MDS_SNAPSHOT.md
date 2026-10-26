@@ -125,8 +125,10 @@ waits.
    prefix is `FIDO_SERVER_MDS_GCS_PREFIX`, default `mds`): its BLOB and the verified
    payload's meta are downloaded at once, each checked against the pointer's SHA-256
    and size; the BLOB is verified against the pinned root at the time the meta says it
-   was fetched (`mds/blob.py`), its signed `no` must be the meta's and the pointer's, and
-   the other five files are derived from the two with the updater's own code
+   was fetched (`mds/blob.py`), without its signing chain's CRLs (the updater checked
+   them before it published the set: "Revocation" below), its signed `no` must be the
+   meta's and the pointer's, and the other five files are derived from the two with the
+   updater's own code
    (`mds/snapshot.py`'s `derive`), the payload derived being the file the pointer
    names. Without a usable pointer, or when its set cannot be read and verified,
    provisioning goes on to the upstream refresh. This is the production path: the
@@ -134,9 +136,10 @@ waits.
    new credentials are involved.
 3. **Upstream refresh.** As a last resort the packaged updater downloads the
    BLOB from `https://mds3.fidoalliance.org/` and verifies it against the
-   GlobalSign R46 trust root pinned in the source before writing anything. The
-   result is then published to Cloud Storage as a set, so the next cold start
-   stops at tier 2.
+   GlobalSign R46 trust root pinned in the source, and its signing chain against the
+   chain's CRLs, before writing anything: a CRL it cannot get fails the refresh, as
+   it fails a run by hand (below). The result is then published to Cloud Storage as
+   a set, so the next cold start stops at tier 2.
 
 Tier 3 is controlled by `FIDO_SERVER_MDS_FETCH_UPSTREAM`. It defaults to the
 Cloud Storage setting: **on** in a deployed service, which can repopulate its
@@ -182,8 +185,8 @@ python tools/update_mds_snapshot.py
 ```
 
 After that the application uses tier 1 and needs no network at all. To check
-that upstream is reachable and the BLOB still verifies, and is no older than the local
-snapshot, without writing anything:
+that upstream is reachable and the BLOB still verifies (its signing chain unrevoked
+too), and is no older than the local snapshot, without writing anything:
 
 ```bash
 python tools/update_mds_snapshot.py --verify-only
@@ -235,6 +238,37 @@ fails, and when the BLOB's serial is below the local snapshot's (then nothing is
 either) or the bucket's: the FIDO Alliance's serials only go up, so an older BLOB is never
 taken. A BLOB whose `nextUpdate` has passed (no newer one was published by then) is taken,
 with a `::warning::` annotation on the run.
+
+### Revocation
+
+Verifying the BLOB includes its signing chain's revocation, as MDS3 asks
+(`server/app/mds/revocation.py`, which `mds/blob.py`'s `verify_blob` runs when the
+updater gives it its download, `_fetch_crl`). Each certificate on the path to the pinned
+root but the root, which is the pin, names where its issuer publishes the CRL that
+covers it: in the real chain, the signing certificate and its CA. The R3
+cross-certificate the BLOB carries past the root is not on the path, so its CRL is never
+fetched. The updater fetches each CRL there, over plain HTTP as CAs publish them (a CRL
+is signed), in at most 30 s and 16 MiB. The CRL must be the issuer's, signed with its
+key; current, its `thisUpdate` passed and its `nextUpdate` not; and complete for the
+certificate: not a delta CRL, nor one limited to some reasons, other kinds of
+certificate or another distribution point. A certificate it lists fails the run
+(`::error::`, exit 1), with nothing written or published.
+
+The check fails closed. A certificate for which no such CRL can be had from any of its
+points (each unreachable, unreadable, out of date or not such a CRL), or which names no
+point to fetch one from, fails the run the same way, with an `::error::` line of its own.
+A failed run costs only time: production keeps the snapshot it has, the next run tries
+again twelve hours later, and `ci-scheduled-runs.yml` flags the failed workflow
+meanwhile. A run that went on without the CRLs would let whoever can block or replay a
+plain-HTTP fetch hide the very revocation the check is for.
+
+A set taken from the bucket is not checked again: a cold start (tier 2) and a running
+instance taking a newer set verify the BLOB's chain and signature at the time it was
+fetched, not its revocation, which the updater checked before it published the set, so
+they depend on no host but the bucket. Tier 3 runs the updater, and checks the CRLs as
+any run does. A certificate revoked after a set was published fails the next run, which
+publishes nothing, but does not withdraw that set: the pointer keeps naming it until a
+newer BLOB, signed by a certificate no CRL lists, is published.
 
 `.github/workflows/update-fido-mds.yml` runs this twice a day, so a new BLOB reaches
 the bucket within about twelve hours of the FIDO Alliance publishing it, and running

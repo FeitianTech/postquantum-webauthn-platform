@@ -257,8 +257,10 @@ its logic out here first.
   generates `instance/session-secret.key`, and tests never do.
 - `mds/`: the FIDO MDS snapshot. Its `__init__` imports nothing, so the updater takes `trust.py`
   (the MDS trust anchor), `blob.py` (the BLOB's chain to that root, which may end in a
-  cross-certificate fido2's `parse_blob` refuses, its signature and payload), `files.py` (the
-  snapshot's file names, its directory, the whole-file writer,
+  cross-certificate fido2's `parse_blob` refuses, its signature and payload), `revocation.py`
+  (that chain against its issuers' CRLs, which the updater fetches: a revoked certificate, or
+  one no current CRL can be had for, fails its run; a set taken from the bucket is not checked
+  again), `files.py` (the snapshot's file names, its directory, the whole-file writer,
   Last-Modified), `build.py` (the explorer rows; `statement_fields.py`, a statement's fields as
   the explorer shows them; `certificates.py`, what their roots say), `entries.py`,
   `snapshot.py` (a snapshot's seven files, from its BLOB, payload and cache state) and `sets.py`
