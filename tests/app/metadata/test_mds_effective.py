@@ -179,3 +179,11 @@ def test_uploaded_entry_source_names_its_file_and_times():
     assert source_info['originalFilename'] == 'upload.json'
     assert source_info['uploadedAt'] == '2026-04-03T00:00:00+00:00'
     assert 'modifiedAt' in source_info
+
+
+def test_an_uploaded_entry_without_names_or_times_names_its_file_alone():
+    item = mds_uploads.SessionMetadataItem(
+        filename="session.json", payload={}, legal_header=None, entry=None, uploaded_at=None, original_filename=None, mtime=None
+    )
+
+    assert mds_effective._session_item_source_info(item) == {"storedFilename": "session.json"}
