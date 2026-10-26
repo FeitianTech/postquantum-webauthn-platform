@@ -120,7 +120,7 @@ def test_a_listing_names_each_upload_with_its_version_and_reads_none(storage, mo
     info = storage / SESSION / f"{stored}.meta.json"
     assert (namespace, upload.filename, upload.mtime) == (SESSION, stored, os.path.getmtime(path))
     assert upload.version == ((path.stat().st_size, path.stat().st_mtime), (info.stat().st_size, info.stat().st_mtime))
-    assert mds_uploads.list_stored_uploads("../escape") == (None, [])
+    assert mds_uploads.list_stored_uploads("../escape") == ("", [])
 
 
 def test_one_upload_is_read_by_the_name_it_is_stored_under(storage):

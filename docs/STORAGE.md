@@ -104,7 +104,8 @@ past one raises `common.StorageQuotaExceeded` before anything is written, and
 
 The counts and sizes come from a listing of the namespace's objects
 (`cloud.list_blob_stats`; a scandir locally, which leaves `.lock` and `.tmp` files
-out). A store that cannot be listed raises `StorageReadError` (503). Two writes at
+out), and so do the times of the uploads a listing names (`session_metadata.file_stats`).
+A store that cannot be listed raises `StorageReadError` (503). Two writes at
 once in one namespace can both pass the check, so a namespace can go past a limit
 by the writes in flight; each write is still compare-and-swap where it was.
 

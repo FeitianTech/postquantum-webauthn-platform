@@ -235,17 +235,17 @@ class StoredUpload:
     version: tuple[Any, ...]
 
 
-def list_stored_uploads(session_id: str | None = None) -> tuple[str | None, list[StoredUpload]]:
-    """The visitor's namespace (None without one) and its uploads, by stored name, from
-    one listing of it: no upload is read."""
+def list_stored_uploads(session_id: str | None = None) -> tuple[str, list[StoredUpload]]:
+    """The visitor's namespace ('' without one) and its uploads, by stored name, from one
+    listing of it: no upload is read."""
 
     active_session = session_id or visitor_session.current_id()
     if not active_session:
-        return None, []
+        return "", []
 
     directory = _session_metadata_directory(active_session, create=False, cleanup=False)
     if not directory:
-        return None, []
+        return "", []
 
     visitor_session.note_activity(active_session)
 

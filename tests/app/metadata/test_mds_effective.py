@@ -12,16 +12,14 @@ import os
 from pathlib import Path
 
 import pytest
-from fido2.mds3 import MetadataBlobPayloadEntry
 
 from server.app import visitor_session
 from server.app.mds import cache as mds_cache
 from server.app.mds import effective as mds_effective
-from server.app.mds import explorer_files
+from server.app.mds import explorer_files, statement_fields
 from server.app.mds import files as mds_files
 from server.app.mds import uploads as mds_uploads
 from server.app.storage import session_metadata
-from tests.app.metadata.upload_entries import _entry_payload
 
 PACKAGED = "f1d0f1d0-0000-4000-8000-000000000001"
 PACKAGED_AAID = "F1D0#0012"
@@ -175,8 +173,18 @@ def test_without_a_snapshot_a_packaged_lookup_finds_none(visitor):
 
 def test_an_entry_whose_statement_is_no_object_matches_no_aaguid():
     # Readers give a statement object; a direct call gives the matcher another.
-    assert mds_effective._entry_matches_lookup({"metadataStatement": 123}, aaguid=PACKAGED) is False
-    assert mds_effective._entry_matches_lookup({"metadataStatement": 123}) is False
+    keys = statement_fields.lookup_keys({"metadataStatement": 123})
+
+    assert keys == ("", None)
+    assert mds_effective._keys_match(keys, aaguid=PACKAGED) is False
+    assert mds_effective._keys_match(keys) is False
+
+
+def test_an_upload_gone_since_it_was_listed_resolves_to_none(visitor, mds_fixture_snapshot, monkeypatch):
+    _upload("Uploaded", PACKAGED)
+    monkeypatch.setattr(mds_uploads, "load_session_metadata_item", lambda _name: None)
+
+    assert mds_effective.resolve_effective_metadata_entry(aaguid=PACKAGED) is None
 
 
 def _aged(stored, seconds):
@@ -237,22 +245,3 @@ def test_no_icon_is_had_of_an_upload_without_an_image_or_of_no_upload(visitor):
     assert mds_effective.upload_icon(without.filename) is None
     assert mds_effective.upload_icon(unserved.filename) is None
     assert mds_effective.upload_icon("missing.json") is None
-
-
-def test_uploaded_entry_source_names_its_file_and_times():
-    session_payload = _entry_payload(aaguid='AAAAAAAA-AAAA-AAAA-AAAA-AAAAAAAAAAAA', description='Session metadata')
-    session_entry = MetadataBlobPayloadEntry.from_dict(session_payload)
-    session_item = mds_uploads.SessionMetadataItem(filename='session.json', payload=session_payload, legal_header='Session Legal', entry=session_entry, uploaded_at='2026-04-03T00:00:00+00:00', original_filename='upload.json', mtime=1.0)
-    source_info = mds_effective._session_item_source_info(session_item)
-    assert source_info['storedFilename'] == 'session.json'
-    assert source_info['originalFilename'] == 'upload.json'
-    assert source_info['uploadedAt'] == '2026-04-03T00:00:00+00:00'
-    assert 'modifiedAt' in source_info
-
-
-def test_an_uploaded_entry_without_names_or_times_names_its_file_alone():
-    item = mds_uploads.SessionMetadataItem(
-        filename="session.json", payload={}, legal_header=None, entry=None, uploaded_at=None, original_filename=None, mtime=None
-    )
-
-    assert mds_effective._session_item_source_info(item) == {"storedFilename": "session.json"}

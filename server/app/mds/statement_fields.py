@@ -117,6 +117,18 @@ def normalise_aaguid_key(value: Any) -> str:
     return formatted.replace("-", "").lower() if formatted else ""
 
 
+def lookup_keys(entry: Mapping[str, Any]) -> tuple[str, str | None]:
+    """What a lookup by AAGUID or AAID reads of an entry: its AAGUID as a key
+    (``normalise_aaguid_key``, '' without one) and its AAID, each from the entry or else
+    its statement."""
+
+    metadata = entry.get("metadataStatement")
+    if not isinstance(metadata, Mapping):
+        metadata = {}
+    aaid = entry.get("aaid") or metadata.get("aaid")
+    return normalise_aaguid_key(entry.get("aaguid") or metadata.get("aaguid")), aaid.strip() if isinstance(aaid, str) else None
+
+
 def format_enum(value: Any) -> str:
     if value in (None, ""):
         return ""

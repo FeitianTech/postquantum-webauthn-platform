@@ -268,10 +268,12 @@ its logic out here first.
   Cloud Storage, upstream), `cache.py` (the loaders and their one `SnapshotCache`),
   `explorer_files.py` (what browsers load, derived from the full explorer snapshot: the list,
   the icons, each entry's detail; kept per snapshot by `cache.load_explorer_files`),
-  `uploads.py` (a visitor's uploaded metadata), `effective.py` (a visitor's uploads as the
-  explorer lists them, `explorer/custom`, and resolve with them in front), `verifier.py` (the
-  verified entries indexed from their JSON by fido2's keys, each parsed when found, a visitor's
-  uploads in front).
+  `uploads.py` (a visitor's uploaded metadata), `listed_uploads.py` (each upload's explorer row
+  and Manage Metadata item, worked out once and kept in memory by namespace, name and version,
+  within a budget: a listing reads only what was written since), `effective.py` (a visitor's
+  uploads as the explorer lists them, `explorer/custom`, and resolve with them in front),
+  `verifier.py` (the verified entries indexed from their JSON by fido2's keys, each parsed when
+  found, a visitor's uploads in front).
 - Leaves the rest import: `encoding.py` (base64, base64url and hex, written and read strictly),
   `json_values.py` (`make_json_safe`, and `as_bytes`, the one reading of a value as bytes),
   `aaguid.py` (an AAGUID's GUID spelling), `env_flags.py`, `accept_encoding.py` (whether a request's

@@ -253,6 +253,15 @@ def test_a_data_url_icon_is_kept_and_bare_base64_becomes_one():
     assert fields.normalise_icon("iVBORw0K\nGgo=", "image/webp") == "data:image/webp;base64,iVBORw0K\nGgo="
 
 
+def test_a_lookup_reads_an_entrys_aaguid_and_aaid_or_else_its_statements():
+    aaguid_key = "f1d0f1d0000040008000000000000001"
+    assert fields.lookup_keys({"aaguid": "F1D0F1D0-0000-4000-8000-000000000001", "aaid": " F1D0#0012 "}) == (aaguid_key, "F1D0#0012")
+    assert fields.lookup_keys(
+        {"aaguid": "", "metadataStatement": {"aaguid": "f1d0f1d0-0000-4000-8000-000000000001", "aaid": "F1D0#0012"}}
+    ) == (aaguid_key, "F1D0#0012")
+    assert fields.lookup_keys({"aaid": 7, "metadataStatement": "not a statement"}) == ("", None)
+
+
 def test_a_statements_icon_is_read_with_its_type_under_either_name():
     assert fields.statement_icon({"icon": "iVBORw0KGgo=", "iconType": "image/webp"}) == "data:image/webp;base64,iVBORw0KGgo="
     assert fields.statement_icon({"icon": "iVBORw0KGgo=", "icon_type": "image/gif"}) == "data:image/gif;base64,iVBORw0KGgo="

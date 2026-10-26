@@ -18,6 +18,7 @@ from ..config.request_limits import METADATA_UPLOAD_LIMIT_KEY
 from ..mds import cache as mds_cache
 from ..mds import effective as mds_effective
 from ..mds import entries as mds_entries
+from ..mds import listed_uploads as mds_listed_uploads
 from ..mds import provisioning as mds_provisioning
 from ..mds import uploads as mds_uploads
 from ..storage import github_mirror
@@ -125,8 +126,8 @@ def api_resolve_metadata_entry():
 
 @bp.route("/api/mds/metadata/custom", methods=["GET"])
 def api_list_custom_metadata():
-    items = [mds_uploads.serialize_session_metadata_item(item) for item in mds_uploads.list_session_metadata_items()]
-    return _no_store_json_response({"items": items})
+    # Each upload's item as it was worked out for its version (mds/listed_uploads.py).
+    return _no_store_json_response({"items": [upload.item for upload in mds_listed_uploads.list_uploads()]})
 
 
 @bp.route("/api/mds/metadata/custom/<string:stored_filename>/icon", methods=["GET"])

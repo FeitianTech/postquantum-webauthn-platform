@@ -6,6 +6,7 @@ import tempfile
 import pytest
 
 from server.app import challenge_registry, visitor_session
+from server.app.mds import listed_uploads
 
 # Hypothesis writes under <cwd>/.hypothesis whatever its database setting -- a
 # cache of each local module's constants, the Unicode character map -- so its
@@ -88,6 +89,16 @@ def _isolated_challenge_registry(monkeypatch):
     registry = challenge_registry.InMemoryChallengeRegistry()
     monkeypatch.setattr(challenge_registry, "_registry", registry)
     yield registry
+
+
+@pytest.fixture(autouse=True)
+def _fresh_listed_uploads(monkeypatch):
+    """Give every test its own memory of the uploads it listed.
+
+    The memory is process-global, and tests reuse namespace and file names.
+    """
+
+    monkeypatch.setattr(listed_uploads, "KEPT", listed_uploads.KeptUploads())
 
 
 @pytest.fixture(autouse=True)

@@ -6,48 +6,14 @@ from __future__ import annotations
 import json
 from collections.abc import Mapping
 from dataclasses import dataclass
-from datetime import datetime, timezone
 from typing import Any
 from urllib.parse import quote
 
 from . import cache as mds_cache
-from . import explorer_files
+from . import explorer_files, listed_uploads
 from . import uploads as mds_uploads
 from .build import build_entry_id, build_explorer_entry, unique_entry_id
-from .statement_fields import normalise_aaguid_key, statement_icon
-
-
-def _build_session_snapshot_entry(
-    item: mds_uploads.SessionMetadataItem,
-    *,
-    index: int,
-    include_detail: bool,
-) -> dict[str, Any]:
-    return build_explorer_entry(
-        item.payload,
-        index=index,
-        source="session",
-        trust_anchor_status=False,
-        snapshot_meta={
-            "generatedAt": item.uploaded_at,
-            "fetchedAt": item.uploaded_at,
-        },
-        include_detail=include_detail,
-        include_raw_entry=False,
-        compact_detail=True,
-        source_info=_session_item_source_info(item),
-    )
-
-
-def _session_item_source_info(item: mds_uploads.SessionMetadataItem) -> dict[str, Any]:
-    info: dict[str, Any] = {"storedFilename": item.filename}
-    if item.original_filename:
-        info["originalFilename"] = item.original_filename
-    if item.uploaded_at:
-        info["uploadedAt"] = item.uploaded_at
-    if item.mtime is not None:
-        info["modifiedAt"] = datetime.fromtimestamp(item.mtime, timezone.utc).isoformat()
-    return info
+from .statement_fields import lookup_keys, normalise_aaguid_key, statement_icon
 
 
 def icon_url(stored_filename: str) -> str:
@@ -56,52 +22,36 @@ def icon_url(stored_filename: str) -> str:
     return f"/api/mds/metadata/custom/{quote(stored_filename, safe='')}/icon"
 
 
-def _entry_matches_lookup(
-    entry_payload: Mapping[str, Any],
-    *,
-    aaguid: str | None = None,
-    aaid: str | None = None,
-) -> bool:
-    metadata = entry_payload.get("metadataStatement")
-    if not isinstance(metadata, Mapping):
-        metadata = {}
+def _keys_match(keys: tuple[str, str | None], *, aaguid: str | None = None, aaid: str | None = None) -> bool:
+    """Whether an entry with ``keys`` (``statement_fields.lookup_keys``) has ``aaguid``, or
+    else ``aaid``."""
 
+    entry_aaguid, entry_aaid = keys
     if aaguid:
         lookup_key = normalise_aaguid_key(aaguid)
-        if not lookup_key:
-            return False
-        return (
-            normalise_aaguid_key(entry_payload.get("aaguid") or metadata.get("aaguid"))
-            == lookup_key
-        )
-
+        return bool(lookup_key) and entry_aaguid == lookup_key
     if aaid:
-        entry_aaid = entry_payload.get("aaid") or metadata.get("aaid")
-        return isinstance(entry_aaid, str) and entry_aaid.strip() == aaid
-
+        return entry_aaid == aaid
     return False
 
 
-_ListedUpload = tuple[mds_uploads.SessionMetadataItem, dict[str, Any]]
+_ListedUpload = tuple[listed_uploads.ListedUpload, dict[str, Any]]
 
 
-def _session_rows(
-    session_items: list[mds_uploads.SessionMetadataItem],
-) -> tuple[list[_ListedUpload], set[str]]:
-    """The visitor's uploads as rows of the list (``explorer_files.list_row``), each with its
-    upload, in the order listed (the newest first), one per AAGUID (the first listed), and
-    the AAGUIDs they hold."""
+def _session_rows(uploads: list[listed_uploads.ListedUpload]) -> tuple[list[_ListedUpload], set[str]]:
+    """The visitor's uploads as rows of the list, each with its upload, in the order listed
+    (the newest first), one per AAGUID (the first listed), and the AAGUIDs they hold."""
 
     rows: list[_ListedUpload] = []
     aaguids: set[str] = set()
-    for index, item in enumerate(session_items):
-        row = explorer_files.list_row(_build_session_snapshot_entry(item, index=index, include_detail=False))
+    for index, upload in enumerate(uploads):
+        row = {**upload.row, "index": index}
         aaguid_key = normalise_aaguid_key(row.get("aaguid"))
         if aaguid_key:
             if aaguid_key in aaguids:
                 continue
             aaguids.add(aaguid_key)
-        rows.append((item, row))
+        rows.append((upload, row))
     return rows, aaguids
 
 
@@ -112,10 +62,9 @@ def _name_icons_by_url(uploads: list[_ListedUpload]) -> None:
     (``explorer_files.icon_file``) stays as it is, as in the packaged list."""
 
     urls: dict[str, str] = {}
-    for item, row in reversed(uploads):
-        file = explorer_files.icon_file(row.get("icon"))
-        if file is not None:
-            row["icon"] = urls.setdefault(file[0], icon_url(item.filename))
+    for upload, row in reversed(uploads):
+        if upload.icon_file is not None:
+            row["icon"] = urls.setdefault(upload.icon_file, icon_url(upload.filename))
 
 
 @dataclass(frozen=True)
@@ -136,7 +85,7 @@ def _listed() -> _Listed:
 
     files = mds_cache.load_explorer_files()
     packaged = files.listed["entries"] if files is not None else []
-    uploads, hidden = _session_rows(mds_uploads.list_session_metadata_items())
+    uploads, hidden = _session_rows(listed_uploads.list_uploads())
     shown = [row for row in packaged if normalise_aaguid_key(row.get("aaguid")) not in hidden]
     taken = {str(row.get("entryId")): 2 for row in shown if row.get("entryId")}
     for _item, row in uploads:
@@ -175,20 +124,25 @@ def resolve_effective_metadata_entry(
     ``aaguid`` or ``aaid``: an upload, with its detail, else a packaged entry no upload hides."""
 
     listed = _listed()
-    for item, row in listed.uploads:
-        found = (row["entryId"] == entry_id) if entry_id else _entry_matches_lookup(item.payload, aaguid=aaguid, aaid=aaid)
+    for upload, row in listed.uploads:
+        keys = (upload.aaguid_key, upload.aaid)
+        found = (row["entryId"] == entry_id) if entry_id else _keys_match(keys, aaguid=aaguid, aaid=aaid)
         if found:
-            return _upload_detail(item, row)
+            return _upload_detail(upload, row)
     if entry_id:
         return _packaged_detail_by_id(entry_id, listed.hidden)
     return _packaged_by_lookup(listed.hidden, aaguid=aaguid, aaid=aaid)
 
 
-def _upload_detail(item: mds_uploads.SessionMetadataItem, row: Mapping[str, Any]) -> dict[str, Any]:
-    """An upload's entry with its detail, under its row's id and with its row's icon: the
-    row is its detail in the list's shape, as a packaged entry's is."""
+def _upload_detail(upload: listed_uploads.ListedUpload, row: Mapping[str, Any]) -> dict[str, Any] | None:
+    """An upload's entry with its detail, read again from its statement, under its row's id
+    and with its row's icon: the row is its detail in the list's shape, as a packaged
+    entry's is. None once the upload is gone."""
 
-    detail = _build_session_snapshot_entry(item, index=row["index"], include_detail=True)
+    item = mds_uploads.load_session_metadata_item(upload.filename)
+    if item is None:
+        return None
+    detail = listed_uploads.upload_entry(item, index=row["index"], include_detail=True)
     return {**detail, "entryId": row["entryId"], "icon": row["icon"]}
 
 
@@ -229,12 +183,10 @@ def _packaged_by_lookup(hidden_aaguids: set[str], *, aaguid: str | None, aaid: s
     for index, payload in enumerate(raw_entries):
         if not isinstance(payload, Mapping):
             continue
-        metadata_statement = payload.get("metadataStatement")
-        metadata_mapping = metadata_statement if isinstance(metadata_statement, Mapping) else {}
-        aaguid_key = normalise_aaguid_key(payload.get("aaguid") or metadata_mapping.get("aaguid"))
-        if aaguid_key and aaguid_key in hidden_aaguids:
+        keys = lookup_keys(payload)
+        if keys[0] and keys[0] in hidden_aaguids:
             continue
-        if _entry_matches_lookup(payload, aaguid=aaguid, aaid=aaid):
+        if _keys_match(keys, aaguid=aaguid, aaid=aaid):
             return _packaged_detail(payload, index, base_summary)
 
     return None
