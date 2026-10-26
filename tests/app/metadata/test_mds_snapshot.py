@@ -1,10 +1,13 @@
 import copy
+import json
+import urllib.request
 
 import pytest
 
 from server.app.mds import explorer_files as mds_explorer_files
 from server.app.mds import files as mds_files
 from server.app.mds import snapshot as mds_snapshot
+from server.app.mds import trust as mds_trust
 from server.app.mds.build import (
     build_bootstrap_snapshot,
     build_entry_id,
@@ -166,3 +169,19 @@ def test_a_snapshot_derived_from_its_blob_and_meta_is_the_one_the_updater_wrote(
 def test_a_meta_that_names_no_fetch_time_is_refused(fixture_blob_root, meta):
     with pytest.raises(ValueError, match="names no time it was fetched"):
         mds_snapshot.derive((mds_fixture.SNAPSHOT_DIR / mds_files.BLOB).read_bytes(), meta)
+
+
+def _no_network(*_args, **_kwargs):
+    raise AssertionError("a CRL was fetched")
+
+
+def test_a_blob_is_derived_without_fetching_its_signing_chains_crls(monkeypatch):
+    # The updater checked them before it published the set; a cold start asks no other host.
+    monkeypatch.setattr(mds_trust, "FIDO_METADATA_TRUST_ROOT_CERT", mds_fixture.chain_certificate("root"))
+    monkeypatch.setattr(urllib.request, "urlopen", _no_network)
+    payload = json.loads((mds_fixture.SNAPSHOT_DIR / mds_files.VERIFIED).read_bytes())
+    meta = (mds_fixture.SNAPSHOT_DIR / mds_files.VERIFIED_META).read_bytes()
+
+    derived = mds_snapshot.derive(mds_fixture.chain_signed_blob(payload), meta)
+
+    assert json.loads(derived[mds_files.VERIFIED]) == payload

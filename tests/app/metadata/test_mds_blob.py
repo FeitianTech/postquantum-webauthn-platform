@@ -21,6 +21,8 @@ from fido2.attestation import InvalidSignature, verify_x509_chain
 from fido2.utils import websafe_encode
 
 from server.app.mds import blob as mds_blob
+from server.app.mds import revocation as mds_revocation
+from tests.app.metadata import mds_fixture
 
 _NOW = datetime.now(timezone.utc)
 
@@ -181,6 +183,40 @@ def test_a_blob_is_checked_at_the_time_given():
     with pytest.raises(InvalidSignature, match="No path to the pinned root"):
         mds_blob.verify_blob(blob, certs.current_root)
     assert mds_blob.verify_blob(blob, certs.current_root, now=_NOW - timedelta(hours=2)) == _payload()
+
+
+def test_with_crls_a_blob_whose_signing_chain_a_current_crl_lists_is_refused():
+    root = mds_fixture.chain_certificate("root")
+    blob = mds_fixture.chain_signed_blob(_payload())
+    served = mds_fixture.CrlServer()
+
+    assert mds_blob.verify_blob(blob, root, fetch_crl=served) == _payload()
+    assert served.fetched == [mds_fixture.CA_CRL_URL, mds_fixture.ROOT_CRL_URL]
+
+    served[mds_fixture.CA_CRL_URL] = mds_fixture.crl("ca", revoked=[mds_fixture.chain_serial("leaf")])
+    with pytest.raises(mds_revocation.CertificateRevoked, match=r"^mds\.fixture\.example \(serial 1b5b\) is revoked"):
+        mds_blob.verify_blob(blob, root, fetch_crl=served)
+
+
+def test_without_crls_none_is_fetched():
+    root = mds_fixture.chain_certificate("root")
+    served = mds_fixture.CrlServer()
+    served[mds_fixture.CA_CRL_URL] = mds_fixture.crl("ca", revoked=[mds_fixture.chain_serial("leaf")])
+
+    assert mds_blob.verify_blob(mds_fixture.chain_signed_blob(_payload()), root) == _payload()
+    assert served.fetched == []
+
+
+def test_the_crls_are_checked_at_the_time_given():
+    root = mds_fixture.chain_certificate("root")
+    blob = mds_fixture.chain_signed_blob(_payload())
+    served = mds_fixture.CrlServer()
+    served[mds_fixture.CA_CRL_URL] = mds_fixture.crl("ca", next_update=datetime(2026, 10, 1, tzinfo=timezone.utc))
+
+    then = datetime(2026, 9, 15, tzinfo=timezone.utc)
+    assert mds_blob.verify_blob(blob, root, now=then, fetch_crl=served) == _payload()
+    with pytest.raises(mds_revocation.RevocationUnknown, match="out of date since its nextUpdate, 2026-10-01"):
+        mds_blob.verify_blob(blob, root, fetch_crl=served)
 
 
 def _der_length(length: int) -> bytes:

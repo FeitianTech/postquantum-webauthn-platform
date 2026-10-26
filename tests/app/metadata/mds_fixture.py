@@ -17,16 +17,22 @@ module builds; ``MDS_FIXTURE_WRITE=1`` rewrites them (or run this module).
 Everything is deterministic: fixed times, keys derived from labels
 (``tests/app/characterization/material.py``), PKCS#1 v1.5 and RFC 6979 signatures,
 and icons kept as literal PNGs (a zlib build could compress them differently).
+
+It also builds a signing chain under a CA of its own, and that CA's CRLs, for the
+tests of revocation checking (the signing chain below); none of it is in the files.
 """
 from __future__ import annotations
 
 import base64
 import json
+from collections.abc import Callable, Sequence
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.asymmetric import padding
+from cryptography import x509
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import ec, padding
 from fido2.utils import websafe_encode
 
 from server.app.mds import snapshot as mds_snapshot
@@ -497,6 +503,16 @@ def _entries() -> list[dict[str, Any]]:
     return entries
 
 
+def _jws(header: dict[str, Any], payload: Any, sign: Callable[[bytes], bytes]) -> bytes:
+    """``header`` and ``payload`` as a JWS in compact form, signed by ``sign``."""
+
+    message = b".".join(
+        websafe_encode(json.dumps(part, separators=(",", ":"), sort_keys=True).encode("utf-8")).encode("ascii")
+        for part in (header, payload)
+    )
+    return message + b"." + websafe_encode(sign(message)).encode("ascii")
+
+
 def _signed_blob(payload: dict[str, Any]) -> tuple[bytes, bytes]:
     """The payload as an MDS3 BLOB (a JWS, RS256) and the root that verifies it."""
 
@@ -512,18 +528,156 @@ def _signed_blob(payload: dict[str, Any]) -> tuple[bytes, bytes]:
         rsa_padding=padding.PKCS1v15(),
     )
     header = {"alg": "RS256", "typ": "JWT", "x5c": [_b64(root)]}
-    message = b".".join(
-        websafe_encode(json.dumps(part, separators=(",", ":"), sort_keys=True).encode("utf-8")).encode("ascii")
-        for part in (header, payload)
-    )
-    signature = key.sign(message, padding.PKCS1v15(), hashes.SHA256())
-    return message + b"." + websafe_encode(signature).encode("ascii"), root
+    return _jws(header, payload, lambda message: key.sign(message, padding.PKCS1v15(), hashes.SHA256())), root
 
 
 def blob_root() -> bytes:
     """The root the fixture's BLOBs verify against, which tests pin where the server pins FIDO's."""
 
     return _signed_blob({})[1]
+
+
+# -- signing chain ---------------------------------------------------------------
+#
+# A chain in the real BLOB's shape, for the tests of revocation checking
+# (``server/app/mds/revocation.py``): a signing certificate, the CA that issued it, and
+# a root the tests pin. Each certificate below the root names where its issuer
+# publishes its CRL, and ``crl`` signs one. The fixture's own BLOB is signed by its
+# root alone, which no CRL covers.
+
+ROOT_CRL_URL = "http://crl.fixture.example/root.crl"
+CA_CRL_URL = "http://crl.fixture.example/ca.crl"
+CRL_THIS_UPDATE = datetime(2026, 9, 1, tzinfo=timezone.utc)
+CRL_NEXT_UPDATE = datetime(2099, 1, 1, tzinfo=timezone.utc)
+REVOKED_AT = datetime(2026, 10, 1, tzinfo=timezone.utc)
+
+# Each certificate's common name, serial and issuer.
+_CHAIN = {
+    "root": ("Fixture MDS Root", 0x1B59, "root"),
+    "ca": ("Fixture MDS CA", 0x1B5A, "root"),
+    "leaf": ("mds.fixture.example", 0x1B5B, "ca"),
+}
+
+
+def crl_distribution_points(*urls: str) -> x509.CRLDistributionPoints:
+    """Where a certificate's issuer publishes its CRL: a point for each URL."""
+
+    return x509.CRLDistributionPoints(
+        [x509.DistributionPoint([x509.UniformResourceIdentifier(url)], None, None, None) for url in urls]
+    )
+
+
+def ca_key_usage(*, crl_sign: bool = True) -> x509.KeyUsage:
+    """A CA's key usage: certificates, and CRLs unless told otherwise."""
+
+    return x509.KeyUsage(
+        digital_signature=False,
+        content_commitment=False,
+        key_encipherment=False,
+        data_encipherment=False,
+        key_agreement=False,
+        key_cert_sign=True,
+        crl_sign=crl_sign,
+        encipher_only=False,
+        decipher_only=False,
+    )
+
+
+# The real chain's: its CAs constrained, the CA and the leaf naming their issuer's CRL.
+_CHAIN_EXTENSIONS = {
+    "root": [(x509.BasicConstraints(ca=True, path_length=None), True)],
+    "ca": [
+        (x509.BasicConstraints(ca=True, path_length=0), True),
+        (ca_key_usage(), True),
+        (crl_distribution_points(ROOT_CRL_URL), False),
+    ],
+    "leaf": [(crl_distribution_points(CA_CRL_URL), False)],
+}
+
+
+def chain_key(name: str) -> ec.EllipticCurvePrivateKey:
+    """The key of the chain's ``"root"``, ``"ca"`` or ``"leaf"``."""
+
+    return material.ec_key(f"mds-fixture:chain-{name}")
+
+
+def chain_serial(name: str) -> int:
+    """The serial of the chain's ``"root"`` (1b59), ``"ca"`` (1b5a) or ``"leaf"`` (1b5b)."""
+
+    return _CHAIN[name][1]
+
+
+def chain_certificate(name: str, extensions: Sequence[tuple[x509.ExtensionType, bool]] | None = None) -> bytes:
+    """The chain's ``"root"``, ``"ca"`` or ``"leaf"`` (DER), issued by the one above it,
+    with the extensions it has in the real chain's shape unless given others."""
+
+    common_name, serial, issuer = _CHAIN[name]
+    return material.certificate(
+        chain_key(name).public_key(),
+        common_name=common_name,
+        serial=serial,
+        extensions=_CHAIN_EXTENSIONS[name] if extensions is None else extensions,
+        signing_key=chain_key(issuer),
+        issuer=material._name(_CHAIN[issuer][0]),
+        algorithm=hashes.SHA256(),
+        ecdsa_deterministic=True,
+    )
+
+
+def chain_signed_blob(payload: dict[str, Any]) -> bytes:
+    """The payload as an MDS3 BLOB (a JWS, ES256) the chain's leaf signed, with it and its
+    CA in ``x5c``, as the real BLOB carries its chain; ``chain_certificate("root")`` verifies it."""
+
+    header = {"alg": "ES256", "typ": "JWT", "x5c": [_b64(chain_certificate("leaf")), _b64(chain_certificate("ca"))]}
+    return _jws(header, payload, lambda message: material.ecdsa_sign(chain_key("leaf"), message))
+
+
+def crl(
+    issuer: str,
+    *,
+    revoked: Sequence[int] = (),
+    reason: x509.ReasonFlags | None = None,
+    this_update: datetime = CRL_THIS_UPDATE,
+    next_update: datetime = CRL_NEXT_UPDATE,
+    extensions: Sequence[tuple[x509.ExtensionType, bool]] = (),
+    signing_key: ec.EllipticCurvePrivateKey | None = None,
+) -> bytes:
+    """A CRL (DER) of the chain's ``"root"`` or ``"ca"``, current from September 2026 to
+    2099 unless told otherwise. It lists the ``revoked`` serials (revoked on 1 October
+    2026, for ``reason`` when one is given) and is signed with the issuer's key, or
+    with ``signing_key``."""
+
+    builder = (
+        x509.CertificateRevocationListBuilder()
+        .issuer_name(material._name(_CHAIN[issuer][0]))
+        .last_update(this_update)
+        .next_update(next_update)
+    )
+    for serial in revoked:
+        entry = x509.RevokedCertificateBuilder().serial_number(serial).revocation_date(REVOKED_AT)
+        if reason is not None:
+            entry = entry.add_extension(x509.CRLReason(reason), critical=False)
+        builder = builder.add_revoked_certificate(entry.build())
+    for extension, critical in extensions:
+        builder = builder.add_extension(extension, critical=critical)
+    signed = builder.sign(signing_key or chain_key(issuer), hashes.SHA256(), ecdsa_deterministic=True)
+    return signed.public_bytes(serialization.Encoding.DER)
+
+
+class CrlServer(dict):
+    """The chain's CRLs by URL, current and listing nothing until a test changes them.
+    Called as the updater's fetch is called, it notes the URL and raises for one it
+    does not hold, as for a host that cannot be reached; nothing goes to the network."""
+
+    def __init__(self) -> None:
+        super().__init__({ROOT_CRL_URL: crl("root"), CA_CRL_URL: crl("ca")})
+        self.fetched: list[str] = []
+
+    def __call__(self, url: str) -> bytes:
+        self.fetched.append(url)
+        if url not in self:
+            raise OSError(f"{url} is unreachable")
+        return self[url]
 
 
 def build_fixture_files() -> dict[str, bytes]:

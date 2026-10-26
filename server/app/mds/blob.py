@@ -8,14 +8,15 @@ checks ``x5c`` and the root as one straight chain, so with R46 pinned it would
 refuse the real BLOB; this builds the path cryptography's verifier finds.
 
 A Flask-free leaf like ``mds.trust``: ``tools/update_mds_snapshot.py`` uses it
-without building the app, and its only import from the app is ``encoding``. The
-JWS's segments are read as the unpadded base64url RFC 7515 writes, and ``x5c``'s
-certificates as standard base64, strictly: nothing else is decoded.
+without building the app, and its only imports from the app are ``encoding`` and
+``mds.revocation``. The JWS's segments are read as the unpadded base64url RFC 7515
+writes, and ``x5c``'s certificates as standard base64, strictly: nothing else is
+decoded.
 """
 from __future__ import annotations
 
 import json
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from datetime import datetime, timezone
 from typing import Any
 
@@ -32,6 +33,7 @@ from fido2.attestation import InvalidSignature
 from fido2.cose import CoseKey
 
 from .. import encoding
+from . import revocation as mds_revocation
 
 __all__ = ["verify_blob", "verify_chain_to_root"]
 
@@ -77,26 +79,35 @@ def _segment(segment: bytes) -> bytes:
     return encoding.decode_base64url(text, ignore_whitespace=False)
 
 
-def verify_blob(blob: bytes, trust_root: bytes, *, now: datetime | None = None) -> dict[str, Any]:
+def verify_blob(
+    blob: bytes,
+    trust_root: bytes,
+    *,
+    now: datetime | None = None,
+    fetch_crl: Callable[[str], bytes] | None = None,
+) -> dict[str, Any]:
     """The BLOB's payload, once its chain leads to ``trust_root``, valid at ``now``, and its signature verifies.
 
     ``now`` defaults to the present; an instance checks a BLOB it took from Cloud
-    Storage at the time it was fetched. The payload is returned as the BLOB has
-    it, JSON, not fido2's dataclasses (which drop every field they do not model),
-    and is not parsed into them: the updater checks it reads as a
-    ``MetadataBlobPayload``.
+    Storage at the time it was fetched. With ``fetch_crl`` (the bytes at a CRL's URL:
+    the updater's download), no certificate on the path but the root may be revoked
+    by a current CRL from its distribution points either (``mds.revocation``, which
+    raises otherwise); an instance re-verifying a BLOB the updater checked so passes
+    none. The payload is returned as the BLOB has it, JSON, not fido2's dataclasses
+    (which drop every field they do not model), and is not parsed into them: the
+    updater checks it reads as a ``MetadataBlobPayload``.
     """
 
+    at = now or datetime.now(timezone.utc)
     message, signature_segment = blob.rsplit(b".", 1)
     header_segment, payload_segment = message.split(b".")
     header = json.loads(_segment(header_segment))
 
     chain = [encoding.decode_base64(certificate, ignore_whitespace=False) for certificate in header.get("x5c", [])]
-    verify_chain_to_root(chain, trust_root, now=now)
+    path = verify_chain_to_root(chain, trust_root, now=at)
 
-    signer = x509.load_der_x509_certificate(chain[0] if chain else trust_root)
     try:
-        public_key = signer.public_key()
+        public_key = path[0].public_key()
     except (ValueError, UnsupportedAlgorithm):
         raise ValueError("Metadata signing certificate does not expose a supported public key") from None
     signature = _segment(signature_segment)
@@ -105,4 +116,6 @@ def verify_blob(blob: bytes, trust_root: bytes, *, now: datetime | None = None) 
     payload = json.loads(_segment(payload_segment))
     if not isinstance(payload, dict):
         raise ValueError("The metadata BLOB's payload is not a JSON object")
+    if fetch_crl is not None:
+        mds_revocation.check_path(path, fetch_crl, now=at)
     return payload
