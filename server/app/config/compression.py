@@ -9,6 +9,7 @@ import gzip
 
 from flask import Flask, current_app, has_request_context, request
 
+from .. import accept_encoding
 from . import application
 
 _COMPRESSIBLE_MIMETYPES = {
@@ -31,8 +32,7 @@ _RESPONSE_COMPRESSION_MARKER = "_postquantum_response_compression"
 def _accepts_gzip() -> bool:
     if not has_request_context():
         return False
-    accepted = request.headers.get("Accept-Encoding", "")
-    return "gzip" in accepted.lower()
+    return accept_encoding.gzip_accepted(request.headers.get("Accept-Encoding"))
 
 
 def _append_vary(existing: str | None, value: str) -> str:

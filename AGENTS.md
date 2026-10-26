@@ -269,7 +269,8 @@ its logic out here first.
   by fido2's keys, each parsed when found, a visitor's uploads in front).
 - Leaves the rest import: `encoding.py` (base64, base64url and hex, written and read strictly),
   `json_values.py` (`make_json_safe`, and `as_bytes`, the one reading of a value as bytes),
-  `aaguid.py` (an AAGUID's GUID spelling), `env_flags.py`.
+  `aaguid.py` (an AAGUID's GUID spelling), `env_flags.py`, `accept_encoding.py` (whether a request's
+  Accept-Encoding takes gzip, its weights read as RFC 9110 writes them: what every gzipped answer asks).
 - `visitor_session.py`: the namespace a visitor's uploads and credentials are stored under (its id
   in a signed cookie of its own, never the Flask session; the last-access touch, throttled in
   memory; and the one sweep of idle namespaces, on both backends: a namespace whole, by its

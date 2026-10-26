@@ -93,8 +93,9 @@ def test_vary_keeps_its_tokens_and_names_accept_encoding_once(compressing_client
     assert response.headers["Vary"] == "accept-encoding, Origin"
 
 
-def test_nothing_is_gzipped_for_a_client_that_does_not_accept_gzip(compressing_client):
-    response = compressing_client.get("/text")
+@pytest.mark.parametrize("accepted", [None, "identity", "gzip;q=0", "br", "gzip;q=0.5, identity"])
+def test_nothing_is_gzipped_for_a_client_that_does_not_accept_gzip(compressing_client, accepted):
+    response = compressing_client.get("/text", headers={"Accept-Encoding": accepted} if accepted else {})
 
     assert "Content-Encoding" not in response.headers
     assert response.data == TEXT
