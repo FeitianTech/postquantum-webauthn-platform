@@ -6,7 +6,8 @@ snapshot's seven files. ``--verify-only`` writes nothing; ``--publish`` (earlier
 ``--gcs-upload``) also publishes them to Cloud Storage as a snapshot set
 (``server/app/mds/sets.py``), which every server instance follows. A BLOB whose
 serial is below the local snapshot's, or with ``--publish`` the bucket's, fails the
-run: the FIDO Alliance's serials only go up.
+run: the FIDO Alliance's serials only go up. One whose ``nextUpdate`` has passed is
+taken with a warning.
 """
 
 from __future__ import annotations
@@ -17,7 +18,7 @@ import sys
 import time
 import urllib.error
 import urllib.request
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -195,6 +196,19 @@ def _build_verified_snapshot(
     return payload
 
 
+def _next_update_passed(next_update: object) -> bool:
+    """Whether a BLOB's ``nextUpdate`` (an ISO date, by which the FIDO Alliance publishes
+    the next one) is before today, in UTC; a date that does not read is not compared."""
+
+    if not isinstance(next_update, str):
+        return False
+    try:
+        due = date.fromisoformat(next_update)
+    except ValueError:
+        return False
+    return due < datetime.now(timezone.utc).date()
+
+
 def _older_than(no: object, than: object) -> bool:
     """Whether serial ``no`` is below ``than``; a serial that is not a number is not compared."""
 
@@ -291,6 +305,11 @@ def main(argv: list[str] | None = None) -> int:
             f"snapshot's no. {existing_cache.get('no')}; nothing written."
         )
         return 1
+    if _next_update_passed(verified_snapshot.get("nextUpdate")):
+        print(
+            f"::warning::The metadata BLOB's nextUpdate ({verified_snapshot.get('nextUpdate')}) has "
+            "passed with no newer BLOB published; going on with this one."
+        )
     cache_state = _build_cache_state(
         last_modified=last_modified,
         etag=etag,

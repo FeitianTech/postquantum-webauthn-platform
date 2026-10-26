@@ -226,7 +226,8 @@ verified snapshot as a set (`--gcs-upload` is the flag's earlier name). It exits
 non-zero, having published nothing, when the download, the verification or the bucket
 fails, and when the BLOB's serial is below the local snapshot's (then nothing is written
 either) or the bucket's: the FIDO Alliance's serials only go up, so an older BLOB is never
-taken.
+taken. A BLOB whose `nextUpdate` has passed (no newer one was published by then) is taken,
+with a `::warning::` annotation on the run.
 
 `.github/workflows/update-fido-mds.yml` runs this twice a day, so a new BLOB reaches
 the bucket within about twelve hours of the FIDO Alliance publishing it, and running

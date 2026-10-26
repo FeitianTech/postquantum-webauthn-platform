@@ -475,6 +475,36 @@ def test_a_blob_older_than_the_buckets_snapshot_fails_the_publish(stubbed_refres
     assert bucket.objects == before
 
 
+def _today(monkeypatch, *day):
+    class _FixedDateTime:
+        @staticmethod
+        def now(tz):
+            return datetime(*day, 12, 0, 0, tzinfo=tz)
+
+    monkeypatch.setattr(updater, "datetime", _FixedDateTime)
+
+
+@pytest.mark.parametrize(("day", "warned"), [((2026, 12, 2), True), ((2026, 12, 1), False), ((2026, 11, 30), False)])
+@pytest.mark.parametrize("argv", [[], ["--verify-only"]])
+def test_a_blob_past_its_next_update_is_taken_with_a_warning(stubbed_refresh, monkeypatch, capsys, day, warned, argv):
+    _today(monkeypatch, *day)
+
+    assert updater.main(argv) == 0
+
+    shown = capsys.readouterr().out
+    assert ("::warning::The metadata BLOB's nextUpdate (2026-12-01) has passed" in shown) is warned
+
+
+@pytest.mark.parametrize("next_update", [None, 20261201, "soon", "2026-12-01T00:00:00Z"])
+def test_a_next_update_that_is_no_date_warns_of_nothing(stubbed_refresh, monkeypatch, capsys, next_update):
+    _today(monkeypatch, 2027, 1, 1)
+    monkeypatch.setattr(updater, "_build_verified_snapshot", lambda _blob: {"entries": [], "no": 42, "nextUpdate": next_update})
+
+    assert updater.main([]) == 0
+
+    assert "::warning::" not in capsys.readouterr().out
+
+
 def test_publish_fails_loudly_when_cloud_storage_is_disabled(stubbed_refresh, monkeypatch, capsys):
     monkeypatch.setattr(cloud, "gcs_enabled", lambda: False)
 
