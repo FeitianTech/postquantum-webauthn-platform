@@ -164,6 +164,14 @@ def test_the_uploads_sizes_come_from_one_listing_of_the_metadata_folder(bucket):
     assert bucket.list_calls[-1] == (f"{METADATA}/", None)
 
 
+def test_the_uploads_sizes_and_times_come_from_that_listing_as_a_reload_reads_them(bucket):
+    bucket.put(f"{METADATA}/entry.json", b"12345")
+    bucket.put(MARKER, b"{}")
+
+    assert session_store.file_stats(SESSION) == {"entry.json": (5, bucket.updated[f"{METADATA}/entry.json"].timestamp())}
+    assert session_store.file_stats(SESSION)["entry.json"][1] == session_store.file_mtime(SESSION, "entry.json")
+
+
 def test_uploads_whose_sizes_cannot_be_listed_raise_rather_than_seem_none(bucket, monkeypatch):
     def _refused(_bucket, **_options):
         raise fake_gcs.ServiceUnavailable("listing failed")
@@ -249,6 +257,14 @@ def test_on_disk_the_uploads_sizes_are_the_namespaces_visible_files(on_disk, mon
     monkeypatch.setattr(os, "scandir", _refused)
     with pytest.raises(storage_common.StorageReadError, match="could not be listed"):
         session_store.file_sizes("session-a")
+
+
+def test_on_disk_the_uploads_times_are_their_files_as_file_mtime_reads_them(on_disk):
+    session_store.write_file("session-a", "entry.json", b"12345")
+    os.utime(on_disk / "session-a" / "entry.json", (1_000.5, 1_000.5))
+
+    assert session_store.file_stats("session-a") == {"entry.json": (5, 1_000.5)}
+    assert session_store.file_mtime("session-a", "entry.json") == 1_000.5
 
 
 def test_on_disk_the_uploads_are_the_namespaces_visible_files(on_disk):

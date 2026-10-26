@@ -7,6 +7,7 @@ fails is stood in for by a raising one: what a full disk or a lost bucket does.
 from __future__ import annotations
 
 import json
+import os
 
 import pytest
 
@@ -92,11 +93,34 @@ def test_an_info_file_that_cannot_be_read_is_none(storage, monkeypatch):
     monkeypatch.setattr(
         session_metadata, "read_file", lambda directory, name: _fail() if name.endswith(".meta.json") else read_file(directory, name)
     )
+
+    (item,) = mds_uploads.list_session_metadata_items(SESSION)
+
+    assert item.original_filename is None
+
+
+def test_uploads_listed_have_the_times_their_listing_gives_and_one_read_by_name_asks(storage, monkeypatch):
+    stored = _stored(storage)
     monkeypatch.setattr(session_metadata, "file_mtime", _fail)
 
     (item,) = mds_uploads.list_session_metadata_items(SESSION)
 
-    assert (item.original_filename, item.mtime) == (None, None)
+    assert item.mtime == os.path.getmtime(storage / SESSION / stored)
+    # One upload read by its name asks the store for its time, and goes without one it cannot have.
+    assert mds_uploads.load_session_metadata_item(stored, session_id=SESSION).mtime is None
+
+
+def test_a_listing_names_each_upload_with_its_version_and_reads_none(storage, monkeypatch):
+    stored = _stored(storage, info="{}")
+    monkeypatch.setattr(session_metadata, "read_file", _fail)
+
+    namespace, (upload,) = mds_uploads.list_stored_uploads(SESSION)
+
+    path = storage / SESSION / stored
+    info = storage / SESSION / f"{stored}.meta.json"
+    assert (namespace, upload.filename, upload.mtime) == (SESSION, stored, os.path.getmtime(path))
+    assert upload.version == ((path.stat().st_size, path.stat().st_mtime), (info.stat().st_size, info.stat().st_mtime))
+    assert mds_uploads.list_stored_uploads("../escape") == (None, [])
 
 
 def test_one_upload_is_read_by_the_name_it_is_stored_under(storage):

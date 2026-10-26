@@ -224,21 +224,50 @@ def has_items(session_id: str) -> bool:
     return any(_is_upload(name) for name in session_metadata.list_files(session_id))
 
 
-def list_session_metadata_items(session_id: str | None = None) -> list[SessionMetadataItem]:
+@dataclass(frozen=True)
+class StoredUpload:
+    """An upload as one listing of its namespace names it: its stored name, when it was
+    written, and its version, which writing it or its info file changes (their sizes
+    and times)."""
+
+    filename: str
+    mtime: float | None
+    version: tuple[Any, ...]
+
+
+def list_stored_uploads(session_id: str | None = None) -> tuple[str | None, list[StoredUpload]]:
+    """The visitor's namespace (None without one) and its uploads, by stored name, from
+    one listing of it: no upload is read."""
+
     active_session = session_id or visitor_session.current_id()
     if not active_session:
-        return []
+        return None, []
 
     directory = _session_metadata_directory(active_session, create=False, cleanup=False)
     if not directory:
-        return []
+        return None, []
 
     visitor_session.note_activity(active_session)
 
     # A namespace whose uploads cannot be listed raises StorageReadError (503), never "no uploads".
-    filenames = [name for name in session_metadata.list_files(directory) if _is_upload(name)]
+    stats = session_metadata.file_stats(directory)
+    return directory, [
+        StoredUpload(name, stats[name][1], (stats[name], stats.get(f"{name}{_SESSION_METADATA_INFO_SUFFIX}")))
+        for name in sorted(stats)
+        if _is_upload(name)
+    ]
 
-    items = [item for item in (_read_item(directory, filename) for filename in sorted(filenames)) if item is not None]
+
+def read_stored_upload(namespace: str, upload: StoredUpload) -> SessionMetadataItem | None:
+    """The upload a listing of ``namespace`` names (``list_stored_uploads``), with its info;
+    None, with a warning, for one that does not read as a metadata entry."""
+
+    return _read_item(namespace, upload.filename, upload.mtime)
+
+
+def list_session_metadata_items(session_id: str | None = None) -> list[SessionMetadataItem]:
+    namespace, stored = list_stored_uploads(session_id)
+    items = [item for item in (read_stored_upload(namespace, upload) for upload in stored) if item is not None]
     items.sort(key=lambda item: item.mtime or 0, reverse=True)
     return items
 
@@ -258,12 +287,16 @@ def load_session_metadata_item(stored_filename: str, session_id: str | None = No
     directory = _session_metadata_directory(active_session, create=False, cleanup=False)
     if not directory or not session_metadata.file_exists(directory, safe_name):
         return None
-    return _read_item(directory, safe_name)
+    try:
+        mtime = session_metadata.file_mtime(directory, safe_name)
+    except Exception:
+        mtime = None
+    return _read_item(directory, safe_name, mtime)
 
 
-def _read_item(directory: str, filename: str) -> SessionMetadataItem | None:
-    """The upload ``filename`` of the namespace ``directory``, with its info; None, with a
-    warning, for one that does not read as a metadata entry."""
+def _read_item(directory: str, filename: str, mtime: float | None) -> SessionMetadataItem | None:
+    """The upload ``filename`` of the namespace ``directory``, written at ``mtime``, with its
+    info; None, with a warning, for one that does not read as a metadata entry."""
 
     try:
         payload_bytes = session_metadata.read_file(directory, filename)
@@ -294,11 +327,6 @@ def _read_item(directory: str, filename: str) -> SessionMetadataItem | None:
     original_filename = (
         raw_original_name.strip() if isinstance(raw_original_name, str) and raw_original_name.strip() else None
     )
-
-    try:
-        mtime = session_metadata.file_mtime(directory, filename)
-    except Exception:
-        mtime = None
 
     return SessionMetadataItem(
         filename=filename,

@@ -38,6 +38,7 @@ __all__ = [
     "file_exists",
     "file_mtime",
     "file_sizes",
+    "file_stats",
     "list_files",
     "list_sessions",
     "read_file",
@@ -287,10 +288,11 @@ def list_files(session_id: str) -> list[str]:
     return sorted(names)
 
 
-def file_sizes(session_id: str) -> dict[str, int]:
-    """The namespace's uploaded files, by name, each with its size in bytes: what
-    ``list_files`` names, from one listing. Raises ``StorageReadError`` when the
-    store cannot be listed, never answering with fewer files."""
+def file_stats(session_id: str) -> dict[str, tuple[int, float | None]]:
+    """The namespace's uploaded files, by name, each with its size in bytes and the time
+    it was last written (epoch seconds, as ``file_mtime`` reads it): what ``list_files``
+    names, from one listing. Raises ``StorageReadError`` when the store cannot be listed,
+    never answering with fewer files."""
 
     if common.using_gcs():
         prefix = _metadata_prefix(session_id) + "/"
@@ -298,19 +300,29 @@ def file_sizes(session_id: str) -> dict[str, int]:
             stats = list_blob_stats(prefix)
         except Exception as exc:
             raise common.StorageReadError(f"the uploads of {session_id} could not be listed") from exc
-        sizes = {stat.name[len(prefix) :]: stat.size for stat in stats}
-        return {name: size for name, size in sizes.items() if name and not name.endswith("/") and name != _LAST_ACCESS_BLOB}
+        named = {stat.name[len(prefix) :]: (stat.size, stat.updated) for stat in stats}
+        return {name: stat for name, stat in named.items() if name and not name.endswith("/") and name != _LAST_ACCESS_BLOB}
 
     directory = _local_session_directory(session_id)
     if not directory:
         return {}
     try:
         with os.scandir(directory) as entries:
-            return {entry.name: entry.stat().st_size for entry in entries if not entry.name.startswith(".") and entry.is_file()}
+            return {
+                entry.name: (entry.stat().st_size, entry.stat().st_mtime)
+                for entry in entries
+                if not entry.name.startswith(".") and entry.is_file()
+            }
     except FileNotFoundError:
         return {}
     except OSError as exc:
         raise common.StorageReadError(f"the uploads of {session_id} could not be listed") from exc
+
+
+def file_sizes(session_id: str) -> dict[str, int]:
+    """The namespace's uploaded files, by name, each with its size in bytes (``file_stats``)."""
+
+    return {name: size for name, (size, _written) in file_stats(session_id).items()}
 
 
 def read_file(session_id: str, name: str) -> bytes | None:
