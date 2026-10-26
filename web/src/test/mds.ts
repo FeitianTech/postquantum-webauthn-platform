@@ -45,6 +45,16 @@ export function resolveFrom(entries: MdsEntry[] = FIXTURE_ENTRIES): Route {
   };
 }
 
+/**
+ * An upload as GET /api/mds/metadata/explorer/custom lists it: a row of the list's shape,
+ * its icon at a URL of its own and no detail file (the entry page resolves its detail).
+ */
+export function uploadRow(fields: Partial<MdsEntry>): MdsEntry {
+  const row: Record<string, unknown> = { ...FIXTURE_LIST.entries[0], icon: '/api/mds/metadata/custom/0f1e.json/icon', ...fields };
+  delete row.detailUrl;
+  return row as MdsEntry;
+}
+
 /** GET /api/mds/metadata/explorer/custom for a session without uploads: none, and the packaged count. */
 export const NO_UPLOADS = {
   meta: { entryCount: FIXTURE_ENTRIES.length, baseEntryCount: FIXTURE_ENTRIES.length, customEntryCount: 0, hasCustomEntries: false },

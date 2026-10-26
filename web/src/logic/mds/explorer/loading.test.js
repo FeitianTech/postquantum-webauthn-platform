@@ -34,15 +34,12 @@ afterEach(() => {
 });
 
 describe('explorer loading: the entries shown', () => {
-  it('copies the entries, drops what is not an entry and marks inline detail', () => {
-    const inline = { entryId: 'aaguid:1', metadataStatement: { description: 'x' } };
-    const light = { entryId: 'aaguid:2', isLightweightEntry: true };
-    const entries = prepareSnapshotEntries({ entries: [inline, null, 'text', light] });
+  it('copies the entries and drops what is not an entry', () => {
+    const listed = { entryId: 'aaguid:1', isLightweightEntry: true };
+    const entries = prepareSnapshotEntries({ entries: [listed, null, 'text'] });
 
-    expect(entries).toHaveLength(2);
-    expect(entries[0]).not.toBe(inline);
-    expect(entries[0]).toMatchObject({ entryId: 'aaguid:1', isLightweightEntry: false });
-    expect(entries[1]).toEqual(light);
+    expect(entries).toEqual([listed]);
+    expect(entries[0]).not.toBe(listed);
   });
 
   it('keeps an entry already resolved in full', () => {

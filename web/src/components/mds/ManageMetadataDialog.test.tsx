@@ -1,23 +1,20 @@
 // Manage Trusted Metadata over the fixture snapshot.
-import type { MdsEntry } from '@/logic/mds/explorer/loading.js';
 import { act, createEvent, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { ToastProvider } from '@/components/ui/Toast';
-import { FIXTURE_ENTRIES, FIXTURE_INFO, FIXTURE_SNAPSHOT, NO_UPLOADS, SNAPSHOT_URL, fixtureRoutes, json, stubFetch } from '@/test/mds';
+import { FIXTURE_ENTRIES, FIXTURE_INFO, FIXTURE_SNAPSHOT, NO_UPLOADS, SNAPSHOT_URL, fixtureRoutes, json, stubFetch, uploadRow } from '@/test/mds';
 import { renderPage } from '@/test/page';
 import { deferred, holdingTimers } from '@/test/timers';
 
 import { MdsSection } from './MdsSection';
 
-const UPLOADED = {
-  ...FIXTURE_ENTRIES[0],
+const UPLOADED = uploadRow({
   entryId: 'aaguid:f1d0c0de-0000-4000-8000-00000000c0de',
   name: 'Fixture Uploaded Authenticator',
   id: 'f1d0c0de-0000-4000-8000-00000000c0de',
   aaguid: 'f1d0c0de-0000-4000-8000-00000000c0de',
-  source: 'session',
-} as MdsEntry;
+});
 // What the server answers of the session's entries once it holds the upload.
 const WITH_UPLOAD = {
   meta: { entryCount: 33, baseEntryCount: 32, customEntryCount: 1, hasCustomEntries: true },

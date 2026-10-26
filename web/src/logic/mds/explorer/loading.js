@@ -55,17 +55,6 @@ export function isAbortError(error) {
     return Boolean(error && error.name === 'AbortError');
 }
 
-/** @param {Record<string, any> | null | undefined} entry */
-export function hasInlineDetail(entry) {
-    return Boolean(
-        entry
-        && typeof entry === 'object'
-        && entry.isLightweightEntry !== true
-        && entry.metadataStatement
-        && typeof entry.metadataStatement === 'object',
-    );
-}
-
 /**
  * @param {SnapshotLocation} source
  * @param {AbortSignal | null} signal
@@ -170,8 +159,8 @@ export function requestExplorerAnswer(location, signal = null) {
     return answer;
 }
 
-// A snapshot's entries as the table shows them: copies, entries with their
-// detail inline marked so, and any entry already resolved in full kept whole.
+// A snapshot's entries as the table shows them: copies, and any entry already
+// resolved in full kept whole.
 /**
  * @param {MdsSnapshot | null | undefined} snapshot
  * @param {Map<string, Record<string, unknown>>} [resolvedEntryCache]
@@ -183,9 +172,6 @@ export function prepareSnapshotEntries(snapshot, resolvedEntryCache = new Map())
         .map(entry => cloneJson(entry))
         .filter(entry => entry && typeof entry === 'object')
         .map(entry => {
-            if (hasInlineDetail(entry)) {
-                entry.isLightweightEntry = false;
-            }
             const cached = entry.entryId ? resolvedEntryCache.get(entry.entryId) : null;
             return cached && typeof cached === 'object' ? { ...entry, ...cached } : entry;
         });

@@ -4,8 +4,7 @@ import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { ToastProvider } from '@/components/ui/Toast';
-import { FIXTURE_ENTRIES, FIXTURE_INFO, FIXTURE_SNAPSHOT, NO_UPLOADS, SNAPSHOT_URL, fixtureRoutes, json, stubFetch } from '@/test/mds';
-import type { MdsEntry } from '@/logic/mds/explorer/loading.js';
+import { FIXTURE_ENTRIES, FIXTURE_INFO, FIXTURE_SNAPSHOT, NO_UPLOADS, SNAPSHOT_URL, fixtureRoutes, json, stubFetch, uploadRow } from '@/test/mds';
 import { renderPage } from '@/test/page';
 
 import { MdsSection } from './MdsSection';
@@ -137,7 +136,7 @@ describe('the MDS section', () => {
   });
 
   it('shows the uploads alone when the server has no packaged list', async () => {
-    const upload = { ...FIXTURE_ENTRIES[0], entryId: 'aaguid:f1d0c0de-0000-4000-8000-00000000c0de', aaguid: 'f1d0c0de-0000-4000-8000-00000000c0de' } as MdsEntry;
+    const upload = uploadRow({ entryId: 'aaguid:f1d0c0de-0000-4000-8000-00000000c0de', aaguid: 'f1d0c0de-0000-4000-8000-00000000c0de' });
     stubFetch(
       fixtureRoutes({
         '/api/mds/metadata/info': () => json({ customEntriesState: 'present' }),

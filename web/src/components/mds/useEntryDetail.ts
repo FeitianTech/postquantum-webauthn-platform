@@ -1,5 +1,5 @@
 import { requestEntryDetail } from '@/logic/mds/explorer/entry-link.js';
-import { type MdsEntry, hasInlineDetail } from '@/logic/mds/explorer/loading.js';
+import type { MdsEntry } from '@/logic/mds/explorer/loading.js';
 import { useCallback, useEffect, useState } from 'react';
 
 import type { ExplorerPhase } from './useMdsExplorer';
@@ -18,19 +18,18 @@ export type EntryDetail =
 
 type Resolved = { entryId: string; attempt: number; detail: EntryDetail };
 
-// The entry #mds/<entryId> names, with all it shows. An entry the list holds
-// with its detail inline (an upload) is shown from there once the list has
-// loaded; one listed without it is read from the detail file its row names
-// (requestEntryDetail), and one the list does not hold (a link to another
-// session's upload, an entry gone since) is asked of GET /api/mds/metadata/resolve.
+// The entry #mds/<entryId> names, with all it shows, which no row holds: a listed
+// entry's is read from the detail file its row names or, for a row that names
+// none (an upload's), asked of GET /api/mds/metadata/resolve (requestEntryDetail);
+// an entry the list does not hold (a link to another session's upload, an entry
+// gone since) is asked of resolve once the list has loaded.
 export function useEntryDetail(entryId: string, entries: MdsEntry[], phase: ExplorerPhase) {
   const [resolved, setResolved] = useState<Resolved | null>(null);
   const [attempt, setAttempt] = useState(0);
 
   const listed = entries.find((entry) => entry.entryId === entryId);
-  const fromList = listed && hasInlineDetail(listed) ? listed : null;
   const listLoading = phase === 'idle' || phase === 'loading';
-  const mustAsk = Boolean(entryId) && !fromList && (Boolean(listed) || !listLoading);
+  const mustAsk = Boolean(entryId) && (Boolean(listed) || !listLoading);
 
   useEffect(() => {
     if (!mustAsk) return undefined;
@@ -54,8 +53,7 @@ export function useEntryDetail(entryId: string, entries: MdsEntry[], phase: Expl
   const retry = useCallback(() => setAttempt((value) => value + 1), []);
 
   let detail: EntryDetail;
-  if (fromList) detail = { phase: 'found', entry: fromList };
-  else if (!mustAsk) detail = { phase: 'waiting' };
+  if (!mustAsk) detail = { phase: 'waiting' };
   else if (resolved && resolved.entryId === entryId && resolved.attempt === attempt) detail = resolved.detail;
   else detail = { phase: 'resolving' };
 
