@@ -9,6 +9,7 @@ snapshot's seven files. ``--verify-only`` writes nothing; ``--publish`` (earlier
 
 from __future__ import annotations
 
+import argparse
 import json
 import sys
 import time
@@ -227,11 +228,33 @@ def _publish_to_cloud_storage(files: dict[str, bytes]) -> int:
     return 0
 
 
+def _arguments(argv: list[str] | None) -> argparse.Namespace:
+    """The command line, read before anything is downloaded: ``--help`` or a flag it
+    does not know ends the run (argparse exits 0 or 2) with nothing fetched or written."""
+
+    parser = argparse.ArgumentParser(
+        prog="update_mds_snapshot.py",
+        description=(
+            "Download the FIDO MDS BLOB, verify it against the pinned trust root, and write "
+            "the snapshot's seven files into FIDO_SERVER_MDS_SNAPSHOT_DIR (else instance/mds-snapshot)."
+        ),
+    )
+    action = parser.add_mutually_exclusive_group()
+    action.add_argument("--verify-only", action="store_true", help="download and verify the BLOB; write and publish nothing")
+    action.add_argument(
+        "--publish",
+        "--gcs-upload",
+        dest="publish",
+        action="store_true",
+        help="also publish the snapshot to Cloud Storage as a set (--gcs-upload is its earlier name)",
+    )
+    return parser.parse_args(argv)
+
+
 def main(argv: list[str] | None = None) -> int:
-    arguments = sys.argv[1:] if argv is None else argv
-    # --gcs-upload is the flag's earlier name.
-    publish = "--publish" in arguments or "--gcs-upload" in arguments
-    verify_only = "--verify-only" in arguments
+    arguments = _arguments(argv)
+    publish = arguments.publish
+    verify_only = arguments.verify_only
 
     try:
         new_blob, last_modified, etag = _fetch_remote_blob_with_retry()

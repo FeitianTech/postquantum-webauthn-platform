@@ -293,7 +293,7 @@ def test_main_reports_refresh_then_up_to_date(monkeypatch, isolated_mds_paths, c
         lambda _verified, _cache: {"entries": [{"name": "demo"}], "meta": {"kind": "full"}},
     )
 
-    first = updater.main()
+    first = updater.main([])
     first_output = capsys.readouterr().out
     assert first == 0
     assert "Packaged metadata snapshot refreshed." in first_output
@@ -315,7 +315,7 @@ def test_main_reports_refresh_then_up_to_date(monkeypatch, isolated_mds_paths, c
         "meta": expected_full_meta,
     }
 
-    second = updater.main()
+    second = updater.main([])
     second_output = capsys.readouterr().out
     assert second == 0
     assert "already up to date" in second_output
@@ -346,6 +346,41 @@ def stubbed_refresh(monkeypatch, isolated_mds_paths):
         lambda _verified, _cache: {"entries": [], "meta": {"kind": "full"}},
     )
     return isolated_mds_paths
+
+
+def _never_downloads():
+    raise AssertionError("the BLOB was downloaded")
+
+
+def test_help_names_the_flags_and_downloads_nothing(isolated_mds_paths, monkeypatch, capsys):
+    monkeypatch.setattr(updater, "_fetch_remote_blob", _never_downloads)
+
+    with pytest.raises(SystemExit) as ended:
+        updater.main(["--help"])
+
+    assert ended.value.code == 0
+    shown = capsys.readouterr().out
+    assert "--verify-only" in shown and "--publish, --gcs-upload" in shown
+    assert not isolated_mds_paths.exists() or not any(isolated_mds_paths.iterdir())
+
+
+@pytest.mark.parametrize(
+    ("argv", "said"),
+    [
+        (["--nope"], "unrecognized arguments: --nope"),
+        (["--verify-only", "--publish"], "not allowed with argument --verify-only"),
+        (["--gcs-upload", "--verify-only"], "not allowed with argument --publish/--gcs-upload"),
+    ],
+)
+def test_a_flag_it_does_not_take_ends_the_run_before_any_download(isolated_mds_paths, monkeypatch, capsys, argv, said):
+    monkeypatch.setattr(updater, "_fetch_remote_blob", _never_downloads)
+
+    with pytest.raises(SystemExit) as ended:
+        updater.main(argv)
+
+    assert ended.value.code == 2
+    assert said in capsys.readouterr().err
+    assert not isolated_mds_paths.exists() or not any(isolated_mds_paths.iterdir())
 
 
 def test_a_refresh_writes_each_file_whole_and_the_metas_last(stubbed_refresh, monkeypatch):

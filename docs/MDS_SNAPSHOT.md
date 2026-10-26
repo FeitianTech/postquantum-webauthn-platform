@@ -181,6 +181,9 @@ that upstream is reachable and the BLOB still verifies without writing anything:
 python tools/update_mds_snapshot.py --verify-only
 ```
 
+`--help` lists the flags. A flag it does not take, or `--verify-only` beside `--publish`,
+ends the run before anything is downloaded.
+
 ## Snapshot sets in Cloud Storage
 
 `server/app/mds/sets.py` (over `storage/cloud.py` and `mds/files.py`, without Flask) keeps the bucket's
