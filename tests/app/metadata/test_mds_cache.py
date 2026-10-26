@@ -116,7 +116,15 @@ def test_a_verified_meta_that_is_no_object_gives_no_cached_headers(snapshot_dir,
 
 def test_cached_headers_are_trimmed_and_the_iso_date_read_from_the_header(snapshot_dir):
     (snapshot_dir / mds_files.VERIFIED_META).write_text(
-        json.dumps({"last_modified": "Wed, 21 Oct 2015 07:28:00 GMT", "last_modified_iso": "  ", "etag": " etag ", "fetched_at": 5}),
+        json.dumps(
+            {
+                "last_modified": "Wed, 21 Oct 2015 07:28:00 GMT",
+                "last_modified_iso": "  ",
+                "etag": " etag ",
+                "fetched_at": 5,
+                "generated_at": " 2015-10-21T07:30:00+00:00 ",
+            }
+        ),
         encoding="utf-8",
     )
 
@@ -125,6 +133,7 @@ def test_cached_headers_are_trimmed_and_the_iso_date_read_from_the_header(snapsh
         "last_modified_iso": "2015-10-21T07:28:00+00:00",
         "etag": "etag",
         "fetched_at": None,
+        "generated_at": "2015-10-21T07:30:00+00:00",
     }
 
 
@@ -200,6 +209,19 @@ def test_a_full_snapshot_derived_in_another_format_is_derived_again(mds_fixture_
     names = [entry["name"] for entry in snapshot["entries"]]
     assert "Row of an earlier release" not in names
     assert len(names) == 32
+
+
+def test_a_snapshot_derived_again_keeps_the_version_of_the_file_it_replaces(mds_fixture_snapshot):
+    # The snapshot's own generation time, not the derivation's: every worker, at any
+    # time, derives the same version, so the same URLs and ETags.
+    written = mds_cache.load_explorer_files()
+    _write_full_snapshot(mds_fixture_snapshot, first_name="Row of an earlier release", derived_format=None)
+
+    derived = mds_cache.load_explorer_files()
+
+    assert "Row of an earlier release" not in derived.list_json.decode("utf-8")
+    assert derived.version == written.version
+    assert json.loads(derived.list_json)["meta"]["generatedAt"] == json.loads(written.list_json)["meta"]["generatedAt"]
 
 
 def test_without_any_snapshot_there_is_no_full_snapshot_and_no_summary(snapshot_dir):

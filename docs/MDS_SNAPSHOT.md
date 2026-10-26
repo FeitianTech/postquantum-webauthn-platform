@@ -113,6 +113,8 @@ waits.
    names the `explorer_files.DERIVED_FORMAT` of the code that derived it): an earlier
    release's rows would otherwise be served under this code's version, so the server
    derives them again from the verified payload, until the updater rewrites the file.
+   What it derives keeps the snapshot's generation time, and so the version the
+   updater's file would have: every worker derives the same URLs.
 2. **Cloud Storage.** With `FIDO_SERVER_GCS_ENABLED` set, the set the bucket's
    pointer names (below) is taken from `gs://$FIDO_SERVER_GCS_BUCKET/mds/` (the
    prefix is `FIDO_SERVER_MDS_GCS_PREFIX`, default `mds`): its BLOB and the verified

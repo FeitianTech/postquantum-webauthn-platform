@@ -67,7 +67,10 @@ def _clean_metadata_cache_value(value: Any) -> str | None:
 
 
 def load_metadata_cache_entry() -> dict[str, str | None]:
-    """Load cached metadata headers used for conditional download requests."""
+    """The verified snapshot's cache state as the snapshot builders read it: the BLOB's
+    headers and when it was fetched, and when the snapshot was generated, so that a
+    snapshot derived here has the meta, and the version, of the file the updater wrote
+    (``explorer_files.snapshot_version``), whichever worker derives it and when."""
 
     try:
         with open(_path(mds_files.VERIFIED_META), "r", encoding="utf-8") as cache_file:
@@ -84,12 +87,14 @@ def load_metadata_cache_entry() -> dict[str, str | None]:
         last_modified_iso = mds_files.format_last_modified(last_modified_header)
     etag = _clean_metadata_cache_value(cached.get("etag"))
     fetched_at = _clean_metadata_cache_value(cached.get("fetched_at"))
+    generated_at = _clean_metadata_cache_value(cached.get("generated_at"))
 
     return {
         "last_modified": last_modified_header,
         "last_modified_iso": last_modified_iso,
         "etag": etag,
         "fetched_at": fetched_at,
+        "generated_at": generated_at,
     }
 
 
