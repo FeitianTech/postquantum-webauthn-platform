@@ -10,7 +10,7 @@ import json
 from collections.abc import Mapping
 from typing import Any, NamedTuple
 
-from flask import Blueprint, current_app, jsonify, request
+from flask import Blueprint, Response, abort, current_app, jsonify, request
 
 from .. import encoding, visitor_session
 from ..config import request_limits
@@ -23,10 +23,13 @@ from ..mds import uploads as mds_uploads
 from ..storage import github_mirror
 from ..storage.common import StorageReadError
 from ..webauthn.attestation import certificates as attestation_certificates
-from . import json_body
+from . import assets, json_body
 
 # The HTTP rules, registered on the app by server.app.app.
 bp = Blueprint("mds", __name__)
+
+# An upload's icon (api_custom_metadata_icon): the browser keeps it, and no shared cache.
+_ICON_CACHE_CONTROL = "private, max-age=31536000, immutable"
 
 
 def _custom_entries_state(metadata_session_id: str | None) -> str:
@@ -124,6 +127,19 @@ def api_resolve_metadata_entry():
 def api_list_custom_metadata():
     items = [mds_uploads.serialize_session_metadata_item(item) for item in mds_uploads.list_session_metadata_items()]
     return _no_store_json_response({"items": items})
+
+
+@bp.route("/api/mds/metadata/custom/<string:stored_filename>/icon", methods=["GET"])
+def api_custom_metadata_icon(stored_filename: str):
+    # An upload's icon, the visitor's own: kept for good, since an upload never changes
+    # (another is saved under a new random name).
+    icon = mds_effective.upload_icon(stored_filename)
+    if icon is None:
+        abort(404)
+    response = Response(icon.data, mimetype=icon.mimetype)
+    response.headers["Cache-Control"] = _ICON_CACHE_CONTROL
+    response.headers["Content-Security-Policy"] = assets.ICON_POLICY
+    return response
 
 
 def _refuse_json_constant(constant: str) -> Any:

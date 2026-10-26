@@ -51,8 +51,9 @@ def init_app(app: Flask) -> None:
     app.register_blueprint(bp)
 
 
-# A navigated icon (an SVG opened in a tab) runs nothing and loads nothing.
-_ICON_POLICY = "default-src 'none'; style-src 'unsafe-inline'; sandbox"
+# A navigated icon (an SVG opened in a tab) runs nothing and loads nothing: these,
+# and a visitor's uploads' (routes/mds.py).
+ICON_POLICY = "default-src 'none'; style-src 'unsafe-inline'; sandbox"
 
 
 def _explorer_files() -> mds_explorer_files.ExplorerFiles:
@@ -87,7 +88,7 @@ def explorer_icon(name: str):
         abort(404)
     response = Response(icon.data, mimetype=icon.mimetype)
     response.headers["Cache-Control"] = web_export.IMMUTABLE_CACHE_CONTROL
-    response.headers["Content-Security-Policy"] = _ICON_POLICY
+    response.headers["Content-Security-Policy"] = ICON_POLICY
     response.set_etag(name)
     return response.make_conditional(request)
 

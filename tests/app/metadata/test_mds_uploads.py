@@ -99,6 +99,31 @@ def test_an_info_file_that_cannot_be_read_is_none(storage, monkeypatch):
     assert (item.original_filename, item.mtime) == (None, None)
 
 
+def test_one_upload_is_read_by_the_name_it_is_stored_under(storage):
+    stored = _stored(storage, info=json.dumps({"original_filename": "demo.json"}))
+
+    item = mds_uploads.load_session_metadata_item(stored, session_id=SESSION)
+
+    assert (item.filename, item.original_filename) == (stored, "demo.json")
+    assert item.payload["metadataStatement"]["description"] == "Uploaded"
+
+
+@pytest.mark.parametrize("name", ["stored.json.meta.json", "missing.json", "../stored.json", "stored.txt"])
+def test_a_name_that_is_no_uploads_reads_as_none(storage, name):
+    _stored(storage, info="{}")
+
+    assert mds_uploads.load_session_metadata_item(name, session_id=SESSION) is None
+
+
+def test_an_upload_reads_as_none_without_a_namespace_or_when_it_is_no_entry(storage):
+    stored = _stored(storage, payload=[])
+
+    # Outside a request no visitor names a namespace.
+    assert mds_uploads.load_session_metadata_item(stored) is None
+    assert mds_uploads.load_session_metadata_item(stored, session_id="../escape") is None
+    assert mds_uploads.load_session_metadata_item(stored, session_id=SESSION) is None
+
+
 def test_a_namespace_that_is_not_one_lists_nothing(storage):
     _stored(storage)
 

@@ -319,6 +319,12 @@ def normalise_icon(icon: Any, icon_type: Any) -> str:
     return f"data:{content_type};base64,{value}"
 
 
+def statement_icon(metadata: Mapping[str, Any]) -> str:
+    """A statement's icon as its explorer row shows it (``normalise_icon``)."""
+
+    return normalise_icon(mapping_value(metadata, "icon"), mapping_value(metadata, "iconType", "icon_type"))
+
+
 def resolve_name(metadata: Mapping[str, Any], entry: Mapping[str, Any]) -> str:
     description = mapping_value(metadata, "description")
     if isinstance(description, str) and description.strip():

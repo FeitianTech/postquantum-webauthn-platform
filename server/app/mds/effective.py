@@ -8,9 +8,10 @@ from datetime import datetime, timezone
 from typing import Any
 
 from . import cache as mds_cache
+from . import explorer_files
 from . import uploads as mds_uploads
 from .build import build_entry_id, build_explorer_entry, unique_entry_id
-from .statement_fields import normalise_aaguid_key
+from .statement_fields import normalise_aaguid_key, statement_icon
 
 
 def _build_session_snapshot_entry(
@@ -190,6 +191,17 @@ def _resolve_by_id(entry_id: str) -> dict[str, Any] | None:
             return row
     hidden = {normalise_aaguid_key(row.get("aaguid")) for row in rows} - {""}
     return _packaged_detail_by_id(entry_id, hidden)
+
+
+def upload_icon(stored_filename: str) -> explorer_files.Icon | None:
+    """The image of the icon of the visitor's upload ``stored_filename``; None without
+    such an upload, and for an icon no file is made of (``explorer_files.icon_file``)."""
+
+    item = mds_uploads.load_session_metadata_item(stored_filename)
+    if item is None:
+        return None
+    file = explorer_files.icon_file(statement_icon(item.payload["metadataStatement"]))
+    return file[1] if file is not None else None
 
 
 def _packaged_detail_by_id(entry_id: str, hidden_aaguids: set[str]) -> dict[str, Any] | None:

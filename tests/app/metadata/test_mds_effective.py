@@ -6,6 +6,7 @@ an AAGUID wins, and a lookup finds the visitor's entry before the packaged one.
 
 from __future__ import annotations
 
+import base64
 import json
 
 import pytest
@@ -14,6 +15,7 @@ from fido2.mds3 import MetadataBlobPayloadEntry
 from server.app import visitor_session
 from server.app.mds import cache as mds_cache
 from server.app.mds import effective as mds_effective
+from server.app.mds import explorer_files
 from server.app.mds import files as mds_files
 from server.app.mds import uploads as mds_uploads
 from server.app.storage import session_metadata
@@ -21,6 +23,7 @@ from tests.app.metadata.upload_entries import _entry_payload
 
 PACKAGED = "f1d0f1d0-0000-4000-8000-000000000001"
 PACKAGED_AAID = "F1D0#0012"
+PNG = b"\x89PNG\r\n\x1a\n" + b"uploaded icon" * 4
 
 
 def _upload(description: str, aaguid: str | None = None):
@@ -168,6 +171,21 @@ def test_an_entry_whose_statement_is_no_object_matches_no_aaguid():
     # Readers give a statement object; a direct call gives the matcher another.
     assert mds_effective._entry_matches_lookup({"metadataStatement": 123}, aaguid=PACKAGED) is False
     assert mds_effective._entry_matches_lookup({"metadataStatement": 123}) is False
+
+
+def test_an_uploads_icon_is_its_image(visitor):
+    stored = _upload_statement("With an icon", icon=f"data:image/png;base64,{base64.b64encode(PNG).decode()}")
+
+    assert mds_effective.upload_icon(stored.filename) == explorer_files.Icon(PNG, "image/png")
+
+
+def test_no_icon_is_had_of_an_upload_without_an_image_or_of_no_upload(visitor):
+    without = _upload("No icon")
+    unserved = _upload_statement("An image no file is made of", icon="data:image/bmp;base64,Qk0=")
+
+    assert mds_effective.upload_icon(without.filename) is None
+    assert mds_effective.upload_icon(unserved.filename) is None
+    assert mds_effective.upload_icon("missing.json") is None
 
 
 def test_uploaded_entry_source_names_its_file_and_times():

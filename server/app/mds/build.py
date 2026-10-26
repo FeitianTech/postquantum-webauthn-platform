@@ -119,10 +119,7 @@ def _authenticator_fields(
         "latestStatus": statement_fields.latest_status(status_reports),
         "id": statement_fields.resolve_identifier(entry_payload, metadata_mapping),
         "aaguid": statement_fields.resolve_aaguid(entry_payload, metadata_mapping),
-        "icon": statement_fields.normalise_icon(
-            statement_fields.mapping_value(metadata_mapping, "icon"),
-            statement_fields.mapping_value(metadata_mapping, "iconType", "icon_type"),
-        ),
+        "icon": statement_fields.statement_icon(metadata_mapping),
         "userVerification": ", ".join(user_verification_list),
         "userVerificationList": user_verification_list,
         "attachment": ", ".join(attachment_list),

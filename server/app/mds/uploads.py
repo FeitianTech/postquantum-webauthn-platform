@@ -1,4 +1,4 @@
-"""A visitor's uploaded metadata statements: save, list, delete, serialise.
+"""A visitor's uploaded metadata statements: save, list (or read one), delete, serialise.
 
 Each upload is stored in the visitor's namespace (``visitor_session``), with an
 info file beside it. The namespace stays when its last upload goes: the idle
@@ -238,57 +238,77 @@ def list_session_metadata_items(session_id: str | None = None) -> list[SessionMe
     # A namespace whose uploads cannot be listed raises StorageReadError (503), never "no uploads".
     filenames = [name for name in session_metadata.list_files(directory) if _is_upload(name)]
 
-    items: list[SessionMetadataItem] = []
-    for filename in sorted(filenames):
-        try:
-            payload_bytes = session_metadata.read_file(directory, filename)
-            raw = json.loads(payload_bytes.decode("utf-8")) if payload_bytes else None
-        except (ValueError, TypeError, UnicodeDecodeError) as exc:
-            logger.warning(
-                "Failed to load session metadata from %s/%s: %s", directory, filename, exc
-            )
-            continue
-
-        try:
-            entry, legal_header, payload = entries.build_metadata_entry_components(raw)
-        except Exception as exc:  # pylint: disable=broad-except
-            logger.warning(
-                "Failed to parse session metadata entry from %s/%s: %s",
-                directory,
-                filename,
-                exc,
-            )
-            continue
-
-        info_filename = f"{filename}{_SESSION_METADATA_INFO_SUFFIX}"
-        info = _load_session_metadata_info(directory, info_filename)
-
-        raw_uploaded_at = info.get("uploaded_at")
-        uploaded_at = raw_uploaded_at.strip() if isinstance(raw_uploaded_at, str) else None
-        raw_original_name = info.get("original_filename")
-        original_filename = (
-            raw_original_name.strip() if isinstance(raw_original_name, str) and raw_original_name.strip() else None
-        )
-
-        try:
-            mtime = session_metadata.file_mtime(directory, filename)
-        except Exception:
-            mtime = None
-
-        items.append(
-            SessionMetadataItem(
-                filename=filename,
-                payload=payload,
-                legal_header=legal_header,
-                entry=entry,
-                uploaded_at=uploaded_at,
-                original_filename=original_filename,
-                mtime=mtime,
-            )
-        )
-
+    items = [item for item in (_read_item(directory, filename) for filename in sorted(filenames)) if item is not None]
     items.sort(key=lambda item: item.mtime or 0, reverse=True)
     return items
+
+
+def load_session_metadata_item(stored_filename: str, session_id: str | None = None) -> SessionMetadataItem | None:
+    """The visitor's upload ``stored_filename``, or None: without a namespace, for a name
+    that is no upload's, and for an upload that is not there or does not read."""
+
+    try:
+        safe_name = _validate_session_metadata_filename(stored_filename)
+    except ValueError:
+        return None
+    active_session = session_id or visitor_session.current_id()
+    if not active_session or not _is_upload(safe_name):
+        return None
+
+    directory = _session_metadata_directory(active_session, create=False, cleanup=False)
+    if not directory or not session_metadata.file_exists(directory, safe_name):
+        return None
+    return _read_item(directory, safe_name)
+
+
+def _read_item(directory: str, filename: str) -> SessionMetadataItem | None:
+    """The upload ``filename`` of the namespace ``directory``, with its info; None, with a
+    warning, for one that does not read as a metadata entry."""
+
+    try:
+        payload_bytes = session_metadata.read_file(directory, filename)
+        raw = json.loads(payload_bytes.decode("utf-8")) if payload_bytes else None
+    except (ValueError, TypeError, UnicodeDecodeError) as exc:
+        logger.warning(
+            "Failed to load session metadata from %s/%s: %s", directory, filename, exc
+        )
+        return None
+
+    try:
+        entry, legal_header, payload = entries.build_metadata_entry_components(raw)
+    except Exception as exc:  # pylint: disable=broad-except
+        logger.warning(
+            "Failed to parse session metadata entry from %s/%s: %s",
+            directory,
+            filename,
+            exc,
+        )
+        return None
+
+    info_filename = f"{filename}{_SESSION_METADATA_INFO_SUFFIX}"
+    info = _load_session_metadata_info(directory, info_filename)
+
+    raw_uploaded_at = info.get("uploaded_at")
+    uploaded_at = raw_uploaded_at.strip() if isinstance(raw_uploaded_at, str) else None
+    raw_original_name = info.get("original_filename")
+    original_filename = (
+        raw_original_name.strip() if isinstance(raw_original_name, str) and raw_original_name.strip() else None
+    )
+
+    try:
+        mtime = session_metadata.file_mtime(directory, filename)
+    except Exception:
+        mtime = None
+
+    return SessionMetadataItem(
+        filename=filename,
+        payload=payload,
+        legal_header=legal_header,
+        entry=entry,
+        uploaded_at=uploaded_at,
+        original_filename=original_filename,
+        mtime=mtime,
+    )
 
 
 def delete_session_metadata_item(

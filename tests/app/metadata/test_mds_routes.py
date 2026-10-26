@@ -14,6 +14,7 @@ from server.app.config import request_limits
 from server.app.mds import effective as mds_effective
 from server.app.mds import entries as mds_entries
 from server.app.mds import uploads as mds_uploads
+from server.app.routes import assets
 from server.app.routes import mds as mds_routes
 from server.app.storage import github_mirror, session_metadata
 from server.app.webauthn.attestation import certificates as attestation_certificates
@@ -33,6 +34,7 @@ _READS = [
     ("GET", "/api/mds/metadata/explorer/custom", 200),
     ("GET", "/api/mds/metadata/resolve?aaguid=f1d0f1d0-0000-4000-8000-000000000001", 200),
     ("GET", "/api/mds/metadata/custom", 200),
+    ("GET", "/api/mds/metadata/custom/0123456789abcdef.json/icon", 404),
     ("DELETE", "/api/mds/metadata/custom/0123456789abcdef.json", 404),
 ]
 
@@ -82,6 +84,63 @@ def test_an_upload_past_the_visitors_quota_saves_and_copies_nothing(mds_fixture_
         "kept.json"
     ]
     assert copied == ["kept.json"]
+
+
+PNG = b"\x89PNG\r\n\x1a\n" + b"uploaded icon" * 4
+PNG_ICON = f"data:image/png;base64,{base64.b64encode(PNG).decode()}"
+
+
+def _uploaded(client, icon=None) -> str:
+    """Upload a statement with ``icon`` as this client's visitor: the name it is stored under."""
+
+    entry = minimal_entry("Uploaded")
+    if icon is not None:
+        entry["metadataStatement"]["icon"] = icon
+    response = client.post(
+        "/api/mds/metadata/upload",
+        data={"files": (io.BytesIO(json.dumps(entry).encode()), "entry.json")},
+        content_type="multipart/form-data",
+    )
+    assert response.status_code == 200, response.get_json()
+    return response.get_json()["items"][0]["source"]["storedFilename"]
+
+
+def test_an_uploads_icon_is_its_image_sandboxed_and_kept_for_good(client):
+    stored = _uploaded(client, PNG_ICON)
+
+    response = client.get(f"/api/mds/metadata/custom/{stored}/icon")
+
+    assert response.status_code == 200
+    assert (response.data, response.mimetype) == (PNG, "image/png")
+    assert response.headers["Cache-Control"] == "private, max-age=31536000, immutable"
+    assert response.headers["Content-Security-Policy"] == assets.ICON_POLICY
+    assert response.headers["X-Content-Type-Options"] == "nosniff"
+
+
+def test_an_uploads_icon_is_served_to_its_visitor_alone(app, client):
+    stored = _uploaded(client, PNG_ICON)
+    other = app.test_client()
+
+    assert other.get(f"/api/mds/metadata/custom/{stored}/icon").status_code == 404
+    _uploaded(other, PNG_ICON)
+    assert other.get(f"/api/mds/metadata/custom/{stored}/icon").status_code == 404
+
+
+@pytest.mark.parametrize(
+    ("icon", "name"),
+    [
+        (None, "{stored}"),
+        ("data:image/bmp;base64,Qk0=", "{stored}"),
+        (PNG_ICON, "{stored}.meta.json"),
+        (PNG_ICON, "missing.json"),
+        (PNG_ICON, ".{stored}"),
+    ],
+    ids=["no-icon", "no-file-is-made-of-it", "the-info-file", "missing", "hidden"],
+)
+def test_no_icon_is_served_but_the_image_of_an_upload(client, icon, name):
+    stored = _uploaded(client, icon)
+
+    assert client.get(f"/api/mds/metadata/custom/{name.format(stored=stored)}/icon").status_code == 404
 
 
 def test_an_uploaded_file_nested_too_deep_is_refused_and_nothing_is_saved(mds_fixture_snapshot, client):

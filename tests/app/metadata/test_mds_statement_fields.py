@@ -253,6 +253,12 @@ def test_a_data_url_icon_is_kept_and_bare_base64_becomes_one():
     assert fields.normalise_icon("iVBORw0K\nGgo=", "image/webp") == "data:image/webp;base64,iVBORw0K\nGgo="
 
 
+def test_a_statements_icon_is_read_with_its_type_under_either_name():
+    assert fields.statement_icon({"icon": "iVBORw0KGgo=", "iconType": "image/webp"}) == "data:image/webp;base64,iVBORw0KGgo="
+    assert fields.statement_icon({"icon": "iVBORw0KGgo=", "icon_type": "image/gif"}) == "data:image/gif;base64,iVBORw0KGgo="
+    assert fields.statement_icon({}) == ""
+
+
 @pytest.mark.parametrize(
     ("reports", "level"),
     [
