@@ -130,14 +130,15 @@ describe('the MDS table: its columns', () => {
     expect(cellsOf(entryNamed('Fixture Key Without Status Reports'))[4]).toHaveTextContent('—');
   });
 
-  it('puts the certification in one badge, coloured by its status', () => {
+  it('puts the level reached in one badge, coloured by what the latest status says of it', () => {
     renderTable();
     const badge = (name: string) => cellsOf(entryNamed(name))[3].querySelector('span > span')!;
+    expect(badge('Fixture Security Key L1')).toHaveTextContent('FIDO Certified L1');
     expect(badge('Fixture Security Key L1')).toHaveClass('text-success');
-    expect(badge('Fixture Revoked Key')).toHaveTextContent('Revoked');
-    expect(badge('Fixture Revoked Key')).toHaveClass('text-danger');
-    expect(badge('Fixture Uncertified Key')).toHaveTextContent('NOT FIDO Certified');
-    expect(badge('Fixture Uncertified Key')).toHaveClass('text-ink-muted');
+    // Certified at L1 in 2023, revoked since: the level stays, its badge no longer green.
+    expect(badge('Fixture Revoked Key')).toHaveTextContent('FIDO Certified L1');
+    expect(badge('Fixture Revoked Key')).toHaveClass('text-ink-muted');
+    expect(cellsOf(entryNamed('Fixture Uncertified Key'))[3]).toHaveTextContent(/^—$/);
   });
 
   it('shows a dash for what an entry does not have', () => {

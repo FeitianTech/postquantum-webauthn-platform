@@ -1,6 +1,6 @@
 // How the explorer's filters match and its columns sort. No DOM.
 
-import { normaliseEnumKey } from '../formatters.js';
+import { isCertifiedStatus, normaliseEnumKey } from '../formatters.js';
 
 export function normaliseSortValueInput(value) {
     if (value === undefined || value === null) {
@@ -90,10 +90,6 @@ function statusKeyOf(text) {
     return normaliseEnumKey((typeof text === 'string' ? text : '').split('•')[0]);
 }
 
-function isCertified(statusKey) {
-    return statusKey === 'FIDO_CERTIFIED' || statusKey.startsWith('FIDO_CERTIFIED_');
-}
-
 // A status filter: text naming one of its options must equal the column's status,
 // except "FIDO Certified", which every certified level passes; other text is found
 // in the column's text or its key.
@@ -101,7 +97,7 @@ function matchesStatusFilter(text, value, options) {
     const statusKey = statusKeyOf(text);
     const canonicalQuery = normaliseEnumKey(value);
     if (canonicalQuery && options.some(option => normaliseEnumKey(option) === canonicalQuery)) {
-        return canonicalQuery === 'FIDO_CERTIFIED' ? isCertified(statusKey) : statusKey === canonicalQuery;
+        return canonicalQuery === 'FIDO_CERTIFIED' ? isCertifiedStatus(statusKey) : statusKey === canonicalQuery;
     }
     const query = value.toLowerCase();
     return [text, statusKey]

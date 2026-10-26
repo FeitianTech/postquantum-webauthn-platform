@@ -1,5 +1,5 @@
 // What the explorer's table cells show beyond an entry's own text. No DOM.
-import { normaliseEnumKey } from '../formatters.js';
+import { isCertifiedStatus, normaliseEnumKey } from '../formatters.js';
 
 export const MISSING_CELL_TEXT = '—';
 export const NO_ICON_TEXT = 'N/A';
@@ -33,12 +33,24 @@ function statusTone(text) {
     if (DANGER_STATUSES.has(statusKey)) {
         return 'danger';
     }
-    return statusKey.startsWith('FIDO_CERTIFIED') ? 'success' : 'neutral';
+    return isCertifiedStatus(statusKey) ? 'success' : 'neutral';
 }
 
-// The certification text as one badge and what follows it: the level (as the
-// server wrote it), then the descriptor and certificate number, the badge in
-// the level's tone.
+// The level's tone: success while the latest status stands by it (a level, or
+// an update available), neutral once a revocation, a compromise or a status
+// that is no certification came after it (the Status column says which).
+/**
+ * @param {Record<string, any> | null | undefined} entry
+ * @returns {StatusTone}
+ */
+function levelTone(entry) {
+    const latest = normaliseEnumKey(entry?.latestStatus);
+    return isCertifiedStatus(latest) || latest === 'UPDATE_AVAILABLE' ? 'success' : 'neutral';
+}
+
+// The certification text as one badge and what follows it: the highest level
+// the entry reached (as the server wrote it), then the descriptor and
+// certificate number of its report.
 /**
  * @param {Record<string, any> | null | undefined} entry
  * @returns {{ level: string, detail: string, tone: StatusTone }}
@@ -46,7 +58,7 @@ function statusTone(text) {
 export function certificationParts(entry) {
     const text = typeof entry?.certification === 'string' ? entry.certification.trim() : '';
     const [level, ...rest] = text ? text.split(' • ') : [];
-    return { level: level || MISSING_CELL_TEXT, detail: rest.join(' • '), tone: statusTone(level || '') };
+    return { level: level || MISSING_CELL_TEXT, detail: rest.join(' • '), tone: level ? levelTone(entry) : 'neutral' };
 }
 
 // The latest status as one badge, in its tone.

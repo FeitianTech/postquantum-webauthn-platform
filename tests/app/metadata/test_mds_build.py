@@ -34,7 +34,7 @@ def test_an_id_already_given_out_gets_the_next_suffix_free():
     assert m.unique_entry_id("akid:ab~2", taken) == "akid:ab~2~2"
 
 
-def test_a_row_names_its_latest_status_beside_its_certification_text():
+def test_a_row_names_its_latest_status_beside_the_level_it_reached():
     entry = m.build_explorer_entry(
         {
             'metadataStatement': {'description': 'Key'},
@@ -48,5 +48,5 @@ def test_a_row_names_its_latest_status_beside_its_certification_text():
     )
 
     assert entry['latestStatus'] == 'Update Available'
-    assert entry['certification'] == 'Update Available'
+    assert entry['certification'] == 'FIDO Certified L2 • Key'
     assert 'certificationStatus' not in entry

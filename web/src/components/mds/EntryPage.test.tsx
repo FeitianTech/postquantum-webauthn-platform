@@ -392,8 +392,14 @@ describe('the MDS entry page', () => {
 
 describe('the MDS entry page: what an entry may lack', () => {
   it('shows a level with nothing after it', () => {
+    renderEntry({ ...L1(), certification: 'FIDO Certified L2', latestStatus: 'FIDO Certified L2' });
+    expect(field(section('overview'), 'Certification')).toHaveTextContent(/^FIDO Certified L2$/);
+  });
+
+  it('shows no certification for an entry that reached none, and its status', () => {
     renderEntry(entryNamed('Fixture Uncertified Key'));
-    expect(field(section('overview'), 'Certification')).toHaveTextContent(/^NOT FIDO Certified$/);
+    expect(section('overview').querySelector('[data-item="Certification"]')).toBeNull();
+    expect(field(section('overview'), 'Status')).toHaveTextContent(/^NOT FIDO Certified$/);
   });
 
   it('shows a method known only by its accuracy, and a descriptor or a version line alone', () => {

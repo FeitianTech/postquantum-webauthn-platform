@@ -16,16 +16,23 @@ describe('table cells', () => {
   });
 
   it('splits the certification into one badge and its detail', () => {
-    expect(certificationParts({ certification: 'FIDO Certified L1 • Security Key by Yubico • (U2F110020191017010)' })).toEqual({
-      level: 'FIDO Certified L1',
-      detail: 'Security Key by Yubico • (U2F110020191017010)',
-      tone: 'success',
-    });
-    expect(certificationParts({ certification: 'NOT FIDO Certified' })).toEqual({ level: 'NOT FIDO Certified', detail: '', tone: 'neutral' });
-    expect(certificationParts({ certification: 'Revoked' }).tone).toBe('danger');
-    expect(certificationParts({ certification: 'Attestation Key Compromise' }).tone).toBe('danger');
-    expect(certificationParts({ certification: 'FIDO Certified L2 • Old' }).tone).toBe('success');
-    expect(certificationParts({ certification: 'Update Available' }).tone).toBe('neutral');
+    expect(
+      certificationParts({
+        certification: 'FIDO Certified L1 • Security Key by Yubico • (U2F110020191017010)',
+        latestStatus: 'FIDO Certified L1',
+      }),
+    ).toEqual({ level: 'FIDO Certified L1', detail: 'Security Key by Yubico • (U2F110020191017010)', tone: 'success' });
+  });
+
+  it('tones the level by what the latest status says of it', () => {
+    const tone = latestStatus => certificationParts({ certification: 'FIDO Certified L2 • Key', latestStatus }).tone;
+    expect(tone('FIDO Certified L2')).toBe('success');
+    expect(tone('FIDO Certified L3plus')).toBe('success');
+    expect(tone('Update Available')).toBe('success');
+    expect(tone('Revoked')).toBe('neutral');
+    expect(tone('USER KEY Physical Compromise')).toBe('neutral');
+    expect(tone('NOT FIDO Certified')).toBe('neutral');
+    expect(tone(undefined)).toBe('neutral');
   });
 
   it('shows a dash for no certification', () => {

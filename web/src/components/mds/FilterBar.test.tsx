@@ -87,19 +87,17 @@ describe('the MDS filters', () => {
     expect(within(filters()).getByText('2 active')).toBeInTheDocument();
   });
 
-  it('matches a named certification level exactly, and FIDO Certified to every level', async () => {
+  it('matches a named certification level exactly, and FIDO Certified to every level reached', async () => {
     await renderLoaded();
     await userEvent.click(combobox('Certification'));
-    await userEvent.click(screen.getByRole('option', { name: 'Revoked' }));
-    await waitFor(() => expect(shownNames()).toEqual(['Fixture Revoked Key']));
-
-    await userEvent.clear(combobox('Certification'));
-    await userEvent.type(combobox('Certification'), 'FIDO Certified L2');
+    await userEvent.click(screen.getByRole('option', { name: 'FIDO Certified L2' }));
     await waitFor(() => expect(shownNames()).toEqual(['Fixture Security Key L2', 'Fixture Key With Every User Verification Method']));
 
     await userEvent.clear(combobox('Certification'));
     await userEvent.type(combobox('Certification'), 'FIDO Certified');
-    await waitFor(() => expect(shownNames()).toHaveLength(28));
+    // The revoked key reached L1 before its revocation.
+    await waitFor(() => expect(shownNames()).toHaveLength(29));
+    expect(shownNames()).toContain('Fixture Revoked Key');
   });
 
   it('shows the protocol as the server spells it, and says when nothing matches', async () => {
@@ -152,10 +150,10 @@ describe('an MDS filter that offers a list', () => {
     expect(within(screen.getByRole('listbox')).queryAllByRole('option')).toHaveLength(0);
   });
 
-  it('offers the static certification statuses and the others present', async () => {
+  it('offers the static certification levels and the others present', async () => {
     await renderLoaded();
     await userEvent.click(combobox('Certification'));
-    expect(options()).toEqual(['FIDO Certified', 'FIDO Certified L1', 'FIDO Certified L2', 'NOT FIDO Certified', 'Revoked']);
+    expect(options()).toEqual(['FIDO Certified', 'FIDO Certified L1', 'FIDO Certified L2']);
   });
 
   it('filters by the latest status, a named one exactly and FIDO Certified to every level', async () => {

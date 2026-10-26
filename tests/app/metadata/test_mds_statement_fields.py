@@ -78,9 +78,9 @@ def test_enum_protocol_certification_and_extraction_helpers():
         {'status': 'fido_certified_l1', 'effectiveDate': '2020-01-01', 'certificationDescriptor': 'Desc', 'certificateNumber': '1'},
         {'status': 'fido_certified_l2', 'effectiveDate': '2024-01-01', 'certificationDescriptor': 'Newest', 'certificateNumber': '2'},
     ]
-    assert fields.format_certification(reports) == 'FIDO Certified L2 • Newest • (2)'
+    assert fields.certification_level(reports) == 'FIDO Certified L2 • Newest • (2)'
     assert fields.latest_status(reports) == 'FIDO Certified L2'
-    assert fields.format_certification([]) == fields.latest_status([]) == ''
+    assert fields.certification_level([]) == fields.latest_status([]) == ''
 
     assert fields.latest_effective_date(reports) == '2024-01-01'
     assert fields.latest_effective_date([]) == ''
@@ -138,7 +138,7 @@ def test_a_guid_candidate_that_is_no_text_formats_as_empty():
 
 
 def test_a_report_without_a_descriptor_reads_as_its_status_and_number():
-    assert fields.format_certification([
+    assert fields.certification_level([
         {'effectiveDate': '2026-01-01', 'status': 'FIDO_CERTIFIED_L1', 'certificateNumber': '42'}
     ]) == 'FIDO Certified L1 • (42)'
 
@@ -150,11 +150,11 @@ def _report(status, date=None, **more):
     return report
 
 
-def test_the_latest_status_is_the_newest_report_whatever_it_says():
+def test_the_latest_status_is_the_newest_report_whatever_it_says_and_the_level_stays():
     reports = [_report("FIDO_CERTIFIED_L2", "2024-01-01"), _report("UPDATE_AVAILABLE", "2025-06-01")]
 
     assert fields.latest_status(reports) == "Update Available"
-    assert fields.format_certification(reports) == "Update Available"
+    assert fields.certification_level(reports) == "FIDO Certified L2"
 
 
 @pytest.mark.parametrize(
@@ -180,7 +180,7 @@ def test_reports_alike_but_for_their_descriptor_give_one_text_in_either_order():
     first = _report("FIDO_CERTIFIED_L1", "2025-01-01", certificationDescriptor="Key A", certificateNumber="1")
     second = _report("FIDO_CERTIFIED_L1", "2025-01-01", certificationDescriptor="Key B", certificateNumber="2")
 
-    assert fields.format_certification([first, second]) == fields.format_certification([second, first]) == "FIDO Certified L1 • Key A • (1)"
+    assert fields.certification_level([first, second]) == fields.certification_level([second, first]) == "FIDO Certified L1 • Key A • (1)"
 
 
 def test_a_report_without_a_date_is_in_force_and_one_whose_date_does_not_read_is_the_oldest():
@@ -251,3 +251,31 @@ def test_a_data_url_icon_is_kept_and_bare_base64_becomes_one():
     assert fields.normalise_icon("DATA:image/png;base64,iVBORw0KGgo=", None) == "DATA:image/png;base64,iVBORw0KGgo="
     assert fields.normalise_icon("iVBORw0KGgo=", None) == "data:image/png;base64,iVBORw0KGgo="
     assert fields.normalise_icon("iVBORw0K\nGgo=", "image/webp") == "data:image/webp;base64,iVBORw0K\nGgo="
+
+
+@pytest.mark.parametrize(
+    ("reports", "level"),
+    [
+        ([_report("FIDO_CERTIFIED_L1", "2023-01-10"), _report("REVOKED", "2026-05-20")], "FIDO Certified L1"),
+        ([_report("FIDO_CERTIFIED_L2", "2024-01-01"), _report("FIDO_CERTIFIED_L1", "2025-01-01")], "FIDO Certified L2"),
+        ([_report("FIDO_CERTIFIED", "2025-01-01"), _report("FIDO_CERTIFIED_L1", "2025-01-01")], "FIDO Certified L1"),
+        ([_report("FIDO_CERTIFIED_L3PLUS", "2025-01-01"), _report("FIDO_CERTIFIED_L4", "2020-01-01")], "FIDO Certified L4"),
+        ([_report("FIDO_CERTIFIED_L1PLUS", "2025-01-01"), _report("FIDO_CERTIFIED_L1", "2026-01-01")], "FIDO Certified L1plus"),
+        ([_report("NOT_FIDO_CERTIFIED", "2025-01-01"), _report("SELF_ASSERTION_SUBMITTED", "2026-01-01")], ""),
+        ([_report("FIDO_CERTIFIEDX", "2025-01-01")], ""),
+        ([], ""),
+    ],
+)
+def test_the_certification_is_the_highest_level_reached(reports, level):
+    assert fields.certification_level(reports) == level
+
+
+def test_of_reports_at_the_highest_level_the_latest_describes_it():
+    reports = [
+        _report("FIDO_CERTIFIED_L1", "2023-01-01", certificationDescriptor="First", certificateNumber="1"),
+        _report("FIDO_CERTIFIED_L1", "2025-01-01", certificationDescriptor="Renewed", certificateNumber="2"),
+        _report("UPDATE_AVAILABLE", "2026-01-01"),
+    ]
+
+    assert fields.certification_level(reports) == "FIDO Certified L1 • Renewed • (2)"
+    assert fields.latest_status(reports) == "Update Available"

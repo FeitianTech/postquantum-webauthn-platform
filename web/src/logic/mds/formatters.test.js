@@ -6,6 +6,7 @@ import {
   formatEnum,
   formatSignatureHashName,
   formatUpv,
+  isCertifiedStatus,
   normaliseEnumKey,
 } from './formatters.js';
 
@@ -21,6 +22,11 @@ describe('an MDS enum', () => {
   it('is compared as its key, in capitals with underscores', () => {
     expect(normaliseEnumKey('  fido certified-l1 ')).toBe('FIDO_CERTIFIED_L1');
     expect(normaliseEnumKey(null)).toBe('');
+  });
+
+  it('is a certification when it is FIDO_CERTIFIED or one of its levels', () => {
+    expect(['FIDO_CERTIFIED', 'FIDO_CERTIFIED_L1', 'FIDO_CERTIFIED_L3PLUS'].map(isCertifiedStatus)).toEqual([true, true, true]);
+    expect(['FIDO_CERTIFIEDX', 'NOT_FIDO_CERTIFIED', 'REVOKED', ''].map(isCertifiedStatus)).toEqual([false, false, false, false]);
   });
 });
 

@@ -65,6 +65,16 @@ test.describe('/#mds', () => {
     expect((await names(rows(page)))[0]).toMatch(/^Fixture Authenticator With A Deliberately Long Description/);
   });
 
+  test('shows the level a revoked key reached beside its revocation', async ({ page }) => {
+    await openList(page);
+    const revoked = row(page, 'aaguid:f1d0f1d0-0000-4000-8000-000000000005');
+    await expect(revoked.locator('td').nth(3)).toHaveText(/^FIDO Certified L1/);
+    await filter(page, 'Certification').fill('FIDO Certified');
+    await section(page).getByRole('option', { name: 'FIDO Certified', exact: true }).click();
+    await expect(rows(page)).toHaveCount(29);
+    await expect(revoked).toBeVisible();
+  });
+
   test('filters by the latest status, which a column of its own shows', async ({ page }) => {
     await openList(page);
     await expect(row(page, 'aaguid:f1d0f1d0-0000-4000-8000-000000000005').locator('td').nth(4)).toHaveText('Revoked');

@@ -8,16 +8,20 @@ export const CUSTOM_METADATA_DELETE_PATH = '/api/mds/metadata/custom';
 export const MISSING_METADATA_MESSAGE =
     'Packaged FIDO metadata is unavailable. Please verify the bundled snapshot is present.';
 
+// The levels the Certification filter always offers, and the statuses the
+// Status filter does.
 export const CERTIFICATION_OPTIONS = [
+    'FIDO_CERTIFIED',
+    'FIDO_CERTIFIED_L1',
+    'FIDO_CERTIFIED_L2',
+];
+export const STATUS_OPTIONS = [
     'FIDO_CERTIFIED',
     'FIDO_CERTIFIED_L1',
     'FIDO_CERTIFIED_L2',
     'NOT_FIDO_CERTIFIED',
     'REVOKED',
 ];
-
-// The statuses the Status filter always offers.
-export const STATUS_OPTIONS = CERTIFICATION_OPTIONS;
 
 /**
  * A filter: the column it reads, its input's id, and the entry list its options

@@ -37,6 +37,16 @@ export function normaliseEnumKey(value) {
         .replace(/^_+|_+$/g, '');
 }
 
+// Whether a status key (normaliseEnumKey's) is a FIDO certification: FIDO_CERTIFIED or
+// one of its levels (FIDO_CERTIFIED_L1, …).
+/**
+ * @param {string} statusKey
+ * @returns {boolean}
+ */
+export function isCertifiedStatus(statusKey) {
+    return statusKey === 'FIDO_CERTIFIED' || statusKey.startsWith('FIDO_CERTIFIED_');
+}
+
 export function formatEnum(value) {
     if (!value && value !== 0) {
         return '';

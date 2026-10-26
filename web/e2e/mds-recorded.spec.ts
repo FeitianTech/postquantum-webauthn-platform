@@ -20,12 +20,30 @@ const CASES = [
   { label: 'user verification and transports', filters: { uv: ['#mds-filter-user-verification', 'User Verification', 'Fingerprint Internal'], transports: ['#mds-filter-transports', 'Transports', 'Nfc'] } },
 ] as const;
 
+const REVOKED_KEY = 'f1d0f1d0-0000-4000-8000-000000000005';
+
 // The words are the server's, in both tables; what differs is listed with its reason.
 const EXPECTED: ExpectedDifference[] = [
   {
     only: 'shown',
+    section: REVOKED_KEY,
+    token: /^(FIDO|Certified|L1|Fixture|Revoked|Key|\(FIDO20020230110005\))$/,
+    reason: "the level the revoked key reached in 2023 (L1, its descriptor and number), which Certification shows now and the revocation, its latest status, used to hide",
+  },
+  {
+    only: 'shown',
     token: /^(FIDO|Certified|L1|L2|NOT|Revoked)$/,
     reason: "each entry's latest status, now a column of its own (Status) beside Certification",
+  },
+];
+
+// Rows a case shows that its recording does not hold, each with its reason: they are
+// set aside before the rows, their order and their words are compared.
+const EXPECTED_ROWS: { case: string; heading: string; reason: string }[] = [
+  {
+    case: 'certification FIDO Certified (every level)',
+    heading: REVOKED_KEY,
+    reason: 'the revoked key reached L1, and Certification now filters by the level reached, not the latest status',
   },
 ];
 
@@ -55,12 +73,19 @@ test.describe('the MDS table reads as recorded', () => {
   for (const { label, filters } of CASES) {
     test(label, async ({ page }) => {
       const legacy = recorded<ShownSection[]>('mds', label);
-      const shown = await shownRows(page, filters);
+      const extra = EXPECTED_ROWS.filter((row) => row.case === label);
+      const all = await shownRows(page, filters);
+      expect(keys(all), 'the rows expected beyond the recording are shown').toEqual(expect.arrayContaining(extra.map((row) => row.heading)));
+      const shown = all.filter((row) => !extra.some((expected) => expected.heading === row.heading));
       expect(legacy.length, 'the recording holds rows').toBeGreaterThan(0);
       expect(keys(shown), 'the same rows, in the same order').toEqual(keys(legacy));
 
       const differences = compareShownText(legacy, shown, EXPECTED);
-      report.push(`${label} (${legacy.length} rows):`, ...describeDifferences(differences).map((line) => `  ${line}`));
+      report.push(
+        `${label} (${legacy.length} rows):`,
+        ...extra.map((row) => `  [${row.heading}] only on the page: the whole row (${row.reason})`),
+        ...describeDifferences(differences).map((line) => `  ${line}`),
+      );
       expect(describeDifferences(differences.filter((difference) => !difference.reason))).toEqual([]);
     });
   }

@@ -213,7 +213,7 @@
         "Fixture FIDO2 Attestation Root"
       ],
       "certificateCommonNames": "Fixture FIDO2 Attestation Root",
-      "certification": "NOT FIDO Certified",
+      "certification": "",
       "commonName": "Fixture FIDO2 Attestation Root",
       "dateTooltip": "2026-06-01",
       "dateUpdated": "Jun 1, 2026",
@@ -275,7 +275,7 @@
         "Fixture FIDO2 Attestation Root"
       ],
       "certificateCommonNames": "Fixture FIDO2 Attestation Root",
-      "certification": "Revoked",
+      "certification": "FIDO Certified L1 \u2022 Fixture Revoked Key \u2022 (FIDO20020230110005)",
       "commonName": "Fixture FIDO2 Attestation Root",
       "dateTooltip": "2026-05-20",
       "dateUpdated": "May 20, 2026",
@@ -550,7 +550,7 @@
         "Fixture FIDO2 Attestation Root"
       ],
       "certificateCommonNames": "Fixture FIDO2 Attestation Root",
-      "certification": "NOT FIDO Certified",
+      "certification": "",
       "commonName": "Fixture FIDO2 Attestation Root",
       "dateTooltip": "2026-01-05",
       "dateUpdated": "Jan 5, 2026",

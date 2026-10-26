@@ -25,8 +25,8 @@ const ENTRY = {
 };
 const BARE = { ...ENTRY, protocol: '', certification: '', latestStatus: undefined };
 
-const STATIC_CERTIFICATION = ['FIDO Certified', 'FIDO Certified L1', 'FIDO Certified L2', 'NOT FIDO Certified', 'Revoked'];
-const STATIC_STATUS = STATIC_CERTIFICATION;
+const STATIC_CERTIFICATION = ['FIDO Certified', 'FIDO Certified L1', 'FIDO Certified L2'];
+const STATIC_STATUS = ['FIDO Certified', 'FIDO Certified L1', 'FIDO Certified L2', 'NOT FIDO Certified', 'Revoked'];
 
 describe('filter options', () => {
   it('collects every value present, and the static statuses', () => {
@@ -50,13 +50,19 @@ describe('filter options', () => {
   });
 
   it('merges the values with the static options, once each', () => {
-    expect(mergeFilterOptions(new Set(['Revoked', '', 'X']), filterConfig('certification'))).toEqual([
+    expect(mergeFilterOptions(new Set(['Revoked', '', 'X']), filterConfig('latestStatus'))).toEqual([
       'Revoked',
       'X',
       'FIDO Certified',
       'FIDO Certified L1',
       'FIDO Certified L2',
       'NOT FIDO Certified',
+    ]);
+    expect(mergeFilterOptions(new Set(['FIDO Certified L3']), filterConfig('certification'))).toEqual([
+      'FIDO Certified L3',
+      'FIDO Certified',
+      'FIDO Certified L1',
+      'FIDO Certified L2',
     ]);
     expect(mergeFilterOptions(['a'], undefined)).toEqual(['a']);
   });

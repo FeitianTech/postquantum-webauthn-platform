@@ -248,11 +248,29 @@ def latest_status(status_reports: Any) -> str:
     return format_enum(_status(reports[0])) if reports else ""
 
 
-def format_certification(status_reports: Any) -> str:
-    """The Certification column's text: the latest report's status, descriptor and certificate number."""
+def _level_rank(status: str) -> tuple[int, Any] | None:
+    """How high a certification ``status`` stands (the higher, the higher), or None for a
+    status that is no certification: the known levels in order, then any other
+    ``FIDO_CERTIFIED_*`` above them all, by name."""
 
-    reports = _reports_latest_first(status_reports)
-    return _report_text(reports[0]) if reports else ""
+    if status in _CERTIFICATION_LEVELS:
+        return (0, -_CERTIFICATION_LEVELS.index(status))
+    if status.startswith("FIDO_CERTIFIED_"):
+        return (1, status)
+    return None
+
+
+def certification_level(status_reports: Any) -> str:
+    """The highest FIDO certification an entry reached, as the Certification column writes
+    it: the level, then the descriptor and certificate number of its latest report at that
+    level; "" when no report names a certification. A later status (an update available,
+    a revocation) does not take it away: the Status column shows that."""
+
+    ranked = [(rank, report) for report in _reports_latest_first(status_reports) if (rank := _level_rank(_status(report)))]
+    if not ranked:
+        return ""
+    highest = max(rank for rank, _report in ranked)
+    return _report_text(next(report for rank, report in ranked if rank == highest))
 
 
 def latest_effective_date(status_reports: Any) -> str:

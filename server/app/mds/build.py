@@ -115,7 +115,7 @@ def _authenticator_fields(
             statement_fields.mapping_value(metadata_mapping, "protocolFamily", "protocol_family")
             or statement_fields.mapping_value(metadata_mapping, "protocolType", "protocol_type")
         ),
-        "certification": statement_fields.format_certification(status_reports),
+        "certification": statement_fields.certification_level(status_reports),
         "latestStatus": statement_fields.latest_status(status_reports),
         "id": statement_fields.resolve_identifier(entry_payload, metadata_mapping),
         "aaguid": statement_fields.resolve_aaguid(entry_payload, metadata_mapping),

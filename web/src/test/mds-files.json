@@ -3,7 +3,7 @@
     "meta": {
       "baseEntryCount": 32,
       "customEntryCount": 0,
-      "derivedFormat": 3,
+      "derivedFormat": 4,
       "entryCount": 32,
       "etag": "\"fixture-7\"",
       "fetchedAt": "2026-09-20T08:00:00+00:00",
@@ -66,7 +66,7 @@
           "Passcode External",
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000001?v=7.6adb59277e89.3"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000001?v=7.6adb59277e89.4"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000002",
@@ -119,7 +119,7 @@
           "Passcode Internal",
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000002?v=7.6adb59277e89.3"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000002?v=7.6adb59277e89.4"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000003",
@@ -170,7 +170,7 @@
           "Passcode External",
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000003?v=7.6adb59277e89.3"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000003?v=7.6adb59277e89.4"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000004",
@@ -192,7 +192,7 @@
           "Fixture FIDO2 Attestation Root"
         ],
         "certificateCommonNames": "Fixture FIDO2 Attestation Root",
-        "certification": "NOT FIDO Certified",
+        "certification": "",
         "commonName": "Fixture FIDO2 Attestation Root",
         "dateTooltip": "2026-06-01",
         "dateUpdated": "Jun 1, 2026",
@@ -218,7 +218,7 @@
           "Passcode External",
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000004?v=7.6adb59277e89.3"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000004?v=7.6adb59277e89.4"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000005",
@@ -242,7 +242,7 @@
           "Fixture FIDO2 Attestation Root"
         ],
         "certificateCommonNames": "Fixture FIDO2 Attestation Root",
-        "certification": "Revoked",
+        "certification": "FIDO Certified L1 • Fixture Revoked Key • (FIDO20020230110005)",
         "commonName": "Fixture FIDO2 Attestation Root",
         "dateTooltip": "2026-05-20",
         "dateUpdated": "May 20, 2026",
@@ -269,7 +269,7 @@
           "Passcode External",
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000005?v=7.6adb59277e89.3"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000005?v=7.6adb59277e89.4"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000006",
@@ -334,7 +334,7 @@
           "Passcode External",
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000006?v=7.6adb59277e89.3"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000006?v=7.6adb59277e89.4"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000007",
@@ -394,7 +394,7 @@
           "Presence Internal",
           "Voiceprint Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000007?v=7.6adb59277e89.3"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000007?v=7.6adb59277e89.4"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000008",
@@ -445,7 +445,7 @@
           "Passcode External",
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000008?v=7.6adb59277e89.3"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000008?v=7.6adb59277e89.4"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000009",
@@ -469,7 +469,7 @@
           "Fixture FIDO2 Attestation Root"
         ],
         "certificateCommonNames": "Fixture FIDO2 Attestation Root",
-        "certification": "NOT FIDO Certified",
+        "certification": "",
         "commonName": "Fixture FIDO2 Attestation Root",
         "dateTooltip": "2026-01-05",
         "dateUpdated": "Jan 5, 2026",
@@ -496,7 +496,7 @@
           "Passcode External",
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000009?v=7.6adb59277e89.3"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000009?v=7.6adb59277e89.4"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000010",
@@ -547,7 +547,7 @@
           "Passcode External",
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000010?v=7.6adb59277e89.3"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000010?v=7.6adb59277e89.4"
       },
       {
         "aaguid": "",
@@ -592,7 +592,7 @@
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/akid%3Af1d0000000000000000000000000000000000011?v=7.6adb59277e89.3"
+        "detailUrl": "/assets/mds/entries/akid%3Af1d0000000000000000000000000000000000011?v=7.6adb59277e89.4"
       },
       {
         "aaguid": "",
@@ -636,7 +636,7 @@
         "userVerificationList": [
           "Fingerprint Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaid%3AF1D0%230012?v=7.6adb59277e89.3"
+        "detailUrl": "/assets/mds/entries/aaid%3AF1D0%230012?v=7.6adb59277e89.4"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000020",
@@ -685,7 +685,7 @@
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000020?v=7.6adb59277e89.3"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000020?v=7.6adb59277e89.4"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000021",
@@ -734,7 +734,7 @@
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000021?v=7.6adb59277e89.3"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000021?v=7.6adb59277e89.4"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000022",
@@ -783,7 +783,7 @@
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000022?v=7.6adb59277e89.3"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000022?v=7.6adb59277e89.4"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000023",
@@ -832,7 +832,7 @@
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000023?v=7.6adb59277e89.3"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000023?v=7.6adb59277e89.4"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000024",
@@ -881,7 +881,7 @@
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000024?v=7.6adb59277e89.3"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000024?v=7.6adb59277e89.4"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000025",
@@ -930,7 +930,7 @@
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000025?v=7.6adb59277e89.3"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000025?v=7.6adb59277e89.4"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000026",
@@ -979,7 +979,7 @@
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000026?v=7.6adb59277e89.3"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000026?v=7.6adb59277e89.4"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000027",
@@ -1028,7 +1028,7 @@
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000027?v=7.6adb59277e89.3"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000027?v=7.6adb59277e89.4"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000028",
@@ -1077,7 +1077,7 @@
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000028?v=7.6adb59277e89.3"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000028?v=7.6adb59277e89.4"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000029",
@@ -1126,7 +1126,7 @@
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000029?v=7.6adb59277e89.3"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000029?v=7.6adb59277e89.4"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000030",
@@ -1175,7 +1175,7 @@
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000030?v=7.6adb59277e89.3"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000030?v=7.6adb59277e89.4"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000031",
@@ -1224,7 +1224,7 @@
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000031?v=7.6adb59277e89.3"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000031?v=7.6adb59277e89.4"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000032",
@@ -1273,7 +1273,7 @@
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000032?v=7.6adb59277e89.3"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000032?v=7.6adb59277e89.4"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000033",
@@ -1322,7 +1322,7 @@
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000033?v=7.6adb59277e89.3"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000033?v=7.6adb59277e89.4"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000034",
@@ -1371,7 +1371,7 @@
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000034?v=7.6adb59277e89.3"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000034?v=7.6adb59277e89.4"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000035",
@@ -1420,7 +1420,7 @@
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000035?v=7.6adb59277e89.3"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000035?v=7.6adb59277e89.4"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000036",
@@ -1469,7 +1469,7 @@
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000036?v=7.6adb59277e89.3"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000036?v=7.6adb59277e89.4"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000037",
@@ -1518,7 +1518,7 @@
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000037?v=7.6adb59277e89.3"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000037?v=7.6adb59277e89.4"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000038",
@@ -1567,7 +1567,7 @@
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000038?v=7.6adb59277e89.3"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000038?v=7.6adb59277e89.4"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000039",
@@ -1616,7 +1616,7 @@
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000039?v=7.6adb59277e89.3"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000039?v=7.6adb59277e89.4"
       }
     ]
   },
@@ -2258,7 +2258,7 @@
         "Fixture FIDO2 Attestation Root"
       ],
       "certificateCommonNames": "Fixture FIDO2 Attestation Root",
-      "certification": "NOT FIDO Certified",
+      "certification": "",
       "commonName": "Fixture FIDO2 Attestation Root",
       "dateTooltip": "2026-06-01",
       "dateUpdated": "Jun 1, 2026",
@@ -2402,7 +2402,7 @@
         "Fixture FIDO2 Attestation Root"
       ],
       "certificateCommonNames": "Fixture FIDO2 Attestation Root",
-      "certification": "Revoked",
+      "certification": "FIDO Certified L1 • Fixture Revoked Key • (FIDO20020230110005)",
       "commonName": "Fixture FIDO2 Attestation Root",
       "dateTooltip": "2026-05-20",
       "dateUpdated": "May 20, 2026",
@@ -3112,7 +3112,7 @@
         "Fixture FIDO2 Attestation Root"
       ],
       "certificateCommonNames": "Fixture FIDO2 Attestation Root",
-      "certification": "NOT FIDO Certified",
+      "certification": "",
       "commonName": "Fixture FIDO2 Attestation Root",
       "dateTooltip": "2026-01-05",
       "dateUpdated": "Jan 5, 2026",
