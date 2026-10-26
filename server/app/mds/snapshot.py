@@ -11,6 +11,7 @@ import json
 from datetime import datetime
 
 from . import blob as mds_blob
+from . import explorer_files as mds_explorer_files
 from . import files as mds_files
 from . import trust as mds_trust
 from .build import build_bootstrap_snapshot, build_explorer_snapshot
@@ -25,7 +26,9 @@ def _serialise_compact_json(value: object) -> str:
 
 
 def _finalise_base_full_snapshot(snapshot: dict[str, object]) -> dict[str, object]:
-    """Add the entry-count fields the explorer API reports for a session without uploads."""
+    """Add the entry-count fields the explorer API reports for a session without uploads,
+    and the format of what this code derives (``explorer_files.DERIVED_FORMAT``): the
+    server derives a file of another format again (``cache._load_base_full_snapshot``)."""
 
     entries = snapshot.get("entries")
     entry_count = len(entries) if isinstance(entries, list) else 0
@@ -34,6 +37,7 @@ def _finalise_base_full_snapshot(snapshot: dict[str, object]) -> dict[str, objec
     meta["baseEntryCount"] = entry_count
     meta["customEntryCount"] = 0
     meta["hasCustomEntries"] = False
+    meta["derivedFormat"] = mds_explorer_files.DERIVED_FORMAT
     return {**snapshot, "meta": meta}
 
 

@@ -15,6 +15,7 @@ from datetime import datetime, timezone
 import pytest
 
 from server.app.mds import cache as mds_cache
+from server.app.mds import explorer_files as mds_explorer_files
 from server.app.mds import files as mds_files
 from tests.app.metadata.cache_locks import FillingLock
 
@@ -163,6 +164,42 @@ def test_a_packaged_full_snapshot_that_cannot_be_read_is_rebuilt(mds_fixture_sna
     snapshot, _ = mds_cache._load_base_full_snapshot()
 
     assert len(snapshot["entries"]) == 32
+
+
+def _write_full_snapshot(directory, *, first_name, derived_format):
+    """The fixture's full snapshot on disk, its first row renamed and its meta of ``derived_format`` (None: none)."""
+
+    full_path = directory / mds_files.EXPLORER_FULL
+    meta_path = directory / mds_files.EXPLORER_FULL_META
+    full = json.loads(full_path.read_text(encoding="utf-8"))
+    meta = json.loads(meta_path.read_text(encoding="utf-8"))
+    meta.pop("derivedFormat")
+    if derived_format is not None:
+        meta["derivedFormat"] = derived_format
+    full["entries"][0]["name"] = first_name
+    full["meta"] = meta
+    full_path.write_text(json.dumps(full), encoding="utf-8")
+    meta_path.write_text(json.dumps(meta), encoding="utf-8")
+
+
+def test_a_full_snapshot_of_this_codes_format_is_read_as_written(mds_fixture_snapshot):
+    _write_full_snapshot(mds_fixture_snapshot, first_name="Row as written", derived_format=mds_explorer_files.DERIVED_FORMAT)
+
+    snapshot, _ = mds_cache._load_base_full_snapshot()
+
+    assert snapshot["entries"][0]["name"] == "Row as written"
+
+
+@pytest.mark.parametrize("derived_format", [None, mds_explorer_files.DERIVED_FORMAT - 1])
+def test_a_full_snapshot_derived_in_another_format_is_derived_again(mds_fixture_snapshot, derived_format):
+    # An earlier release's files kept on disk: their rows are not this code's.
+    _write_full_snapshot(mds_fixture_snapshot, first_name="Row of an earlier release", derived_format=derived_format)
+
+    snapshot, _ = mds_cache._load_base_full_snapshot()
+
+    names = [entry["name"] for entry in snapshot["entries"]]
+    assert "Row of an earlier release" not in names
+    assert len(names) == 32
 
 
 def test_without_any_snapshot_there_is_no_full_snapshot_and_no_summary(snapshot_dir):

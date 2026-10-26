@@ -266,8 +266,11 @@ def _load_base_full_snapshot() -> tuple[dict[str, Any] | None, tuple[float | Non
         snapshot: dict[str, Any] | None = None
 
         # The packaged full snapshot is built by the same code as the fallback
-        # below; loading it avoids re-parsing every attestation certificate.
-        if _load_packaged_explorer_meta(_path(mds_files.EXPLORER_FULL)) is not None:
+        # below; loading it avoids re-parsing every attestation certificate. One
+        # derived in another format (an earlier release's files, kept on disk) is
+        # derived again: its rows would otherwise be served under this code's version.
+        full_meta = _load_packaged_explorer_meta(_path(mds_files.EXPLORER_FULL))
+        if full_meta is not None and full_meta.get("derivedFormat") == mds_explorer_files.DERIVED_FORMAT:
             try:
                 with open(_path(mds_files.EXPLORER_FULL), "r", encoding="utf-8") as full_file:
                     loaded = json.load(full_file)

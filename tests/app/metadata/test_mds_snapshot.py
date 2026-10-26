@@ -2,6 +2,7 @@ import copy
 
 import pytest
 
+from server.app.mds import explorer_files as mds_explorer_files
 from server.app.mds import files as mds_files
 from server.app.mds import snapshot as mds_snapshot
 from server.app.mds.build import (
@@ -143,7 +144,14 @@ def test_the_snapshots_files_are_written_sorted_and_the_full_one_compact():
     finalised = mds_snapshot._finalise_base_full_snapshot({"entries": [{"name": "a"}, {"name": "b"}], "meta": {"no": 5}})
 
     assert finalised["entries"] == [{"name": "a"}, {"name": "b"}]
-    assert finalised["meta"] == {"no": 5, "entryCount": 2, "baseEntryCount": 2, "customEntryCount": 0, "hasCustomEntries": False}
+    assert finalised["meta"] == {
+        "no": 5,
+        "entryCount": 2,
+        "baseEntryCount": 2,
+        "customEntryCount": 0,
+        "hasCustomEntries": False,
+        "derivedFormat": mds_explorer_files.DERIVED_FORMAT,
+    }
 
 
 def test_a_snapshot_derived_from_its_blob_and_meta_is_the_one_the_updater_wrote(fixture_blob_root):

@@ -15,6 +15,7 @@ from cryptography import x509
 from fido2.attestation.base import InvalidSignature
 
 import tools.update_mds_snapshot as updater
+from server.app.mds import explorer_files as mds_explorer_files
 from server.app.mds import files as mds_files
 from server.app.mds import sets as snapshot_sets
 from server.app.storage import cloud
@@ -306,6 +307,7 @@ def test_main_reports_refresh_then_up_to_date(monkeypatch, isolated_mds_paths, c
         "baseEntryCount": 1,
         "customEntryCount": 0,
         "hasCustomEntries": False,
+        "derivedFormat": mds_explorer_files.DERIVED_FORMAT,
     }
     assert json.loads(_file(mds_files.EXPLORER_FULL_META).read_text(encoding="utf-8")) == expected_full_meta
     assert json.loads(_file(mds_files.EXPLORER_FULL).read_text(encoding="utf-8")) == {
