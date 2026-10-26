@@ -91,6 +91,10 @@ def _x5c(*certificates: bytes) -> list[str]:
     return [base64.b64encode(certificate).decode("ascii") for certificate in certificates]
 
 
+def _loaded(*certificates: bytes) -> list[x509.Certificate]:
+    return [x509.load_der_x509_certificate(certificate) for certificate in certificates]
+
+
 def test_a_chain_ending_in_a_cross_certificate_reaches_either_root():
     certs = _transition()
     chain = [certs.leaf, certs.intermediate, certs.cross]
@@ -99,9 +103,11 @@ def test_a_chain_ending_in_a_cross_certificate_reaches_either_root():
     with pytest.raises(InvalidSignature):
         verify_x509_chain(chain + [certs.current_root])
 
-    mds_blob.verify_chain_to_root(chain, certs.current_root)
-    mds_blob.verify_chain_to_root(chain, certs.legacy_root)
-    mds_blob.verify_chain_to_root([certs.leaf, certs.intermediate], certs.current_root)
+    # The path ends at the root given: the cross-certificate is on it only to the older one.
+    to_current = _loaded(certs.leaf, certs.intermediate, certs.current_root)
+    assert mds_blob.verify_chain_to_root(chain, certs.current_root) == to_current
+    assert mds_blob.verify_chain_to_root(chain, certs.legacy_root) == _loaded(*chain, certs.legacy_root)
+    assert mds_blob.verify_chain_to_root([certs.leaf, certs.intermediate], certs.current_root) == to_current
     with pytest.raises(InvalidSignature):
         mds_blob.verify_chain_to_root(chain, certs.unrelated)
 
@@ -129,6 +135,7 @@ def test_no_x5c_means_the_root_signed_the_blob():
     root = _certificate(subject="Signer", issuer="Signer", public_key=key.public_key(), issuer_key=key)
 
     assert mds_blob.verify_blob(_blob({"alg": "ES256"}, _payload(), key), root) == _payload()
+    assert mds_blob.verify_chain_to_root([], root) == _loaded(root)
 
 
 def test_a_blob_with_the_cross_certificate_in_x5c_verifies_and_keeps_its_json():

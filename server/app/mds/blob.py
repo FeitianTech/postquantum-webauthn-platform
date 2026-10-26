@@ -36,29 +36,34 @@ from .. import encoding
 __all__ = ["verify_blob", "verify_chain_to_root"]
 
 
-def verify_chain_to_root(chain: Sequence[bytes], trust_root: bytes, *, now: datetime | None = None) -> None:
-    """Check that ``chain``'s first certificate leads to ``trust_root``, valid at ``now``.
+def verify_chain_to_root(
+    chain: Sequence[bytes], trust_root: bytes, *, now: datetime | None = None
+) -> list[x509.Certificate]:
+    """The path from ``chain``'s first certificate to ``trust_root``, valid at ``now``.
 
     RFC 5280 path building (cryptography's ``x509.verification``) with
     ``trust_root`` the only anchor and the rest of ``chain`` the intermediates it
     may use: a certificate past the root (the R3 cross-certificate) is simply not
-    on the path. Every CA on the path must carry Basic Constraints. Raises fido2's
+    on the path. Every CA on the path must carry Basic Constraints. The path runs
+    from the signing certificate to the root, each certificate followed by its
+    issuer; with no chain the root signed, and is the whole path. Raises fido2's
     ``InvalidSignature`` when there is no such path.
     """
 
+    root = x509.load_der_x509_certificate(bytes(trust_root))
     if not chain:
-        return
+        return [root]
     certificates = [x509.load_der_x509_certificate(bytes(der)) for der in chain]
     ca_policy = ExtensionPolicy.permit_all().require_present(x509.BasicConstraints, Criticality.AGNOSTIC, None)
     verifier = (
         PolicyBuilder()
-        .store(Store([x509.load_der_x509_certificate(bytes(trust_root))]))
+        .store(Store([root]))
         .time(now or datetime.now(timezone.utc))
         .extension_policies(ca_policy=ca_policy, ee_policy=ExtensionPolicy.permit_all())
         .build_client_verifier()
     )
     try:
-        verifier.verify(certificates[0], certificates[1:])
+        return verifier.verify(certificates[0], certificates[1:]).chain
     except VerificationError as exc:
         raise InvalidSignature(f"No path to the pinned root: {exc}") from None
 
