@@ -15,6 +15,7 @@ import hashlib
 
 from flask import Blueprint, Flask, Response, abort, request
 
+from .. import accept_encoding
 from ..mds import cache as mds_cache
 from ..mds import explorer_files as mds_explorer_files
 from ..mds import files as mds_files
@@ -69,7 +70,7 @@ def explorer_list():
     version and the encoding, so a page loading it again gets a 304."""
 
     files = _explorer_files()
-    gzipped = "gzip" in request.headers.get("Accept-Encoding", "").lower()
+    gzipped = accept_encoding.gzip_accepted(request.headers.get("Accept-Encoding"))
     response = Response(files.list_gzip if gzipped else files.list_json, mimetype="application/json")
     if gzipped:
         response.headers["Content-Encoding"] = "gzip"

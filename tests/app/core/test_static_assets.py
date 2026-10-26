@@ -142,8 +142,9 @@ def test_the_explorer_list_is_one_url_revalidated_by_its_etag(mds_fixture_snapsh
         assert again.status_code == 304
 
 
-def test_the_explorer_list_is_sent_whole_to_a_client_that_takes_no_gzip(mds_fixture_snapshot, client):
-    with client.get("/assets/mds/fido-mds3.explorer.list.json", headers={"Accept-Encoding": "identity"}) as listed:
+@pytest.mark.parametrize("accepted", ["identity", "gzip;q=0", "gzip;q=0.5, identity"])
+def test_the_explorer_list_is_sent_whole_to_a_client_that_takes_no_gzip(mds_fixture_snapshot, client, accepted):
+    with client.get("/assets/mds/fido-mds3.explorer.list.json", headers={"Accept-Encoding": accepted}) as listed:
         assert listed.status_code == 200
         assert "Content-Encoding" not in listed.headers
         assert json.loads(listed.data)["meta"]["no"] == 7
