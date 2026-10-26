@@ -58,9 +58,8 @@ describe('the MDS section', () => {
     ]);
   });
 
-  it('reads the packaged list at its one URL whatever the server names', async () => {
-    const { snapshotUrl: _url, ...info } = FIXTURE_INFO;
-    const fetch = stubFetch(fixtureRoutes({ '/api/mds/metadata/info': () => json(info) }));
+  it('asks only for the packaged list, at its one URL, while the session has no uploads', async () => {
+    const fetch = stubFetch(fixtureRoutes());
     renderSection();
 
     await waitFor(() => expect(bodyRows()).toHaveLength(FIXTURE_ENTRIES.length));

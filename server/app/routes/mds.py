@@ -18,7 +18,6 @@ from ..config.request_limits import METADATA_UPLOAD_LIMIT_KEY
 from ..mds import cache as mds_cache
 from ..mds import effective as mds_effective
 from ..mds import entries as mds_entries
-from ..mds import explorer_files as mds_explorer_files
 from ..mds import provisioning as mds_provisioning
 from ..mds import uploads as mds_uploads
 from ..storage import github_mirror
@@ -32,8 +31,8 @@ bp = Blueprint("mds", __name__)
 
 def _custom_entries_state(metadata_session_id: str | None) -> str:
     """Whether the visitor's namespace holds uploaded metadata: "present" or "none",
-    or "unknown" when its uploads cannot be listed. The page loads the cacheable
-    packaged list only for "none"."""
+    or "unknown" when its uploads cannot be listed. The page asks for the session's
+    own rows (explorer/custom) beside the packaged list unless it is "none"."""
 
     if not metadata_session_id:
         return "none"
@@ -43,21 +42,10 @@ def _custom_entries_state(metadata_session_id: str | None) -> str:
         return "unknown"
 
 
-def _packaged_snapshot_url() -> str | None:
-    """Where browsers load the packaged snapshot's list from (one URL, revalidated
-    by its ETag, so the page may fetch it before asking here), or None when the
-    snapshot on disk is not one the explorer API would agree with (the page then
-    asks the API)."""
-
-    if mds_cache.load_packaged_snapshot_meta() is None:
-        return None
-    return mds_explorer_files.list_url()
-
-
 def _initial_mds_info() -> dict[str, Any]:
     """What the MDS explorer starts from: the packaged snapshot's summary (absent
-    without a snapshot), the URL of the packaged snapshot (absent without one),
-    and whether this session has uploaded metadata. The page asks
+    without a snapshot) and whether this session has uploaded metadata; the page
+    loads the packaged list at its one URL. The page asks
     ``/api/mds/metadata/info`` for it, which waits for a provisioning under way;
     the page itself is static and never waits. A running instance takes a newer
     snapshot from Cloud Storage here (``mds_provisioning.follow_newer_snapshot``): this is where
@@ -68,9 +56,6 @@ def _initial_mds_info() -> dict[str, Any]:
     metadata_session_id = visitor_session.current_id()
 
     initial_mds_info = dict(mds_cache.load_packaged_explorer_summary() or {})
-    snapshot_url = _packaged_snapshot_url()
-    if snapshot_url:
-        initial_mds_info["snapshotUrl"] = snapshot_url
     initial_mds_info["customEntriesState"] = _custom_entries_state(metadata_session_id)
     return initial_mds_info
 

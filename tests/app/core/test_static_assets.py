@@ -15,6 +15,7 @@ from server.app.config.web_export import WEB_EXPORT_ROOT_KEY
 from server.app.mds import cache as mds_cache
 from server.app.mds import files as mds_files
 from tests.app.entry_app import entry_app
+from tests.app.metadata.snapshot_versions import snapshot_version
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 
@@ -140,6 +141,44 @@ def test_the_explorer_list_is_one_url_revalidated_by_its_etag(mds_fixture_snapsh
         headers={"Accept-Encoding": "gzip", "If-None-Match": listed.headers["ETag"]},
     ) as again:
         assert again.status_code == 304
+
+
+def test_a_new_snapshot_is_a_new_list_at_the_same_url(mds_fixture_snapshot, client):
+    url = "/assets/mds/fido-mds3.explorer.list.json"
+    before = client.get(url).headers["ETag"]
+
+    # A refresh writes every file whole, metas last (with times of their own).
+    for step, (name, data) in enumerate(sorted(snapshot_version(8).items(), key=lambda item: item[0] in mds_files.META_FILENAMES)):
+        path = mds_fixture_snapshot / name
+        path.write_bytes(data)
+        os.utime(path, (2_000_000_000 + step, 2_000_000_000 + step))
+
+    with client.get(url, headers={"If-None-Match": before, "Accept-Encoding": "identity"}) as after:
+        assert after.status_code == 200
+        assert after.headers["ETag"] != before
+        assert json.loads(after.data)["meta"]["no"] == 8
+
+
+def _without_the_full_file(snapshot):
+    (snapshot / mds_files.EXPLORER_FULL).unlink()
+
+
+def _with_the_full_file_of_another_snapshot(snapshot):
+    # No row of the verified snapshot, and a meta that names another one.
+    (snapshot / mds_files.EXPLORER_FULL).write_text(json.dumps({"meta": {}, "entries": []}), encoding="utf-8")
+    meta_path = snapshot / mds_files.EXPLORER_FULL_META
+    meta = json.loads(meta_path.read_text(encoding="utf-8"))
+    meta_path.write_text(json.dumps({**meta, "etag": '"another"'}), encoding="utf-8")
+
+
+@pytest.mark.parametrize("change", [_without_the_full_file, _with_the_full_file_of_another_snapshot])
+def test_the_list_is_the_verified_snapshots_whatever_full_file_lies_beside_it(mds_fixture_snapshot, client, change):
+    change(mds_fixture_snapshot)
+
+    with client.get("/assets/mds/fido-mds3.explorer.list.json", headers={"Accept-Encoding": "identity"}) as listed:
+        assert listed.status_code == 200
+        assert json.loads(listed.data)["meta"]["no"] == 7
+        assert len(json.loads(listed.data)["entries"]) == 32
 
 
 @pytest.mark.parametrize("accepted", ["identity", "gzip;q=0", "gzip;q=0.5, identity"])

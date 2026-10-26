@@ -41,22 +41,26 @@ def _local(directory):
     return {name: (directory / name).read_bytes() for name in mds_files.SNAPSHOT_FILENAMES}
 
 
+_LIST = "/assets/mds/fido-mds3.explorer.list.json"
+
+
 def _info(client):
-    info = client.get("/api/mds/metadata/info").get_json()
-    return info["no"], info["snapshotUrl"]
+    """The number of the snapshot the info answer describes."""
+
+    return client.get("/api/mds/metadata/info").get_json()["no"]
 
 
 def test_a_newer_set_in_the_bucket_reaches_a_running_instance(instance, client):
     directory, bucket = instance
-    no, url = _info(client)
-    assert no == 7 and json.loads(client.get(url).data)["meta"]["no"] == 7
+    no = _info(client)
+    assert no == 7 and json.loads(client.get(_LIST).data)["meta"]["no"] == 7
 
     snapshot_sets.publish(snapshot_version(8))
 
-    no, url = _info(client)
+    no = _info(client)
     assert no == 8
     assert _local(directory) == snapshot_version(8)
-    with client.get(url, headers={"Accept-Encoding": "identity"}) as listed:
+    with client.get(_LIST, headers={"Accept-Encoding": "identity"}) as listed:
         assert listed.headers["Cache-Control"] == "no-cache"
         assert json.loads(listed.data)["meta"]["no"] == 8
     # Taken from the set's BLOB and meta alone, the rest derived.
@@ -75,11 +79,11 @@ def test_the_pointer_is_read_at_most_once_per_interval(instance, client, monkeyp
     reads = len(bucket.download_options)
 
     clock[0] += 899
-    assert _info(client)[0] == 7
+    assert _info(client) == 7
     assert len(bucket.download_options) == reads
 
     clock[0] += 1
-    assert _info(client)[0] == 8
+    assert _info(client) == 8
     # One short read of the pointer, tried once, inside the request.
     assert bucket.download_options[reads] == ("mds/current.json", {"timeout": 5.0, "retry": None})
 
@@ -87,7 +91,7 @@ def test_the_pointer_is_read_at_most_once_per_interval(instance, client, monkeyp
 def test_an_older_or_the_same_set_is_left_alone(instance, client):
     directory, bucket = instance
     snapshot_sets.publish(snapshot_version(6))
-    assert _info(client)[0] == 7
+    assert _info(client) == 7
     assert _local(directory) == snapshot_version(7)
 
 
@@ -108,11 +112,11 @@ def test_other_requests_go_on_while_one_takes_the_new_set(instance, client, app)
     try:
         assert downloading.wait(5)
         # Not held: it answers from the snapshot it has.
-        assert _info(client)[0] == 7
+        assert _info(client) == 7
     finally:
         release.set()
         taking.join(10)
-    assert _info(client)[0] == 8
+    assert _info(client) == 8
 
 
 @pytest.mark.parametrize(
@@ -130,8 +134,8 @@ def test_a_failed_follow_keeps_the_snapshot(instance, client, failure):
     elif failure == "a file gone":
         del bucket.objects[pointer["set"] + mds_files.VERIFIED_META]
 
-    no, url = _info(client)
-    assert no == 7 and json.loads(client.get(url).data)["meta"]["no"] == 7
+    no = _info(client)
+    assert no == 7 and json.loads(client.get(_LIST).data)["meta"]["no"] == 7
     assert _local(directory) == snapshot_version(7)
     assert not list(directory.glob("*.partial"))
 
@@ -151,9 +155,9 @@ def test_a_set_pruned_under_a_following_instance_is_taken_on_the_next_check(inst
 
     bucket.on_download.append(_publishers)
 
-    assert _info(client)[0] == 7
+    assert _info(client) == 7
     assert _local(directory) == snapshot_version(7)
-    assert _info(client)[0] == 10
+    assert _info(client) == 10
     assert _local(directory) == snapshot_version(10)
 
 
@@ -163,7 +167,7 @@ def test_without_cloud_storage_nothing_is_asked(instance, client, monkeypatch):
     snapshot_sets.publish(snapshot_version(8))
     reads = len(bucket.download_options)
 
-    assert _info(client)[0] == 7
+    assert _info(client) == 7
     assert len(bucket.download_options) == reads
 
 
@@ -177,5 +181,5 @@ def test_a_follow_replaces_a_snapshot_whose_local_serial_cannot_be_read(instance
         meta.write_bytes(local_meta)
     snapshot_sets.publish(snapshot_version(8))
 
-    assert _info(client)[0] == 8
+    assert _info(client) == 8
     assert _local(directory) == snapshot_version(8)

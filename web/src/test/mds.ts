@@ -17,7 +17,7 @@ export const FIXTURE_ENTRIES = FIXTURE_SNAPSHOT.entries as MdsEntry[];
 /** The list the page loads: each entry without its detail, which its detailUrl names. */
 export const FIXTURE_LIST = files.list as unknown as MdsSnapshot;
 export const SNAPSHOT_URL = '/assets/mds/fido-mds3.explorer.list.json';
-export const FIXTURE_INFO = { ...summary, snapshotUrl: SNAPSHOT_URL, customEntriesState: 'none' };
+export const FIXTURE_INFO = { ...summary, customEntriesState: 'none' };
 
 /** Each entry's detail file, by the path its row names (fetch is answered by path). */
 export function detailRoutes(): Record<string, Route> {

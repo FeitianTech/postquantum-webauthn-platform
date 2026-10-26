@@ -104,10 +104,6 @@ def snapshot_version(meta: Mapping[str, Any] | None) -> str | None:
     return quote(f"{meta.get('no')}.{digest}", safe=".")
 
 
-def list_url() -> str:
-    return f"{URL_PREFIX}/{LIST_FILENAME}"
-
-
 def icon_url(name: str) -> str:
     return f"{URL_PREFIX}/{ICON_DIRECTORY}/{name}"
 

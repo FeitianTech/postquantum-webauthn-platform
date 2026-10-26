@@ -6,13 +6,11 @@ from __future__ import annotations
 
 import io
 import json
-import os
 
 from server.app.mds import files as mds_files
 from server.app.storage import session_metadata
 from server.app.storage.common import StorageReadError
 from tests.app.metadata import mds_fixture
-from tests.app.metadata.snapshot_versions import snapshot_version
 from tests.app.security.ceremony_helpers import Authenticator, register_simple
 
 
@@ -28,15 +26,12 @@ def _upload(client):
     )
 
 
-def test_a_new_visitor_gets_the_packaged_summary_and_the_static_snapshot_and_no_namespace(mds_fixture_snapshot, client):
+def test_a_new_visitor_gets_the_packaged_summary_and_no_namespace(mds_fixture_snapshot, client):
     answer = client.get("/api/mds/metadata/info")
 
     assert answer.status_code == 200
-    assert answer.get_json() == {
-        **_summary(),
-        "snapshotUrl": "/assets/mds/fido-mds3.explorer.list.json",
-        "customEntriesState": "none",
-    }
+    # The page loads the packaged list at its one URL: the answer names none.
+    assert answer.get_json() == {**_summary(), "customEntriesState": "none"}
     assert client.get_cookie("session") is None
     assert client.get_cookie("fido.mds.session") is None
 
@@ -65,56 +60,8 @@ def test_a_namespace_whose_uploads_cannot_be_listed_is_unknown(mds_fixture_snaps
     assert client.get("/api/mds/metadata/info").get_json()["customEntriesState"] == "unknown"
 
 
-def test_the_snapshot_url_is_the_explorer_list_revalidated_by_its_etag(mds_fixture_snapshot, client):
-    url = client.get("/api/mds/metadata/info").get_json()["snapshotUrl"]
-
-    assert url == "/assets/mds/fido-mds3.explorer.list.json"
-    with client.get(url, headers={"Accept-Encoding": "identity"}) as listed:
-        assert listed.status_code == 200
-        assert listed.headers["Cache-Control"] == "no-cache"
-        assert listed.headers["ETag"]
-        assert json.loads(listed.data)["meta"]["no"] == 7
-
-
-def test_a_new_snapshot_is_a_new_list_at_the_same_url(mds_fixture_snapshot, client):
-    url = client.get("/api/mds/metadata/info").get_json()["snapshotUrl"]
-    before = client.get(url).headers["ETag"]
-
-    # A refresh writes every file whole, metas last (with times of their own).
-    for step, (name, data) in enumerate(sorted(snapshot_version(8).items(), key=lambda item: item[0] in mds_files.META_FILENAMES)):
-        path = mds_fixture_snapshot / name
-        path.write_bytes(data)
-        os.utime(path, (2_000_000_000 + step, 2_000_000_000 + step))
-
-    assert client.get("/api/mds/metadata/info").get_json()["snapshotUrl"] == url
-    with client.get(url, headers={"If-None-Match": before, "Accept-Encoding": "identity"}) as after:
-        assert after.status_code == 200
-        assert after.headers["ETag"] != before
-        assert json.loads(after.data)["meta"]["no"] == 8
-
-
-def test_without_a_snapshot_it_names_no_snapshot_url(client):
-    # The page then asks the explorer API instead of requesting a missing file.
+def test_without_a_snapshot_it_answers_the_uploads_state_alone(client):
     assert client.get("/api/mds/metadata/info").get_json() == {"customEntriesState": "none"}
-
-
-def test_without_the_browsers_file_it_names_no_snapshot_url(mds_fixture_snapshot, client):
-    (mds_fixture_snapshot / mds_files.EXPLORER_FULL).unlink()
-
-    answer = client.get("/api/mds/metadata/info").get_json()
-
-    assert "snapshotUrl" not in answer
-    assert answer["no"] == _summary()["no"]
-
-
-def test_a_browsers_file_from_another_snapshot_is_not_named(mds_fixture_snapshot, client):
-    # The API would answer from the verified snapshot; a file whose meta names
-    # another one would show different entries, so the page is not sent to it.
-    meta_path = mds_fixture_snapshot / mds_files.EXPLORER_FULL_META
-    meta = json.loads(meta_path.read_text(encoding="utf-8"))
-    meta_path.write_text(json.dumps({**meta, "etag": '"another"'}), encoding="utf-8")
-
-    assert "snapshotUrl" not in client.get("/api/mds/metadata/info").get_json()
 
 
 def test_only_get_is_answered(client):

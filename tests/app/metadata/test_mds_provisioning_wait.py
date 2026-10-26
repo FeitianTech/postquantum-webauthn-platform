@@ -95,7 +95,6 @@ def test_the_info_waits_and_then_offers_the_packaged_snapshot(slow_provisioning,
     assert response.status_code == 200
     info = response.get_json()
     assert info["entryCount"] == FIXTURE_ENTRIES
-    assert "snapshotUrl" in info
 
 
 def test_the_visitors_rows_wait_and_then_count_the_packaged_list(slow_provisioning, client):

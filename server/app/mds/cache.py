@@ -164,20 +164,6 @@ def _load_packaged_explorer_meta(snapshot_path: str | None = None) -> dict[str, 
     return explorer_meta
 
 
-def load_packaged_snapshot_meta() -> dict[str, Any] | None:
-    """The meta of the snapshot browsers load (``fido-mds3.explorer.full.json``),
-    when the file is there and its meta describes the verified snapshot; else None.
-
-    Only then is the static file what the explorer API would answer for a session
-    without uploads, so only then is the page sent to it.
-    """
-
-    path = _path(mds_files.EXPLORER_FULL)
-    if not os.path.isfile(path):
-        return None
-    return _load_packaged_explorer_meta(path)
-
-
 def _mtimes(*names: str) -> tuple[float | None, ...]:
     """The snapshot files' modification times, None for a missing one.
 

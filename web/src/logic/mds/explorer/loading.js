@@ -41,7 +41,7 @@ import { MDS_INFO_PATH, MDS_LIST_PATH } from '../constants.js';
 /** @typedef {{ meta?: { [key: string]: unknown }, entries: MdsEntry[] }} MdsSnapshot */
 
 /**
- * What GET /api/mds/metadata/info answers: the packaged summary, snapshotUrl and customEntriesState.
+ * What GET /api/mds/metadata/info answers: the packaged summary and customEntriesState.
  * @typedef {{ [key: string]: unknown }} MdsInfo
  */
 
@@ -191,9 +191,9 @@ export function prepareSnapshotEntries(snapshot, resolvedEntryCache = new Map())
         });
 }
 
-// What the page starts from (GET /api/mds/metadata/info: the packaged summary,
-// `snapshotUrl` and `customEntriesState`). Null when it cannot be had: the
-// explorer then asks the API.
+// What the page starts from (GET /api/mds/metadata/info: the packaged summary
+// and `customEntriesState`). Null when it cannot be had: the explorer then asks
+// for the session's own rows as well as the list.
 /**
  * @param {{ signal?: AbortSignal }} [options]
  * @returns {Promise<MdsInfo | null>}
