@@ -77,6 +77,35 @@ def _entry_matches_lookup(
     return False
 
 
+def _session_rows(
+    session_items: list[mds_uploads.SessionMetadataItem],
+    *,
+    include_detail: bool,
+    include_raw_entry: bool = True,
+    compact_detail: bool = False,
+) -> tuple[list[dict[str, Any]], set[str]]:
+    """The visitor's uploads as explorer rows, in the order listed (the newest first),
+    one per AAGUID (the first listed), and the AAGUIDs they hold."""
+
+    rows: list[dict[str, Any]] = []
+    aaguids: set[str] = set()
+    for index, item in enumerate(session_items):
+        row = _build_session_snapshot_entry(
+            item,
+            index=index,
+            include_detail=include_detail,
+            include_raw_entry=include_raw_entry,
+            compact_detail=compact_detail,
+        )
+        aaguid_key = normalise_aaguid_key(row.get("aaguid"))
+        if aaguid_key:
+            if aaguid_key in aaguids:
+                continue
+            aaguids.add(aaguid_key)
+        rows.append(row)
+    return rows, aaguids
+
+
 def _compose_effective_snapshot(
     base_snapshot: Mapping[str, Any] | None,
     *,
@@ -108,23 +137,12 @@ def _compose_effective_snapshot(
         return {"meta": meta, "entries": raw_base_entries}
 
     base_entries = [dict(entry) for entry in raw_base_entries]
-    custom_entries: list[dict[str, Any]] = []
-    seen_aaguids: set[str] = set()
-
-    for index, item in enumerate(session_items):
-        custom_entry = _build_session_snapshot_entry(
-            item,
-            index=index,
-            include_detail=include_detail,
-            include_raw_entry=include_raw_entry,
-            compact_detail=compact_detail,
-        )
-        aaguid_key = normalise_aaguid_key(custom_entry.get("aaguid"))
-        if aaguid_key:
-            if aaguid_key in seen_aaguids:
-                continue
-            seen_aaguids.add(aaguid_key)
-        custom_entries.append(custom_entry)
+    custom_entries, seen_aaguids = _session_rows(
+        session_items,
+        include_detail=include_detail,
+        include_raw_entry=include_raw_entry,
+        compact_detail=compact_detail,
+    )
 
     effective_entries = custom_entries[:]
     for entry in base_entries:
