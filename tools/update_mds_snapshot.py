@@ -4,7 +4,9 @@
 Downloads the BLOB, verifies it against the pinned trust root, and writes the
 snapshot's seven files. ``--verify-only`` writes nothing; ``--publish`` (earlier
 ``--gcs-upload``) also publishes them to Cloud Storage as a snapshot set
-(``server/app/mds/sets.py``), which every server instance follows.
+(``server/app/mds/sets.py``), which every server instance follows. A BLOB whose
+serial is below the local snapshot's, or with ``--publish`` the bucket's, fails the
+run: the FIDO Alliance's serials only go up.
 """
 
 from __future__ import annotations
@@ -193,9 +195,15 @@ def _build_verified_snapshot(
     return payload
 
 
-def _publish_to_cloud_storage(files: dict[str, bytes]) -> int:
-    """Publish the verified snapshot's files as a set in the bucket the server
-    provisions from, and point to it (``server/app/mds/sets.py``)."""
+def _older_than(no: object, than: object) -> bool:
+    """Whether serial ``no`` is below ``than``; a serial that is not a number is not compared."""
+
+    return isinstance(no, int) and isinstance(than, int) and no < than
+
+
+def _publish_to_cloud_storage(files: dict[str, bytes], no: object) -> int:
+    """Publish the verified snapshot's files (serial ``no``) as a set in the bucket the
+    server provisions from, and point to it (``server/app/mds/sets.py``)."""
 
     from server.app.mds import sets as snapshot_sets
     from server.app.storage import cloud
@@ -221,6 +229,12 @@ def _publish_to_cloud_storage(files: dict[str, bytes]) -> int:
     pointer = result.pointer or {}
     if result.outcome == "published":
         print(f"Published snapshot no. {pointer.get('no')} as {pointer.get('set')}.")
+    elif result.outcome == "current" and _older_than(no, pointer.get("no")):
+        print(
+            f"::error::The bucket has snapshot no. {pointer.get('no')}, newer than this BLOB's "
+            f"no. {no}; nothing published."
+        )
+        return 1
     elif result.outcome == "current":
         print(f"The bucket already has snapshot no. {pointer.get('no')}; nothing published.")
     else:
@@ -271,6 +285,12 @@ def main(argv: list[str] | None = None) -> int:
         print(f"::error::The metadata BLOB failed verification; nothing written: {exc}")
         return 1
     existing_cache = _load_existing_cache()
+    if _older_than(verified_snapshot.get("no"), existing_cache.get("no")):
+        print(
+            f"::error::The metadata BLOB is no. {verified_snapshot.get('no')}, older than the local "
+            f"snapshot's no. {existing_cache.get('no')}; nothing written."
+        )
+        return 1
     cache_state = _build_cache_state(
         last_modified=last_modified,
         etag=etag,
@@ -299,7 +319,7 @@ def main(argv: list[str] | None = None) -> int:
         print("Packaged metadata is already up to date; no changes made.")
 
     if publish:
-        return _publish_to_cloud_storage(files)
+        return _publish_to_cloud_storage(files, verified_snapshot.get("no"))
     return 0
 
 

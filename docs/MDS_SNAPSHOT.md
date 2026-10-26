@@ -175,7 +175,8 @@ python tools/update_mds_snapshot.py
 ```
 
 After that the application uses tier 1 and needs no network at all. To check
-that upstream is reachable and the BLOB still verifies without writing anything:
+that upstream is reachable and the BLOB still verifies, and is no older than the local
+snapshot, without writing anything:
 
 ```bash
 python tools/update_mds_snapshot.py --verify-only
@@ -198,7 +199,8 @@ snapshot as immutable sets and a pointer:
   replaced (`previous`). It is written once its set is complete, only if it is still
   the object its writer read (its generation), and only forward: a snapshot whose
   serial is not above the pointer's is not published, so a run that finds no new
-  BLOB writes nothing and the asset URL keeps its version.
+  BLOB writes nothing and the asset URL keeps its version (one below the pointer's
+  fails the run: the FIDO Alliance's serials only go up).
 - **Two writers at once** leave one pointer: the other's conditional write fails, it
   deletes the set it wrote, and the updater reads the pointer again (up to three
   times) in case the winner's snapshot is older than its own.
@@ -221,8 +223,10 @@ FIDO_SERVER_GCS_ENABLED=1 FIDO_SERVER_GCS_BUCKET=pqcwebauthn python tools/update
 
 It downloads and verifies the BLOB, writes the local snapshot, and publishes that
 verified snapshot as a set (`--gcs-upload` is the flag's earlier name). It exits
-non-zero when the download, the verification or the bucket fails, having published
-nothing.
+non-zero, having published nothing, when the download, the verification or the bucket
+fails, and when the BLOB's serial is below the local snapshot's (then nothing is written
+either) or the bucket's: the FIDO Alliance's serials only go up, so an older BLOB is never
+taken.
 
 `.github/workflows/update-fido-mds.yml` runs this twice a day, so a new BLOB reaches
 the bucket within about twelve hours of the FIDO Alliance publishing it, and running

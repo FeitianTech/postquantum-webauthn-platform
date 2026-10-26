@@ -435,6 +435,46 @@ def test_publish_points_the_bucket_at_the_verified_snapshot(stubbed_refresh, buc
     assert "already has snapshot no. 42" in capsys.readouterr().out
 
 
+def _local_snapshot_no(no):
+    """A local snapshot whose verified meta names serial ``no``."""
+
+    path = _file(mds_files.VERIFIED_META)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps({"no": no}), encoding="utf-8")
+
+
+@pytest.mark.parametrize("argv", [[], ["--verify-only"], ["--publish"]])
+def test_a_blob_older_than_the_local_snapshot_is_refused_with_nothing_written(stubbed_refresh, bucket, argv, capsys):
+    _local_snapshot_no(43)
+
+    assert updater.main(argv) == 1
+
+    assert "::error::The metadata BLOB is no. 42, older than the local snapshot's no. 43; nothing written." in capsys.readouterr().out
+    assert not _file(mds_files.BLOB).exists()
+    assert json.loads(_file(mds_files.VERIFIED_META).read_text(encoding="utf-8")) == {"no": 43}
+    assert bucket.objects == {}
+
+
+@pytest.mark.parametrize("local", [41, 42, "not a number"])
+def test_a_blob_as_new_as_the_local_snapshot_or_newer_is_taken(stubbed_refresh, local):
+    _local_snapshot_no(local)
+
+    assert updater.main([]) == 0
+
+    assert _file(mds_files.BLOB).read_bytes() == b"a-blob"
+    assert json.loads(_file(mds_files.VERIFIED_META).read_text(encoding="utf-8"))["no"] == 42
+
+
+def test_a_blob_older_than_the_buckets_snapshot_fails_the_publish(stubbed_refresh, bucket, capsys):
+    snapshot_sets.publish(snapshot_version(43))
+    before = dict(bucket.objects)
+
+    assert updater.main(["--publish"]) == 1
+
+    assert "::error::The bucket has snapshot no. 43, newer than this BLOB's no. 42; nothing published." in capsys.readouterr().out
+    assert bucket.objects == before
+
+
 def test_publish_fails_loudly_when_cloud_storage_is_disabled(stubbed_refresh, monkeypatch, capsys):
     monkeypatch.setattr(cloud, "gcs_enabled", lambda: False)
 
