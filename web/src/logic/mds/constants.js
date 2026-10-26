@@ -16,6 +16,9 @@ export const CERTIFICATION_OPTIONS = [
     'REVOKED',
 ];
 
+// The statuses the Status filter always offers.
+export const STATUS_OPTIONS = CERTIFICATION_OPTIONS;
+
 /**
  * A filter: the column it reads, its input's id, and the entry list its options
  * come from (with those always offered, and whether the list shows whole).
@@ -36,6 +39,12 @@ export const FILTER_CONFIG = [
         inputId: 'mds-filter-certification',
         optionsKey: 'certification',
         staticOptions: CERTIFICATION_OPTIONS,
+    },
+    {
+        key: 'latestStatus',
+        inputId: 'mds-filter-latest-status',
+        optionsKey: 'latestStatus',
+        staticOptions: STATUS_OPTIONS,
     },
     { key: 'id', inputId: 'mds-filter-id' },
     {

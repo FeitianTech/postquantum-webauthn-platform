@@ -1,7 +1,7 @@
 import type { DetailSection } from '@/logic/mds/explorer/detail.js';
 import type { ChipList, DetailField } from '@/logic/mds/explorer/detail-fields.js';
 import type { MdsEntry } from '@/logic/mds/explorer/loading.js';
-import { certificationParts, identifierLabel } from '@/logic/mds/explorer/rows.js';
+import { certificationParts, identifierLabel, statusParts } from '@/logic/mds/explorer/rows.js';
 
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -40,6 +40,10 @@ function FieldValue({ field, entry }: { field: DetailField; entry: MdsEntry }) {
         {badge.detail ? <span className="text-body text-ink-muted">{badge.detail}</span> : null}
       </span>
     );
+  }
+  if (field.label === 'Status') {
+    const badge = statusParts(entry);
+    return <Badge tone={badge.tone}>{badge.status}</Badge>;
   }
   return <span className="[overflow-wrap:anywhere]">{value}</span>;
 }

@@ -54,6 +54,7 @@ export const MDS_SORT_ACCESSORS = {
     name: entry => entry?.name || '',
     protocol: entry => entry?.protocol || '',
     certification: entry => entry?.certification || '',
+    latestStatus: entry => entry?.latestStatus || '',
     id: entry => entry?.id || '',
     userVerification: entry => entry?.userVerification || '',
     attachment: entry => entry?.attachment || '',
@@ -81,52 +82,52 @@ export function defaultExplorerSort() {
     return { key: DEFAULT_SORT_KEY, direction: DEFAULT_SORT_DIRECTION };
 }
 
-function certificationDisplayKey(entry) {
-    return normaliseEnumKey((entry.certification || '').split('•')[0]);
+// The columns a filter picks a status for: each status's key, read from the
+// column's text (its first part, before the descriptor).
+const STATUS_COLUMNS = new Set(['certification', 'latestStatus']);
+
+function statusKeyOf(text) {
+    return normaliseEnumKey((typeof text === 'string' ? text : '').split('•')[0]);
+}
+
+function isCertified(statusKey) {
+    return statusKey === 'FIDO_CERTIFIED' || statusKey.startsWith('FIDO_CERTIFIED_');
+}
+
+// A status filter: text naming one of its options must equal the column's status,
+// except "FIDO Certified", which every certified level passes; other text is found
+// in the column's text or its key.
+function matchesStatusFilter(text, value, options) {
+    const statusKey = statusKeyOf(text);
+    const canonicalQuery = normaliseEnumKey(value);
+    if (canonicalQuery && options.some(option => normaliseEnumKey(option) === canonicalQuery)) {
+        return canonicalQuery === 'FIDO_CERTIFIED' ? isCertified(statusKey) : statusKey === canonicalQuery;
+    }
+    const query = value.toLowerCase();
+    return [text, statusKey]
+        .map(candidate => (typeof candidate === 'string' ? candidate : '').toLowerCase())
+        .some(candidate => candidate && candidate.includes(query));
 }
 
 // Whether an entry passes every filter (all must). A filter is the text typed or
-// picked, found in the column's text ignoring case. Certification: text naming
-// one of the list's options must equal the entry's status, except "FIDO
-// Certified", which every certified level passes.
+// picked, found in the column's text ignoring case; Certification and Status read
+// as status filters, against the options each offers.
 /**
  * @param {Record<string, any>} entry
  * @param {Record<string, string>} filters
- * @param {string[]} [certificationOptions]
+ * @param {Record<string, string[]>} [optionLists]
  * @returns {boolean}
  */
-export function matchesExplorerFilters(entry, filters, certificationOptions = []) {
+export function matchesExplorerFilters(entry, filters, optionLists = {}) {
     return Object.entries(filters).every(([key, value]) => {
         if (!value) {
             return true;
         }
-        const query = value.toLowerCase();
-        if (key === 'certification') {
-            const canonicalQuery = normaliseEnumKey(value);
-            const isKnownOption = Boolean(canonicalQuery)
-                && certificationOptions.some(option => normaliseEnumKey(option) === canonicalQuery);
-
-            if (isKnownOption && canonicalQuery) {
-                const statusKey = normaliseEnumKey(entry.certificationStatus);
-                if (canonicalQuery === 'FIDO_CERTIFIED') {
-                    if (statusKey) {
-                        return statusKey.startsWith('FIDO_CERTIFIED');
-                    }
-                    return certificationDisplayKey(entry).startsWith('FIDO_CERTIFIED');
-                }
-                if (statusKey) {
-                    return statusKey === canonicalQuery;
-                }
-                return certificationDisplayKey(entry) === canonicalQuery;
-            }
-
-            const haystacks = [entry.certification, entry.certificationStatus]
-                .map(text => (text || '').toLowerCase())
-                .filter(Boolean);
-            return haystacks.some(text => text.includes(query));
+        if (STATUS_COLUMNS.has(key)) {
+            return matchesStatusFilter(entry[key], value, optionLists[key] || []);
         }
         const haystack = (entry[key] || '').toLowerCase();
-        return haystack.includes(query);
+        return haystack.includes(value.toLowerCase());
     });
 }
 

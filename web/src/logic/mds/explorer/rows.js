@@ -20,26 +20,43 @@ const DANGER_STATUSES = new Set([
     'USER_KEY_PHYSICAL_COMPROMISE',
 ]);
 
-// The certification text as one badge and what follows it: the level (the
-// latest status, as the server wrote it), then the descriptor and certificate
-// number; the tone is success for a certified level, danger for a revocation or
-// a compromise, neutral otherwise.
+/** @typedef {'success' | 'danger' | 'neutral'} StatusTone */
+
+// A status's tone: danger for a revocation or a compromise, success for a
+// certified level, neutral otherwise.
+/**
+ * @param {string} text
+ * @returns {StatusTone}
+ */
+function statusTone(text) {
+    const statusKey = normaliseEnumKey(text);
+    if (DANGER_STATUSES.has(statusKey)) {
+        return 'danger';
+    }
+    return statusKey.startsWith('FIDO_CERTIFIED') ? 'success' : 'neutral';
+}
+
+// The certification text as one badge and what follows it: the level (as the
+// server wrote it), then the descriptor and certificate number, the badge in
+// the level's tone.
 /**
  * @param {Record<string, any> | null | undefined} entry
- * @returns {{ level: string, detail: string, tone: 'success' | 'danger' | 'neutral' }}
+ * @returns {{ level: string, detail: string, tone: StatusTone }}
  */
 export function certificationParts(entry) {
     const text = typeof entry?.certification === 'string' ? entry.certification.trim() : '';
     const [level, ...rest] = text ? text.split(' • ') : [];
-    const statusKey = normaliseEnumKey(entry?.certificationStatus || level);
-    /** @type {'success' | 'danger' | 'neutral'} */
-    let tone = 'neutral';
-    if (DANGER_STATUSES.has(statusKey)) {
-        tone = 'danger';
-    } else if (statusKey.startsWith('FIDO_CERTIFIED')) {
-        tone = 'success';
-    }
-    return { level: level || MISSING_CELL_TEXT, detail: rest.join(' • '), tone };
+    return { level: level || MISSING_CELL_TEXT, detail: rest.join(' • '), tone: statusTone(level || '') };
+}
+
+// The latest status as one badge, in its tone.
+/**
+ * @param {Record<string, any> | null | undefined} entry
+ * @returns {{ status: string, tone: StatusTone }}
+ */
+export function statusParts(entry) {
+    const status = typeof entry?.latestStatus === 'string' ? entry.latestStatus.trim() : '';
+    return { status: status || MISSING_CELL_TEXT, tone: statusTone(status) };
 }
 
 const IDENTIFIER_LABELS = {

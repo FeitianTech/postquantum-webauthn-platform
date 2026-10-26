@@ -20,8 +20,14 @@ const CASES = [
   { label: 'user verification and transports', filters: { uv: ['#mds-filter-user-verification', 'User Verification', 'Fingerprint Internal'], transports: ['#mds-filter-transports', 'Transports', 'Nfc'] } },
 ] as const;
 
-// Nothing is expected to differ: the words are the server's, in both tables.
-const EXPECTED: ExpectedDifference[] = [];
+// The words are the server's, in both tables; what differs is listed with its reason.
+const EXPECTED: ExpectedDifference[] = [
+  {
+    only: 'shown',
+    token: /^(FIDO|Certified|L1|L2|NOT|Revoked)$/,
+    reason: "each entry's latest status, now a column of its own (Status) beside Certification",
+  },
+];
 
 async function shownRows(page: Page, filters: Record<string, readonly string[]>) {
   await page.goto('/#mds');
@@ -33,7 +39,7 @@ async function shownRows(page: Page, filters: Record<string, readonly string[]>)
     await field.fill(value);
     await field.press('Tab');
   }
-  return readShownRows(section.locator('tbody'), 'tr[data-entry-id]:not([hidden])', 4);
+  return readShownRows(section.locator('tbody'), 'tr[data-entry-id]:not([hidden])', 5);
 }
 
 const keys = (rows: ShownSection[]) => rows.map((row) => row.heading);
@@ -66,9 +72,9 @@ test.describe('the MDS table reads as recorded', () => {
     const section = page.getByRole('tabpanel', { name: 'FIDO MDS Authenticators' });
     const name = section.getByRole('columnheader', { name: /^Name/ }).getByRole('button');
     await name.click();
-    const shownUp = keys(await readShownRows(section.locator('tbody'), 'tr[data-entry-id]:not([hidden])', 4));
+    const shownUp = keys(await readShownRows(section.locator('tbody'), 'tr[data-entry-id]:not([hidden])', 5));
     await name.click();
-    const shownDown = keys(await readShownRows(section.locator('tbody'), 'tr[data-entry-id]:not([hidden])', 4));
+    const shownDown = keys(await readShownRows(section.locator('tbody'), 'tr[data-entry-id]:not([hidden])', 5));
 
     expect(shownUp).toEqual(legacyUp);
     expect(shownDown).toEqual(legacyDown);

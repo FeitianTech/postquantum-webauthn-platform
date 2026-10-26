@@ -169,32 +169,90 @@ def _effective_timestamp(report: Mapping[str, Any]) -> float:
     return parsed.timestamp() if parsed else 0.0
 
 
-def format_certification(status_reports: Any) -> tuple[str, str]:
-    reports = [report for report in extract_list(status_reports) if isinstance(report, Mapping)]
-    if not reports:
-        return "", ""
+# The certification levels, highest first.
+_CERTIFICATION_LEVELS = (
+    "FIDO_CERTIFIED_L3PLUS",
+    "FIDO_CERTIFIED_L3",
+    "FIDO_CERTIFIED_L2PLUS",
+    "FIDO_CERTIFIED_L2",
+    "FIDO_CERTIFIED_L1PLUS",
+    "FIDO_CERTIFIED_L1",
+    "FIDO_CERTIFIED",
+)
+# A report's status, the more serious first: of reports on one date, the first of
+# them is the latest status (a revocation over the certification of that day, a
+# level over the plain FIDO_CERTIFIED the MDS often dates the same day). Any
+# other status comes after them all.
+_STATUS_ORDER = (
+    "REVOKED",
+    "ATTESTATION_KEY_COMPROMISE",
+    "USER_KEY_REMOTE_COMPROMISE",
+    "USER_KEY_PHYSICAL_COMPROMISE",
+    "USER_VERIFICATION_BYPASS",
+    "UPDATE_AVAILABLE",
+    *_CERTIFICATION_LEVELS,
+    "SELF_ASSERTION_SUBMITTED",
+    "NOT_FIDO_CERTIFIED",
+)
 
-    sorted_reports = sorted(reports, key=_effective_timestamp, reverse=True)
-    latest = sorted_reports[0]
 
-    status_raw = string_or_none(mapping_value(latest, "status")) or ""
-    status_value = status_raw.upper()
-    descriptor = string_or_none(
-        mapping_value(latest, "certificationDescriptor", "certification_descriptor")
-    )
-    certificate_number = string_or_none(
-        mapping_value(latest, "certificateNumber", "certificate_number")
-    )
+def _status(report: Mapping[str, Any]) -> str:
+    """A status report's status, upper-cased as the explorer compares it; "" without one."""
 
-    parts = []
-    if status_value:
-        parts.append(format_enum(status_value))
+    return (string_or_none(mapping_value(report, "status")) or "").upper()
+
+
+def _report_order(report: Mapping[str, Any]) -> tuple[Any, ...]:
+    """Where a status report stands among an entry's, the latest first: one with no
+    date is in force (MDS3: effective while present), then the dated ones newest
+    first, then one whose date does not read; on one date the more serious status;
+    then the report's JSON, so the statement's own order never decides."""
+
+    raw_date = string_or_none(mapping_value(report, "effectiveDate", "effective_date"))
+    parsed = _effective_date(report)
+    if raw_date is None:
+        when: tuple[int, float] = (0, 0.0)
+    elif parsed is None:
+        when = (2, 0.0)
+    else:
+        when = (1, -parsed.timestamp())
+    status = _status(report)
+    rank = _STATUS_ORDER.index(status) if status in _STATUS_ORDER else len(_STATUS_ORDER)
+    return (*when, rank, canonical_json(report))
+
+
+def _reports_latest_first(status_reports: Any) -> list[Mapping[str, Any]]:
+    """An entry's status reports that name a status, the latest first (``_report_order``)."""
+
+    reports = [report for report in extract_list(status_reports) if isinstance(report, Mapping) and _status(report)]
+    return sorted(reports, key=_report_order)
+
+
+def _report_text(report: Mapping[str, Any]) -> str:
+    """A status report as the explorer writes it: "FIDO Certified L2 • descriptor • (number)"."""
+
+    parts = [format_enum(_status(report))]
+    descriptor = string_or_none(mapping_value(report, "certificationDescriptor", "certification_descriptor"))
     if descriptor:
         parts.append(descriptor)
+    certificate_number = string_or_none(mapping_value(report, "certificateNumber", "certificate_number"))
     if certificate_number:
         parts.append(f"({certificate_number})")
+    return " • ".join(parts)
 
-    return " • ".join(part for part in parts if part), status_value
+
+def latest_status(status_reports: Any) -> str:
+    """An entry's latest status, formatted ("Update Available"); "" when no report names one."""
+
+    reports = _reports_latest_first(status_reports)
+    return format_enum(_status(reports[0])) if reports else ""
+
+
+def format_certification(status_reports: Any) -> str:
+    """The Certification column's text: the latest report's status, descriptor and certificate number."""
+
+    reports = _reports_latest_first(status_reports)
+    return _report_text(reports[0]) if reports else ""
 
 
 def latest_effective_date(status_reports: Any) -> str:

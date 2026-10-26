@@ -38,13 +38,14 @@ afterEach(() => {
 });
 
 describe('the MDS filters', () => {
-  it('has the 11 filters, labelled by their column, with the current placeholders', async () => {
+  it('has the 12 filters, labelled by their column, with the current placeholders', async () => {
     await renderLoaded();
     const fields = within(filters()).getAllByRole('combobox').concat(within(filters()).getAllByRole('searchbox'));
-    expect(fields).toHaveLength(11);
+    expect(fields).toHaveLength(12);
     expect(within(filters()).getAllByRole('combobox').map((field) => [field.getAttribute('placeholder'), field.id !== ''])).toEqual([
       ['Protocol', true],
       ['Certification', true],
+      ['Status', true],
       ['User verification', true],
       ['Attachment', true],
       ['Transports', true],
@@ -155,6 +156,18 @@ describe('an MDS filter that offers a list', () => {
     await renderLoaded();
     await userEvent.click(combobox('Certification'));
     expect(options()).toEqual(['FIDO Certified', 'FIDO Certified L1', 'FIDO Certified L2', 'NOT FIDO Certified', 'Revoked']);
+  });
+
+  it('filters by the latest status, a named one exactly and FIDO Certified to every level', async () => {
+    await renderLoaded();
+    await userEvent.click(combobox('Status'));
+    expect(options()).toEqual(['FIDO Certified', 'FIDO Certified L1', 'FIDO Certified L2', 'NOT FIDO Certified', 'Revoked']);
+    await userEvent.click(screen.getByRole('option', { name: 'Revoked' }));
+    await waitFor(() => expect(shownNames()).toEqual(['Fixture Revoked Key']));
+
+    await userEvent.clear(combobox('Status'));
+    await userEvent.type(combobox('Status'), 'FIDO Certified');
+    await waitFor(() => expect(shownNames()).toHaveLength(28));
   });
 
   it('shows the user verification and algorithm lists whole, the others scrolling', async () => {

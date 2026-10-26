@@ -61,6 +61,7 @@ describe('the detail page: sections', () => {
       { label: 'AAGUID', value: entry.aaguid, identifier: true },
       { label: 'Protocol', value: 'FIDO2' },
       { label: 'Certification', value: entry.certification },
+      { label: 'Status', value: 'FIDO Certified L1' },
       { label: 'Authenticator Version', value: '2' },
       { label: 'Date Updated', value: entry.dateUpdated },
     ]);

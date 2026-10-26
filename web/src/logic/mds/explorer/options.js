@@ -1,15 +1,21 @@
 // The options a filter's combobox offers. No DOM.
-import { CERTIFICATION_OPTIONS, FILTER_CONFIG } from '../constants.js';
+import { CERTIFICATION_OPTIONS, FILTER_CONFIG, STATUS_OPTIONS } from '../constants.js';
 import { formatEnum } from '../formatters.js';
 
 export const NO_MATCHING_OPTIONS = 'No matches';
 
-// Every value present in the entries, per filter; certification always offers
-// the static statuses too.
+// A status column's option: its text's first part, before the descriptor.
+function statusOption(text) {
+    return typeof text === 'string' ? text.split(' • ')[0].trim() : '';
+}
+
+// Every value present in the entries, per filter; Certification and Status always
+// offer their static statuses too.
 export function collectOptionSets(data) {
     const sets = {
         protocol: new Set(),
         certification: new Set(CERTIFICATION_OPTIONS.map(option => formatEnum(option))),
+        latestStatus: new Set(STATUS_OPTIONS.map(option => formatEnum(option))),
         userVerification: new Set(),
         attachment: new Set(),
         transports: new Set(),
@@ -21,8 +27,11 @@ export function collectOptionSets(data) {
         if (entry.protocol) {
             sets.protocol.add(entry.protocol);
         }
-        if (entry.certificationStatus) {
-            sets.certification.add(formatEnum(entry.certificationStatus));
+        for (const key of ['certification', 'latestStatus']) {
+            const option = statusOption(entry[key]);
+            if (option) {
+                sets[key].add(option);
+            }
         }
         entry.userVerificationList.forEach(value => sets.userVerification.add(value));
         entry.attachmentList.forEach(value => sets.attachment.add(value));
@@ -71,7 +80,7 @@ export function matchingFilterOptions(options, query) {
 }
 
 // Every option filter's list, as shown, for the entries loaded (none yet: only
-// the static certification statuses).
+// the static statuses).
 /**
  * @param {Array<Record<string, any>>} entries
  * @returns {Record<string, string[]>}

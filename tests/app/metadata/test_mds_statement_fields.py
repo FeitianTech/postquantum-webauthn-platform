@@ -78,9 +78,9 @@ def test_enum_protocol_certification_and_extraction_helpers():
         {'status': 'fido_certified_l1', 'effectiveDate': '2020-01-01', 'certificationDescriptor': 'Desc', 'certificateNumber': '1'},
         {'status': 'fido_certified_l2', 'effectiveDate': '2024-01-01', 'certificationDescriptor': 'Newest', 'certificateNumber': '2'},
     ]
-    cert_text, cert_status = fields.format_certification(reports)
-    assert 'Newest' in cert_text and cert_status == 'FIDO_CERTIFIED_L2'
-    assert fields.format_certification([]) == ('', '')
+    assert fields.format_certification(reports) == 'FIDO Certified L2 • Newest • (2)'
+    assert fields.latest_status(reports) == 'FIDO Certified L2'
+    assert fields.format_certification([]) == fields.latest_status([]) == ''
 
     assert fields.latest_effective_date(reports) == '2024-01-01'
     assert fields.latest_effective_date([]) == ''
@@ -137,16 +137,69 @@ def test_a_guid_candidate_that_is_no_text_formats_as_empty():
     assert fields.format_guid_candidate(12345) == ''
 
 
-def test_a_certification_is_described_by_its_descriptor_or_else_its_status_and_number():
+def test_a_report_without_a_descriptor_reads_as_its_status_and_number():
     assert fields.format_certification([
-        {'effectiveDate': '2026-01-01', 'certificationDescriptor': 'Only Descriptor'}
-    ]) == ('Only Descriptor', '')
-
-    cert_text, cert_status = fields.format_certification([
         {'effectiveDate': '2026-01-01', 'status': 'FIDO_CERTIFIED_L1', 'certificateNumber': '42'}
-    ])
-    assert cert_status == 'FIDO_CERTIFIED_L1'
-    assert '(42)' in cert_text
+    ]) == 'FIDO Certified L1 • (42)'
+
+
+def _report(status, date=None, **more):
+    report = {"status": status, **more}
+    if date is not None:
+        report["effectiveDate"] = date
+    return report
+
+
+def test_the_latest_status_is_the_newest_report_whatever_it_says():
+    reports = [_report("FIDO_CERTIFIED_L2", "2024-01-01"), _report("UPDATE_AVAILABLE", "2025-06-01")]
+
+    assert fields.latest_status(reports) == "Update Available"
+    assert fields.format_certification(reports) == "Update Available"
+
+
+@pytest.mark.parametrize(
+    ("statuses", "latest"),
+    [
+        (("FIDO_CERTIFIED", "FIDO_CERTIFIED_L1"), "FIDO Certified L1"),
+        (("FIDO_CERTIFIED_L2", "FIDO_CERTIFIED_L1PLUS"), "FIDO Certified L2"),
+        (("FIDO_CERTIFIED_L3PLUS", "UPDATE_AVAILABLE"), "Update Available"),
+        (("UPDATE_AVAILABLE", "REVOKED", "FIDO_CERTIFIED_L2"), "Revoked"),
+        (("USER_VERIFICATION_BYPASS", "ATTESTATION_KEY_COMPROMISE"), "Attestation KEY Compromise"),
+        (("NOT_FIDO_CERTIFIED", "SELF_ASSERTION_SUBMITTED"), "SELF Assertion Submitted"),
+        (("A_FUTURE_STATUS", "NOT_FIDO_CERTIFIED"), "NOT FIDO Certified"),
+    ],
+)
+def test_of_reports_of_one_date_the_more_serious_status_is_the_latest_in_either_order(statuses, latest):
+    reports = [_report(status, "2025-01-01") for status in statuses]
+
+    assert fields.latest_status(reports) == latest
+    assert fields.latest_status(list(reversed(reports))) == latest
+
+
+def test_reports_alike_but_for_their_descriptor_give_one_text_in_either_order():
+    first = _report("FIDO_CERTIFIED_L1", "2025-01-01", certificationDescriptor="Key A", certificateNumber="1")
+    second = _report("FIDO_CERTIFIED_L1", "2025-01-01", certificationDescriptor="Key B", certificateNumber="2")
+
+    assert fields.format_certification([first, second]) == fields.format_certification([second, first]) == "FIDO Certified L1 • Key A • (1)"
+
+
+def test_a_report_without_a_date_is_in_force_and_one_whose_date_does_not_read_is_the_oldest():
+    # MDS3: a status without an effective date is effective while it is present.
+    assert fields.latest_status([_report("FIDO_CERTIFIED_L1", "2025-01-01"), _report("REVOKED")]) == "Revoked"
+    assert fields.latest_status([_report("REVOKED", "someday"), _report("FIDO_CERTIFIED_L1", "2025-01-01")]) == "FIDO Certified L1"
+    assert fields.latest_status([_report("REVOKED", "someday")]) == "Revoked"
+
+
+def test_a_report_without_a_status_is_passed_over():
+    reports = [
+        _report("", "2026-01-01"),
+        {"effectiveDate": "2026-02-01", "certificationDescriptor": "Only Descriptor"},
+        _report("fido_certified_l1", "2025-01-01"),
+        "not a report",
+    ]
+
+    assert fields.latest_status(reports) == "FIDO Certified L1"
+    assert fields.latest_status([{"certificationDescriptor": "Only Descriptor"}]) == ""
 
 
 def test_user_verification_skips_entries_that_are_no_objects():

@@ -14,7 +14,7 @@ import { MDS_EXPLORER_FULL_PATH, MDS_INFO_PATH, MDS_LIST_PATH, MISSING_METADATA_
  *     icon?: string | null,
  *     protocol: string,
  *     certification: string,
- *     certificationStatus: string,
+ *     latestStatus: string,
  *     id: string,
  *     aaguid?: string,
  *     userVerification: string,

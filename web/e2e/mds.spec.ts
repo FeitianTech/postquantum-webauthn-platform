@@ -33,13 +33,13 @@ async function names(list: Locator) {
 }
 
 test.describe('/#mds', () => {
-  test('loads the fixture: the count, the status line, the 13 columns', async ({ page }) => {
+  test('loads the fixture: the count, the status line, the 14 columns', async ({ page }) => {
     await openList(page);
     await expect(section(page).getByText(/^Entries:/)).toHaveText('Entries: 32 of 32 total');
     const status = section(page).locator('[role="status"][data-variant]');
     await expect(status).toHaveAttribute('data-variant', 'success');
     await expect(status).toHaveText(/^Loaded 32 authenticators\. Last updated .+\.$/);
-    await expect(section(page).getByRole('columnheader')).toHaveCount(13);
+    await expect(section(page).getByRole('columnheader')).toHaveCount(14);
     await expect(header(page, 'Date Updated')).toHaveAttribute('aria-sort', 'descending');
   });
 
@@ -65,6 +65,15 @@ test.describe('/#mds', () => {
     expect((await names(rows(page)))[0]).toMatch(/^Fixture Authenticator With A Deliberately Long Description/);
   });
 
+  test('filters by the latest status, which a column of its own shows', async ({ page }) => {
+    await openList(page);
+    await expect(row(page, 'aaguid:f1d0f1d0-0000-4000-8000-000000000005').locator('td').nth(4)).toHaveText('Revoked');
+    await filter(page, 'Status').fill('Revoked');
+    await section(page).getByRole('option', { name: 'Revoked' }).click();
+    await expect(rows(page)).toHaveCount(1);
+    await expect(header(page, 'Status')).toContainText('(filtered)');
+  });
+
   test('resizes a column by keyboard and by dragging', async ({ page }) => {
     await openList(page);
     const width = async () => (await header(page, 'Protocol').boundingBox())!.width;
@@ -84,7 +93,7 @@ test.describe('/#mds', () => {
 
   test('keeps a long CN within reach: one line with the whole value as a tooltip, every word when expanded', async ({ page }) => {
     await openList(page);
-    const cn = row(page, MANY_ROOTS).locator('td').nth(11);
+    const cn = row(page, MANY_ROOTS).locator('td').nth(12);
     const title = await cn.getAttribute('title');
     expect(title!.length).toBeGreaterThanOrEqual(954);
     const collapsed = (await row(page, MANY_ROOTS).boundingBox())!.height;

@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 # What this module derives changes with the code, not only with the snapshot:
 # the version the files are served under names both, so a page never reads an
 # earlier deploy's files under the current version.
-DERIVED_FORMAT = 2
+DERIVED_FORMAT = 3
 
 URL_PREFIX = "/assets/mds"
 LIST_FILENAME = "fido-mds3.explorer.list.json"

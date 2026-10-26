@@ -4,6 +4,7 @@ import {
   certificationParts,
   iconAltText,
   identifierLabel,
+  statusParts,
 } from './rows.js';
 
 describe('table cells', () => {
@@ -15,18 +16,13 @@ describe('table cells', () => {
   });
 
   it('splits the certification into one badge and its detail', () => {
-    expect(
-      certificationParts({
-        certification: 'FIDO Certified L1 • Security Key by Yubico • (U2F110020191017010)',
-        certificationStatus: 'FIDO_CERTIFIED_L1',
-      }),
-    ).toEqual({ level: 'FIDO Certified L1', detail: 'Security Key by Yubico • (U2F110020191017010)', tone: 'success' });
-    expect(certificationParts({ certification: 'NOT FIDO Certified', certificationStatus: 'NOT_FIDO_CERTIFIED' })).toEqual({
-      level: 'NOT FIDO Certified',
-      detail: '',
-      tone: 'neutral',
+    expect(certificationParts({ certification: 'FIDO Certified L1 • Security Key by Yubico • (U2F110020191017010)' })).toEqual({
+      level: 'FIDO Certified L1',
+      detail: 'Security Key by Yubico • (U2F110020191017010)',
+      tone: 'success',
     });
-    expect(certificationParts({ certification: 'Revoked', certificationStatus: 'REVOKED' }).tone).toBe('danger');
+    expect(certificationParts({ certification: 'NOT FIDO Certified' })).toEqual({ level: 'NOT FIDO Certified', detail: '', tone: 'neutral' });
+    expect(certificationParts({ certification: 'Revoked' }).tone).toBe('danger');
     expect(certificationParts({ certification: 'Attestation Key Compromise' }).tone).toBe('danger');
     expect(certificationParts({ certification: 'FIDO Certified L2 • Old' }).tone).toBe('success');
     expect(certificationParts({ certification: 'Update Available' }).tone).toBe('neutral');
@@ -35,6 +31,15 @@ describe('table cells', () => {
   it('shows a dash for no certification', () => {
     expect(certificationParts({ certification: '  ' })).toEqual({ level: '—', detail: '', tone: 'neutral' });
     expect(certificationParts(undefined)).toEqual({ level: '—', detail: '', tone: 'neutral' });
+  });
+
+  it('puts the latest status in one badge, in its tone', () => {
+    expect(statusParts({ latestStatus: ' Revoked ' })).toEqual({ status: 'Revoked', tone: 'danger' });
+    expect(statusParts({ latestStatus: 'USER KEY Remote Compromise' }).tone).toBe('danger');
+    expect(statusParts({ latestStatus: 'FIDO Certified L1plus' })).toEqual({ status: 'FIDO Certified L1plus', tone: 'success' });
+    expect(statusParts({ latestStatus: 'Update Available' }).tone).toBe('neutral');
+    expect(statusParts({ latestStatus: '' })).toEqual({ status: '—', tone: 'neutral' });
+    expect(statusParts(null)).toEqual({ status: '—', tone: 'neutral' });
   });
 
   it('names what the ID column holds', () => {

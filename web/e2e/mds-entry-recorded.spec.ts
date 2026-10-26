@@ -28,6 +28,12 @@ const ENTRIES = [
 const EXPECTED: ExpectedDifference[] = [
   {
     only: 'shown',
+    section: 'Overview',
+    token: /^(Status|FIDO|Certified|L1|L2)$/,
+    reason: "the entry's latest status, now a field of its own (Status) beside Certification",
+  },
+  {
+    only: 'shown',
     section: 'User Verification Details',
     token: /^(Self-attested|FRR|FAR|Max|templates|retries|Block|slowdown|Min|complexity|\d+(\.\d+)?)$/,
     reason: 'the biometric (baDesc) and pattern (paDesc) accuracy, which the current page left out (new in the new UI)',

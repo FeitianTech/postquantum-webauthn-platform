@@ -49,12 +49,12 @@ def test_the_fixture_holds_what_the_explorer_must_show_well():
     assert {entry["protocol"] for entry in entries} == {"FIDO2", "U2F", "Uaf"}
     assert {entry["entryId"].split(":")[0] for entry in entries} == {"aaguid", "aaid", "akid"}
     assert any("#" in entry["entryId"] for entry in entries)
-    assert {entry["certificationStatus"] for entry in entries} >= {
-        "FIDO_CERTIFIED",
-        "FIDO_CERTIFIED_L1",
-        "FIDO_CERTIFIED_L2",
-        "NOT_FIDO_CERTIFIED",
-        "REVOKED",
+    assert {entry["latestStatus"] for entry in entries} >= {
+        "FIDO Certified",
+        "FIDO Certified L1",
+        "FIDO Certified L2",
+        "NOT FIDO Certified",
+        "Revoked",
     }
     assert max(len(entry["commonName"]) for entry in entries) >= 954
     assert max(len(entry["userVerification"]) for entry in entries) >= 194

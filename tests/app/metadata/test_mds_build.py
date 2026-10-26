@@ -32,3 +32,21 @@ def test_an_id_already_given_out_gets_the_next_suffix_free():
     assert m.unique_entry_id("akid:ab", taken) == "akid:ab"
     assert m.unique_entry_id("akid:ab", taken) == "akid:ab~3"
     assert m.unique_entry_id("akid:ab~2", taken) == "akid:ab~2~2"
+
+
+def test_a_row_names_its_latest_status_beside_its_certification_text():
+    entry = m.build_explorer_entry(
+        {
+            'metadataStatement': {'description': 'Key'},
+            'statusReports': [
+                {'status': 'FIDO_CERTIFIED_L2', 'effectiveDate': '2024-01-01', 'certificationDescriptor': 'Key'},
+                {'status': 'UPDATE_AVAILABLE', 'effectiveDate': '2025-01-01'},
+            ],
+        },
+        source='packaged',
+        trust_anchor_status=True,
+    )
+
+    assert entry['latestStatus'] == 'Update Available'
+    assert entry['certification'] == 'Update Available'
+    assert 'certificationStatus' not in entry

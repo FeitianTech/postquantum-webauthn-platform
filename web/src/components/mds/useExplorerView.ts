@@ -53,7 +53,7 @@ export function useExplorerView(entries: MdsEntry[], version: number) {
 
   const rows = useMemo(() => sortExplorerEntries(entries, sort), [entries, sort]);
   const shown = useMemo(
-    () => new Set(entries.filter((entry) => matchesExplorerFilters(entry, trimmed, options.certification)).map((entry) => entry.entryId)),
+    () => new Set(entries.filter((entry) => matchesExplorerFilters(entry, trimmed, options)).map((entry) => entry.entryId)),
     [entries, trimmed, options],
   );
   const filteredColumns = useMemo(

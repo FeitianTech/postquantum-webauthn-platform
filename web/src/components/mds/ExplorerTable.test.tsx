@@ -44,6 +44,7 @@ const HEADERS = [
   'Name',
   'Protocol',
   'Certification',
+  'Status',
   'ID',
   'User Verification',
   'Attachment',
@@ -65,7 +66,7 @@ afterEach(() => {
 });
 
 describe('the MDS table: its columns', () => {
-  it('has the 13 columns, in order, with their headers', () => {
+  it('has the 14 columns, in order, with their headers', () => {
     renderTable();
     expect(screen.getAllByRole('columnheader').map((cell) => cell.querySelector('button span')?.textContent)).toEqual(HEADERS);
     expect(screen.getByRole('table', { name: 'FIDO MDS authenticators' })).toBeInTheDocument();
@@ -85,28 +86,30 @@ describe('the MDS table: its columns', () => {
     expect(cells[2]).toHaveTextContent('FIDO2');
     expect(cells[3]).toHaveTextContent('FIDO Certified L2Fixture Security Key L2 • (FIDO20020260815002)');
     expect(cells[3]).toHaveAttribute('title', entry.certification);
-    expect(within(cells[4]).getByText(entry.id).tagName).toBe('CODE');
-    expect(cells[5]).toHaveTextContent('Fingerprint Internal, Passcode Internal, Presence Internal');
-    expect(cells[6]).toHaveTextContent('External, Wired, Nfc');
-    expect(cells[7]).toHaveTextContent('Ble, Nfc, Usb');
-    expect(cells[8]).toHaveTextContent('Hardware, Secure Element');
-    expect(cells[9]).toHaveTextContent('SECP256R1 Ecdsa SHA256 Raw, ED25519 Eddsa SHA512 Raw');
-    expect(cells[10]).toHaveTextContent('RSASSA-PKCS1-v1_5_SHA256');
-    expect(cells[11]).toHaveTextContent('Fixture RSA Attestation Root');
-    expect(within(cells[12]).getByText('Aug 15, 2026')).toHaveAttribute('dateTime', '2026-08-15');
-    expect(cells[12]).toHaveAttribute('title', '2026-08-15');
+    expect(cells[4]).toHaveTextContent('FIDO Certified L2');
+    expect(cells[4]).toHaveAttribute('title', entry.latestStatus);
+    expect(within(cells[5]).getByText(entry.id).tagName).toBe('CODE');
+    expect(cells[6]).toHaveTextContent('Fingerprint Internal, Passcode Internal, Presence Internal');
+    expect(cells[7]).toHaveTextContent('External, Wired, Nfc');
+    expect(cells[8]).toHaveTextContent('Ble, Nfc, Usb');
+    expect(cells[9]).toHaveTextContent('Hardware, Secure Element');
+    expect(cells[10]).toHaveTextContent('SECP256R1 Ecdsa SHA256 Raw, ED25519 Eddsa SHA512 Raw');
+    expect(cells[11]).toHaveTextContent('RSASSA-PKCS1-v1_5_SHA256');
+    expect(cells[12]).toHaveTextContent('Fixture RSA Attestation Root');
+    expect(within(cells[13]).getByText('Aug 15, 2026')).toHaveAttribute('dateTime', '2026-08-15');
+    expect(cells[13]).toHaveAttribute('title', '2026-08-15');
   });
 
   it('shows the U2F and UAF entries as the server spells them', () => {
     renderTable();
     const u2f = cellsOf(entryNamed('Fixture U2F Key'));
     expect(u2f[2]).toHaveTextContent('U2F');
-    expect(u2f[4]).toHaveTextContent('f1d0000000000000000000000000000000000011');
-    expect(within(u2f[4]).getByRole('button', { name: 'Copy key identifier' })).toBeInTheDocument();
-    expect(u2f[7]).toHaveTextContent('—');
+    expect(u2f[5]).toHaveTextContent('f1d0000000000000000000000000000000000011');
+    expect(within(u2f[5]).getByRole('button', { name: 'Copy key identifier' })).toBeInTheDocument();
+    expect(u2f[8]).toHaveTextContent('—');
     const uaf = cellsOf(entryNamed('Fixture UAF Authenticator'));
     expect(uaf[2]).toHaveTextContent('Uaf');
-    expect(within(uaf[4]).getByRole('button', { name: 'Copy AAID' })).toBeInTheDocument();
+    expect(within(uaf[5]).getByRole('button', { name: 'Copy AAID' })).toBeInTheDocument();
     expect(within(uaf[1]).getByRole('link')).toHaveAttribute('href', '#mds/aaid:F1D0%230012');
   });
 
@@ -114,6 +117,17 @@ describe('the MDS table: its columns', () => {
     renderTable();
     expect(cellsOf(entryNamed('Fixture Key Without An Icon'))[0]).toHaveTextContent('N/A');
     expect(cellsOf(entryNamed('Fixture Key Without Status Reports'))[3]).toHaveTextContent('—');
+  });
+
+  it('puts the latest status in a badge of its own, in its tone', () => {
+    renderTable();
+    const badge = (name: string) => cellsOf(entryNamed(name))[4].querySelector('span')!;
+    expect(badge('Fixture Security Key L2')).toHaveTextContent('FIDO Certified L2');
+    expect(badge('Fixture Security Key L2')).toHaveClass('text-success');
+    expect(badge('Fixture Revoked Key')).toHaveTextContent('Revoked');
+    expect(badge('Fixture Revoked Key')).toHaveClass('text-danger');
+    expect(badge('Fixture Uncertified Key')).toHaveClass('text-ink-muted');
+    expect(cellsOf(entryNamed('Fixture Key Without Status Reports'))[4]).toHaveTextContent('—');
   });
 
   it('puts the certification in one badge, coloured by its status', () => {
@@ -141,9 +155,9 @@ describe('the MDS table: its columns', () => {
     expect(cells[1]).toHaveTextContent('—');
     expect(within(cells[1]).getByRole('button', { name: 'Show all of entry:bare' })).toBeInTheDocument();
     expect(cells[2]).toHaveTextContent('—');
-    expect(cells[4]).toHaveTextContent('—');
     expect(cells[5]).toHaveTextContent('—');
-    expect(cells[12]).toHaveTextContent('—');
+    expect(cells[6]).toHaveTextContent('—');
+    expect(cells[13]).toHaveTextContent('—');
   });
 
   it('marks a filtered column in its header', () => {
@@ -157,7 +171,7 @@ describe('the MDS table: rows that expand', () => {
   it('shows a long value on one line, whole in its tooltip, and every word when expanded', async () => {
     renderTable();
     const entry = entryNamed('Fixture Key With Many Attestation Roots');
-    const cn = () => cellsOf(entry)[11];
+    const cn = () => cellsOf(entry)[12];
     expect(cn()).toHaveClass('truncate');
     expect(cn()).toHaveAttribute('title', entry.certificateCommonNameList.join(', '));
 
@@ -219,7 +233,7 @@ describe('the MDS table: its frame', () => {
     renderTable();
     const frame = document.querySelector<HTMLDivElement>('[data-mds-frame]')!;
     const fade = document.querySelector<HTMLElement>('[data-mds-fade]')!;
-    const size = { scrollWidth: 2740, clientWidth: 941, offsetWidth: 958, clientHeight: 600, offsetHeight: 617 };
+    const size = { scrollWidth: 2940, clientWidth: 941, offsetWidth: 958, clientHeight: 600, offsetHeight: 617 };
     for (const [key, value] of Object.entries(size)) Object.defineProperty(frame, key, { configurable: true, value });
 
     fireEvent.scroll(frame);
@@ -228,7 +242,7 @@ describe('the MDS table: its frame', () => {
     expect(fade.style.right).toBe('16px');
     expect(fade.style.bottom).toBe('16px');
 
-    frame.scrollLeft = 2740 - 941;
+    frame.scrollLeft = 2940 - 941;
     fireEvent.scroll(frame);
     expect(fade).not.toBeVisible();
 
@@ -248,8 +262,8 @@ describe('the MDS table: column widths', () => {
   it('sets the column widths on the table, which every row lines up on, and every header but the last can be resized', () => {
     renderTable();
     expect(width(1)).toBe('280px');
-    expect(document.querySelector('table')!.style.width).toBe('2740px');
-    expect(screen.getAllByRole('separator')).toHaveLength(12);
+    expect(document.querySelector('table')!.style.width).toBe('2940px');
+    expect(screen.getAllByRole('separator')).toHaveLength(13);
     expect(separator('Name')).toHaveAttribute('title', 'Drag to resize column');
   });
 
@@ -259,7 +273,7 @@ describe('the MDS table: column widths', () => {
     );
     renderTable();
     expect(width(0)).toBe('44px');
-    expect(document.querySelector('table')!.style.width).toBe('2712px');
+    expect(document.querySelector('table')!.style.width).toBe('2912px');
     expect(within(header('Icon')).getByText('Icon')).toHaveClass('max-sm:sr-only');
     expect(within(header('Name')).getByText('Name')).not.toHaveClass('max-sm:sr-only');
     expect(separator('Icon')).toHaveAttribute('aria-valuemin', '40');
@@ -315,7 +329,7 @@ describe('the MDS table: column widths', () => {
     for (let step = 0; step < 20; step += 1) fireEvent.keyDown(separator('Name'), { key: 'ArrowLeft' });
     expect(width(1)).toBe('64px');
     for (let step = 0; step < 3; step += 1) fireEvent.keyDown(separator('ID'), { key: 'ArrowLeft' });
-    expect(width(4)).toBe('320px');
+    expect(width(5)).toBe('320px');
   });
 
   it('resizes by dragging with the main button', () => {
@@ -344,9 +358,9 @@ describe('the MDS table: copying an identifier', () => {
     const entry = entryNamed('Fixture Security Key L1');
 
     await holdingTimers(async () => {
-      await act(async () => fireEvent.click(within(cellsOf(entry)[4]).getByRole('button', { name: 'Copy AAGUID' })));
+      await act(async () => fireEvent.click(within(cellsOf(entry)[5]).getByRole('button', { name: 'Copy AAGUID' })));
       expect(writeText).toHaveBeenCalledWith('f1d0f1d0-0000-4000-8000-000000000001');
-      expect(within(cellsOf(entry)[4]).getByRole('status')).toHaveTextContent('AAGUID copied.');
+      expect(within(cellsOf(entry)[5]).getByRole('status')).toHaveTextContent('AAGUID copied.');
     });
   });
 
@@ -357,7 +371,7 @@ describe('the MDS table: copying an identifier', () => {
     });
     renderTable();
     const entry = entryNamed('Fixture Security Key L1');
-    await userEvent.click(within(cellsOf(entry)[4]).getByRole('button', { name: 'Copy AAGUID' }));
+    await userEvent.click(within(cellsOf(entry)[5]).getByRole('button', { name: 'Copy AAGUID' }));
     // In the cell's status for a screen reader, and in a toast where it is seen.
     await waitFor(() =>
       expect(screen.getAllByText(/^Could not copy: .* It is shown in full and selected, to copy by hand\.$/)).toHaveLength(2),
@@ -374,7 +388,7 @@ describe('the MDS table: opening an entry', () => {
     await userEvent.click(within(cellsOf(entry)[1]).getByRole('link'));
     expect(onOpen).toHaveBeenLastCalledWith(entry.entryId);
 
-    await userEvent.click(cellsOf(entry)[8]);
+    await userEvent.click(cellsOf(entry)[9]);
     expect(onOpen).toHaveBeenCalledTimes(2);
 
     await userEvent.click(within(cellsOf(entry)[1]).getByRole('button'));
@@ -384,7 +398,7 @@ describe('the MDS table: opening an entry', () => {
   it('leaves a text selection alone', async () => {
     const onOpen = vi.fn();
     renderTable(FIXTURE_ENTRIES, onOpen);
-    const cell = cellsOf(entryNamed('Fixture U2F Key'))[8];
+    const cell = cellsOf(entryNamed('Fixture U2F Key'))[9];
     window.getSelection()!.selectAllChildren(cell);
     fireEvent.click(cell);
     expect(onOpen).not.toHaveBeenCalled();

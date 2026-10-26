@@ -1,5 +1,5 @@
 import type { MdsEntry } from '@/logic/mds/explorer/loading.js';
-import { MISSING_CELL_TEXT, NO_ICON_TEXT, certificationParts, iconAltText, identifierLabel } from '@/logic/mds/explorer/rows.js';
+import { MISSING_CELL_TEXT, NO_ICON_TEXT, certificationParts, iconAltText, identifierLabel, statusParts } from '@/logic/mds/explorer/rows.js';
 import { type MouseEvent, type ReactNode, memo, useEffect, useRef } from 'react';
 
 import { Badge } from '@/components/ui/Badge';
@@ -119,6 +119,16 @@ function CertificationCell({ entry, expanded }: { entry: MdsEntry; expanded: boo
   );
 }
 
+function StatusCell({ entry, expanded }: { entry: MdsEntry; expanded: boolean }) {
+  const { status, tone } = statusParts(entry);
+  if (!entry.latestStatus) return <Cell expanded={expanded}>{MISSING_CELL_TEXT}</Cell>;
+  return (
+    <Cell expanded={expanded} title={entry.latestStatus}>
+      <Badge tone={tone}>{status}</Badge>
+    </Cell>
+  );
+}
+
 type RowProps = {
   entry: MdsEntry;
   hidden: boolean;
@@ -191,6 +201,7 @@ export const ExplorerRow = memo(function ExplorerRow({ entry, hidden, expanded, 
       </Cell>
       <Cell expanded={expanded}>{entry.protocol || MISSING_CELL_TEXT}</Cell>
       <CertificationCell entry={entry} expanded={expanded} />
+      <StatusCell entry={entry} expanded={expanded} />
       <IdCell entry={entry} expanded={expanded} />
       {lists.map((column) => (
         <ListCell key={column.key} values={(entry[column.list] as string[] | undefined) ?? []} expanded={expanded} />

@@ -227,7 +227,7 @@ type ExplorerTableProps = {
   frameRef: RefObject<HTMLDivElement | null>;
 };
 
-// The 13 columns in a frame that scrolls both ways by itself: the header stays in
+// The 14 columns in a frame that scrolls both ways by itself: the header stays in
 // view as the list scrolls, the sideways scrollbar is always within reach, and
 // the page never scrolls sideways. Every row is in the page (find-in-page finds
 // it), but each row is a grid on the one column template, not a table row, so

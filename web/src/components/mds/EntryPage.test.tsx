@@ -85,6 +85,8 @@ describe('the MDS entry page', () => {
     expect(field(overview, 'Identifier').querySelector('code')).toHaveTextContent(entry.id);
     expect(field(overview, 'Protocol')).toHaveTextContent('FIDO2');
     expect(field(overview, 'Certification')).toHaveTextContent('FIDO Certified L1Fixture Security Key • (FIDO20020260901001)');
+    expect(field(overview, 'Status')).toHaveTextContent(/^FIDO Certified L1$/);
+    expect(field(overview, 'Status').querySelector('span')).toHaveClass('text-success');
     expect(field(overview, 'Authenticator Version')).toHaveTextContent('2');
     expect(field(overview, 'Date Updated')).toHaveTextContent(entry.dateUpdated);
   });

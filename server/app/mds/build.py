@@ -91,7 +91,6 @@ def build_snapshot_meta(
 def _authenticator_fields(
     metadata_mapping: Mapping[str, Any], entry_payload: Mapping[str, Any], status_reports: list[Mapping[str, Any]]
 ) -> dict[str, Any]:
-    certification, certification_status = statement_fields.format_certification(status_reports)
     user_verification_list = statement_fields.extract_user_verification(
         statement_fields.mapping_value(metadata_mapping, "userVerificationDetails", "user_verification_details")
     )
@@ -116,8 +115,8 @@ def _authenticator_fields(
             statement_fields.mapping_value(metadata_mapping, "protocolFamily", "protocol_family")
             or statement_fields.mapping_value(metadata_mapping, "protocolType", "protocol_type")
         ),
-        "certification": certification,
-        "certificationStatus": certification_status,
+        "certification": statement_fields.format_certification(status_reports),
+        "latestStatus": statement_fields.latest_status(status_reports),
         "id": statement_fields.resolve_identifier(entry_payload, metadata_mapping),
         "aaguid": statement_fields.resolve_aaguid(entry_payload, metadata_mapping),
         "icon": statement_fields.normalise_icon(

@@ -15,12 +15,14 @@ import {
   sortExplorerEntries,
 } from './filter-sort.js';
 
-const CERTIFICATION_OPTIONS = ['FIDO Certified', 'FIDO Certified L1', 'FIDO Certified L2', 'NOT FIDO Certified', 'Revoked'];
+const STATUS_OPTIONS = ['FIDO Certified', 'FIDO Certified L1', 'FIDO Certified L2', 'NOT FIDO Certified', 'Revoked'];
+const OPTION_LISTS = { certification: STATUS_OPTIONS, latestStatus: STATUS_OPTIONS };
 
-const L1 = { name: 'Key L1', certification: 'FIDO Certified L1 • Key • (FIDO2)', certificationStatus: 'FIDO_CERTIFIED_L1' };
-const L2 = { name: 'Key L2', certification: 'FIDO Certified L2', certificationStatus: 'FIDO_CERTIFIED_L2' };
-const NOT = { name: 'Plain', certification: 'NOT FIDO Certified', certificationStatus: 'NOT_FIDO_CERTIFIED' };
-const DISPLAY_ONLY = { name: 'Display', certification: 'FIDO Certified L2 • Old' };
+const L1 = { name: 'Key L1', certification: 'FIDO Certified L1 • Key • (FIDO2)', latestStatus: 'FIDO Certified L1' };
+const L2 = { name: 'Key L2', certification: 'FIDO Certified L2', latestStatus: 'FIDO Certified L2' };
+const NOT = { name: 'Plain', certification: 'NOT FIDO Certified', latestStatus: 'NOT FIDO Certified' };
+const PLAIN = { name: 'Certified', certification: 'FIDO Certified • Old', latestStatus: 'FIDO Certified' };
+const ODD = { name: 'Odd', certification: 'FIDO CertifiedX', latestStatus: 'FIDO CertifiedX' };
 
 describe('sort order', () => {
   it('names the directions and the default', () => {
@@ -34,6 +36,7 @@ describe('sort order', () => {
       name: 'Name',
       protocol: 'FIDO2',
       certification: 'C',
+      latestStatus: 'S',
       id: 'I',
       userVerification: 'U',
       attachment: 'A',
@@ -47,7 +50,7 @@ describe('sort order', () => {
     expect(MDS_SORT_ACCESSORS.icon(entry)).toBe('1_Name');
     expect(MDS_SORT_ACCESSORS.icon({ name: 7 })).toBe('0_');
     expect(Object.keys(MDS_SORT_ACCESSORS).filter(key => !['icon', 'dateUpdated'].includes(key))
-      .map(key => MDS_SORT_ACCESSORS[key](entry))).toEqual(['Name', 'FIDO2', 'C', 'I', 'U', 'A', 'T', 'K', 'G', 'AI', 'CN']);
+      .map(key => MDS_SORT_ACCESSORS[key](entry))).toEqual(['Name', 'FIDO2', 'C', 'S', 'I', 'U', 'A', 'T', 'K', 'G', 'AI', 'CN']);
     expect(MDS_SORT_ACCESSORS.dateUpdated(entry)).toBe(Date.parse('2023-09-18'));
     expect(MDS_SORT_ACCESSORS.dateUpdated({ dateTooltip: 'someday' })).toBe('someday');
     expect(MDS_SORT_ACCESSORS.dateUpdated({ dateUpdated: 'Sep 18, 2023' })).toBe('Sep 18, 2023');
@@ -138,26 +141,23 @@ describe('filters', () => {
     expect(matchesExplorerFilters({}, { commonName: 'x' })).toBe(false);
   });
 
-  it('matches a named certification level exactly, and FIDO Certified to every level', () => {
-    const match = value => [L1, L2, NOT].filter(entry => matchesExplorerFilters(entry, { certification: value }, CERTIFICATION_OPTIONS));
+  it.each(['certification', 'latestStatus'])('matches a named status of %s exactly, and FIDO Certified to every level', key => {
+    const match = value => [L1, L2, NOT, PLAIN, ODD].filter(entry => matchesExplorerFilters(entry, { [key]: value }, OPTION_LISTS));
     expect(match('FIDO Certified L2')).toEqual([L2]);
-    expect(match('fido certified')).toEqual([L1, L2]);
+    expect(match('fido certified')).toEqual([L1, L2, PLAIN]);
     expect(match('NOT FIDO Certified')).toEqual([NOT]);
+    expect(match('Revoked')).toEqual([]);
   });
 
-  it('reads the level from the text when the entry has no status', () => {
-    expect(matchesExplorerFilters(DISPLAY_ONLY, { certification: 'FIDO Certified L2' }, CERTIFICATION_OPTIONS)).toBe(true);
-    expect(matchesExplorerFilters(DISPLAY_ONLY, { certification: 'FIDO Certified' }, CERTIFICATION_OPTIONS)).toBe(true);
-    expect(matchesExplorerFilters({}, { certification: 'FIDO Certified' }, CERTIFICATION_OPTIONS)).toBe(false);
-    expect(matchesExplorerFilters({}, { certification: 'Revoked' }, CERTIFICATION_OPTIONS)).toBe(false);
-  });
-
-  it('finds other certification text anywhere in the text or the status', () => {
-    expect(matchesExplorerFilters(L1, { certification: 'key •' }, CERTIFICATION_OPTIONS)).toBe(true);
+  it('finds other status text anywhere in the text or its key', () => {
+    expect(matchesExplorerFilters(L1, { certification: 'key •' }, OPTION_LISTS)).toBe(true);
     expect(matchesExplorerFilters(L1, { certification: 'certified_l1' })).toBe(true);
+    expect(matchesExplorerFilters(L1, { latestStatus: 'certified_l1' })).toBe(true);
     expect(matchesExplorerFilters(L1, { certification: '•' })).toBe(true);
     expect(matchesExplorerFilters(L1, { certification: 'revoked' })).toBe(false);
     expect(matchesExplorerFilters({}, { certification: 'x' })).toBe(false);
+    expect(matchesExplorerFilters({}, { latestStatus: 'FIDO Certified' }, OPTION_LISTS)).toBe(false);
+    expect(matchesExplorerFilters({ latestStatus: 7 }, { latestStatus: '7' })).toBe(false);
   });
 
   it('counts the filters in use', () => {

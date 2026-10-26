@@ -3,7 +3,7 @@
     "meta": {
       "baseEntryCount": 32,
       "customEntryCount": 0,
-      "derivedFormat": 2,
+      "derivedFormat": 3,
       "entryCount": 32,
       "etag": "\"fixture-7\"",
       "fetchedAt": "2026-09-20T08:00:00+00:00",
@@ -40,7 +40,6 @@
         ],
         "certificateCommonNames": "Fixture FIDO2 Attestation Root",
         "certification": "FIDO Certified L1 • Fixture Security Key • (FIDO20020260901001)",
-        "certificationStatus": "FIDO_CERTIFIED_L1",
         "commonName": "Fixture FIDO2 Attestation Root",
         "dateTooltip": "2026-09-01",
         "dateUpdated": "Sep 1, 2026",
@@ -54,6 +53,7 @@
           "Hardware",
           "Secure Element"
         ],
+        "latestStatus": "FIDO Certified L1",
         "name": "Fixture Security Key L1",
         "protocol": "FIDO2",
         "transports": "Nfc, Usb",
@@ -66,7 +66,7 @@
           "Passcode External",
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000001?v=7.6adb59277e89.2"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000001?v=7.6adb59277e89.3"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000002",
@@ -91,7 +91,6 @@
         ],
         "certificateCommonNames": "Fixture RSA Attestation Root",
         "certification": "FIDO Certified L2 • Fixture Security Key L2 • (FIDO20020260815002)",
-        "certificationStatus": "FIDO_CERTIFIED_L2",
         "commonName": "Fixture RSA Attestation Root",
         "dateTooltip": "2026-08-15",
         "dateUpdated": "Aug 15, 2026",
@@ -105,6 +104,7 @@
           "Hardware",
           "Secure Element"
         ],
+        "latestStatus": "FIDO Certified L2",
         "name": "Fixture Security Key L2",
         "protocol": "FIDO2",
         "transports": "Ble, Nfc, Usb",
@@ -119,7 +119,7 @@
           "Passcode Internal",
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000002?v=7.6adb59277e89.2"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000002?v=7.6adb59277e89.3"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000003",
@@ -144,7 +144,6 @@
         ],
         "certificateCommonNames": "Fixture Ed25519 Attestation Root",
         "certification": "FIDO Certified • Fixture Certified Key • (FIDO20020260710003)",
-        "certificationStatus": "FIDO_CERTIFIED",
         "commonName": "Fixture Ed25519 Attestation Root",
         "dateTooltip": "2026-07-10",
         "dateUpdated": "Jul 10, 2026",
@@ -158,6 +157,7 @@
           "Hardware",
           "Secure Element"
         ],
+        "latestStatus": "FIDO Certified",
         "name": "Fixture Certified Key",
         "protocol": "FIDO2",
         "transports": "Nfc, Usb",
@@ -170,7 +170,7 @@
           "Passcode External",
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000003?v=7.6adb59277e89.2"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000003?v=7.6adb59277e89.3"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000004",
@@ -193,7 +193,6 @@
         ],
         "certificateCommonNames": "Fixture FIDO2 Attestation Root",
         "certification": "NOT FIDO Certified",
-        "certificationStatus": "NOT_FIDO_CERTIFIED",
         "commonName": "Fixture FIDO2 Attestation Root",
         "dateTooltip": "2026-06-01",
         "dateUpdated": "Jun 1, 2026",
@@ -206,6 +205,7 @@
         "keyProtectionList": [
           "Software"
         ],
+        "latestStatus": "NOT FIDO Certified",
         "name": "Fixture Uncertified Key",
         "protocol": "FIDO2",
         "transports": "Hybrid, Internal",
@@ -218,7 +218,7 @@
           "Passcode External",
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000004?v=7.6adb59277e89.2"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000004?v=7.6adb59277e89.3"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000005",
@@ -243,7 +243,6 @@
         ],
         "certificateCommonNames": "Fixture FIDO2 Attestation Root",
         "certification": "Revoked",
-        "certificationStatus": "REVOKED",
         "commonName": "Fixture FIDO2 Attestation Root",
         "dateTooltip": "2026-05-20",
         "dateUpdated": "May 20, 2026",
@@ -257,6 +256,7 @@
           "Hardware",
           "Secure Element"
         ],
+        "latestStatus": "Revoked",
         "name": "Fixture Revoked Key",
         "protocol": "FIDO2",
         "transports": "Nfc, Usb",
@@ -269,7 +269,7 @@
           "Passcode External",
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000005?v=7.6adb59277e89.2"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000005?v=7.6adb59277e89.3"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000006",
@@ -308,7 +308,6 @@
         ],
         "certificateCommonNames": "Fixture Authenticator Attestation Root Certificate Authority 01, Fixture Authenticator Attestation Root Certificate Authority 02, Fixture Authenticator Attestation Root Certificate Authority 03, Fixture Authenticator Attestation Root Certificate Authority 04, Fixture Authenticator Attestation Root Certificate Authority 05, Fixture Authenticator Attestation Root Certificate Authority 06, Fixture Authenticator Attestation Root Certificate Authority 07, Fixture Authenticator Attestation Root Certificate Authority 08, Fixture Authenticator Attestation Root Certificate Authority 09, Fixture Authenticator Attestation Root Certificate Authority 10, Fixture Authenticator Attestation Root Certificate Authority 11, Fixture Authenticator Attestation Root Certificate Authority 12, Fixture Authenticator Attestation Root Certificate Authority 13, Fixture Authenticator Attestation Root Certificate Authority 14, Fixture Authenticator Attestation Root Certificate Authority 15",
         "certification": "FIDO Certified L1 • Fixture Key With Many Roots • (FIDO20020260402006)",
-        "certificationStatus": "FIDO_CERTIFIED_L1",
         "commonName": "Fixture Authenticator Attestation Root Certificate Authority 01, Fixture Authenticator Attestation Root Certificate Authority 02, Fixture Authenticator Attestation Root Certificate Authority 03, Fixture Authenticator Attestation Root Certificate Authority 04, Fixture Authenticator Attestation Root Certificate Authority 05, Fixture Authenticator Attestation Root Certificate Authority 06, Fixture Authenticator Attestation Root Certificate Authority 07, Fixture Authenticator Attestation Root Certificate Authority 08, Fixture Authenticator Attestation Root Certificate Authority 09, Fixture Authenticator Attestation Root Certificate Authority 10, Fixture Authenticator Attestation Root Certificate Authority 11, Fixture Authenticator Attestation Root Certificate Authority 12, Fixture Authenticator Attestation Root Certificate Authority 13, Fixture Authenticator Attestation Root Certificate Authority 14, Fixture Authenticator Attestation Root Certificate Authority 15",
         "dateTooltip": "2026-04-02",
         "dateUpdated": "Apr 2, 2026",
@@ -322,6 +321,7 @@
           "Hardware",
           "Secure Element"
         ],
+        "latestStatus": "FIDO Certified L1",
         "name": "Fixture Key With Many Attestation Roots",
         "protocol": "FIDO2",
         "transports": "Nfc, Usb",
@@ -334,7 +334,7 @@
           "Passcode External",
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000006?v=7.6adb59277e89.2"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000006?v=7.6adb59277e89.3"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000007",
@@ -359,7 +359,6 @@
         ],
         "certificateCommonNames": "Fixture FIDO2 Attestation Root",
         "certification": "FIDO Certified L2 • Fixture Biometric Key • (FIDO20020260303007)",
-        "certificationStatus": "FIDO_CERTIFIED_L2",
         "commonName": "Fixture FIDO2 Attestation Root",
         "dateTooltip": "2026-03-03",
         "dateUpdated": "Mar 3, 2026",
@@ -373,6 +372,7 @@
           "Hardware",
           "Secure Element"
         ],
+        "latestStatus": "FIDO Certified L2",
         "name": "Fixture Key With Every User Verification Method",
         "protocol": "FIDO2",
         "transports": "Nfc, Usb",
@@ -394,7 +394,7 @@
           "Presence Internal",
           "Voiceprint Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000007?v=7.6adb59277e89.2"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000007?v=7.6adb59277e89.3"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000008",
@@ -419,7 +419,6 @@
         ],
         "certificateCommonNames": "Fixture FIDO2 Attestation Root",
         "certification": "FIDO Certified L1 • Fixture Long Name Key • (FIDO20020260214008)",
-        "certificationStatus": "FIDO_CERTIFIED_L1",
         "commonName": "Fixture FIDO2 Attestation Root",
         "dateTooltip": "2026-02-14",
         "dateUpdated": "Feb 14, 2026",
@@ -433,6 +432,7 @@
           "Hardware",
           "Secure Element"
         ],
+        "latestStatus": "FIDO Certified L1",
         "name": "Fixture Authenticator With A Deliberately Long Description, Written To Show How The Explorer Truncates A Name While Keeping It Visible.",
         "protocol": "FIDO2",
         "transports": "Nfc, Usb",
@@ -445,7 +445,7 @@
           "Passcode External",
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000008?v=7.6adb59277e89.2"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000008?v=7.6adb59277e89.3"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000009",
@@ -470,7 +470,6 @@
         ],
         "certificateCommonNames": "Fixture FIDO2 Attestation Root",
         "certification": "NOT FIDO Certified",
-        "certificationStatus": "NOT_FIDO_CERTIFIED",
         "commonName": "Fixture FIDO2 Attestation Root",
         "dateTooltip": "2026-01-05",
         "dateUpdated": "Jan 5, 2026",
@@ -484,6 +483,7 @@
           "Hardware",
           "Secure Element"
         ],
+        "latestStatus": "NOT FIDO Certified",
         "name": "Fixture Key Without An Icon",
         "protocol": "FIDO2",
         "transports": "Nfc, Usb",
@@ -496,7 +496,7 @@
           "Passcode External",
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000009?v=7.6adb59277e89.2"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000009?v=7.6adb59277e89.3"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000010",
@@ -521,7 +521,6 @@
         ],
         "certificateCommonNames": "Fixture FIDO2 Attestation Root",
         "certification": "",
-        "certificationStatus": "",
         "commonName": "Fixture FIDO2 Attestation Root",
         "dateTooltip": "2025-12-12",
         "dateUpdated": "Dec 12, 2025",
@@ -535,6 +534,7 @@
           "Hardware",
           "Secure Element"
         ],
+        "latestStatus": "",
         "name": "Fixture Key Without Status Reports",
         "protocol": "FIDO2",
         "transports": "Nfc, Usb",
@@ -547,7 +547,7 @@
           "Passcode External",
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000010?v=7.6adb59277e89.2"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000010?v=7.6adb59277e89.3"
       },
       {
         "aaguid": "",
@@ -570,7 +570,6 @@
         ],
         "certificateCommonNames": "Fixture FIDO2 Attestation Root",
         "certification": "FIDO Certified L1 • Fixture U2F Key • (U2F100020251111011)",
-        "certificationStatus": "FIDO_CERTIFIED_L1",
         "commonName": "Fixture FIDO2 Attestation Root",
         "dateTooltip": "2025-11-11",
         "dateUpdated": "Nov 11, 2025",
@@ -584,6 +583,7 @@
           "Hardware",
           "Secure Element"
         ],
+        "latestStatus": "FIDO Certified L1",
         "name": "Fixture U2F Key",
         "protocol": "U2F",
         "transports": "",
@@ -592,7 +592,7 @@
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/akid%3Af1d0000000000000000000000000000000000011?v=7.6adb59277e89.2"
+        "detailUrl": "/assets/mds/entries/akid%3Af1d0000000000000000000000000000000000011?v=7.6adb59277e89.3"
       },
       {
         "aaguid": "",
@@ -614,7 +614,6 @@
         ],
         "certificateCommonNames": "Fixture Ed25519 Attestation Root",
         "certification": "FIDO Certified L1 • Fixture UAF Authenticator • (UAF100020251010012)",
-        "certificationStatus": "FIDO_CERTIFIED_L1",
         "commonName": "Fixture Ed25519 Attestation Root",
         "dateTooltip": "2025-10-10",
         "dateUpdated": "Oct 10, 2025",
@@ -628,6 +627,7 @@
           "Hardware",
           "Tee"
         ],
+        "latestStatus": "FIDO Certified L1",
         "name": "Fixture UAF Authenticator",
         "protocol": "Uaf",
         "transports": "",
@@ -636,7 +636,7 @@
         "userVerificationList": [
           "Fingerprint Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaid%3AF1D0%230012?v=7.6adb59277e89.2"
+        "detailUrl": "/assets/mds/entries/aaid%3AF1D0%230012?v=7.6adb59277e89.3"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000020",
@@ -660,7 +660,6 @@
         ],
         "certificateCommonNames": "Fixture FIDO2 Attestation Root",
         "certification": "FIDO Certified L1 • Fixture Filler Key 01 • (FIDO20020250100020)",
-        "certificationStatus": "FIDO_CERTIFIED_L1",
         "commonName": "Fixture FIDO2 Attestation Root",
         "dateTooltip": "2025-01-01",
         "dateUpdated": "Jan 1, 2025",
@@ -674,6 +673,7 @@
           "Hardware",
           "Secure Element"
         ],
+        "latestStatus": "FIDO Certified L1",
         "name": "Fixture Filler Key 01",
         "protocol": "FIDO2",
         "transports": "Nfc, Usb",
@@ -685,7 +685,7 @@
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000020?v=7.6adb59277e89.2"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000020?v=7.6adb59277e89.3"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000021",
@@ -709,7 +709,6 @@
         ],
         "certificateCommonNames": "Fixture FIDO2 Attestation Root",
         "certification": "FIDO Certified L1 • Fixture Filler Key 02 • (FIDO20020250100021)",
-        "certificationStatus": "FIDO_CERTIFIED_L1",
         "commonName": "Fixture FIDO2 Attestation Root",
         "dateTooltip": "2025-02-02",
         "dateUpdated": "Feb 2, 2025",
@@ -723,6 +722,7 @@
           "Hardware",
           "Secure Element"
         ],
+        "latestStatus": "FIDO Certified L1",
         "name": "Fixture Filler Key 02",
         "protocol": "FIDO2",
         "transports": "Nfc, Usb",
@@ -734,7 +734,7 @@
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000021?v=7.6adb59277e89.2"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000021?v=7.6adb59277e89.3"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000022",
@@ -758,7 +758,6 @@
         ],
         "certificateCommonNames": "Fixture FIDO2 Attestation Root",
         "certification": "FIDO Certified L1 • Fixture Filler Key 03 • (FIDO20020250100022)",
-        "certificationStatus": "FIDO_CERTIFIED_L1",
         "commonName": "Fixture FIDO2 Attestation Root",
         "dateTooltip": "2025-03-03",
         "dateUpdated": "Mar 3, 2025",
@@ -772,6 +771,7 @@
           "Hardware",
           "Secure Element"
         ],
+        "latestStatus": "FIDO Certified L1",
         "name": "Fixture Filler Key 03",
         "protocol": "FIDO2",
         "transports": "Nfc, Usb",
@@ -783,7 +783,7 @@
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000022?v=7.6adb59277e89.2"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000022?v=7.6adb59277e89.3"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000023",
@@ -807,7 +807,6 @@
         ],
         "certificateCommonNames": "Fixture FIDO2 Attestation Root",
         "certification": "FIDO Certified L1 • Fixture Filler Key 04 • (FIDO20020250100023)",
-        "certificationStatus": "FIDO_CERTIFIED_L1",
         "commonName": "Fixture FIDO2 Attestation Root",
         "dateTooltip": "2025-04-04",
         "dateUpdated": "Apr 4, 2025",
@@ -821,6 +820,7 @@
           "Hardware",
           "Secure Element"
         ],
+        "latestStatus": "FIDO Certified L1",
         "name": "Fixture Filler Key 04",
         "protocol": "FIDO2",
         "transports": "Nfc, Usb",
@@ -832,7 +832,7 @@
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000023?v=7.6adb59277e89.2"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000023?v=7.6adb59277e89.3"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000024",
@@ -856,7 +856,6 @@
         ],
         "certificateCommonNames": "Fixture FIDO2 Attestation Root",
         "certification": "FIDO Certified L1 • Fixture Filler Key 05 • (FIDO20020250100024)",
-        "certificationStatus": "FIDO_CERTIFIED_L1",
         "commonName": "Fixture FIDO2 Attestation Root",
         "dateTooltip": "2025-05-05",
         "dateUpdated": "May 5, 2025",
@@ -870,6 +869,7 @@
           "Hardware",
           "Secure Element"
         ],
+        "latestStatus": "FIDO Certified L1",
         "name": "Fixture Filler Key 05",
         "protocol": "FIDO2",
         "transports": "Nfc, Usb",
@@ -881,7 +881,7 @@
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000024?v=7.6adb59277e89.2"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000024?v=7.6adb59277e89.3"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000025",
@@ -905,7 +905,6 @@
         ],
         "certificateCommonNames": "Fixture FIDO2 Attestation Root",
         "certification": "FIDO Certified L1 • Fixture Filler Key 06 • (FIDO20020250100025)",
-        "certificationStatus": "FIDO_CERTIFIED_L1",
         "commonName": "Fixture FIDO2 Attestation Root",
         "dateTooltip": "2025-06-06",
         "dateUpdated": "Jun 6, 2025",
@@ -919,6 +918,7 @@
           "Hardware",
           "Secure Element"
         ],
+        "latestStatus": "FIDO Certified L1",
         "name": "Fixture Filler Key 06",
         "protocol": "FIDO2",
         "transports": "Nfc, Usb",
@@ -930,7 +930,7 @@
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000025?v=7.6adb59277e89.2"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000025?v=7.6adb59277e89.3"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000026",
@@ -954,7 +954,6 @@
         ],
         "certificateCommonNames": "Fixture FIDO2 Attestation Root",
         "certification": "FIDO Certified L1 • Fixture Filler Key 07 • (FIDO20020250100026)",
-        "certificationStatus": "FIDO_CERTIFIED_L1",
         "commonName": "Fixture FIDO2 Attestation Root",
         "dateTooltip": "2025-07-07",
         "dateUpdated": "Jul 7, 2025",
@@ -968,6 +967,7 @@
           "Hardware",
           "Secure Element"
         ],
+        "latestStatus": "FIDO Certified L1",
         "name": "Fixture Filler Key 07",
         "protocol": "FIDO2",
         "transports": "Nfc, Usb",
@@ -979,7 +979,7 @@
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000026?v=7.6adb59277e89.2"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000026?v=7.6adb59277e89.3"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000027",
@@ -1003,7 +1003,6 @@
         ],
         "certificateCommonNames": "Fixture FIDO2 Attestation Root",
         "certification": "FIDO Certified L1 • Fixture Filler Key 08 • (FIDO20020250100027)",
-        "certificationStatus": "FIDO_CERTIFIED_L1",
         "commonName": "Fixture FIDO2 Attestation Root",
         "dateTooltip": "2025-08-08",
         "dateUpdated": "Aug 8, 2025",
@@ -1017,6 +1016,7 @@
           "Hardware",
           "Secure Element"
         ],
+        "latestStatus": "FIDO Certified L1",
         "name": "Fixture Filler Key 08",
         "protocol": "FIDO2",
         "transports": "Nfc, Usb",
@@ -1028,7 +1028,7 @@
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000027?v=7.6adb59277e89.2"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000027?v=7.6adb59277e89.3"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000028",
@@ -1052,7 +1052,6 @@
         ],
         "certificateCommonNames": "Fixture FIDO2 Attestation Root",
         "certification": "FIDO Certified L1 • Fixture Filler Key 09 • (FIDO20020250100028)",
-        "certificationStatus": "FIDO_CERTIFIED_L1",
         "commonName": "Fixture FIDO2 Attestation Root",
         "dateTooltip": "2025-09-09",
         "dateUpdated": "Sep 9, 2025",
@@ -1066,6 +1065,7 @@
           "Hardware",
           "Secure Element"
         ],
+        "latestStatus": "FIDO Certified L1",
         "name": "Fixture Filler Key 09",
         "protocol": "FIDO2",
         "transports": "Nfc, Usb",
@@ -1077,7 +1077,7 @@
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000028?v=7.6adb59277e89.2"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000028?v=7.6adb59277e89.3"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000029",
@@ -1101,7 +1101,6 @@
         ],
         "certificateCommonNames": "Fixture FIDO2 Attestation Root",
         "certification": "FIDO Certified L1 • Fixture Filler Key 10 • (FIDO20020250100029)",
-        "certificationStatus": "FIDO_CERTIFIED_L1",
         "commonName": "Fixture FIDO2 Attestation Root",
         "dateTooltip": "2025-01-10",
         "dateUpdated": "Jan 10, 2025",
@@ -1115,6 +1114,7 @@
           "Hardware",
           "Secure Element"
         ],
+        "latestStatus": "FIDO Certified L1",
         "name": "Fixture Filler Key 10",
         "protocol": "FIDO2",
         "transports": "Nfc, Usb",
@@ -1126,7 +1126,7 @@
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000029?v=7.6adb59277e89.2"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000029?v=7.6adb59277e89.3"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000030",
@@ -1150,7 +1150,6 @@
         ],
         "certificateCommonNames": "Fixture FIDO2 Attestation Root",
         "certification": "FIDO Certified L1 • Fixture Filler Key 11 • (FIDO20020250100030)",
-        "certificationStatus": "FIDO_CERTIFIED_L1",
         "commonName": "Fixture FIDO2 Attestation Root",
         "dateTooltip": "2025-02-11",
         "dateUpdated": "Feb 11, 2025",
@@ -1164,6 +1163,7 @@
           "Hardware",
           "Secure Element"
         ],
+        "latestStatus": "FIDO Certified L1",
         "name": "Fixture Filler Key 11",
         "protocol": "FIDO2",
         "transports": "Nfc, Usb",
@@ -1175,7 +1175,7 @@
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000030?v=7.6adb59277e89.2"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000030?v=7.6adb59277e89.3"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000031",
@@ -1199,7 +1199,6 @@
         ],
         "certificateCommonNames": "Fixture FIDO2 Attestation Root",
         "certification": "FIDO Certified L1 • Fixture Filler Key 12 • (FIDO20020250100031)",
-        "certificationStatus": "FIDO_CERTIFIED_L1",
         "commonName": "Fixture FIDO2 Attestation Root",
         "dateTooltip": "2025-03-12",
         "dateUpdated": "Mar 12, 2025",
@@ -1213,6 +1212,7 @@
           "Hardware",
           "Secure Element"
         ],
+        "latestStatus": "FIDO Certified L1",
         "name": "Fixture Filler Key 12",
         "protocol": "FIDO2",
         "transports": "Nfc, Usb",
@@ -1224,7 +1224,7 @@
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000031?v=7.6adb59277e89.2"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000031?v=7.6adb59277e89.3"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000032",
@@ -1248,7 +1248,6 @@
         ],
         "certificateCommonNames": "Fixture FIDO2 Attestation Root",
         "certification": "FIDO Certified L1 • Fixture Filler Key 13 • (FIDO20020250100032)",
-        "certificationStatus": "FIDO_CERTIFIED_L1",
         "commonName": "Fixture FIDO2 Attestation Root",
         "dateTooltip": "2025-04-13",
         "dateUpdated": "Apr 13, 2025",
@@ -1262,6 +1261,7 @@
           "Hardware",
           "Secure Element"
         ],
+        "latestStatus": "FIDO Certified L1",
         "name": "Fixture Filler Key 13",
         "protocol": "FIDO2",
         "transports": "Nfc, Usb",
@@ -1273,7 +1273,7 @@
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000032?v=7.6adb59277e89.2"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000032?v=7.6adb59277e89.3"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000033",
@@ -1297,7 +1297,6 @@
         ],
         "certificateCommonNames": "Fixture FIDO2 Attestation Root",
         "certification": "FIDO Certified L1 • Fixture Filler Key 14 • (FIDO20020250100033)",
-        "certificationStatus": "FIDO_CERTIFIED_L1",
         "commonName": "Fixture FIDO2 Attestation Root",
         "dateTooltip": "2025-05-14",
         "dateUpdated": "May 14, 2025",
@@ -1311,6 +1310,7 @@
           "Hardware",
           "Secure Element"
         ],
+        "latestStatus": "FIDO Certified L1",
         "name": "Fixture Filler Key 14",
         "protocol": "FIDO2",
         "transports": "Nfc, Usb",
@@ -1322,7 +1322,7 @@
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000033?v=7.6adb59277e89.2"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000033?v=7.6adb59277e89.3"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000034",
@@ -1346,7 +1346,6 @@
         ],
         "certificateCommonNames": "Fixture FIDO2 Attestation Root",
         "certification": "FIDO Certified L1 • Fixture Filler Key 15 • (FIDO20020250100034)",
-        "certificationStatus": "FIDO_CERTIFIED_L1",
         "commonName": "Fixture FIDO2 Attestation Root",
         "dateTooltip": "2025-06-15",
         "dateUpdated": "Jun 15, 2025",
@@ -1360,6 +1359,7 @@
           "Hardware",
           "Secure Element"
         ],
+        "latestStatus": "FIDO Certified L1",
         "name": "Fixture Filler Key 15",
         "protocol": "FIDO2",
         "transports": "Nfc, Usb",
@@ -1371,7 +1371,7 @@
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000034?v=7.6adb59277e89.2"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000034?v=7.6adb59277e89.3"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000035",
@@ -1395,7 +1395,6 @@
         ],
         "certificateCommonNames": "Fixture FIDO2 Attestation Root",
         "certification": "FIDO Certified L1 • Fixture Filler Key 16 • (FIDO20020250100035)",
-        "certificationStatus": "FIDO_CERTIFIED_L1",
         "commonName": "Fixture FIDO2 Attestation Root",
         "dateTooltip": "2025-07-16",
         "dateUpdated": "Jul 16, 2025",
@@ -1409,6 +1408,7 @@
           "Hardware",
           "Secure Element"
         ],
+        "latestStatus": "FIDO Certified L1",
         "name": "Fixture Filler Key 16",
         "protocol": "FIDO2",
         "transports": "Nfc, Usb",
@@ -1420,7 +1420,7 @@
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000035?v=7.6adb59277e89.2"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000035?v=7.6adb59277e89.3"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000036",
@@ -1444,7 +1444,6 @@
         ],
         "certificateCommonNames": "Fixture FIDO2 Attestation Root",
         "certification": "FIDO Certified L1 • Fixture Filler Key 17 • (FIDO20020250100036)",
-        "certificationStatus": "FIDO_CERTIFIED_L1",
         "commonName": "Fixture FIDO2 Attestation Root",
         "dateTooltip": "2025-08-17",
         "dateUpdated": "Aug 17, 2025",
@@ -1458,6 +1457,7 @@
           "Hardware",
           "Secure Element"
         ],
+        "latestStatus": "FIDO Certified L1",
         "name": "Fixture Filler Key 17",
         "protocol": "FIDO2",
         "transports": "Nfc, Usb",
@@ -1469,7 +1469,7 @@
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000036?v=7.6adb59277e89.2"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000036?v=7.6adb59277e89.3"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000037",
@@ -1493,7 +1493,6 @@
         ],
         "certificateCommonNames": "Fixture FIDO2 Attestation Root",
         "certification": "FIDO Certified L1 • Fixture Filler Key 18 • (FIDO20020250100037)",
-        "certificationStatus": "FIDO_CERTIFIED_L1",
         "commonName": "Fixture FIDO2 Attestation Root",
         "dateTooltip": "2025-09-18",
         "dateUpdated": "Sep 18, 2025",
@@ -1507,6 +1506,7 @@
           "Hardware",
           "Secure Element"
         ],
+        "latestStatus": "FIDO Certified L1",
         "name": "Fixture Filler Key 18",
         "protocol": "FIDO2",
         "transports": "Nfc, Usb",
@@ -1518,7 +1518,7 @@
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000037?v=7.6adb59277e89.2"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000037?v=7.6adb59277e89.3"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000038",
@@ -1542,7 +1542,6 @@
         ],
         "certificateCommonNames": "Fixture FIDO2 Attestation Root",
         "certification": "FIDO Certified L1 • Fixture Filler Key 19 • (FIDO20020250100038)",
-        "certificationStatus": "FIDO_CERTIFIED_L1",
         "commonName": "Fixture FIDO2 Attestation Root",
         "dateTooltip": "2025-01-19",
         "dateUpdated": "Jan 19, 2025",
@@ -1556,6 +1555,7 @@
           "Hardware",
           "Secure Element"
         ],
+        "latestStatus": "FIDO Certified L1",
         "name": "Fixture Filler Key 19",
         "protocol": "FIDO2",
         "transports": "Nfc, Usb",
@@ -1567,7 +1567,7 @@
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000038?v=7.6adb59277e89.2"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000038?v=7.6adb59277e89.3"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000039",
@@ -1591,7 +1591,6 @@
         ],
         "certificateCommonNames": "Fixture FIDO2 Attestation Root",
         "certification": "FIDO Certified L1 • Fixture Filler Key 20 • (FIDO20020250100039)",
-        "certificationStatus": "FIDO_CERTIFIED_L1",
         "commonName": "Fixture FIDO2 Attestation Root",
         "dateTooltip": "2025-01-01",
         "dateUpdated": "Jan 1, 2025",
@@ -1605,6 +1604,7 @@
           "Hardware",
           "Secure Element"
         ],
+        "latestStatus": "FIDO Certified L1",
         "name": "Fixture Filler Key 20",
         "protocol": "FIDO2",
         "transports": "Nfc, Usb",
@@ -1616,7 +1616,7 @@
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000039?v=7.6adb59277e89.2"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000039?v=7.6adb59277e89.3"
       }
     ]
   },
@@ -1649,7 +1649,6 @@
       ],
       "certificateCommonNames": "Fixture FIDO2 Attestation Root",
       "certification": "FIDO Certified L1 • Fixture Security Key • (FIDO20020260901001)",
-      "certificationStatus": "FIDO_CERTIFIED_L1",
       "commonName": "Fixture FIDO2 Attestation Root",
       "dateTooltip": "2026-09-01",
       "dateUpdated": "Sep 1, 2026",
@@ -1663,6 +1662,7 @@
         "Hardware",
         "Secure Element"
       ],
+      "latestStatus": "FIDO Certified L1",
       "metadataStatement": {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000001",
         "attachmentHint": [
@@ -1857,7 +1857,6 @@
       ],
       "certificateCommonNames": "Fixture RSA Attestation Root",
       "certification": "FIDO Certified L2 • Fixture Security Key L2 • (FIDO20020260815002)",
-      "certificationStatus": "FIDO_CERTIFIED_L2",
       "commonName": "Fixture RSA Attestation Root",
       "dateTooltip": "2026-08-15",
       "dateUpdated": "Aug 15, 2026",
@@ -1871,6 +1870,7 @@
         "Hardware",
         "Secure Element"
       ],
+      "latestStatus": "FIDO Certified L2",
       "metadataStatement": {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000002",
         "alternativeDescriptions": {
@@ -2109,7 +2109,6 @@
       ],
       "certificateCommonNames": "Fixture Ed25519 Attestation Root",
       "certification": "FIDO Certified • Fixture Certified Key • (FIDO20020260710003)",
-      "certificationStatus": "FIDO_CERTIFIED",
       "commonName": "Fixture Ed25519 Attestation Root",
       "dateTooltip": "2026-07-10",
       "dateUpdated": "Jul 10, 2026",
@@ -2123,6 +2122,7 @@
         "Hardware",
         "Secure Element"
       ],
+      "latestStatus": "FIDO Certified",
       "metadataStatement": {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000003",
         "attachmentHint": [
@@ -2259,7 +2259,6 @@
       ],
       "certificateCommonNames": "Fixture FIDO2 Attestation Root",
       "certification": "NOT FIDO Certified",
-      "certificationStatus": "NOT_FIDO_CERTIFIED",
       "commonName": "Fixture FIDO2 Attestation Root",
       "dateTooltip": "2026-06-01",
       "dateUpdated": "Jun 1, 2026",
@@ -2272,6 +2271,7 @@
       "keyProtectionList": [
         "Software"
       ],
+      "latestStatus": "NOT FIDO Certified",
       "metadataStatement": {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000004",
         "attachmentHint": [
@@ -2403,7 +2403,6 @@
       ],
       "certificateCommonNames": "Fixture FIDO2 Attestation Root",
       "certification": "Revoked",
-      "certificationStatus": "REVOKED",
       "commonName": "Fixture FIDO2 Attestation Root",
       "dateTooltip": "2026-05-20",
       "dateUpdated": "May 20, 2026",
@@ -2417,6 +2416,7 @@
         "Hardware",
         "Secure Element"
       ],
+      "latestStatus": "Revoked",
       "metadataStatement": {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000005",
         "attachmentHint": [
@@ -2587,7 +2587,6 @@
       ],
       "certificateCommonNames": "Fixture Authenticator Attestation Root Certificate Authority 01, Fixture Authenticator Attestation Root Certificate Authority 02, Fixture Authenticator Attestation Root Certificate Authority 03, Fixture Authenticator Attestation Root Certificate Authority 04, Fixture Authenticator Attestation Root Certificate Authority 05, Fixture Authenticator Attestation Root Certificate Authority 06, Fixture Authenticator Attestation Root Certificate Authority 07, Fixture Authenticator Attestation Root Certificate Authority 08, Fixture Authenticator Attestation Root Certificate Authority 09, Fixture Authenticator Attestation Root Certificate Authority 10, Fixture Authenticator Attestation Root Certificate Authority 11, Fixture Authenticator Attestation Root Certificate Authority 12, Fixture Authenticator Attestation Root Certificate Authority 13, Fixture Authenticator Attestation Root Certificate Authority 14, Fixture Authenticator Attestation Root Certificate Authority 15",
       "certification": "FIDO Certified L1 • Fixture Key With Many Roots • (FIDO20020260402006)",
-      "certificationStatus": "FIDO_CERTIFIED_L1",
       "commonName": "Fixture Authenticator Attestation Root Certificate Authority 01, Fixture Authenticator Attestation Root Certificate Authority 02, Fixture Authenticator Attestation Root Certificate Authority 03, Fixture Authenticator Attestation Root Certificate Authority 04, Fixture Authenticator Attestation Root Certificate Authority 05, Fixture Authenticator Attestation Root Certificate Authority 06, Fixture Authenticator Attestation Root Certificate Authority 07, Fixture Authenticator Attestation Root Certificate Authority 08, Fixture Authenticator Attestation Root Certificate Authority 09, Fixture Authenticator Attestation Root Certificate Authority 10, Fixture Authenticator Attestation Root Certificate Authority 11, Fixture Authenticator Attestation Root Certificate Authority 12, Fixture Authenticator Attestation Root Certificate Authority 13, Fixture Authenticator Attestation Root Certificate Authority 14, Fixture Authenticator Attestation Root Certificate Authority 15",
       "dateTooltip": "2026-04-02",
       "dateUpdated": "Apr 2, 2026",
@@ -2601,6 +2600,7 @@
         "Hardware",
         "Secure Element"
       ],
+      "latestStatus": "FIDO Certified L1",
       "metadataStatement": {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000006",
         "attachmentHint": [
@@ -2739,7 +2739,6 @@
       ],
       "certificateCommonNames": "Fixture FIDO2 Attestation Root",
       "certification": "FIDO Certified L2 • Fixture Biometric Key • (FIDO20020260303007)",
-      "certificationStatus": "FIDO_CERTIFIED_L2",
       "commonName": "Fixture FIDO2 Attestation Root",
       "dateTooltip": "2026-03-03",
       "dateUpdated": "Mar 3, 2026",
@@ -2753,6 +2752,7 @@
         "Hardware",
         "Secure Element"
       ],
+      "latestStatus": "FIDO Certified L2",
       "metadataStatement": {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000007",
         "attachmentHint": [
@@ -2961,7 +2961,6 @@
       ],
       "certificateCommonNames": "Fixture FIDO2 Attestation Root",
       "certification": "FIDO Certified L1 • Fixture Long Name Key • (FIDO20020260214008)",
-      "certificationStatus": "FIDO_CERTIFIED_L1",
       "commonName": "Fixture FIDO2 Attestation Root",
       "dateTooltip": "2026-02-14",
       "dateUpdated": "Feb 14, 2026",
@@ -2975,6 +2974,7 @@
         "Hardware",
         "Secure Element"
       ],
+      "latestStatus": "FIDO Certified L1",
       "metadataStatement": {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000008",
         "attachmentHint": [
@@ -3113,7 +3113,6 @@
       ],
       "certificateCommonNames": "Fixture FIDO2 Attestation Root",
       "certification": "NOT FIDO Certified",
-      "certificationStatus": "NOT_FIDO_CERTIFIED",
       "commonName": "Fixture FIDO2 Attestation Root",
       "dateTooltip": "2026-01-05",
       "dateUpdated": "Jan 5, 2026",
@@ -3127,6 +3126,7 @@
         "Hardware",
         "Secure Element"
       ],
+      "latestStatus": "NOT FIDO Certified",
       "metadataStatement": {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000009",
         "attachmentHint": [
@@ -3261,7 +3261,6 @@
       ],
       "certificateCommonNames": "Fixture FIDO2 Attestation Root",
       "certification": "",
-      "certificationStatus": "",
       "commonName": "Fixture FIDO2 Attestation Root",
       "dateTooltip": "2025-12-12",
       "dateUpdated": "Dec 12, 2025",
@@ -3275,6 +3274,7 @@
         "Hardware",
         "Secure Element"
       ],
+      "latestStatus": "",
       "metadataStatement": {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000010",
         "attachmentHint": [
@@ -3404,7 +3404,6 @@
       ],
       "certificateCommonNames": "Fixture FIDO2 Attestation Root",
       "certification": "FIDO Certified L1 • Fixture U2F Key • (U2F100020251111011)",
-      "certificationStatus": "FIDO_CERTIFIED_L1",
       "commonName": "Fixture FIDO2 Attestation Root",
       "dateTooltip": "2025-11-11",
       "dateUpdated": "Nov 11, 2025",
@@ -3418,6 +3417,7 @@
         "Hardware",
         "Secure Element"
       ],
+      "latestStatus": "FIDO Certified L1",
       "metadataStatement": {
         "attachmentHint": [
           "external",
@@ -3515,7 +3515,6 @@
       ],
       "certificateCommonNames": "Fixture Ed25519 Attestation Root",
       "certification": "FIDO Certified L1 • Fixture UAF Authenticator • (UAF100020251010012)",
-      "certificationStatus": "FIDO_CERTIFIED_L1",
       "commonName": "Fixture Ed25519 Attestation Root",
       "dateTooltip": "2025-10-10",
       "dateUpdated": "Oct 10, 2025",
@@ -3529,6 +3528,7 @@
         "Hardware",
         "Tee"
       ],
+      "latestStatus": "FIDO Certified L1",
       "metadataStatement": {
         "aaid": "F1D0#0012",
         "attachmentHint": [
@@ -3628,7 +3628,6 @@
       ],
       "certificateCommonNames": "Fixture FIDO2 Attestation Root",
       "certification": "FIDO Certified L1 • Fixture Filler Key 01 • (FIDO20020250100020)",
-      "certificationStatus": "FIDO_CERTIFIED_L1",
       "commonName": "Fixture FIDO2 Attestation Root",
       "dateTooltip": "2025-01-01",
       "dateUpdated": "Jan 1, 2025",
@@ -3642,6 +3641,7 @@
         "Hardware",
         "Secure Element"
       ],
+      "latestStatus": "FIDO Certified L1",
       "metadataStatement": {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000020",
         "attachmentHint": [
@@ -3772,7 +3772,6 @@
       ],
       "certificateCommonNames": "Fixture FIDO2 Attestation Root",
       "certification": "FIDO Certified L1 • Fixture Filler Key 02 • (FIDO20020250100021)",
-      "certificationStatus": "FIDO_CERTIFIED_L1",
       "commonName": "Fixture FIDO2 Attestation Root",
       "dateTooltip": "2025-02-02",
       "dateUpdated": "Feb 2, 2025",
@@ -3786,6 +3785,7 @@
         "Hardware",
         "Secure Element"
       ],
+      "latestStatus": "FIDO Certified L1",
       "metadataStatement": {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000021",
         "attachmentHint": [
@@ -3916,7 +3916,6 @@
       ],
       "certificateCommonNames": "Fixture FIDO2 Attestation Root",
       "certification": "FIDO Certified L1 • Fixture Filler Key 03 • (FIDO20020250100022)",
-      "certificationStatus": "FIDO_CERTIFIED_L1",
       "commonName": "Fixture FIDO2 Attestation Root",
       "dateTooltip": "2025-03-03",
       "dateUpdated": "Mar 3, 2025",
@@ -3930,6 +3929,7 @@
         "Hardware",
         "Secure Element"
       ],
+      "latestStatus": "FIDO Certified L1",
       "metadataStatement": {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000022",
         "attachmentHint": [
@@ -4060,7 +4060,6 @@
       ],
       "certificateCommonNames": "Fixture FIDO2 Attestation Root",
       "certification": "FIDO Certified L1 • Fixture Filler Key 04 • (FIDO20020250100023)",
-      "certificationStatus": "FIDO_CERTIFIED_L1",
       "commonName": "Fixture FIDO2 Attestation Root",
       "dateTooltip": "2025-04-04",
       "dateUpdated": "Apr 4, 2025",
@@ -4074,6 +4073,7 @@
         "Hardware",
         "Secure Element"
       ],
+      "latestStatus": "FIDO Certified L1",
       "metadataStatement": {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000023",
         "attachmentHint": [
@@ -4204,7 +4204,6 @@
       ],
       "certificateCommonNames": "Fixture FIDO2 Attestation Root",
       "certification": "FIDO Certified L1 • Fixture Filler Key 05 • (FIDO20020250100024)",
-      "certificationStatus": "FIDO_CERTIFIED_L1",
       "commonName": "Fixture FIDO2 Attestation Root",
       "dateTooltip": "2025-05-05",
       "dateUpdated": "May 5, 2025",
@@ -4218,6 +4217,7 @@
         "Hardware",
         "Secure Element"
       ],
+      "latestStatus": "FIDO Certified L1",
       "metadataStatement": {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000024",
         "attachmentHint": [
@@ -4348,7 +4348,6 @@
       ],
       "certificateCommonNames": "Fixture FIDO2 Attestation Root",
       "certification": "FIDO Certified L1 • Fixture Filler Key 06 • (FIDO20020250100025)",
-      "certificationStatus": "FIDO_CERTIFIED_L1",
       "commonName": "Fixture FIDO2 Attestation Root",
       "dateTooltip": "2025-06-06",
       "dateUpdated": "Jun 6, 2025",
@@ -4362,6 +4361,7 @@
         "Hardware",
         "Secure Element"
       ],
+      "latestStatus": "FIDO Certified L1",
       "metadataStatement": {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000025",
         "attachmentHint": [
@@ -4492,7 +4492,6 @@
       ],
       "certificateCommonNames": "Fixture FIDO2 Attestation Root",
       "certification": "FIDO Certified L1 • Fixture Filler Key 07 • (FIDO20020250100026)",
-      "certificationStatus": "FIDO_CERTIFIED_L1",
       "commonName": "Fixture FIDO2 Attestation Root",
       "dateTooltip": "2025-07-07",
       "dateUpdated": "Jul 7, 2025",
@@ -4506,6 +4505,7 @@
         "Hardware",
         "Secure Element"
       ],
+      "latestStatus": "FIDO Certified L1",
       "metadataStatement": {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000026",
         "attachmentHint": [
@@ -4636,7 +4636,6 @@
       ],
       "certificateCommonNames": "Fixture FIDO2 Attestation Root",
       "certification": "FIDO Certified L1 • Fixture Filler Key 08 • (FIDO20020250100027)",
-      "certificationStatus": "FIDO_CERTIFIED_L1",
       "commonName": "Fixture FIDO2 Attestation Root",
       "dateTooltip": "2025-08-08",
       "dateUpdated": "Aug 8, 2025",
@@ -4650,6 +4649,7 @@
         "Hardware",
         "Secure Element"
       ],
+      "latestStatus": "FIDO Certified L1",
       "metadataStatement": {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000027",
         "attachmentHint": [
@@ -4780,7 +4780,6 @@
       ],
       "certificateCommonNames": "Fixture FIDO2 Attestation Root",
       "certification": "FIDO Certified L1 • Fixture Filler Key 09 • (FIDO20020250100028)",
-      "certificationStatus": "FIDO_CERTIFIED_L1",
       "commonName": "Fixture FIDO2 Attestation Root",
       "dateTooltip": "2025-09-09",
       "dateUpdated": "Sep 9, 2025",
@@ -4794,6 +4793,7 @@
         "Hardware",
         "Secure Element"
       ],
+      "latestStatus": "FIDO Certified L1",
       "metadataStatement": {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000028",
         "attachmentHint": [
@@ -4924,7 +4924,6 @@
       ],
       "certificateCommonNames": "Fixture FIDO2 Attestation Root",
       "certification": "FIDO Certified L1 • Fixture Filler Key 10 • (FIDO20020250100029)",
-      "certificationStatus": "FIDO_CERTIFIED_L1",
       "commonName": "Fixture FIDO2 Attestation Root",
       "dateTooltip": "2025-01-10",
       "dateUpdated": "Jan 10, 2025",
@@ -4938,6 +4937,7 @@
         "Hardware",
         "Secure Element"
       ],
+      "latestStatus": "FIDO Certified L1",
       "metadataStatement": {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000029",
         "attachmentHint": [
@@ -5068,7 +5068,6 @@
       ],
       "certificateCommonNames": "Fixture FIDO2 Attestation Root",
       "certification": "FIDO Certified L1 • Fixture Filler Key 11 • (FIDO20020250100030)",
-      "certificationStatus": "FIDO_CERTIFIED_L1",
       "commonName": "Fixture FIDO2 Attestation Root",
       "dateTooltip": "2025-02-11",
       "dateUpdated": "Feb 11, 2025",
@@ -5082,6 +5081,7 @@
         "Hardware",
         "Secure Element"
       ],
+      "latestStatus": "FIDO Certified L1",
       "metadataStatement": {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000030",
         "attachmentHint": [
@@ -5212,7 +5212,6 @@
       ],
       "certificateCommonNames": "Fixture FIDO2 Attestation Root",
       "certification": "FIDO Certified L1 • Fixture Filler Key 12 • (FIDO20020250100031)",
-      "certificationStatus": "FIDO_CERTIFIED_L1",
       "commonName": "Fixture FIDO2 Attestation Root",
       "dateTooltip": "2025-03-12",
       "dateUpdated": "Mar 12, 2025",
@@ -5226,6 +5225,7 @@
         "Hardware",
         "Secure Element"
       ],
+      "latestStatus": "FIDO Certified L1",
       "metadataStatement": {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000031",
         "attachmentHint": [
@@ -5356,7 +5356,6 @@
       ],
       "certificateCommonNames": "Fixture FIDO2 Attestation Root",
       "certification": "FIDO Certified L1 • Fixture Filler Key 13 • (FIDO20020250100032)",
-      "certificationStatus": "FIDO_CERTIFIED_L1",
       "commonName": "Fixture FIDO2 Attestation Root",
       "dateTooltip": "2025-04-13",
       "dateUpdated": "Apr 13, 2025",
@@ -5370,6 +5369,7 @@
         "Hardware",
         "Secure Element"
       ],
+      "latestStatus": "FIDO Certified L1",
       "metadataStatement": {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000032",
         "attachmentHint": [
@@ -5500,7 +5500,6 @@
       ],
       "certificateCommonNames": "Fixture FIDO2 Attestation Root",
       "certification": "FIDO Certified L1 • Fixture Filler Key 14 • (FIDO20020250100033)",
-      "certificationStatus": "FIDO_CERTIFIED_L1",
       "commonName": "Fixture FIDO2 Attestation Root",
       "dateTooltip": "2025-05-14",
       "dateUpdated": "May 14, 2025",
@@ -5514,6 +5513,7 @@
         "Hardware",
         "Secure Element"
       ],
+      "latestStatus": "FIDO Certified L1",
       "metadataStatement": {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000033",
         "attachmentHint": [
@@ -5644,7 +5644,6 @@
       ],
       "certificateCommonNames": "Fixture FIDO2 Attestation Root",
       "certification": "FIDO Certified L1 • Fixture Filler Key 15 • (FIDO20020250100034)",
-      "certificationStatus": "FIDO_CERTIFIED_L1",
       "commonName": "Fixture FIDO2 Attestation Root",
       "dateTooltip": "2025-06-15",
       "dateUpdated": "Jun 15, 2025",
@@ -5658,6 +5657,7 @@
         "Hardware",
         "Secure Element"
       ],
+      "latestStatus": "FIDO Certified L1",
       "metadataStatement": {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000034",
         "attachmentHint": [
@@ -5788,7 +5788,6 @@
       ],
       "certificateCommonNames": "Fixture FIDO2 Attestation Root",
       "certification": "FIDO Certified L1 • Fixture Filler Key 16 • (FIDO20020250100035)",
-      "certificationStatus": "FIDO_CERTIFIED_L1",
       "commonName": "Fixture FIDO2 Attestation Root",
       "dateTooltip": "2025-07-16",
       "dateUpdated": "Jul 16, 2025",
@@ -5802,6 +5801,7 @@
         "Hardware",
         "Secure Element"
       ],
+      "latestStatus": "FIDO Certified L1",
       "metadataStatement": {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000035",
         "attachmentHint": [
@@ -5932,7 +5932,6 @@
       ],
       "certificateCommonNames": "Fixture FIDO2 Attestation Root",
       "certification": "FIDO Certified L1 • Fixture Filler Key 17 • (FIDO20020250100036)",
-      "certificationStatus": "FIDO_CERTIFIED_L1",
       "commonName": "Fixture FIDO2 Attestation Root",
       "dateTooltip": "2025-08-17",
       "dateUpdated": "Aug 17, 2025",
@@ -5946,6 +5945,7 @@
         "Hardware",
         "Secure Element"
       ],
+      "latestStatus": "FIDO Certified L1",
       "metadataStatement": {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000036",
         "attachmentHint": [
@@ -6076,7 +6076,6 @@
       ],
       "certificateCommonNames": "Fixture FIDO2 Attestation Root",
       "certification": "FIDO Certified L1 • Fixture Filler Key 18 • (FIDO20020250100037)",
-      "certificationStatus": "FIDO_CERTIFIED_L1",
       "commonName": "Fixture FIDO2 Attestation Root",
       "dateTooltip": "2025-09-18",
       "dateUpdated": "Sep 18, 2025",
@@ -6090,6 +6089,7 @@
         "Hardware",
         "Secure Element"
       ],
+      "latestStatus": "FIDO Certified L1",
       "metadataStatement": {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000037",
         "attachmentHint": [
@@ -6220,7 +6220,6 @@
       ],
       "certificateCommonNames": "Fixture FIDO2 Attestation Root",
       "certification": "FIDO Certified L1 • Fixture Filler Key 19 • (FIDO20020250100038)",
-      "certificationStatus": "FIDO_CERTIFIED_L1",
       "commonName": "Fixture FIDO2 Attestation Root",
       "dateTooltip": "2025-01-19",
       "dateUpdated": "Jan 19, 2025",
@@ -6234,6 +6233,7 @@
         "Hardware",
         "Secure Element"
       ],
+      "latestStatus": "FIDO Certified L1",
       "metadataStatement": {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000038",
         "attachmentHint": [
@@ -6364,7 +6364,6 @@
       ],
       "certificateCommonNames": "Fixture FIDO2 Attestation Root",
       "certification": "FIDO Certified L1 • Fixture Filler Key 20 • (FIDO20020250100039)",
-      "certificationStatus": "FIDO_CERTIFIED_L1",
       "commonName": "Fixture FIDO2 Attestation Root",
       "dateTooltip": "2025-01-01",
       "dateUpdated": "Jan 1, 2025",
@@ -6378,6 +6377,7 @@
         "Hardware",
         "Secure Element"
       ],
+      "latestStatus": "FIDO Certified L1",
       "metadataStatement": {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000039",
         "attachmentHint": [

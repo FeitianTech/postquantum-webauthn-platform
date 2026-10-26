@@ -3,7 +3,7 @@
 import { FILTER_CONFIG } from '@/logic/mds/constants.js';
 import type { MdsEntry } from '@/logic/mds/explorer/loading.js';
 
-// The 13 columns, in order, with their headers; `list` names the
+// The 14 columns, in order, with their headers; `list` names the
 // entry's list a tag column shows. The widths are where each column starts (the
 // ID column fits a whole AAGUID and its copy button; on a phone the Icon column
 // starts narrower, only as wide as its icon); a person can resize them.
@@ -12,6 +12,7 @@ export const EXPLORER_COLUMNS = [
   { key: 'name', header: 'Name', width: 280 },
   { key: 'protocol', header: 'Protocol', width: 104 },
   { key: 'certification', header: 'Certification', width: 300 },
+  { key: 'latestStatus', header: 'Status', width: 200 },
   { key: 'id', header: 'ID', width: 352, min: 320 },
   { key: 'userVerification', header: 'User Verification', width: 240, list: 'userVerificationList' },
   { key: 'attachment', header: 'Attachment', width: 180, list: 'attachmentList' },
@@ -25,13 +26,14 @@ export const EXPLORER_COLUMNS = [
 
 export type ExplorerColumn = (typeof EXPLORER_COLUMNS)[number];
 
-// The 11 filters: the column each one reads, the current template's placeholder,
+// The 12 filters: the column each one reads, the current template's placeholder,
 // and, from the shared configuration, whether it offers a list (and shows that
 // list whole).
 const PLACEHOLDERS: Record<string, string> = {
   name: 'Search name',
   protocol: 'Protocol',
   certification: 'Certification',
+  latestStatus: 'Status',
   id: 'AAGUID or AAID',
   userVerification: 'User verification',
   attachment: 'Attachment',

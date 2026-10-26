@@ -70,6 +70,7 @@ function overviewSection(entry, metadata) {
             entry.aaguid ? field('AAGUID', entry.aaguid, { identifier: true }) : null,
             entry.protocol ? field('Protocol', entry.protocol) : null,
             entry.certification ? field('Certification', entry.certification) : null,
+            entry.latestStatus ? field('Status', entry.latestStatus) : null,
             field('Authenticator Version', metadata.authenticatorVersion),
             entry.dateUpdated ? field('Date Updated', entry.dateUpdated) : null,
         ]),
