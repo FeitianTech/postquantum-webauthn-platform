@@ -156,16 +156,25 @@ def format_protocol(protocol: Any) -> str:
     return formatted
 
 
+def _effective_date(report: Mapping[str, Any]) -> datetime | None:
+    """A status report's effective date, or None when it has none that reads."""
+
+    return _parse_date(mapping_value(report, "effectiveDate", "effective_date"))
+
+
+def _effective_timestamp(report: Mapping[str, Any]) -> float:
+    """A status report's effective date as a timestamp; 0 (the oldest) without one."""
+
+    parsed = _effective_date(report)
+    return parsed.timestamp() if parsed else 0.0
+
+
 def format_certification(status_reports: Any) -> tuple[str, str]:
     reports = [report for report in extract_list(status_reports) if isinstance(report, Mapping)]
     if not reports:
         return "", ""
 
-    def sort_key(report: Mapping[str, Any]) -> float:
-        parsed = _parse_date(mapping_value(report, "effectiveDate", "effective_date"))
-        return parsed.timestamp() if parsed else 0.0
-
-    sorted_reports = sorted(reports, key=sort_key, reverse=True)
+    sorted_reports = sorted(reports, key=_effective_timestamp, reverse=True)
     latest = sorted_reports[0]
 
     status_raw = string_or_none(mapping_value(latest, "status")) or ""
@@ -193,11 +202,7 @@ def latest_effective_date(status_reports: Any) -> str:
     if not reports:
         return ""
 
-    def sort_key(report: Mapping[str, Any]) -> float:
-        parsed = _parse_date(mapping_value(report, "effectiveDate", "effective_date"))
-        return parsed.timestamp() if parsed else 0.0
-
-    latest = max(reports, key=sort_key)
+    latest = max(reports, key=_effective_timestamp)
     return string_or_none(mapping_value(latest, "effectiveDate", "effective_date")) or ""
 
 
