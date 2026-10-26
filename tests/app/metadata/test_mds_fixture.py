@@ -99,6 +99,10 @@ def test_an_uploaded_statement_joins_the_fixture(mds_fixture_snapshot, client):
     assert snapshot["meta"]["customEntryCount"] == 1
     assert snapshot["entries"][0]["name"] == "Fixture Uploaded Authenticator"
     assert snapshot["entries"][0]["source"] == "session"
+    custom = answer.get_json()["custom"]
+    assert custom["meta"] == {"entryCount": 33, "baseEntryCount": 32, "customEntryCount": 1, "hasCustomEntries": True}
+    assert [entry["name"] for entry in custom["entries"]] == ["Fixture Uploaded Authenticator"]
+    assert client.get("/api/mds/metadata/explorer/custom").get_json() == custom
 
     listed = client.get("/api/mds/metadata/custom").get_json()["items"]
     assert [item["source"]["originalFilename"] for item in listed] == ["custom-metadata.json"]
@@ -107,6 +111,10 @@ def test_an_uploaded_statement_joins_the_fixture(mds_fixture_snapshot, client):
     removed = client.delete(f"/api/mds/metadata/custom/{stored}")
     assert removed.status_code == 200
     assert removed.get_json()["snapshot"]["meta"]["customEntryCount"] == 0
+    assert removed.get_json()["custom"] == {
+        "meta": {"entryCount": 32, "baseEntryCount": 32, "customEntryCount": 0, "hasCustomEntries": False},
+        "entries": [],
+    }
 
 
 @pytest.mark.parametrize("name", mds_files.SNAPSHOT_FILENAMES)

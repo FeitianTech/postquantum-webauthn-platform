@@ -51,6 +51,60 @@ def test_uploads_come_first_one_per_aaguid_in_place_of_the_packaged_entry(visito
     assert packaged["detailUrl"].startswith("/assets/mds/entries/")
 
 
+def _upload_statement(description: str, **statement):
+    return mds_uploads.save_session_metadata_item({"metadataStatement": {"description": description, **statement}})
+
+
+def test_the_custom_entries_are_the_uploads_alone_with_the_counts_of_the_list_they_make(visitor, mds_fixture_snapshot):
+    _upload("Uploaded", PACKAGED)
+    _upload("Uploaded again", PACKAGED)
+    _upload("No AAGUID")
+
+    custom = mds_effective.load_custom_entries()
+
+    assert custom["meta"] == {"entryCount": 33, "baseEntryCount": 32, "customEntryCount": 2, "hasCustomEntries": True}
+    # One upload per AAGUID; each with its detail, as the page shows it without asking.
+    assert [entry["source"] for entry in custom["entries"]] == ["session", "session"]
+    assert sum(entry["aaguid"] == PACKAGED for entry in custom["entries"]) == 1
+    assert "No AAGUID" in {entry["metadataStatement"]["description"] for entry in custom["entries"]}
+    assert all(entry["isLightweightEntry"] is False for entry in custom["entries"])
+
+
+def test_without_uploads_the_custom_entries_are_none_and_the_counts_the_packaged_list(visitor, mds_fixture_snapshot):
+    assert mds_effective.load_custom_entries() == {
+        "meta": {"entryCount": 32, "baseEntryCount": 32, "customEntryCount": 0, "hasCustomEntries": False},
+        "entries": [],
+    }
+
+
+def test_without_a_snapshot_the_custom_entries_count_no_packaged_row(visitor):
+    _upload("Uploaded", PACKAGED)
+
+    meta = mds_effective.load_custom_entries()["meta"]
+
+    assert (meta["entryCount"], meta["baseEntryCount"], meta["customEntryCount"]) == (1, 0, 1)
+
+
+def test_an_upload_with_the_id_of_a_packaged_entry_shown_gets_one_of_its_own(visitor, mds_fixture_snapshot):
+    _upload_statement("Uploaded UAF", aaid=PACKAGED_AAID)
+
+    (row,) = mds_effective.load_custom_entries()["entries"]
+
+    assert row["entryId"] == f"aaid:{PACKAGED_AAID}~2"
+    resolved = mds_effective.resolve_effective_metadata_entry(entry_id=row["entryId"])
+    assert resolved["metadataStatement"]["description"] == "Uploaded UAF"
+    assert mds_effective.resolve_effective_metadata_entry(entry_id=f"aaid:{PACKAGED_AAID}")["source"] == "packaged"
+
+
+def test_uploads_with_one_key_identifier_get_an_id_each(visitor, mds_fixture_snapshot):
+    _upload_statement("First", attestationCertificateKeyIdentifiers=["ab" * 20])
+    _upload_statement("Second", attestationCertificateKeyIdentifiers=["ab" * 20])
+
+    ids = [row["entryId"] for row in mds_effective.load_custom_entries()["entries"]]
+
+    assert sorted(ids) == [f"akid:{'ab' * 20}", f"akid:{'ab' * 20}~2"]
+
+
 def test_without_a_snapshot_the_uploads_are_the_whole_snapshot(visitor):
     _upload("Uploaded", PACKAGED)
 

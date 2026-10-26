@@ -105,6 +105,13 @@ def test_the_explorer_waits_and_then_answers_every_entry(slow_provisioning, clie
     assert len(response.get_json()["entries"]) == FIXTURE_ENTRIES
 
 
+def test_the_visitors_rows_wait_and_then_count_the_packaged_list(slow_provisioning, client):
+    response = _waits_until_released(client, "/api/mds/metadata/explorer/custom", slow_provisioning)
+
+    assert response.status_code == 200
+    assert response.get_json()["meta"]["baseEntryCount"] == FIXTURE_ENTRIES
+
+
 def test_resolve_waits_and_then_finds_the_entry(slow_provisioning, client):
     response = _waits_until_released(client, f"/api/mds/metadata/resolve?aaguid={AAGUID}", slow_provisioning)
 

@@ -30,6 +30,7 @@ def _own_namespaces(own_stores):
 _READS = [
     ("GET", "/api/mds/metadata/info", 200),
     ("GET", "/api/mds/metadata/explorer/full", 200),
+    ("GET", "/api/mds/metadata/explorer/custom", 200),
     ("GET", "/api/mds/metadata/resolve?aaguid=f1d0f1d0-0000-4000-8000-000000000001", 200),
     ("GET", "/api/mds/metadata/custom", 200),
     ("DELETE", "/api/mds/metadata/custom/0123456789abcdef.json", 404),
@@ -102,6 +103,25 @@ def test_the_visitors_uploads_are_never_cached_and_keyed_on_the_cookie(mds_fixtu
 
     assert response.headers["Cache-Control"] == "no-store"
     assert "Cookie" in response.headers["Vary"]
+
+
+def test_the_visitors_explorer_rows_are_never_cached_and_keyed_on_the_cookie(mds_fixture_snapshot, client):
+    response = client.get("/api/mds/metadata/explorer/custom")
+
+    assert response.status_code == 200
+    assert response.get_json() == {
+        "meta": {"entryCount": 32, "baseEntryCount": 32, "customEntryCount": 0, "hasCustomEntries": False},
+        "entries": [],
+    }
+    assert response.headers["Cache-Control"] == "no-store"
+    assert response.headers["Vary"] == "Cookie"
+
+
+def test_without_a_snapshot_the_visitors_explorer_rows_are_answered_all_the_same(client):
+    response = client.get("/api/mds/metadata/explorer/custom")
+
+    assert response.status_code == 200
+    assert response.get_json()["meta"]["baseEntryCount"] == 0
 
 
 def test_the_full_explorer_is_never_cached_and_keyed_on_the_cookie(mds_fixture_snapshot, client):

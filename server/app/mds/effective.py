@@ -8,7 +8,7 @@ from typing import Any
 
 from . import cache as mds_cache
 from . import uploads as mds_uploads
-from .build import build_entry_id, build_explorer_entry
+from .build import build_entry_id, build_explorer_entry, unique_entry_id
 from .statement_fields import normalise_aaguid_key
 
 
@@ -50,13 +50,9 @@ def _session_item_source_info(item: mds_uploads.SessionMetadataItem) -> dict[str
 def _entry_matches_lookup(
     entry_payload: Mapping[str, Any],
     *,
-    entry_id: str | None = None,
     aaguid: str | None = None,
     aaid: str | None = None,
 ) -> bool:
-    if entry_id:
-        return build_entry_id(entry_payload) == entry_id
-
     metadata = entry_payload.get("metadataStatement")
     if not isinstance(metadata, Mapping):
         metadata = {}
@@ -160,6 +156,37 @@ def _compose_effective_snapshot(
     return {"meta": meta, "entries": effective_entries}
 
 
+def load_custom_entries() -> dict[str, Any]:
+    """What the page lacks of the visitor's explorer: their uploads as rows (each with its
+    detail, the newest first, one per AAGUID) and the counts of the list they make with
+    the packaged one. The page holds that list (``explorer_files``) and merges the two,
+    an upload hiding the packaged entry with its AAGUID. An upload's id is made unique
+    among the rows the page shows: one with a packaged entry's AAID or key identifier,
+    or an earlier upload's, gets ``~2`` (``build.unique_entry_id``)."""
+
+    files = mds_cache.load_explorer_files()
+    packaged = files.listed["entries"] if files is not None else []
+    rows, hidden = _session_rows(
+        mds_uploads.list_session_metadata_items(),
+        include_detail=True,
+        include_raw_entry=False,
+        compact_detail=True,
+    )
+    shown = [row for row in packaged if normalise_aaguid_key(row.get("aaguid")) not in hidden]
+    taken = {str(row.get("entryId")): 2 for row in shown if row.get("entryId")}
+    for row in rows:
+        row["entryId"] = unique_entry_id(str(row["entryId"]), taken)
+    return {
+        "meta": {
+            "entryCount": len(rows) + len(shown),
+            "baseEntryCount": len(packaged),
+            "customEntryCount": len(rows),
+            "hasCustomEntries": bool(rows),
+        },
+        "entries": rows,
+    }
+
+
 def load_effective_full_snapshot() -> dict[str, Any]:
     """Every entry this session sees: the packaged list's rows (each without its
     detail, which its ``detailUrl`` names) and the session's uploads in full."""
@@ -180,13 +207,16 @@ def resolve_effective_metadata_entry(
     aaguid: str | None = None,
     aaid: str | None = None,
 ) -> dict[str, Any] | None:
+    if entry_id:
+        return _resolve_by_id(entry_id)
+
     base_summary = mds_cache.load_packaged_explorer_summary()
     session_items = mds_uploads.list_session_metadata_items()
     seen_aaguids: set[str] = set()
 
     for index, item in enumerate(session_items):
         payload = item.payload
-        if _entry_matches_lookup(payload, entry_id=entry_id, aaguid=aaguid, aaid=aaid):
+        if _entry_matches_lookup(payload, aaguid=aaguid, aaid=aaid):
             # As the visitor's explorer list holds it.
             return _build_session_snapshot_entry(
                 item, index=index, include_detail=True, include_raw_entry=False, compact_detail=True
@@ -197,9 +227,6 @@ def resolve_effective_metadata_entry(
         aaguid_key = normalise_aaguid_key(payload.get("aaguid") or metadata_mapping.get("aaguid"))
         if aaguid_key:
             seen_aaguids.add(aaguid_key)
-
-    if entry_id:
-        return _packaged_detail_by_id(entry_id, seen_aaguids)
 
     # The entry as the BLOB has it, from the verified payload's JSON.
     raw_entries = mds_cache.load_verified_entries()
@@ -214,10 +241,22 @@ def resolve_effective_metadata_entry(
         aaguid_key = normalise_aaguid_key(payload.get("aaguid") or metadata_mapping.get("aaguid"))
         if aaguid_key and aaguid_key in seen_aaguids:
             continue
-        if _entry_matches_lookup(payload, entry_id=entry_id, aaguid=aaguid, aaid=aaid):
+        if _entry_matches_lookup(payload, aaguid=aaguid, aaid=aaid):
             return _packaged_detail(payload, index, base_summary)
 
     return None
+
+
+def _resolve_by_id(entry_id: str) -> dict[str, Any] | None:
+    """The entry the visitor's explorer lists as ``entry_id``: an upload by the id its row
+    has (``load_custom_entries``), else a packaged entry no upload hides."""
+
+    rows = load_custom_entries()["entries"]
+    for row in rows:
+        if row["entryId"] == entry_id:
+            return row
+    hidden = {normalise_aaguid_key(row.get("aaguid")) for row in rows} - {""}
+    return _packaged_detail_by_id(entry_id, hidden)
 
 
 def _packaged_detail_by_id(entry_id: str, hidden_aaguids: set[str]) -> dict[str, Any] | None:

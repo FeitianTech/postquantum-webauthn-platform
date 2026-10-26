@@ -101,6 +101,14 @@ def api_get_full_explorer_metadata():
     return _no_store_json_response(snapshot)
 
 
+@bp.route("/api/mds/metadata/explorer/custom", methods=["GET"])
+@mds_provisioning.waits_for_the_snapshot
+def api_get_custom_explorer_entries():
+    # The visitor's own rows and the counts (the page holds the packaged list):
+    # per session, so never cached and keyed on the cookie.
+    return _no_store_json_response(mds_effective.load_custom_entries())
+
+
 @bp.route("/api/mds/metadata/resolve", methods=["GET"])
 @mds_provisioning.waits_for_the_snapshot
 def api_resolve_metadata_entry():
@@ -253,6 +261,7 @@ def _upload_answer(saved_items: list[Any], errors: list[str]):
         response["errors"] = errors
     if saved_items:
         response["snapshot"] = mds_effective.load_effective_full_snapshot()
+        response["custom"] = mds_effective.load_custom_entries()
 
     return _no_store_json_response(response, status=200 if saved_items else 400)
 
@@ -274,7 +283,7 @@ def api_delete_custom_metadata(stored_filename: str):
         )
 
     snapshot = mds_effective.load_effective_full_snapshot()
-    return _no_store_json_response({"deleted": True, "snapshot": snapshot})
+    return _no_store_json_response({"deleted": True, "snapshot": snapshot, "custom": mds_effective.load_custom_entries()})
 
 
 @bp.route("/api/mds/decode-certificate", methods=["POST"])
