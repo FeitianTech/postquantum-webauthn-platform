@@ -12,6 +12,7 @@ import {
   describeDeleteAnswer,
   describeFileSelection,
   describeUploadAnswer,
+  mergeCustomEntries,
   removedCustomMetadataMessage,
   removingCustomMetadataMessage,
   requestCustomMetadataDelete,
@@ -104,19 +105,19 @@ describe('Manage Trusted Metadata: uploading', () => {
     expect(describeUploadAnswer(failed, null)).toEqual({ ok: false, message: 'Failed to upload metadata files.', variant: 'error' });
   });
 
-  it('words an upload that worked, with its warnings and snapshot', () => {
-    const snapshot = { meta: {}, entries: [] };
-    expect(describeUploadAnswer({ ok: true }, { items: [{}], snapshot })).toEqual({
+  it('words an upload that worked, with its warnings and the session\'s entries', () => {
+    const custom = { meta: { customEntryCount: 1 }, entries: [{ entryId: 'aaguid:u' }] };
+    expect(describeUploadAnswer({ ok: true }, { items: [{}], custom })).toEqual({
       ok: true,
       message: 'Metadata uploaded successfully.',
       variant: 'success',
-      snapshot,
+      custom,
     });
-    expect(describeUploadAnswer({ ok: true }, { errors: ['c.json is not a JSON file.'], snapshot: 'x' })).toEqual({
+    expect(describeUploadAnswer({ ok: true }, { errors: ['c.json is not a JSON file.'], custom: 'x' })).toEqual({
       ok: true,
       message: 'Metadata uploaded with warnings: c.json is not a JSON file.',
       variant: 'warning',
-      snapshot: null,
+      custom: null,
     });
   });
 });
@@ -149,10 +150,51 @@ describe('Manage Trusted Metadata: deleting', () => {
     });
   });
 
-  it('keeps the snapshot a delete sends back', () => {
-    const snapshot = { meta: {}, entries: [] };
-    expect(describeDeleteAnswer({ ok: true }, { deleted: true, snapshot })).toEqual({ ok: true, snapshot });
-    expect(describeDeleteAnswer({ ok: true }, null)).toEqual({ ok: true, snapshot: null });
+  it('keeps the session\'s entries a delete sends back', () => {
+    const custom = { meta: { customEntryCount: 0 }, entries: [] };
+    expect(describeDeleteAnswer({ ok: true }, { deleted: true, custom })).toEqual({ ok: true, custom });
+    expect(describeDeleteAnswer({ ok: true }, null)).toEqual({ ok: true, custom: null });
+  });
+});
+
+describe('the session\'s uploads merged with the packaged list', () => {
+  const PACKAGED = {
+    meta: { no: 7, legalHeader: 'Legal.', customEntryCount: 0, hasCustomEntries: false, entryCount: 3 },
+    entries: [
+      { entryId: 'aaguid:f1d0f1d0-0000-4000-8000-000000000001', aaguid: 'f1d0f1d0-0000-4000-8000-000000000001', name: 'Packaged one' },
+      { entryId: 'aaguid:f1d0f1d0-0000-4000-8000-000000000002', aaguid: 'F1D0F1D0-0000-4000-8000-000000000002', name: 'Packaged two' },
+      { entryId: 'akid:ab', aaguid: '', name: 'Packaged U2F' },
+    ],
+  };
+
+  it('puts the uploads first, an upload in place of the packaged entry with its AAGUID', () => {
+    const custom = {
+      meta: { customEntryCount: 2, hasCustomEntries: true },
+      entries: [
+        { entryId: 'aaguid:f1d0f1d0-0000-4000-8000-000000000002', aaguid: 'f1d0f1d0-0000-4000-8000-000000000002', name: 'Uploaded two' },
+        { entryId: 'akid:ab~2', aaguid: '', name: 'Uploaded U2F' },
+      ],
+    };
+
+    const merged = mergeCustomEntries(PACKAGED, custom);
+
+    expect(merged.entries.map(entry => entry.name)).toEqual(['Uploaded two', 'Uploaded U2F', 'Packaged one', 'Packaged U2F']);
+    expect(merged.meta).toEqual({ no: 7, legalHeader: 'Legal.', customEntryCount: 2, hasCustomEntries: true, entryCount: 4 });
+    expect(PACKAGED.entries).toHaveLength(3);
+  });
+
+  it('shows the packaged list alone without uploads, and the uploads alone without a list', () => {
+    expect(mergeCustomEntries(PACKAGED, null)).toEqual({ ...PACKAGED, meta: { ...PACKAGED.meta, entryCount: 3 } });
+    expect(mergeCustomEntries(PACKAGED, { entries: 'none' }).entries).toHaveLength(3);
+    const upload = { entryId: 'aaguid:u', aaguid: 'not a guid', name: 'Uploaded' };
+    expect(mergeCustomEntries(null, { entries: [upload] })).toEqual({
+      meta: { customEntryCount: 1, hasCustomEntries: true, entryCount: 1 },
+      entries: [upload],
+    });
+    expect(mergeCustomEntries({ meta: 'not an object', entries: 'none' }, undefined)).toEqual({
+      meta: { customEntryCount: 0, hasCustomEntries: false, entryCount: 0 },
+      entries: [],
+    });
   });
 });
 

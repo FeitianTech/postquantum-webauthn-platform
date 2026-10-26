@@ -6,7 +6,7 @@ import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { ToastProvider } from '@/components/ui/Toast';
-import { FIXTURE_ENTRIES, entryNamed, fixtureRoutes, json, resolveFrom, stubFetch } from '@/test/mds';
+import { FIXTURE_ENTRIES, SNAPSHOT_URL, entryNamed, fixtureRoutes, json, resolveFrom, stubFetch } from '@/test/mds';
 import { renderPage } from '@/test/page';
 
 import { EntryPage } from './EntryPage';
@@ -487,7 +487,7 @@ describe('an entry the list does not hold', () => {
     stubFetch(
       fixtureRoutes({
         '/api/mds/metadata/info': () => json({}),
-        '/api/mds/metadata/explorer/full': () => json(null, 502),
+        [SNAPSHOT_URL]: () => json(null, 502),
         '/api/mds/metadata/resolve': resolveFrom([uploaded as MdsEntry]),
       }),
     );
@@ -548,7 +548,7 @@ describe('an entry the list does not hold', () => {
     const light = { ...L1(), metadataStatement: null, isLightweightEntry: true };
     stubFetch(
       fixtureRoutes({
-        '/api/mds/metadata/explorer/full': () => json({ meta: { entryCount: 1 }, entries: [light] }),
+        [SNAPSHOT_URL]: () => json({ meta: { entryCount: 1 }, entries: [light] }),
         '/api/mds/metadata/info': () => json({}),
       }),
     );

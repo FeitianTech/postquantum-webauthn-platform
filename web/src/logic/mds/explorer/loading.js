@@ -1,8 +1,8 @@
 // Where the explorer's entries come from and what an answer means. No DOM.
 import { cloneJson } from '../../shared/json.js';
-import { MDS_EXPLORER_FULL_PATH, MDS_INFO_PATH, MDS_LIST_PATH, MISSING_METADATA_MESSAGE } from '../constants.js';
+import { MDS_INFO_PATH, MDS_LIST_PATH } from '../constants.js';
 
-/** @import { ExplorerSource, SnapshotLocation } from '../explorer-source.js' */
+/** @import { SnapshotLocation } from '../explorer-source.js' */
 
 /**
  * One authenticator as the server lists it (mds/build.py's build_explorer_entry):
@@ -48,11 +48,6 @@ import { MDS_EXPLORER_FULL_PATH, MDS_INFO_PATH, MDS_LIST_PATH, MISSING_METADATA_
 /**
  * A snapshot request's response, and its JSON (null when it was not JSON).
  * @typedef {{ response: Response, payload: any }} ExplorerAnswer
- * @typedef {(
- *     | { kind: 'missing', message: string }
- *     | { kind: 'failed', message: string }
- *     | { kind: 'snapshot', payload: MdsSnapshot }
- * )} ExplorerOutcome
  */
 
 /** @param {any} error */
@@ -105,8 +100,9 @@ async function fetchExplorerAnswer(source, signal, priority) {
 }
 
 // The packaged list as fetched for this page, by URL: ahead of the explorer
-// (not yet taken), or by it. An answer that is not a list is forgotten.
-/** @type {Map<string, { answer: Promise<ExplorerAnswer>, taken: boolean }>} */
+// (not yet taken), or by it (taken; shared while it is still out). An answer
+// that is not a list is forgotten.
+/** @type {Map<string, { answer: Promise<ExplorerAnswer>, taken: boolean, settled: boolean }>} */
 const lists = new Map();
 
 /**
@@ -115,14 +111,21 @@ const lists = new Map();
  * @param {boolean} taken
  */
 function remember(url, answer, taken) {
-    lists.set(url, { answer, taken });
+    const held = { answer, taken, settled: false };
+    lists.set(url, held);
+    const forget = () => {
+        if (lists.get(url) === held) {
+            lists.delete(url);
+        }
+    };
     answer.then(
         ({ response }) => {
+            held.settled = true;
             if (!response.ok) {
-                lists.delete(url);
+                forget();
             }
         },
-        () => lists.delete(url),
+        forget,
     );
 }
 
@@ -145,92 +148,26 @@ export function forgetExplorerList() {
     lists.clear();
 }
 
+// A location's answer: the packaged list as this page fetched it (the answer
+// fetched ahead, taken once, or one still out, shared), else fetched now; the
+// session's part always fetched now. An abort is never swallowed.
 /**
- * @param {SnapshotLocation} source
- * @param {AbortSignal | null} signal
- */
-function fetchOrTakePrefetched(source, signal) {
-    const ahead = lists.get(source.url);
-    if (ahead && !ahead.taken) {
-        ahead.taken = true;
-        return ahead.answer;
-    }
-    const answer = fetchExplorerAnswer(source, signal);
-    remember(source.url, answer, true);
-    return answer;
-}
-
-// Asks the source the explorer source chooses (../explorer-source.js). The
-// packaged file is an optimisation: any problem loading it falls back to the
-// per-session API. An abort is never swallowed.
-/**
- * @param {ExplorerSource | null} explorerSource
- * @param {{ forceReload?: boolean, signal?: AbortSignal | null, apiPath?: string }} [options]
+ * @param {SnapshotLocation} location
+ * @param {AbortSignal | null} [signal]
  * @returns {Promise<ExplorerAnswer>}
  */
-export async function requestExplorerSnapshot(
-    explorerSource,
-    { forceReload = false, signal = null, apiPath = MDS_EXPLORER_FULL_PATH } = {},
-) {
-    if (!explorerSource || typeof explorerSource.resolve !== 'function') {
-        return fetchExplorerAnswer({ url: apiPath, cache: forceReload ? 'reload' : 'no-store', kind: 'api' }, signal);
+export function requestExplorerAnswer(location, signal = null) {
+    if (location.kind !== 'static') {
+        return fetchExplorerAnswer(location, signal);
     }
-    const primarySource = explorerSource.resolve({ forceReload });
-
-    if (primarySource.kind !== 'static') {
-        return fetchExplorerAnswer(primarySource, signal);
+    const held = lists.get(location.url);
+    if (held && (!held.taken || !held.settled)) {
+        held.taken = true;
+        return held.answer;
     }
-
-    let result = null;
-    try {
-        result = await fetchOrTakePrefetched(primarySource, signal);
-        if (!result.response.ok || !result.payload || typeof result.payload !== 'object') {
-            result = null;
-        }
-    } catch (error) {
-        if (isAbortError(error)) {
-            throw error;
-        }
-        result = null;
-    }
-    return result || fetchExplorerAnswer(explorerSource.fallback({ forceReload }), signal);
-}
-
-function answerError(payload) {
-    return payload && typeof payload.error === 'string' && payload.error ? payload.error : '';
-}
-
-// What an answer is: `missing` (a 404: no snapshot), `failed` (with the sentence
-// the status line shows) or `snapshot`.
-/**
- * @param {ExplorerAnswer} answer
- * @param {string} [missingMessage]
- * @returns {ExplorerOutcome}
- */
-export function classifyExplorerAnswer({ response, payload }, missingMessage = MISSING_METADATA_MESSAGE) {
-    if (!response.ok) {
-        if (response.status === 404) {
-            return { kind: 'missing', message: answerError(payload) || missingMessage };
-        }
-        return {
-            kind: 'failed',
-            message: answerError(payload) || `Explorer request failed with status ${response.status}.`,
-        };
-    }
-    if (!payload || typeof payload !== 'object') {
-        return { kind: 'failed', message: 'Explorer response was not valid JSON.' };
-    }
-    return { kind: 'snapshot', payload };
-}
-
-/**
- * @param {unknown} error
- * @returns {string}
- */
-export function explorerLoadFailure(error) {
-    return error instanceof Error && error.message
-        ? error.message
-        : 'Unable to load the packaged authenticator explorer.';
+    const answer = fetchExplorerAnswer(location, signal);
+    remember(location.url, answer, true);
+    return answer;
 }
 
 // A snapshot's entries as the table shows them: copies, entries with their

@@ -524,7 +524,7 @@ def test_the_logic_modules_are_imported_not_copied():
     assert "from User-Agent Client Hints" in sentences
     assert "Decoded in lenient mode (best effort); skipped items are listed below." in sentences
     assert "Attestation statement (interpreted)" in sentences
-    assert {"matchesExplorerFilters", "requestExplorerSnapshot", "buildLoadedStatus", "describeUploadAnswer"} <= names
+    assert {"matchesExplorerFilters", "requestExplorerParts", "buildLoadedStatus", "describeUploadAnswer"} <= names
     assert "No authenticators match the selected filters." in sentences
     assert "Packaged FIDO metadata is available. Explorer data is loading in the background." in sentences
 

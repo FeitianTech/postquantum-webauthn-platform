@@ -63,10 +63,13 @@ seven files are exactly what they were:
   of one AAGUID or key identifier) the last keeps it, as fido2 finds the last of them,
   and the earlier ones are listed as `<id>~2`, `~3`… counting back.
 
-The page is given the list's URL as `snapshotUrl` only while the full file is there and
-its meta matches the verified snapshot; otherwise it asks the explorer API, which
-answers from the verified snapshot either way. The explorer API, an upload and a
-delete answer the same rows, with the session's uploads in full.
+The page reads the list at its one URL, served from the verified snapshot whether or not
+the full file is there, and, while the session has (or may have) uploads,
+`/api/mds/metadata/explorer/custom`: the session's own rows, each in full, and the counts.
+It shows the uploads, then the packaged rows whose AAGUID no upload has: an upload hides
+the packaged entry with its AAGUID. An upload and a delete answer the session's rows as
+`custom`, which the page merges with the list it holds. The info answer's `snapshotUrl`,
+the explorer API's whole list and an answer's `snapshot` stay for pages loaded before.
 
 No route serves a snapshot file, at `/assets/mds/` or at the site's root: the seven
 names, and the `.gz` copy earlier releases wrote beside the full one, are refused there
@@ -89,7 +92,7 @@ indexes the verified entries a registration looks its credential up in
 fido2's dataclasses only when a lookup finds it, never the whole payload.
 
 The routes that read the snapshot (`/api/mds/metadata/info`,
-`explorer/full`, `resolve`, the upload and the delete, the explorer's files
+`explorer/full`, `explorer/custom`, `resolve`, the upload and the delete, the explorer's files
 under `/assets/mds/`, and both registrations' complete, which look the new
 credential's AAGUID up and record what they found for good) call
 `ensure_snapshot_available()` first (`waits_for_the_snapshot` in `server/app/mds/provisioning.py`):
@@ -156,9 +159,9 @@ and the next check tries again.
 
 The application still starts and serves. `/health` and `/` work; the explorer APIs
 answer `200` with no entries (their `404` branch is not reached: the snapshot they
-compose always has its counts), the page is given no `snapshotUrl` (so it requests no
-missing file), and the explorer shows no entries (it says the packaged metadata is
-unavailable). The updater (below) fills it.
+compose always has its counts), the list's URL answers `404`, and the explorer shows the
+session's uploads alone, or no entries (it says the packaged metadata is unavailable).
+The updater (below) fills it.
 
 ## Working locally without Cloud Storage
 

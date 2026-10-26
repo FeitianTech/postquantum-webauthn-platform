@@ -4,7 +4,8 @@ import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { ToastProvider } from '@/components/ui/Toast';
-import { FIXTURE_ENTRIES, FIXTURE_INFO, FIXTURE_SNAPSHOT, SNAPSHOT_URL, fixtureRoutes, json, stubFetch } from '@/test/mds';
+import { FIXTURE_ENTRIES, FIXTURE_INFO, FIXTURE_SNAPSHOT, NO_UPLOADS, SNAPSHOT_URL, fixtureRoutes, json, stubFetch } from '@/test/mds';
+import type { MdsEntry } from '@/logic/mds/explorer/loading.js';
 import { renderPage } from '@/test/page';
 
 import { MdsSection } from './MdsSection';
@@ -57,7 +58,7 @@ describe('the MDS section', () => {
     ]);
   });
 
-  it('asks the API alone when the server names no packaged snapshot', async () => {
+  it('reads the packaged list at its one URL whatever the server names', async () => {
     const { snapshotUrl: _url, ...info } = FIXTURE_INFO;
     const fetch = stubFetch(fixtureRoutes({ '/api/mds/metadata/info': () => json(info) }));
     renderSection();
@@ -65,7 +66,7 @@ describe('the MDS section', () => {
     await waitFor(() => expect(bodyRows()).toHaveLength(FIXTURE_ENTRIES.length));
     expect(fetch.mock.calls.map(([url, init]) => [url, init?.cache])).toEqual([
       ['/api/mds/metadata/info', 'no-store'],
-      ['/api/mds/metadata/explorer/full', 'no-store'],
+      [SNAPSHOT_URL, 'default'],
     ]);
   });
 
@@ -125,28 +126,38 @@ describe('the MDS section', () => {
     expect(fetch).toHaveBeenCalledTimes(2);
   });
 
-  it('asks the session its own list when it has uploads', async () => {
+  it('asks the session its own entries beside the packaged list when it has uploads', async () => {
     const fetch = stubFetch(fixtureRoutes({ '/api/mds/metadata/info': () => json({ ...FIXTURE_INFO, customEntriesState: 'present' }) }));
     renderSection();
     await waitFor(() => expect(bodyRows()).toHaveLength(32));
     expect(fetch.mock.calls.map(([url, init]) => [url, init?.cache])).toEqual([
       ['/api/mds/metadata/info', 'no-store'],
-      ['/api/mds/metadata/explorer/full', 'no-store'],
+      [SNAPSHOT_URL, 'default'],
+      ['/api/mds/metadata/explorer/custom', 'no-store'],
     ]);
   });
 
-  it('falls back to the session list when the packaged file cannot be had', async () => {
-    const fetch = stubFetch(fixtureRoutes({ [SNAPSHOT_URL]: () => json({ error: 'gone' }, 404) }));
+  it('shows the uploads alone when the server has no packaged list', async () => {
+    const upload = { ...FIXTURE_ENTRIES[0], entryId: 'aaguid:f1d0c0de-0000-4000-8000-00000000c0de', aaguid: 'f1d0c0de-0000-4000-8000-00000000c0de' } as MdsEntry;
+    stubFetch(
+      fixtureRoutes({
+        '/api/mds/metadata/info': () => json({ customEntriesState: 'present' }),
+        [SNAPSHOT_URL]: () => json({ error: 'gone' }, 404),
+        '/api/mds/metadata/explorer/custom': () =>
+          json({ meta: { entryCount: 1, baseEntryCount: 0, customEntryCount: 1, hasCustomEntries: true }, entries: [upload] }),
+      }),
+    );
     renderSection();
-    await waitFor(() => expect(bodyRows()).toHaveLength(32));
-    expect(fetch.mock.calls.map(([url]) => url)).toEqual(['/api/mds/metadata/info', SNAPSHOT_URL, '/api/mds/metadata/explorer/full']);
+
+    await waitFor(() => expect(bodyRows()).toHaveLength(1));
+    expect(status()).toHaveTextContent('Loaded 1 authenticators. Including 1 session metadata entry.');
   });
 
-  it('without what to start from, asks the session list and keeps the first sentence', async () => {
+  it('without what to start from, asks both parts and keeps the first sentence', async () => {
     const fetch = stubFetch(fixtureRoutes({ '/api/mds/metadata/info': () => Promise.reject(new TypeError('offline')) }));
     renderSection();
     await waitFor(() => expect(bodyRows()).toHaveLength(32));
-    expect(fetch.mock.calls.map(([url]) => url)).toEqual(['/api/mds/metadata/info', '/api/mds/metadata/explorer/full']);
+    expect(fetch.mock.calls.map(([url]) => url)).toEqual(['/api/mds/metadata/info', SNAPSHOT_URL, '/api/mds/metadata/explorer/custom']);
   });
 
   it('shows a failure, in the line and in the list, and Retry asks again, forced', async () => {
@@ -154,7 +165,7 @@ describe('the MDS section', () => {
     const fetch = stubFetch(
       fixtureRoutes({
         '/api/mds/metadata/info': () => json({ ...FIXTURE_INFO, customEntriesState: 'unknown' }),
-        '/api/mds/metadata/explorer/full': () => (failing ? json({ error: 'The server is resting.' }, 503) : json(FIXTURE_SNAPSHOT)),
+        '/api/mds/metadata/explorer/custom': () => (failing ? json({ error: 'The server is resting.' }, 503) : json(NO_UPLOADS)),
       }),
     );
     renderSection();
@@ -168,23 +179,28 @@ describe('the MDS section', () => {
     await userEvent.click(retries[0]);
     await waitFor(() => expect(bodyRows()).toHaveLength(32));
     expect(status()).toHaveTextContent(/ Explorer refreshed\.$/);
-    expect(fetch.mock.calls.at(-1)).toEqual(['/api/mds/metadata/explorer/full', { cache: 'reload' }]);
+    expect(fetch.mock.calls.at(-1)).toEqual(['/api/mds/metadata/explorer/custom', { cache: 'reload' }]);
     expect(screen.queryByRole('button', { name: 'Retry' })).toBeNull();
   });
 
   it('words a status without an error of its own', async () => {
-    stubFetch(fixtureRoutes({ '/api/mds/metadata/info': () => json({}), '/api/mds/metadata/explorer/full': () => json(null, 502) }));
+    stubFetch(fixtureRoutes({ '/api/mds/metadata/info': () => json({}), '/api/mds/metadata/explorer/custom': () => json(null, 502) }));
     renderSection();
     await waitFor(() => expect(status()).toHaveTextContent('Explorer request failed with status 502.'));
+  });
+
+  it('words a packaged list that cannot be had', async () => {
+    stubFetch(fixtureRoutes({ [SNAPSHOT_URL]: () => json({ error: 'The list is resting.' }, 503) }));
+    renderSection();
+    await waitFor(() => expect(status()).toHaveTextContent('The list is resting.'));
+    expect(status()).toHaveAttribute('data-variant', 'error');
   });
 
   it('shows the missing-snapshot sentence when there is nothing to list', async () => {
     stubFetch(
       fixtureRoutes({
-        '/api/mds/metadata/info': () => json({ snapshotUrl: SNAPSHOT_URL, customEntriesState: 'none' }),
+        '/api/mds/metadata/info': () => json({ customEntriesState: 'none' }),
         [SNAPSHOT_URL]: () => json({ error: 'nope' }, 404),
-        '/api/mds/metadata/explorer/full': () =>
-          json({ meta: { entryCount: 0, baseEntryCount: 0, customEntryCount: 0, hasCustomEntries: false }, entries: [] }),
       }),
     );
     renderSection();
@@ -193,18 +209,5 @@ describe('the MDS section', () => {
     expect(status()).toHaveAttribute('data-variant', 'info');
     expect(screen.getByText('Packaged FIDO metadata is unavailable. Please verify the bundled snapshot is present.')).toBeInTheDocument();
     expect(screen.getByText(/^Entries:/)).toHaveTextContent('Entries: 0');
-  });
-
-  it('shows the server words for a 404 of the session list', async () => {
-    stubFetch(
-      fixtureRoutes({
-        '/api/mds/metadata/info': () => json({}),
-        '/api/mds/metadata/explorer/full': () => json({ error: 'Verified metadata snapshot is not available.' }, 404),
-      }),
-    );
-    renderSection();
-
-    await waitFor(() => expect(status()).toHaveTextContent('Verified metadata snapshot is not available.'));
-    expect(screen.getByText('Packaged FIDO metadata is unavailable. Please verify the bundled snapshot is present.')).toBeInTheDocument();
   });
 });

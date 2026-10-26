@@ -195,7 +195,9 @@ its logic out here first.
   relying party), which `detail/compose.js` composes into a registration state of its own. Registration snapshots (`schemaVersion` 2) hold the
   registration as data, never markup, and its certificates without their DER; older composed HTML is never read.
 - `codec/`: the Codec's requests, results and values. `mds/`: the MDS
-  explorer's loading (the list fetched ahead, without the cookie: `prefetchExplorerList`), filters,
+  explorer's loading (the list fetched ahead, without the cookie: `prefetchExplorerList`; the
+  session's own rows from `explorer/custom`, merged with it by `mergeCustomEntries`: an upload
+  hides the packaged entry with its AAGUID), filters,
   sort, columns, rows, entry (its detail from the file its row names, else resolve:
   `requestEntryDetail`), certificate, raw view and Manage Metadata (the server builds each row:
   `mds/build.py`'s `build_explorer_entry`, and the list's: `mds/explorer_files.py`).

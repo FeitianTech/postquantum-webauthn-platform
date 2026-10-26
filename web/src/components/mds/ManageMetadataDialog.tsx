@@ -84,16 +84,16 @@ export function ManageMetadataDialog({
   open,
   onClose,
   returnFocusTo,
-  onSnapshot,
+  onCustomEntries,
   onReload,
 }: {
   open: boolean;
   onClose: () => void;
   returnFocusTo: () => HTMLElement | null;
-  onSnapshot: (snapshot: MdsSnapshot) => void;
+  onCustomEntries: (custom: MdsSnapshot) => void;
   onReload: () => Promise<void>;
 }) {
-  const metadata = useCustomMetadata({ onSnapshot, onReload });
+  const metadata = useCustomMetadata({ onCustomEntries, onReload });
   const titleId = `${useId()}-title`;
   const { refresh } = metadata;
 

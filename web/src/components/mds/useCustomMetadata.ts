@@ -28,14 +28,14 @@ const FAILURE_MS = 720;
 // Manage Trusted Metadata's work, in the steps and words of
 // explorer/custom-metadata.js: choosing files (only .json ones are sent),
 // uploading, deleting, and the files uploaded in this session. An answer with the
-// session's snapshot is shown at once; one without makes the explorer load the
-// session's list again. A refusal keeps the server's reason, and the progress is a
-// line in the dialog.
+// session's entries is shown at once, merged with the packaged list; one without
+// makes the explorer load both again. A refusal keeps the server's reason, and the
+// progress is a line in the dialog.
 export function useCustomMetadata({
-  onSnapshot,
+  onCustomEntries,
   onReload,
 }: {
-  onSnapshot: (snapshot: MdsSnapshot) => void;
+  onCustomEntries: (custom: MdsSnapshot) => void;
   onReload: () => Promise<void>;
 }) {
   const [items, setItems] = useState<CustomItem[]>([]);
@@ -64,10 +64,10 @@ export function useCustomMetadata({
     }
   }, []);
 
-  const applyAnswer = async (snapshot: MdsSnapshot | null | undefined, progressSteps: { applying: string; later: string }) => {
-    if (snapshot) {
+  const applyAnswer = async (custom: MdsSnapshot | null | undefined, progressSteps: { applying: string; later: string }) => {
+    if (custom) {
       step(progressSteps.applying);
-      onSnapshot(snapshot);
+      onCustomEntries(custom);
     } else {
       step(progressSteps.later);
       await onReload();
@@ -91,7 +91,7 @@ export function useCustomMetadata({
         finish(UPLOAD_PROGRESS.failure, FAILURE_MS);
         return;
       }
-      await applyAnswer(answer.snapshot, { applying: UPLOAD_PROGRESS.applying, later: UPLOAD_PROGRESS.reloading });
+      await applyAnswer(answer.custom, { applying: UPLOAD_PROGRESS.applying, later: UPLOAD_PROGRESS.reloading });
       finish(UPLOAD_PROGRESS.success, SUCCESS_MS);
       await refresh();
     } catch {
@@ -125,7 +125,7 @@ export function useCustomMetadata({
         await refresh();
         return;
       }
-      await applyAnswer(answer.snapshot, { applying: DELETE_PROGRESS.applying, later: DELETE_PROGRESS.refreshing });
+      await applyAnswer(answer.custom, { applying: DELETE_PROGRESS.applying, later: DELETE_PROGRESS.refreshing });
       setMessage({ text: removedCustomMetadataMessage(label), variant: 'success' });
       finish(DELETE_PROGRESS.success, SUCCESS_MS);
       await refresh();

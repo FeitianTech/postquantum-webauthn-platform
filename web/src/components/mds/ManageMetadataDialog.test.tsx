@@ -4,7 +4,7 @@ import { act, createEvent, fireEvent, screen, waitFor, within } from '@testing-l
 import userEvent from '@testing-library/user-event';
 
 import { ToastProvider } from '@/components/ui/Toast';
-import { FIXTURE_ENTRIES, FIXTURE_INFO, FIXTURE_SNAPSHOT, SNAPSHOT_URL, fixtureRoutes, json, stubFetch } from '@/test/mds';
+import { FIXTURE_ENTRIES, FIXTURE_INFO, FIXTURE_SNAPSHOT, NO_UPLOADS, SNAPSHOT_URL, fixtureRoutes, json, stubFetch } from '@/test/mds';
 import { renderPage } from '@/test/page';
 import { deferred, holdingTimers } from '@/test/timers';
 
@@ -15,11 +15,13 @@ const UPLOADED = {
   entryId: 'aaguid:f1d0c0de-0000-4000-8000-00000000c0de',
   name: 'Fixture Uploaded Authenticator',
   id: 'f1d0c0de-0000-4000-8000-00000000c0de',
+  aaguid: 'f1d0c0de-0000-4000-8000-00000000c0de',
   source: 'session',
 } as MdsEntry;
+// What the server answers of the session's entries once it holds the upload.
 const WITH_UPLOAD = {
-  meta: { ...FIXTURE_SNAPSHOT.meta, entryCount: 33, customEntryCount: 1, hasCustomEntries: true },
-  entries: [UPLOADED, ...FIXTURE_ENTRIES],
+  meta: { entryCount: 33, baseEntryCount: 32, customEntryCount: 1, hasCustomEntries: true },
+  entries: [UPLOADED],
 };
 const ITEM = {
   entry: {},
@@ -129,7 +131,7 @@ describe('Manage Trusted Metadata', () => {
     const fetch = await renderSection({
       '/api/mds/metadata/upload': () => {
         listed = [ITEM];
-        return json({ items: [ITEM], snapshot: WITH_UPLOAD });
+        return json({ items: [ITEM], custom: WITH_UPLOAD });
       },
       '/api/mds/metadata/custom': () => json({ items: listed }),
     });
@@ -157,7 +159,7 @@ describe('Manage Trusted Metadata', () => {
     expect(screen.getByRole('button', { name: 'Drop JSON files here or click to browse' })).toBeDisabled();
 
     await holdingTimers(async () => {
-      await act(async () => answer.resolve(json({ items: [ITEM], snapshot: WITH_UPLOAD })));
+      await act(async () => answer.resolve(json({ items: [ITEM], custom: WITH_UPLOAD })));
       expect(document.querySelector('[data-mds-progress]')).toHaveTextContent('Completing metadata update...');
       await act(async () => vi.runOnlyPendingTimers());
       expect(document.querySelector('[data-mds-progress]')).toBeNull();
@@ -165,7 +167,7 @@ describe('Manage Trusted Metadata', () => {
   });
 
   it('passes on the warnings of an upload that partly worked', async () => {
-    await renderSection({ '/api/mds/metadata/upload': () => json({ items: [ITEM], errors: ['b.json is not a JSON file.'], snapshot: WITH_UPLOAD }) });
+    await renderSection({ '/api/mds/metadata/upload': () => json({ items: [ITEM], errors: ['b.json is not a JSON file.'], custom: WITH_UPLOAD }) });
     await openDialog();
     await userEvent.upload(fileInput(), [file('a.json'), file('b.json')]);
     await waitFor(() => expect(message()).toHaveTextContent('Metadata uploaded with warnings: b.json is not a JSON file.'));
@@ -199,17 +201,18 @@ describe('Manage Trusted Metadata', () => {
         uploaded = true;
         return json({ items: [ITEM] });
       },
-      '/api/mds/metadata/explorer/full': () => json(uploaded ? WITH_UPLOAD : FIXTURE_SNAPSHOT),
+      '/api/mds/metadata/explorer/custom': () => json(uploaded ? WITH_UPLOAD : NO_UPLOADS),
     });
     await openDialog();
     await userEvent.upload(fileInput(), file('a.json'));
     await waitFor(() => expect(rowNames()).toContain('Fixture Uploaded Authenticator'));
-    expect(fetch.mock.calls.at(-2)).toEqual(['/api/mds/metadata/explorer/full', { cache: 'reload' }]);
+    expect(rowNames()).toHaveLength(33);
+    expect(fetch.mock.calls.at(-2)).toEqual(['/api/mds/metadata/explorer/custom', { cache: 'reload' }]);
     expect(status()).toHaveTextContent(/ Custom metadata updated\.$/);
   });
 
   it('refuses files that are not JSON, and sends the others', async () => {
-    const fetch = await renderSection({ '/api/mds/metadata/upload': () => json({ items: [ITEM], snapshot: WITH_UPLOAD }) });
+    const fetch = await renderSection({ '/api/mds/metadata/upload': () => json({ items: [ITEM], custom: WITH_UPLOAD }) });
     await openDialog();
 
     fireEvent.change(fileInput(), { target: { files: [new File(['x'], 'notes.txt', { type: 'text/plain' })] } });
@@ -224,7 +227,7 @@ describe('Manage Trusted Metadata', () => {
   });
 
   it('takes files dropped on the zone, lighting it up while they are over it', async () => {
-    await renderSection({ '/api/mds/metadata/upload': () => json({ items: [ITEM], snapshot: WITH_UPLOAD }) });
+    await renderSection({ '/api/mds/metadata/upload': () => json({ items: [ITEM], custom: WITH_UPLOAD }) });
     const panel = await openDialog();
     const zone = panel.querySelector<HTMLElement>('[data-mds-dropzone]')!;
     const dataTransfer = { files: [file('a.json')], dropEffect: 'none' };
@@ -255,7 +258,7 @@ describe('Manage Trusted Metadata', () => {
       '/api/mds/metadata/custom': () => json({ items: listed }),
       '/api/mds/metadata/custom/0f1e.json': () => {
         listed = [];
-        return json({ deleted: true, snapshot: FIXTURE_SNAPSHOT });
+        return json({ deleted: true, custom: NO_UPLOADS });
       },
     });
     const panel = await openDialog();
@@ -312,16 +315,54 @@ describe('Manage Trusted Metadata', () => {
     const panel = await openDialog();
     await userEvent.click(await within(panel).findByRole('button', { name: 'Delete custom-metadata.json' }));
     await waitFor(() => expect(message()).toHaveTextContent('custom-metadata.json removed.'));
-    expect(fetch.mock.calls.some(([url, init]) => url === '/api/mds/metadata/explorer/full' && init?.cache === 'reload')).toBe(true);
+    expect(fetch.mock.calls.some(([url, init]) => url === '/api/mds/metadata/explorer/custom' && init?.cache === 'reload')).toBe(true);
   });
 
-  it('shows an upload over a load still out, and drops that load when it comes', async () => {
-    const snapshot = deferred<Response>();
+  it('merges an upload in place of the packaged entry with its AAGUID', async () => {
+    const replacing = { ...UPLOADED, entryId: FIXTURE_ENTRIES[0].entryId, aaguid: FIXTURE_ENTRIES[0].aaguid };
+    await renderSection({
+      '/api/mds/metadata/upload': () => json({ items: [ITEM], custom: { ...WITH_UPLOAD, entries: [replacing] } }),
+    });
+    await openDialog();
+    await userEvent.upload(fileInput(), file('a.json'));
+
+    await waitFor(() => expect(rowNames()).toContain('Fixture Uploaded Authenticator'));
+    expect(rowNames()).toHaveLength(32);
+    expect(rowNames()).not.toContain(FIXTURE_ENTRIES[0].name);
+  });
+
+  it('shows an upload answered while the list is still out once the list comes', async () => {
+    const list = deferred<Response>();
     await renderSection(
       {
         '/api/mds/metadata/info': () => json(FIXTURE_INFO),
-        [SNAPSHOT_URL]: () => snapshot.promise,
-        '/api/mds/metadata/upload': () => json({ items: [ITEM], snapshot: WITH_UPLOAD }),
+        [SNAPSHOT_URL]: () => list.promise,
+        '/api/mds/metadata/explorer/custom': () => json(WITH_UPLOAD),
+        '/api/mds/metadata/upload': () => json({ items: [ITEM], custom: WITH_UPLOAD }),
+      },
+      { waitForRows: false },
+    );
+    await openDialog();
+    await userEvent.upload(fileInput(), file('a.json'));
+    await waitFor(() => expect(message()).toHaveTextContent('Metadata uploaded successfully.'));
+    expect(rowNames()).toHaveLength(0);
+
+    await act(async () => list.resolve(json(FIXTURE_SNAPSHOT)));
+    await waitFor(() => expect(rowNames()).toHaveLength(33));
+    expect(rowNames()).toContain('Fixture Uploaded Authenticator');
+  });
+
+  it.each([
+    ['answered with an error', (late: Promise<void>) => late.then(() => json({ error: 'Late.' }, 500))],
+    ['whose request failed', (late: Promise<void>) => late.then(() => Promise.reject(new TypeError('Late.')))],
+  ])('drops a load an upload has overtaken, one %s', async (_case, fail) => {
+    const late = deferred<void>();
+    let asked = 0;
+    await renderSection(
+      {
+        '/api/mds/metadata/info': () => json({ ...FIXTURE_INFO, customEntriesState: 'present' }),
+        '/api/mds/metadata/explorer/custom': () => (asked++ === 0 ? fail(late.promise) : json(WITH_UPLOAD)),
+        '/api/mds/metadata/upload': () => json({ items: [ITEM], custom: WITH_UPLOAD }),
       },
       { waitForRows: false },
     );
@@ -329,26 +370,8 @@ describe('Manage Trusted Metadata', () => {
     await userEvent.upload(fileInput(), file('a.json'));
     await waitFor(() => expect(rowNames()).toHaveLength(33));
 
-    await act(async () => snapshot.resolve(json(FIXTURE_SNAPSHOT)));
-    expect(rowNames()).toHaveLength(33);
-  });
-
-  it('drops a failed load an upload has overtaken', async () => {
-    const snapshot = deferred<Response>();
-    await renderSection(
-      {
-        '/api/mds/metadata/info': () => json(FIXTURE_INFO),
-        [SNAPSHOT_URL]: () => snapshot.promise,
-        '/api/mds/metadata/explorer/full': () => json({ error: 'Late.' }, 500),
-        '/api/mds/metadata/upload': () => json({ items: [ITEM], snapshot: WITH_UPLOAD }),
-      },
-      { waitForRows: false },
-    );
-    await openDialog();
-    await userEvent.upload(fileInput(), file('a.json'));
-    await waitFor(() => expect(rowNames()).toHaveLength(33));
-
-    await act(async () => snapshot.resolve(json(null, 404)));
+    await act(async () => late.resolve());
     expect(status()).not.toHaveTextContent('Late.');
+    expect(rowNames()).toHaveLength(33);
   });
 });

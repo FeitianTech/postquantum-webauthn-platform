@@ -45,14 +45,19 @@ export function resolveFrom(entries: MdsEntry[] = FIXTURE_ENTRIES): Route {
   };
 }
 
+/** GET /api/mds/metadata/explorer/custom for a session without uploads: none, and the packaged count. */
+export const NO_UPLOADS = {
+  meta: { entryCount: FIXTURE_ENTRIES.length, baseEntryCount: FIXTURE_ENTRIES.length, customEntryCount: 0, hasCustomEntries: false },
+  entries: [] as MdsEntry[],
+};
+
 // Flask with the fixture, for a session that has uploaded nothing.
 export function fixtureRoutes(overrides: Record<string, Route> = {}) {
   return {
     '/api/mds/metadata/info': () => json(FIXTURE_INFO),
     '/api/mds/metadata/resolve': resolveFrom(),
     [SNAPSHOT_URL]: () => json(FIXTURE_LIST),
-    // A session without uploads gets the packaged list's rows here too.
-    '/api/mds/metadata/explorer/full': () => json(FIXTURE_LIST),
+    '/api/mds/metadata/explorer/custom': () => json(NO_UPLOADS),
     ...detailRoutes(),
     ...overrides,
   };

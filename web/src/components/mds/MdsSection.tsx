@@ -182,7 +182,7 @@ export function MdsSection({ active, route = CLOSED_ROUTE }: { active: boolean; 
         open={managing}
         onClose={() => setManaging(false)}
         returnFocusTo={() => manageRef.current}
-        onSnapshot={explorer.applySnapshot}
+        onCustomEntries={explorer.applyCustomEntries}
         onReload={explorer.reload}
       />
     </section>

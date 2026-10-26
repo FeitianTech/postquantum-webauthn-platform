@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
 import type { Locator, Page } from '@playwright/test';
@@ -135,8 +136,13 @@ test.describe('/#mds', () => {
     await expect(dialog).toBeVisible();
     await expect(dialog.getByText('No custom metadata has been added yet.')).toBeVisible();
 
+    const uploaded = page.waitForResponse('**/api/mds/metadata/upload');
     await dialog.locator('input[type="file"]').setInputFiles(UPLOAD);
     await expect(dialog.getByText('Metadata uploaded successfully.')).toBeVisible();
+    // The answer carries the session's own entries, which the page merges with its list.
+    const { custom } = await (await uploaded).json();
+    expect(custom.entries.map((entry: { name: string }) => entry.name)).toEqual(['Fixture Uploaded Authenticator']);
+    expect(custom.meta).toMatchObject({ customEntryCount: 1, hasCustomEntries: true });
     await expect(rows(page)).toHaveCount(33);
     await expect(section(page).getByRole('link', { name: 'Fixture Uploaded Authenticator' })).toBeAttached();
     await expect(section(page).locator('[role="status"][data-variant]')).toHaveText(/Including 1 session metadata entry\. Custom metadata updated\.$/);
@@ -151,6 +157,20 @@ test.describe('/#mds', () => {
     await page.keyboard.press('Escape');
     await expect(dialog).toBeHidden();
     await expect(manage).toBeFocused();
+  });
+
+  test('shows an upload in place of the packaged entry with its AAGUID', async ({ page }) => {
+    await openList(page);
+    await section(page).getByRole('button', { name: 'Manage Metadata' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Manage Trusted Metadata' });
+    // The uploaded statement, given Fixture Security Key L1's AAGUID.
+    const buffer = Buffer.from(readFileSync(UPLOAD, 'utf8').replaceAll('000000000099', '000000000001'));
+    await dialog.locator('input[type="file"]').setInputFiles({ name: 'replacing-l1.json', mimeType: 'application/json', buffer });
+    await expect(dialog.getByText('Metadata uploaded successfully.')).toBeVisible();
+
+    await expect(row(page, L1).locator('a[data-entry-link]')).toHaveText('Fixture Uploaded Authenticator');
+    await expect(rows(page)).toHaveCount(32);
+    expect(await names(rows(page))).not.toContain('Fixture Security Key L1');
   });
 
   test('opens an entry from its row and goes back, by the page and by the browser, to the list as it was', async ({ page }) => {

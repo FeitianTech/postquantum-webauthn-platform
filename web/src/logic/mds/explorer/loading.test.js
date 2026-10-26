@@ -1,17 +1,14 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { MDS_EXPLORER_FULL_PATH, MDS_INFO_PATH, MDS_LIST_PATH, MISSING_METADATA_MESSAGE } from '../constants.js';
+import { MDS_CUSTOM_ENTRIES_PATH, MDS_INFO_PATH, MDS_LIST_PATH } from '../constants.js';
 import {
-  classifyExplorerAnswer,
-  explorerLoadFailure,
   fetchExplorerInfo,
   forgetExplorerList,
   isMissingSnapshot,
   prefetchExplorerList,
   prepareSnapshotEntries,
-  requestExplorerSnapshot,
+  requestExplorerAnswer,
 } from './loading.js';
-import { createExplorerSource } from '../explorer-source.js';
 
 function answer(body, { ok = true, status = 200 } = {}) {
   return {
@@ -32,150 +29,8 @@ function abortError() {
   return error;
 }
 
-const SNAPSHOT = { meta: { hasCustomEntries: false }, entries: [{ entryId: 'aaguid:1' }] };
-
 afterEach(() => {
   vi.restoreAllMocks();
-});
-
-describe('explorer loading: which source answers', () => {
-  it('asks the API when there is no explorer source, reloading when forced', async () => {
-    globalThis.fetch = vi.fn(async () => answer(SNAPSHOT));
-
-    const plain = await requestExplorerSnapshot(null);
-    expect(globalThis.fetch).toHaveBeenLastCalledWith(MDS_EXPLORER_FULL_PATH, { cache: 'no-store' });
-    expect(plain.payload).toEqual(SNAPSHOT);
-
-    await requestExplorerSnapshot(undefined, { forceReload: true, apiPath: '/elsewhere' });
-    expect(globalThis.fetch).toHaveBeenLastCalledWith('/elsewhere', { cache: 'reload' });
-  });
-
-  it('passes the abort signal when there is one', async () => {
-    globalThis.fetch = vi.fn(async () => answer(SNAPSHOT));
-    const signal = new AbortController().signal;
-    await requestExplorerSnapshot(null, { signal });
-    expect(globalThis.fetch).toHaveBeenCalledWith(MDS_EXPLORER_FULL_PATH, { cache: 'no-store', signal });
-  });
-
-  it('asks the API once when the source chooses it', async () => {
-    globalThis.fetch = vi.fn(async () => answer(SNAPSHOT));
-    const source = createExplorerSource({ snapshotUrl: '/snap.json', customEntriesState: 'present' });
-    await requestExplorerSnapshot(source);
-    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
-    expect(globalThis.fetch).toHaveBeenCalledWith(MDS_EXPLORER_FULL_PATH, { cache: 'no-store' });
-  });
-
-  it('asks the API alone when the page names no packaged snapshot', async () => {
-    globalThis.fetch = vi.fn(async () => answer(SNAPSHOT));
-    const source = createExplorerSource({ customEntriesState: 'none' });
-    await expect(requestExplorerSnapshot(source)).resolves.toMatchObject({ payload: SNAPSHOT });
-    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
-    expect(globalThis.fetch).toHaveBeenCalledWith(MDS_EXPLORER_FULL_PATH, { cache: 'no-store' });
-  });
-
-  it('keeps the packaged file when it answers with an object', async () => {
-    globalThis.fetch = vi.fn(async () => answer(SNAPSHOT));
-    const source = createExplorerSource({ snapshotUrl: '/snap.json', customEntriesState: 'none' });
-    const result = await requestExplorerSnapshot(source);
-    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
-    expect(globalThis.fetch).toHaveBeenCalledWith('/snap.json', { cache: 'default', credentials: 'omit' });
-    expect(result.payload).toEqual(SNAPSHOT);
-  });
-
-  it.each([
-    ['a failed answer', () => answer(null, { ok: false, status: 404 })],
-    ['a body that is not JSON', () => answer(new SyntaxError('not json'))],
-    ['a body that is not an object', () => answer('text')],
-  ])('falls back to the API after %s from the packaged file', async (_label, staticAnswer) => {
-    globalThis.fetch = vi.fn(async url => (url === '/snap.json' ? staticAnswer() : answer(SNAPSHOT)));
-    const source = createExplorerSource({ snapshotUrl: '/snap.json', customEntriesState: 'none' });
-    const result = await requestExplorerSnapshot(source);
-    expect(globalThis.fetch).toHaveBeenNthCalledWith(2, MDS_EXPLORER_FULL_PATH, { cache: 'no-store' });
-    expect(result.payload).toEqual(SNAPSHOT);
-  });
-
-  it('falls back to the API when the packaged file cannot be fetched at all', async () => {
-    globalThis.fetch = vi.fn(async url => {
-      if (url === '/snap.json') {
-        throw new TypeError('offline');
-      }
-      return answer(SNAPSHOT);
-    });
-    const source = createExplorerSource({ snapshotUrl: '/snap.json', customEntriesState: 'none' });
-    await expect(requestExplorerSnapshot(source)).resolves.toMatchObject({ payload: SNAPSHOT });
-  });
-
-  it('never swallows an abort', async () => {
-    globalThis.fetch = vi.fn(async () => {
-      throw abortError();
-    });
-    const source = createExplorerSource({ snapshotUrl: '/snap.json', customEntriesState: 'none' });
-    await expect(requestExplorerSnapshot(source)).rejects.toMatchObject({ name: 'AbortError' });
-    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
-  });
-
-  it('treats a thrown non-error as a failure of the packaged file', async () => {
-    globalThis.fetch = vi.fn(async url => {
-      if (url === '/snap.json') {
-        throw null;
-      }
-      return answer(SNAPSHOT);
-    });
-    const source = createExplorerSource({ snapshotUrl: '/snap.json', customEntriesState: 'none' });
-    await expect(requestExplorerSnapshot(source)).resolves.toMatchObject({ payload: SNAPSHOT });
-  });
-});
-
-describe('explorer loading: what an answer means', () => {
-  it('reads a 404 as a missing snapshot, in the server words or the packaged sentence', () => {
-    expect(classifyExplorerAnswer({ response: { ok: false, status: 404 }, payload: { error: 'Gone.' } })).toEqual({
-      kind: 'missing',
-      message: 'Gone.',
-    });
-    expect(classifyExplorerAnswer({ response: { ok: false, status: 404 }, payload: null })).toEqual({
-      kind: 'missing',
-      message: MISSING_METADATA_MESSAGE,
-    });
-    expect(classifyExplorerAnswer({ response: { ok: false, status: 404 }, payload: { error: '' } }, 'Custom.')).toEqual({
-      kind: 'missing',
-      message: 'Custom.',
-    });
-  });
-
-  it('reads another failure with the server error or the status', () => {
-    expect(classifyExplorerAnswer({ response: { ok: false, status: 500 }, payload: { error: 'Broken.' } })).toEqual({
-      kind: 'failed',
-      message: 'Broken.',
-    });
-    expect(classifyExplorerAnswer({ response: { ok: false, status: 502 }, payload: { error: 7 } })).toEqual({
-      kind: 'failed',
-      message: 'Explorer request failed with status 502.',
-    });
-  });
-
-  it('refuses a success that is not an object', () => {
-    for (const payload of [null, 'text']) {
-      expect(classifyExplorerAnswer({ response: { ok: true, status: 200 }, payload })).toEqual({
-        kind: 'failed',
-        message: 'Explorer response was not valid JSON.',
-      });
-    }
-  });
-
-  it('keeps a snapshot', () => {
-    expect(classifyExplorerAnswer({ response: { ok: true, status: 200 }, payload: SNAPSHOT })).toEqual({
-      kind: 'snapshot',
-      payload: SNAPSHOT,
-    });
-  });
-
-  it('words a load failure', () => {
-    expect(explorerLoadFailure(new Error('Explorer response was not valid JSON.'))).toBe(
-      'Explorer response was not valid JSON.',
-    );
-    expect(explorerLoadFailure(new Error(''))).toBe('Unable to load the packaged authenticator explorer.');
-    expect(explorerLoadFailure('nope')).toBe('Unable to load the packaged authenticator explorer.');
-  });
 });
 
 describe('explorer loading: the entries shown', () => {
@@ -245,7 +100,7 @@ describe('explorer loading: what the page starts from', () => {
 
 describe('the packaged list fetched ahead', () => {
   const LIST = { meta: { no: 7 }, entries: [{ entryId: 'aaguid:x', isLightweightEntry: true }] };
-  const listSource = () => createExplorerSource({ snapshotUrl: MDS_LIST_PATH, customEntriesState: 'none' });
+  const LIST_LOCATION = { url: MDS_LIST_PATH, cache: 'default', kind: 'static' };
 
   afterEach(() => {
     forgetExplorerList();
@@ -264,10 +119,23 @@ describe('the packaged list fetched ahead', () => {
     globalThis.fetch = vi.fn(async () => answer(LIST));
     prefetchExplorerList();
 
-    await expect(requestExplorerSnapshot(listSource())).resolves.toMatchObject({ payload: LIST });
+    await expect(requestExplorerAnswer(LIST_LOCATION)).resolves.toMatchObject({ payload: LIST });
     expect(globalThis.fetch).toHaveBeenCalledTimes(1);
-    await requestExplorerSnapshot(listSource());
+    await requestExplorerAnswer(LIST_LOCATION);
     expect(globalThis.fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('is shared by a load that starts while it is still out', async () => {
+    let arrive = () => {};
+    globalThis.fetch = vi.fn(() => new Promise((resolve) => { arrive = () => resolve(answer(LIST)); }));
+
+    const first = requestExplorerAnswer(LIST_LOCATION);
+    const second = requestExplorerAnswer(LIST_LOCATION);
+    arrive();
+
+    await expect(first).resolves.toMatchObject({ payload: LIST });
+    await expect(second).resolves.toMatchObject({ payload: LIST });
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
   });
 
   it.each([
@@ -279,14 +147,31 @@ describe('the packaged list fetched ahead', () => {
     await vi.waitFor(() => expect(globalThis.fetch).toHaveBeenCalledTimes(1));
     await new Promise((resolve) => setTimeout(resolve, 0));
 
-    await expect(requestExplorerSnapshot(listSource())).resolves.toMatchObject({ payload: LIST });
+    await expect(requestExplorerAnswer(LIST_LOCATION)).resolves.toMatchObject({ payload: LIST });
     expect(globalThis.fetch).toHaveBeenCalledTimes(2);
     expect(globalThis.fetch).toHaveBeenLastCalledWith(MDS_LIST_PATH, { cache: 'default', credentials: 'omit' });
   });
 
+  it('keeps a later request when one it replaced fails afterwards', async () => {
+    let fail = () => {};
+    globalThis.fetch = vi.fn()
+      .mockImplementationOnce(() => new Promise((resolve) => { fail = () => resolve(answer(null, { ok: false, status: 503 })); }))
+      .mockImplementation(async () => answer(LIST));
+    prefetchExplorerList();
+    forgetExplorerList();
+
+    const later = requestExplorerAnswer(LIST_LOCATION);
+    fail();
+    await later;
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    prefetchExplorerList();
+    expect(globalThis.fetch).toHaveBeenCalledTimes(2);
+  });
+
   it('is not fetched ahead again once the explorer has fetched it', async () => {
     globalThis.fetch = vi.fn(async () => answer(LIST));
-    await requestExplorerSnapshot(listSource());
+    await requestExplorerAnswer(LIST_LOCATION);
 
     prefetchExplorerList(undefined, { priority: 'low' });
     expect(globalThis.fetch).toHaveBeenCalledTimes(1);
@@ -297,8 +182,29 @@ describe('the packaged list fetched ahead', () => {
     prefetchExplorerList();
     forgetExplorerList();
 
-    await requestExplorerSnapshot(listSource());
+    await requestExplorerAnswer(LIST_LOCATION);
     expect(globalThis.fetch).toHaveBeenCalledTimes(2);
   });
 });
 
+describe('the session\'s own entries', () => {
+  it('are fetched afresh each time, with the cookie, and the abort signal when there is one', async () => {
+    globalThis.fetch = vi.fn(async () => answer({ entries: [] }));
+    const location = { url: MDS_CUSTOM_ENTRIES_PATH, cache: 'no-store', kind: 'api' };
+    const signal = new AbortController().signal;
+
+    await requestExplorerAnswer(location);
+    await requestExplorerAnswer(location, signal);
+
+    expect(globalThis.fetch.mock.calls).toEqual([
+      [MDS_CUSTOM_ENTRIES_PATH, { cache: 'no-store' }],
+      [MDS_CUSTOM_ENTRIES_PATH, { cache: 'no-store', signal }],
+    ]);
+  });
+
+  it('read a body that is not JSON as no payload', async () => {
+    globalThis.fetch = vi.fn(async () => answer(new SyntaxError('not json')));
+
+    await expect(requestExplorerAnswer({ url: MDS_CUSTOM_ENTRIES_PATH, cache: 'no-store', kind: 'api' })).resolves.toMatchObject({ payload: null });
+  });
+});

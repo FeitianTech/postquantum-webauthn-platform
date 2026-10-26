@@ -1,7 +1,32 @@
-// Manage Trusted Metadata's requests and everything it says. No DOM.
+// Manage Trusted Metadata's requests and everything it says, and the session's
+// uploads merged with the packaged list. No DOM.
+import { aaguidGuid } from '../../shared/aaguid.js';
 import { CUSTOM_METADATA_DELETE_PATH, CUSTOM_METADATA_LIST_PATH, CUSTOM_METADATA_UPLOAD_PATH } from '../constants.js';
 
-/** @import { MdsSnapshot } from './loading.js' */
+/** @import { MdsEntry, MdsSnapshot } from './loading.js' */
+
+// The list the explorer shows: the session's uploads (GET
+// /api/mds/metadata/explorer/custom, or an upload's or a delete's answer), then
+// the packaged rows whose AAGUID no upload has, since an upload takes the place
+// of the packaged entry with its AAGUID; the packaged list's meta with the
+// uploads' counts and the number shown.
+/**
+ * @param {MdsSnapshot | null | undefined} packaged
+ * @param {MdsSnapshot | null | undefined} custom
+ * @returns {MdsSnapshot}
+ */
+export function mergeCustomEntries(packaged, custom) {
+    /** @type {MdsEntry[]} */
+    const uploads = Array.isArray(custom?.entries) ? custom.entries : [];
+    const hidden = new Set(uploads.map(entry => aaguidGuid(entry?.aaguid)).filter(Boolean));
+    const listed = Array.isArray(packaged?.entries) ? packaged.entries : [];
+    const entries = [...uploads, ...listed.filter(entry => !hidden.has(aaguidGuid(entry?.aaguid)))];
+    const meta = packaged?.meta && typeof packaged.meta === 'object' ? packaged.meta : {};
+    return {
+        meta: { ...meta, customEntryCount: uploads.length, hasCustomEntries: uploads.length > 0, entryCount: entries.length },
+        entries,
+    };
+}
 
 /**
  * What the panel says, and how.
@@ -119,16 +144,21 @@ export async function requestCustomMetadataUpload(files, { signal, path = CUSTOM
     return { response, payload: await readCustomMetadataAnswer(response) };
 }
 
+// The session's entries an answer carries, or null.
+function customEntriesOf(payload) {
+    return payload?.custom && typeof payload.custom === 'object' ? payload.custom : null;
+}
+
 function trimmedText(value) {
     return typeof value === 'string' && value.trim() ? value.trim() : '';
 }
 
 // An upload's answer: what the panel says (the server's warnings too), and the
-// snapshot to show when the server sends one.
+// session's entries to show when the server sends them.
 /**
  * @param {Response} response
  * @param {any} payload
- * @returns {{ ok: boolean, message: string, variant: MessageVariant, snapshot?: MdsSnapshot | null }}
+ * @returns {{ ok: boolean, message: string, variant: MessageVariant, custom?: MdsSnapshot | null }}
  */
 export function describeUploadAnswer(response, payload) {
     const errors = Array.isArray(payload?.errors) ? payload.errors : [];
@@ -145,7 +175,7 @@ export function describeUploadAnswer(response, payload) {
             ? `Metadata uploaded with warnings: ${errors.join(' ')}`
             : 'Metadata uploaded successfully.',
         variant: errors.length ? 'warning' : 'success',
-        snapshot: payload?.snapshot && typeof payload.snapshot === 'object' ? payload.snapshot : null,
+        custom: customEntriesOf(payload),
     };
 }
 
@@ -187,7 +217,7 @@ export async function requestCustomMetadataDelete(
 /**
  * @param {Response} response
  * @param {any} payload
- * @returns {{ ok: boolean, message?: string, variant?: MessageVariant, snapshot?: MdsSnapshot | null }}
+ * @returns {{ ok: boolean, message?: string, variant?: MessageVariant, custom?: MdsSnapshot | null }}
  */
 export function describeDeleteAnswer(response, payload) {
     if (!response.ok) {
@@ -197,10 +227,7 @@ export function describeDeleteAnswer(response, payload) {
             variant: response.status === 404 ? 'warning' : 'error',
         };
     }
-    return {
-        ok: true,
-        snapshot: payload?.snapshot && typeof payload.snapshot === 'object' ? payload.snapshot : null,
-    };
+    return { ok: true, custom: customEntriesOf(payload) };
 }
 
 // One uploaded file as the list shows it: its name, the stored name a delete
