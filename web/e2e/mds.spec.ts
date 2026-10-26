@@ -146,6 +146,12 @@ test.describe('/#mds', () => {
     expect(answer.custom.meta).toMatchObject({ customEntryCount: 1, hasCustomEntries: true });
     await expect(rows(page)).toHaveCount(33);
     await expect(section(page).getByRole('link', { name: 'Fixture Uploaded Authenticator' })).toBeAttached();
+    // Its row names its icon by a URL of its own, as a packaged row does, and the image loads from it.
+    const uploadedRow = row(page, 'aaguid:f1d0f1d0-0000-4000-8000-000000000099');
+    const icon = uploadedRow.locator('img');
+    await expect(icon).toHaveAttribute('src', /^\/api\/mds\/metadata\/custom\/[0-9a-f]{32}\.json\/icon$/);
+    await uploadedRow.scrollIntoViewIfNeeded();
+    await expect.poll(() => icon.evaluate((image: HTMLImageElement) => (image.complete ? image.naturalWidth : 0))).toBeGreaterThan(0);
     await expect(section(page).locator('[role="status"][data-variant]')).toHaveText(/Including 1 session metadata entry\. Custom metadata updated\.$/);
     await expect(dialog.getByText('custom-metadata.json')).toBeVisible();
     expect(await greyFills(page, '[data-overlay="dialog"]')).toEqual([]);

@@ -65,13 +65,18 @@ seven files are exactly what they were:
 
 The page reads the list at its one URL, served from the verified snapshot whether or not
 the full file is there, and, while the session has (or may have) uploads,
-`/api/mds/metadata/explorer/custom`: the session's own rows, each in full, and the counts.
-It shows the uploads, then the packaged rows whose AAGUID no upload has: an upload hides
-the packaged entry with its AAGUID. An upload and a delete answer the session's rows as
-`custom`, which the page merges with the list it holds. A page from an earlier release
-was sent to the list only by the info answer's `snapshotUrl`, which is gone, and asked
-`/api/mds/metadata/explorer/full` for every row: that answers `410` with a sentence telling
-it to reload.
+`/api/mds/metadata/explorer/custom`: the session's own rows and the counts. It shows the
+uploads, then the packaged rows whose AAGUID no upload has: an upload hides the packaged
+entry with its AAGUID. An upload and a delete answer the session's rows as `custom`, which
+the page merges with the list it holds. An upload's row has the list's shape, so these
+answers grow by a row for each upload, never by its statement or its image: the entry
+page asks `/api/mds/metadata/resolve?entryId=` for its detail, and its icon is at
+`/api/mds/metadata/custom/<stored name>/icon`, the visitor's own, kept by the browser for
+good (an upload never changes), one URL for each image (the oldest upload's that holds
+it). An icon no file is made of stays in its row, as in the list. A page from an earlier
+release was sent to the list only by the info answer's `snapshotUrl`, which is gone, and
+asked `/api/mds/metadata/explorer/full` for every row: that answers `410` with a sentence
+telling it to reload.
 
 No route serves a snapshot file, at `/assets/mds/` or at the site's root: the seven
 names, and the `.gz` copy earlier releases wrote beside the full one, are refused there

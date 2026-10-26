@@ -1,11 +1,14 @@
-"""A visitor's uploads as the explorer lists them (``explorer/custom``), and the lookup of
-an entry with them in front of the packaged ones."""
+"""A visitor's uploads as the explorer lists them (``explorer/custom``): rows of the packaged
+list's shape, whose icons are served at URLs of their own; and the lookup of an entry with
+them in front of the packaged ones."""
 from __future__ import annotations
 
 import json
 from collections.abc import Mapping
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
+from urllib.parse import quote
 
 from . import cache as mds_cache
 from . import explorer_files
@@ -19,8 +22,6 @@ def _build_session_snapshot_entry(
     *,
     index: int,
     include_detail: bool,
-    include_raw_entry: bool = True,
-    compact_detail: bool = False,
 ) -> dict[str, Any]:
     return build_explorer_entry(
         item.payload,
@@ -32,8 +33,8 @@ def _build_session_snapshot_entry(
             "fetchedAt": item.uploaded_at,
         },
         include_detail=include_detail,
-        include_raw_entry=include_raw_entry,
-        compact_detail=compact_detail,
+        include_raw_entry=False,
+        compact_detail=True,
         source_info=_session_item_source_info(item),
     )
 
@@ -47,6 +48,12 @@ def _session_item_source_info(item: mds_uploads.SessionMetadataItem) -> dict[str
     if item.mtime is not None:
         info["modifiedAt"] = datetime.fromtimestamp(item.mtime, timezone.utc).isoformat()
     return info
+
+
+def icon_url(stored_filename: str) -> str:
+    """Where the icon of the visitor's upload ``stored_filename`` is served (``routes/mds.py``)."""
+
+    return f"/api/mds/metadata/custom/{quote(stored_filename, safe='')}/icon"
 
 
 def _entry_matches_lookup(
@@ -75,59 +82,82 @@ def _entry_matches_lookup(
     return False
 
 
+_ListedUpload = tuple[mds_uploads.SessionMetadataItem, dict[str, Any]]
+
+
 def _session_rows(
     session_items: list[mds_uploads.SessionMetadataItem],
-    *,
-    include_detail: bool,
-    include_raw_entry: bool = True,
-    compact_detail: bool = False,
-) -> tuple[list[dict[str, Any]], set[str]]:
-    """The visitor's uploads as explorer rows, in the order listed (the newest first),
-    one per AAGUID (the first listed), and the AAGUIDs they hold."""
+) -> tuple[list[_ListedUpload], set[str]]:
+    """The visitor's uploads as rows of the list (``explorer_files.list_row``), each with its
+    upload, in the order listed (the newest first), one per AAGUID (the first listed), and
+    the AAGUIDs they hold."""
 
-    rows: list[dict[str, Any]] = []
+    rows: list[_ListedUpload] = []
     aaguids: set[str] = set()
     for index, item in enumerate(session_items):
-        row = _build_session_snapshot_entry(
-            item,
-            index=index,
-            include_detail=include_detail,
-            include_raw_entry=include_raw_entry,
-            compact_detail=compact_detail,
-        )
+        row = explorer_files.list_row(_build_session_snapshot_entry(item, index=index, include_detail=False))
         aaguid_key = normalise_aaguid_key(row.get("aaguid"))
         if aaguid_key:
             if aaguid_key in aaguids:
                 continue
             aaguids.add(aaguid_key)
-        rows.append(row)
+        rows.append((item, row))
     return rows, aaguids
 
 
-def load_custom_entries() -> dict[str, Any]:
-    """What the page lacks of the visitor's explorer: their uploads as rows (each with its
-    detail, the newest first, one per AAGUID) and the counts of the list they make with
-    the packaged one. The page holds that list (``explorer_files``) and merges the two,
-    an upload hiding the packaged entry with its AAGUID. An upload's id is made unique
-    among the rows the page shows: one with a packaged entry's AAID or key identifier,
-    or an earlier upload's, gets ``~2`` (``build.unique_entry_id``)."""
+def _name_icons_by_url(uploads: list[_ListedUpload]) -> None:
+    """Give each row its icon's URL (``icon_url``) in place of its image, as the packaged
+    list does: of uploads with one image, the oldest's, so the page loads it once and a
+    newer upload leaves the URLs it holds as they are. An icon no file is made of
+    (``explorer_files.icon_file``) stays as it is, as in the packaged list."""
+
+    urls: dict[str, str] = {}
+    for item, row in reversed(uploads):
+        file = explorer_files.icon_file(row.get("icon"))
+        if file is not None:
+            row["icon"] = urls.setdefault(file[0], icon_url(item.filename))
+
+
+@dataclass(frozen=True)
+class _Listed:
+    """The visitor's explorer: their uploads as rows, each with its upload, and the AAGUIDs
+    the rows hide; how many rows the packaged list has, and how many of them are shown."""
+
+    uploads: list[_ListedUpload]
+    hidden: set[str]
+    packaged: int
+    shown: int
+
+
+def _listed() -> _Listed:
+    """The visitor's uploads as their explorer lists them, beside the packaged list. An
+    upload's id is made unique among the rows the page shows: one with a packaged entry's
+    AAID or key identifier, or an earlier upload's, gets ``~2`` (``build.unique_entry_id``)."""
 
     files = mds_cache.load_explorer_files()
     packaged = files.listed["entries"] if files is not None else []
-    rows, hidden = _session_rows(
-        mds_uploads.list_session_metadata_items(),
-        include_detail=True,
-        include_raw_entry=False,
-        compact_detail=True,
-    )
+    uploads, hidden = _session_rows(mds_uploads.list_session_metadata_items())
     shown = [row for row in packaged if normalise_aaguid_key(row.get("aaguid")) not in hidden]
     taken = {str(row.get("entryId")): 2 for row in shown if row.get("entryId")}
-    for row in rows:
+    for _item, row in uploads:
         row["entryId"] = unique_entry_id(str(row["entryId"]), taken)
+    _name_icons_by_url(uploads)
+    return _Listed(uploads, hidden, len(packaged), len(shown))
+
+
+def load_custom_entries() -> dict[str, Any]:
+    """What the page lacks of the visitor's explorer: their uploads as rows of the packaged
+    list's shape (the newest first, one per AAGUID; the entry page resolves each one's
+    detail), and the counts of the list they make with the packaged one. The page holds
+    that list (``explorer_files``) and merges the two, an upload hiding the packaged entry
+    with its AAGUID."""
+
+    listed = _listed()
+    rows = [row for _item, row in listed.uploads]
     return {
         "meta": {
-            "entryCount": len(rows) + len(shown),
-            "baseEntryCount": len(packaged),
+            "entryCount": len(rows) + listed.shown,
+            "baseEntryCount": listed.packaged,
             "customEntryCount": len(rows),
             "hasCustomEntries": bool(rows),
         },
@@ -141,56 +171,25 @@ def resolve_effective_metadata_entry(
     aaguid: str | None = None,
     aaid: str | None = None,
 ) -> dict[str, Any] | None:
+    """The entry the visitor's explorer lists as ``entry_id``, else the first it lists with
+    ``aaguid`` or ``aaid``: an upload, with its detail, else a packaged entry no upload hides."""
+
+    listed = _listed()
+    for item, row in listed.uploads:
+        found = (row["entryId"] == entry_id) if entry_id else _entry_matches_lookup(item.payload, aaguid=aaguid, aaid=aaid)
+        if found:
+            return _upload_detail(item, row)
     if entry_id:
-        return _resolve_by_id(entry_id)
-
-    base_summary = mds_cache.load_packaged_explorer_summary()
-    session_items = mds_uploads.list_session_metadata_items()
-    seen_aaguids: set[str] = set()
-
-    for index, item in enumerate(session_items):
-        payload = item.payload
-        if _entry_matches_lookup(payload, aaguid=aaguid, aaid=aaid):
-            # As the visitor's explorer list holds it.
-            return _build_session_snapshot_entry(
-                item, index=index, include_detail=True, include_raw_entry=False, compact_detail=True
-            )
-
-        metadata_statement = payload.get("metadataStatement")
-        metadata_mapping = metadata_statement if isinstance(metadata_statement, Mapping) else {}
-        aaguid_key = normalise_aaguid_key(payload.get("aaguid") or metadata_mapping.get("aaguid"))
-        if aaguid_key:
-            seen_aaguids.add(aaguid_key)
-
-    # The entry as the BLOB has it, from the verified payload's JSON.
-    raw_entries = mds_cache.load_verified_entries()
-    if raw_entries is None:
-        return None
-
-    for index, payload in enumerate(raw_entries):
-        if not isinstance(payload, Mapping):
-            continue
-        metadata_statement = payload.get("metadataStatement")
-        metadata_mapping = metadata_statement if isinstance(metadata_statement, Mapping) else {}
-        aaguid_key = normalise_aaguid_key(payload.get("aaguid") or metadata_mapping.get("aaguid"))
-        if aaguid_key and aaguid_key in seen_aaguids:
-            continue
-        if _entry_matches_lookup(payload, aaguid=aaguid, aaid=aaid):
-            return _packaged_detail(payload, index, base_summary)
-
-    return None
+        return _packaged_detail_by_id(entry_id, listed.hidden)
+    return _packaged_by_lookup(listed.hidden, aaguid=aaguid, aaid=aaid)
 
 
-def _resolve_by_id(entry_id: str) -> dict[str, Any] | None:
-    """The entry the visitor's explorer lists as ``entry_id``: an upload by the id its row
-    has (``load_custom_entries``), else a packaged entry no upload hides."""
+def _upload_detail(item: mds_uploads.SessionMetadataItem, row: Mapping[str, Any]) -> dict[str, Any]:
+    """An upload's entry with its detail, under its row's id and with its row's icon: the
+    row is its detail in the list's shape, as a packaged entry's is."""
 
-    rows = load_custom_entries()["entries"]
-    for row in rows:
-        if row["entryId"] == entry_id:
-            return row
-    hidden = {normalise_aaguid_key(row.get("aaguid")) for row in rows} - {""}
-    return _packaged_detail_by_id(entry_id, hidden)
+    detail = _build_session_snapshot_entry(item, index=row["index"], include_detail=True)
+    return {**detail, "entryId": row["entryId"], "icon": row["icon"]}
 
 
 def upload_icon(stored_filename: str) -> explorer_files.Icon | None:
@@ -216,6 +215,29 @@ def _packaged_detail_by_id(entry_id: str, hidden_aaguids: set[str]) -> dict[str,
     entry = json.loads(detail)
     aaguid_key = normalise_aaguid_key(entry.get("aaguid"))
     return None if aaguid_key and aaguid_key in hidden_aaguids else entry
+
+
+def _packaged_by_lookup(hidden_aaguids: set[str], *, aaguid: str | None, aaid: str | None) -> dict[str, Any] | None:
+    """The first packaged entry with ``aaguid`` or ``aaid`` whose AAGUID no upload has, found
+    in the verified payload's JSON (the entries as the BLOB has them)."""
+
+    raw_entries = mds_cache.load_verified_entries()
+    if raw_entries is None:
+        return None
+
+    base_summary = mds_cache.load_packaged_explorer_summary()
+    for index, payload in enumerate(raw_entries):
+        if not isinstance(payload, Mapping):
+            continue
+        metadata_statement = payload.get("metadataStatement")
+        metadata_mapping = metadata_statement if isinstance(metadata_statement, Mapping) else {}
+        aaguid_key = normalise_aaguid_key(payload.get("aaguid") or metadata_mapping.get("aaguid"))
+        if aaguid_key and aaguid_key in hidden_aaguids:
+            continue
+        if _entry_matches_lookup(payload, aaguid=aaguid, aaid=aaid):
+            return _packaged_detail(payload, index, base_summary)
+
+    return None
 
 
 def _packaged_detail(payload: Mapping[str, Any], index: int, base_summary: Mapping[str, Any]) -> dict[str, Any]:

@@ -155,6 +155,15 @@ def _unique_ids(entries: list[Mapping[str, Any]]) -> list[str]:
     return ids[::-1]
 
 
+def list_row(entry: Mapping[str, Any]) -> dict[str, Any]:
+    """An entry as the list holds it: what the table shows, filters and sorts by, marked
+    lightweight, without what ``LIST_LEAVES_OUT`` names (its detail, where it came from)."""
+
+    row = {key: value for key, value in entry.items() if key not in LIST_LEAVES_OUT}
+    row["isLightweightEntry"] = True
+    return row
+
+
 def build_explorer_files(snapshot: Mapping[str, Any]) -> ExplorerFiles | None:
     """The browsers' files of an explorer's full snapshot, or None without one."""
 
@@ -168,8 +177,7 @@ def build_explorer_files(snapshot: Mapping[str, Any]) -> ExplorerFiles | None:
     rows: list[dict[str, Any]] = []
     entries = [entry for entry in snapshot.get("entries") or [] if isinstance(entry, Mapping)]
     for entry, entry_id in zip(entries, _unique_ids(entries), strict=True):
-        row = {key: value for key, value in entry.items() if key not in LIST_LEAVES_OUT}
-        row["isLightweightEntry"] = True
+        row = list_row(entry)
         file = icon_file(entry.get("icon"))
         if file is not None:
             name, image = file

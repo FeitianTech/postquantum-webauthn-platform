@@ -8,6 +8,8 @@ from __future__ import annotations
 
 import base64
 import json
+import os
+from pathlib import Path
 
 import pytest
 from fido2.mds3 import MetadataBlobPayloadEntry
@@ -24,6 +26,7 @@ from tests.app.metadata.upload_entries import _entry_payload
 PACKAGED = "f1d0f1d0-0000-4000-8000-000000000001"
 PACKAGED_AAID = "F1D0#0012"
 PNG = b"\x89PNG\r\n\x1a\n" + b"uploaded icon" * 4
+PNG_ICON = f"data:image/png;base64,{base64.b64encode(PNG).decode()}"
 
 
 def _upload(description: str, aaguid: str | None = None):
@@ -45,11 +48,12 @@ def test_the_custom_entries_are_the_uploads_alone_with_the_counts_of_the_list_th
     custom = mds_effective.load_custom_entries()
 
     assert custom["meta"] == {"entryCount": 33, "baseEntryCount": 32, "customEntryCount": 2, "hasCustomEntries": True}
-    # One upload per AAGUID; each with its detail, as the page shows it without asking.
-    assert [entry["source"] for entry in custom["entries"]] == ["session", "session"]
+    # One upload per AAGUID, each a row of the packaged list's shape: the entry page asks for its detail.
+    packaged = mds_cache.load_explorer_files().listed["entries"][0]
+    assert [set(entry) for entry in custom["entries"]] == [set(packaged) - {"detailUrl"}] * 2
     assert sum(entry["aaguid"] == PACKAGED for entry in custom["entries"]) == 1
-    assert "No AAGUID" in {entry["metadataStatement"]["description"] for entry in custom["entries"]}
-    assert all(entry["isLightweightEntry"] is False for entry in custom["entries"])
+    assert "No AAGUID" in {entry["name"] for entry in custom["entries"]}
+    assert all(entry["isLightweightEntry"] is True for entry in custom["entries"])
 
 
 def test_without_uploads_the_custom_entries_are_none_and_the_counts_the_packaged_list(visitor, mds_fixture_snapshot):
@@ -97,14 +101,16 @@ def test_an_upload_is_found_before_the_packaged_entry_with_its_aaguid(visitor, m
     assert by_aaguid["sourceInfo"]["storedFilename"].endswith(".json")
 
 
-def test_an_upload_is_resolved_as_the_visitors_explorer_list_holds_it(visitor, mds_fixture_snapshot):
+def test_an_uploads_row_is_its_detail_in_the_lists_shape_as_a_packaged_entrys_is(visitor, mds_fixture_snapshot):
     _upload("Uploaded", PACKAGED)
 
-    resolved = mds_effective.resolve_effective_metadata_entry(aaguid=PACKAGED)
-    listed = mds_effective.load_custom_entries()["entries"][0]
+    (listed,) = mds_effective.load_custom_entries()["entries"]
+    resolved = mds_effective.resolve_effective_metadata_entry(entry_id=listed["entryId"])
 
-    assert resolved == listed
+    assert explorer_files.list_row(resolved) == listed
+    assert resolved["metadataStatement"]["description"] == "Uploaded"
     assert resolved["rawEntry"] is None
+    assert mds_effective.resolve_effective_metadata_entry(aaguid=PACKAGED) == resolved
 
 
 def test_an_upload_without_its_info_file_is_shown_without_its_names(visitor, mds_fixture_snapshot):
@@ -173,8 +179,53 @@ def test_an_entry_whose_statement_is_no_object_matches_no_aaguid():
     assert mds_effective._entry_matches_lookup({"metadataStatement": 123}) is False
 
 
+def _aged(stored, seconds):
+    """Give the upload ``stored`` the modification time ``seconds``: uploads are listed newest first."""
+
+    path = Path(os.environ["FIDO_SERVER_SESSION_METADATA_DIR"]) / visitor_session.current_id() / stored.filename
+    os.utime(path, (seconds, seconds))
+
+
+def test_an_uploads_icon_is_listed_as_the_url_that_serves_it_and_resolved_so(visitor):
+    stored = _upload_statement("With an icon", icon=PNG_ICON)
+
+    (row,) = mds_effective.load_custom_entries()["entries"]
+
+    assert row["icon"] == mds_effective.icon_url(stored.filename) == f"/api/mds/metadata/custom/{stored.filename}/icon"
+    assert mds_effective.resolve_effective_metadata_entry(entry_id=row["entryId"])["icon"] == row["icon"]
+
+
+def test_uploads_with_one_image_name_the_oldest_ones_icon(visitor):
+    oldest = _upload_statement("Oldest", icon=PNG_ICON)
+    newer = _upload_statement("Newer", icon=PNG_ICON)
+    other = _upload_statement("Another image", icon=f"data:image/png;base64,{base64.b64encode(PNG + b'2').decode()}")
+    for stored, seconds in ((oldest, 1_000), (newer, 2_000), (other, 3_000)):
+        _aged(stored, seconds)
+
+    icons = {row["name"]: row["icon"] for row in mds_effective.load_custom_entries()["entries"]}
+
+    assert icons == {
+        "Another image": mds_effective.icon_url(other.filename),
+        "Newer": mds_effective.icon_url(oldest.filename),
+        "Oldest": mds_effective.icon_url(oldest.filename),
+    }
+
+
+def test_an_icon_no_file_is_made_of_is_listed_as_it_is(visitor):
+    _upload_statement("An image no file is made of", icon="data:image/bmp;base64,Qk0=")
+    _upload_statement("No icon")
+
+    icons = {row["name"]: row["icon"] for row in mds_effective.load_custom_entries()["entries"]}
+
+    assert icons == {"An image no file is made of": "data:image/bmp;base64,Qk0=", "No icon": ""}
+
+
+def test_an_icons_url_names_its_upload_whole():
+    assert mds_effective.icon_url("a#b.json") == "/api/mds/metadata/custom/a%23b.json/icon"
+
+
 def test_an_uploads_icon_is_its_image(visitor):
-    stored = _upload_statement("With an icon", icon=f"data:image/png;base64,{base64.b64encode(PNG).decode()}")
+    stored = _upload_statement("With an icon", icon=PNG_ICON)
 
     assert mds_effective.upload_icon(stored.filename) == explorer_files.Icon(PNG, "image/png")
 

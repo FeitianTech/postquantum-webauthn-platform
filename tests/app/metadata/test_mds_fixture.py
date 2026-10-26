@@ -95,8 +95,14 @@ def test_an_uploaded_statement_joins_the_fixture(mds_fixture_snapshot, client):
     assert set(answer.get_json()) == {"items", "custom"}
     custom = answer.get_json()["custom"]
     assert custom["meta"] == {"entryCount": 33, "baseEntryCount": 32, "customEntryCount": 1, "hasCustomEntries": True}
-    assert [(entry["name"], entry["source"]) for entry in custom["entries"]] == [("Fixture Uploaded Authenticator", "session")]
+    (row,) = custom["entries"]
+    assert (row["name"], row["isLightweightEntry"]) == ("Fixture Uploaded Authenticator", True)
     assert client.get("/api/mds/metadata/explorer/custom").get_json() == custom
+    # The entry page resolves its detail, and the table loads its icon from the URL it names.
+    resolved = client.get("/api/mds/metadata/resolve", query_string={"entryId": row["entryId"]}).get_json()["entry"]
+    assert (resolved["source"], resolved["metadataStatement"]["description"]) == ("session", "Fixture Uploaded Authenticator")
+    icon = client.get(row["icon"])
+    assert (icon.status_code, icon.mimetype) == (200, "image/png")
 
     listed = client.get("/api/mds/metadata/custom").get_json()["items"]
     assert [item["source"]["originalFilename"] for item in listed] == ["custom-metadata.json"]
