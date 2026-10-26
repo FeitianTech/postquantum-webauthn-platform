@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from datetime import date, datetime, timezone
 
+import pytest
+
 from server.app.mds import statement_fields as fields
 
 
@@ -89,8 +91,6 @@ def test_enum_protocol_certification_and_extraction_helpers():
     metadata = {'authenticatorGetInfo': {'transports': ['usb']}, 'transports': ['nfc', 'usb']}
     assert fields.extract_transports(metadata) == ['Nfc', 'Usb']
 
-    assert fields.normalise_icon('http://icon', None) == 'http://icon'
-    assert fields.normalise_icon('iVBOR', 'image/png').startswith('data:image/png;base64,')
     assert fields.normalise_icon(None, None) == ''
 
 
@@ -175,3 +175,26 @@ def test_attestation_key_identifiers_are_trimmed_and_unique_ignoring_case():
 
 def test_enum_names_replace_repeated_hyphens_with_spaces():
     assert fields.format_enum('A--B') == 'A B'
+
+
+@pytest.mark.parametrize(
+    "icon",
+    [
+        "http://example.com/icon.png",
+        "HTTPS://example.com/icon.png",
+        "//example.com/icon.png",
+        "javascript:alert(1)",
+        "not an icon",
+        "iVBOR",
+    ],
+)
+def test_an_icon_that_is_no_data_url_or_base64_is_none(icon):
+    # The page's policy loads images from data: URLs only; another would be refused, and reported.
+    assert fields.normalise_icon(icon, "image/png") == ""
+
+
+def test_a_data_url_icon_is_kept_and_bare_base64_becomes_one():
+    assert fields.normalise_icon(" data:image/svg+xml;base64,PHN2Zy8+ ", None) == "data:image/svg+xml;base64,PHN2Zy8+"
+    assert fields.normalise_icon("DATA:image/png;base64,iVBORw0KGgo=", None) == "DATA:image/png;base64,iVBORw0KGgo="
+    assert fields.normalise_icon("iVBORw0KGgo=", None) == "data:image/png;base64,iVBORw0KGgo="
+    assert fields.normalise_icon("iVBORw0K\nGgo=", "image/webp") == "data:image/webp;base64,iVBORw0K\nGgo="

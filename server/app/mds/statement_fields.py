@@ -7,7 +7,7 @@ from collections.abc import Mapping
 from datetime import date, datetime, timezone
 from typing import Any
 
-from .. import aaguid
+from .. import aaguid, encoding
 
 
 def mapping_value(mapping: Mapping[str, Any], *keys: str) -> Any:
@@ -223,11 +223,17 @@ def extract_transports(metadata: Mapping[str, Any]) -> list[str]:
 
 
 def normalise_icon(icon: Any, icon_type: Any) -> str:
+    """A statement's icon as a data: URL, the one kind of image the page's policy
+    loads: a data: URL as it is, bare base64 as one (of its ``iconType``, else
+    PNG), anything else (an http(s) URL, text that is no base64) nothing."""
+
     value = string_or_none(icon)
     if not value:
         return ""
-    if value.lower().startswith("data:") or value.lower().startswith("http://") or value.lower().startswith("https://"):
+    if value[:5].lower() == "data:":
         return value
+    if not encoding.try_decode_base64(value):
+        return ""
     content_type = string_or_none(icon_type) or "image/png"
     return f"data:{content_type};base64,{value}"
 
