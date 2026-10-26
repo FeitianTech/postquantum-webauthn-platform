@@ -220,12 +220,12 @@ def visitor(monkeypatch):
 
 @pytest.fixture
 def two_entry_upload(monkeypatch, visitor):
-    """An upload that expands to two entries, with no GitHub copy and a stand-in snapshot."""
+    """An upload that expands to two entries, with no GitHub copy and stand-in rows for the session."""
 
     monkeypatch.setattr(mds_entries, "expand_metadata_entry_payloads", lambda _payload: [{"entry": 1}, {"entry": 2}])
     monkeypatch.setattr(github_mirror, "maybe_store_uploaded_metadata_file", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(mds_uploads, "serialize_session_metadata_item", lambda item: item)
-    monkeypatch.setattr(mds_effective, "load_effective_full_snapshot", lambda: {"meta": {"entryCount": 1}})
+    monkeypatch.setattr(mds_effective, "load_custom_entries", lambda: {"meta": {"customEntryCount": 1}, "entries": []})
 
 
 @pytest.mark.parametrize(
@@ -307,7 +307,8 @@ def test_an_upload_keeps_the_entries_it_can_save_and_names_the_others(monkeypatc
     assert status == 200
     assert payload["items"] == [{"storedFilename": "stored-2.json", "originalFilename": "mixed.json (entry 2)"}]
     assert payload["errors"] == ["mixed.json (entry 1): duplicate entry"]
-    assert payload["snapshot"] == {"meta": {"entryCount": 1}}
+    assert payload["custom"] == {"meta": {"customEntryCount": 1}, "entries": []}
+    assert "snapshot" not in payload
 
 
 def test_an_upload_the_store_cannot_save_answers_500(monkeypatch, two_entry_upload):
@@ -332,7 +333,7 @@ def test_an_upload_without_a_file_name_is_named_metadata_json(monkeypatch, visit
         lambda _payload, original_filename=None: {"originalFilename": original_filename},
     )
     monkeypatch.setattr(mds_uploads, "serialize_session_metadata_item", lambda item: item)
-    monkeypatch.setattr(mds_effective, "load_effective_full_snapshot", lambda: {"meta": {"entryCount": 1}})
+    monkeypatch.setattr(mds_effective, "load_custom_entries", lambda: {"meta": {"customEntryCount": 1}, "entries": []})
 
     response, status = _upload(monkeypatch, _Storage("   ", b"{}"))
 

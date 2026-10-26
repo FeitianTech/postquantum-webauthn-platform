@@ -253,14 +253,13 @@ def api_upload_custom_metadata():
 
 
 def _upload_answer(saved_items: list[Any], errors: list[str]):
-    """What an upload answers: the files saved, what was refused, and the explorer
-    snapshot with them when any was saved (400 when none was)."""
+    """What an upload answers: the files saved, what was refused, and the session's
+    own rows (as explorer/custom answers them) when any was saved (400 when none was)."""
 
     response: dict[str, Any] = {"items": saved_items}
     if errors:
         response["errors"] = errors
     if saved_items:
-        response["snapshot"] = mds_effective.load_effective_full_snapshot()
         response["custom"] = mds_effective.load_custom_entries()
 
     return _no_store_json_response(response, status=200 if saved_items else 400)
@@ -282,8 +281,7 @@ def api_delete_custom_metadata(stored_filename: str):
             status=404,
         )
 
-    snapshot = mds_effective.load_effective_full_snapshot()
-    return _no_store_json_response({"deleted": True, "snapshot": snapshot, "custom": mds_effective.load_custom_entries()})
+    return _no_store_json_response({"deleted": True, "custom": mds_effective.load_custom_entries()})
 
 
 @bp.route("/api/mds/decode-certificate", methods=["POST"])

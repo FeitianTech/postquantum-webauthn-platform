@@ -68,8 +68,8 @@ the full file is there, and, while the session has (or may have) uploads,
 `/api/mds/metadata/explorer/custom`: the session's own rows, each in full, and the counts.
 It shows the uploads, then the packaged rows whose AAGUID no upload has: an upload hides
 the packaged entry with its AAGUID. An upload and a delete answer the session's rows as
-`custom`, which the page merges with the list it holds. The info answer's `snapshotUrl`,
-the explorer API's whole list and an answer's `snapshot` stay for pages loaded before.
+`custom`, which the page merges with the list it holds. The info answer's `snapshotUrl`
+and the explorer API's whole list stay for pages loaded before.
 
 No route serves a snapshot file, at `/assets/mds/` or at the site's root: the seven
 names, and the `.gz` copy earlier releases wrote beside the full one, are refused there

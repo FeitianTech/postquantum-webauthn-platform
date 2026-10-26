@@ -139,10 +139,11 @@ test.describe('/#mds', () => {
     const uploaded = page.waitForResponse('**/api/mds/metadata/upload');
     await dialog.locator('input[type="file"]').setInputFiles(UPLOAD);
     await expect(dialog.getByText('Metadata uploaded successfully.')).toBeVisible();
-    // The answer carries the session's own entries, which the page merges with its list.
-    const { custom } = await (await uploaded).json();
-    expect(custom.entries.map((entry: { name: string }) => entry.name)).toEqual(['Fixture Uploaded Authenticator']);
-    expect(custom.meta).toMatchObject({ customEntryCount: 1, hasCustomEntries: true });
+    // The answer carries the session's own entries alone, which the page merges with its list.
+    const answer = await (await uploaded).json();
+    expect(Object.keys(answer).sort()).toEqual(['custom', 'items']);
+    expect(answer.custom.entries.map((entry: { name: string }) => entry.name)).toEqual(['Fixture Uploaded Authenticator']);
+    expect(answer.custom.meta).toMatchObject({ customEntryCount: 1, hasCustomEntries: true });
     await expect(rows(page)).toHaveCount(33);
     await expect(section(page).getByRole('link', { name: 'Fixture Uploaded Authenticator' })).toBeAttached();
     await expect(section(page).locator('[role="status"][data-variant]')).toHaveText(/Including 1 session metadata entry\. Custom metadata updated\.$/);

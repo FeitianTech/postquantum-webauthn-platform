@@ -95,13 +95,11 @@ def test_an_uploaded_statement_joins_the_fixture(mds_fixture_snapshot, client):
         content_type="multipart/form-data",
     )
     assert answer.status_code == 200
-    snapshot = answer.get_json()["snapshot"]
-    assert snapshot["meta"]["customEntryCount"] == 1
-    assert snapshot["entries"][0]["name"] == "Fixture Uploaded Authenticator"
-    assert snapshot["entries"][0]["source"] == "session"
+    # The session's own rows, never the packaged list.
+    assert set(answer.get_json()) == {"items", "custom"}
     custom = answer.get_json()["custom"]
     assert custom["meta"] == {"entryCount": 33, "baseEntryCount": 32, "customEntryCount": 1, "hasCustomEntries": True}
-    assert [entry["name"] for entry in custom["entries"]] == ["Fixture Uploaded Authenticator"]
+    assert [(entry["name"], entry["source"]) for entry in custom["entries"]] == [("Fixture Uploaded Authenticator", "session")]
     assert client.get("/api/mds/metadata/explorer/custom").get_json() == custom
 
     listed = client.get("/api/mds/metadata/custom").get_json()["items"]
@@ -110,10 +108,12 @@ def test_an_uploaded_statement_joins_the_fixture(mds_fixture_snapshot, client):
     stored = listed[0]["source"]["storedFilename"]
     removed = client.delete(f"/api/mds/metadata/custom/{stored}")
     assert removed.status_code == 200
-    assert removed.get_json()["snapshot"]["meta"]["customEntryCount"] == 0
-    assert removed.get_json()["custom"] == {
-        "meta": {"entryCount": 32, "baseEntryCount": 32, "customEntryCount": 0, "hasCustomEntries": False},
-        "entries": [],
+    assert removed.get_json() == {
+        "deleted": True,
+        "custom": {
+            "meta": {"entryCount": 32, "baseEntryCount": 32, "customEntryCount": 0, "hasCustomEntries": False},
+            "entries": [],
+        },
     }
 
 
