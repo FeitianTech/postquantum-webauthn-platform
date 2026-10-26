@@ -180,6 +180,9 @@ def resolve_effective_metadata_entry(
         if aaguid_key:
             seen_aaguids.add(aaguid_key)
 
+    if entry_id:
+        return _packaged_detail_by_id(entry_id, seen_aaguids)
+
     # The entry as the BLOB has it, from the verified payload's JSON.
     raw_entries = mds_cache.load_verified_entries()
     if raw_entries is None:
@@ -197,6 +200,20 @@ def resolve_effective_metadata_entry(
             return _packaged_detail(payload, index, base_summary)
 
     return None
+
+
+def _packaged_detail_by_id(entry_id: str, hidden_aaguids: set[str]) -> dict[str, Any] | None:
+    """The packaged entry with ``entry_id`` as its detail file has it (``mds.explorer_files``,
+    whose ids are unique: ``…~2`` names an earlier entry of the same id), unless an upload
+    with its AAGUID hides it."""
+
+    files = mds_cache.load_explorer_files()
+    detail = files.details.get(entry_id) if files is not None else None
+    if detail is None:
+        return None
+    entry = json.loads(detail)
+    aaguid_key = normalise_aaguid_key(entry.get("aaguid"))
+    return None if aaguid_key and aaguid_key in hidden_aaguids else entry
 
 
 def _packaged_detail(payload: Mapping[str, Any], index: int, base_summary: Mapping[str, Any]) -> dict[str, Any]:

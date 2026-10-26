@@ -5,6 +5,7 @@ from __future__ import annotations
 import base64
 import gzip
 import json
+import logging
 from urllib.parse import unquote
 
 import pytest
@@ -143,6 +144,33 @@ def test_rows_that_are_not_entries_are_passed_over(full_snapshot):
     assert [row["name"] for row in _list(files)["entries"]] == ["No id"]
     assert "detailUrl" not in _list(files)["entries"][0]
     assert files.details == {}
+
+
+def test_entries_with_one_id_each_get_an_id_and_a_detail_of_their_own(full_snapshot, caplog):
+    first, second, third, other = (dict(entry) for entry in full_snapshot["entries"][:4])
+    for entry, name in ((first, "First"), (second, "Second"), (third, "Third")):
+        entry.update(entryId=first["entryId"], name=name)
+    u2f = next(entry for entry in full_snapshot["entries"] if entry["entryId"].startswith("akid:"))
+    snapshot = {**full_snapshot, "entries": [first, dict(u2f, name="Earlier U2F"), second, other, third, u2f]}
+
+    with caplog.at_level(logging.WARNING, logger="server.app.mds.explorer_files"):
+        files = explorer_files.build_explorer_files(snapshot)
+
+    rows = _list(files)["entries"]
+    plain, akid = first["entryId"], u2f["entryId"]
+    # The last keeps the plain id, as fido2 finds the last of them; the earlier ones count back.
+    assert [row["entryId"] for row in rows] == [f"{plain}~3", f"{akid}~2", f"{plain}~2", other["entryId"], plain, akid]
+    for row in rows:
+        detail = json.loads(files.details[row["entryId"]])
+        assert (detail["entryId"], detail["name"]) == (row["entryId"], row["name"])
+        assert unquote(row["detailUrl"].split("/entries/", 1)[1].split("?", 1)[0]) == row["entryId"]
+    assert len(files.details) == 6
+    # Read from the last entry back.
+    assert [record.getMessage() for record in caplog.records] == [
+        f"MDS entries share the id {plain}: an earlier one is listed as {plain}~2.",
+        f"MDS entries share the id {akid}: an earlier one is listed as {akid}~2.",
+        f"MDS entries share the id {plain}: an earlier one is listed as {plain}~3.",
+    ]
 
 
 def test_the_cache_derives_them_once_for_each_snapshot(mds_fixture_snapshot):

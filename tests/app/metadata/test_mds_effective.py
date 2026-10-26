@@ -6,12 +6,15 @@ an AAGUID wins, and a lookup finds the visitor's entry before the packaged one.
 
 from __future__ import annotations
 
+import json
+
 import pytest
 from fido2.mds3 import MetadataBlobPayloadEntry
 
 from server.app import visitor_session
 from server.app.mds import cache as mds_cache
 from server.app.mds import effective as mds_effective
+from server.app.mds import files as mds_files
 from server.app.mds import uploads as mds_uploads
 from server.app.storage import session_metadata
 from tests.app.metadata.upload_entries import _entry_payload
@@ -94,6 +97,30 @@ def test_a_packaged_entry_is_found_by_its_aaguid_or_aaid_past_the_one_an_upload_
     _upload("No AAGUID")
 
     assert mds_effective.resolve_effective_metadata_entry(**lookup)["source"] == source
+
+
+def _with_an_earlier_copy_of_the_packaged_entry(directory):
+    # A BLOB with two statements of one AAGUID: the list gives the earlier one an id of its own.
+    path = directory / mds_files.EXPLORER_FULL
+    full = json.loads(path.read_text(encoding="utf-8"))
+    original = next(entry for entry in full["entries"] if entry["entryId"] == f"aaguid:{PACKAGED}")
+    full["entries"].insert(0, {**original, "name": "Earlier statement"})
+    path.write_text(json.dumps(full), encoding="utf-8")
+
+
+def test_a_packaged_entry_sharing_its_id_is_resolved_by_its_own(visitor, mds_fixture_snapshot):
+    _with_an_earlier_copy_of_the_packaged_entry(mds_fixture_snapshot)
+
+    assert mds_effective.resolve_effective_metadata_entry(entry_id=f"aaguid:{PACKAGED}~2")["name"] == "Earlier statement"
+    assert mds_effective.resolve_effective_metadata_entry(entry_id=f"aaguid:{PACKAGED}")["name"] == "Fixture Security Key L1"
+    assert mds_effective.resolve_effective_metadata_entry(entry_id=f"aaguid:{PACKAGED}~3") is None
+
+
+def test_a_packaged_entry_an_upload_hides_is_not_resolved_by_its_id(visitor, mds_fixture_snapshot):
+    _with_an_earlier_copy_of_the_packaged_entry(mds_fixture_snapshot)
+    _upload("Uploaded", PACKAGED)
+
+    assert mds_effective.resolve_effective_metadata_entry(entry_id=f"aaguid:{PACKAGED}~2") is None
 
 
 @pytest.mark.parametrize("lookup", [{"aaid": "missing"}, {"aaguid": "   "}, {}])

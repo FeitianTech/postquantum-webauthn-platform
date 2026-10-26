@@ -16,6 +16,7 @@ __all__ = [
     "build_explorer_entry",
     "build_explorer_snapshot",
     "build_snapshot_meta",
+    "unique_entry_id",
 ]
 
 _ENTRY_HASH_PREFIX = "entry:"
@@ -41,6 +42,24 @@ def build_entry_id(entry_payload: Mapping[str, Any]) -> str:
 
     digest = hashlib.sha256(statement_fields.canonical_json(entry_payload).encode("utf-8")).hexdigest()
     return f"{_ENTRY_HASH_PREFIX}{digest[:24]}"
+
+
+def unique_entry_id(entry_id: str, taken: dict[str, int]) -> str:
+    """``entry_id``, or, when ``taken`` holds it, ``<entry_id>~2``, ``~3``…: the first
+    ``taken`` does not hold. ``taken`` maps each id given out to the next suffix to try
+    after it, so a run of equal ids costs one step each. ``~`` is unreserved: the id
+    stays as it is in a URL's path, its query and its hash."""
+
+    if entry_id not in taken:
+        taken[entry_id] = 2
+        return entry_id
+    number = taken[entry_id]
+    while f"{entry_id}~{number}" in taken:
+        number += 1
+    taken[entry_id] = number + 1
+    unique = f"{entry_id}~{number}"
+    taken[unique] = 2
+    return unique
 
 
 def build_snapshot_meta(

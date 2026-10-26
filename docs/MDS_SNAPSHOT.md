@@ -59,7 +59,9 @@ seven files are exactly what they were:
   `/api/mds/metadata/resolve`). Immutable at the version its URL names, where the
   version is the snapshot's (`explorer_files.snapshot_version`: its serial and a digest
   of its ETag and generation time) and `DERIVED_FORMAT`, which changes with what the
-  code derives.
+  code derives. Each entry has an id of its own: of entries sharing one (two statements
+  of one AAGUID or key identifier) the last keeps it, as fido2 finds the last of them,
+  and the earlier ones are listed as `<id>~2`, `~3`… counting back.
 
 The page is given the list's URL as `snapshotUrl` only while the full file is there and
 its meta matches the verified snapshot; otherwise it asks the explorer API, which

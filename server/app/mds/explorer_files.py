@@ -15,12 +15,16 @@ from __future__ import annotations
 import gzip
 import hashlib
 import json
+import logging
 from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
 from urllib.parse import quote
 
 from .. import encoding
+from .build import unique_entry_id
+
+logger = logging.getLogger(__name__)
 
 # What this module derives changes with the code, not only with the snapshot:
 # the version the files are served under names both, so a page never reads an
@@ -137,6 +141,24 @@ def icon_file(icon: Any) -> tuple[str, Icon] | None:
     return f"{hashlib.sha256(data).hexdigest()[:32]}.{extension}", Icon(data, mimetype)
 
 
+def _unique_ids(entries: list[Mapping[str, Any]]) -> list[str]:
+    """Each entry's id, each one once: of entries with one id the last keeps it (fido2
+    finds the last of them, and a saved credential opens ``#mds/<id>``), the ones before
+    it ``<id>~2``, ``~3``… counting back; '' for an entry without an id."""
+
+    taken: dict[str, int] = {}
+    ids: list[str] = []
+    for entry in reversed(entries):
+        entry_id = str(entry.get("entryId") or "")
+        if entry_id:
+            unique = unique_entry_id(entry_id, taken)
+            if unique != entry_id:
+                logger.warning("MDS entries share the id %s: an earlier one is listed as %s.", entry_id, unique)
+            entry_id = unique
+        ids.append(entry_id)
+    return ids[::-1]
+
+
 def build_explorer_files(snapshot: Mapping[str, Any]) -> ExplorerFiles | None:
     """The browsers' files of an explorer's full snapshot, or None without one."""
 
@@ -148,9 +170,8 @@ def build_explorer_files(snapshot: Mapping[str, Any]) -> ExplorerFiles | None:
     icons: dict[str, Icon] = {}
     details: dict[str, bytes] = {}
     rows: list[dict[str, Any]] = []
-    for entry in snapshot.get("entries") or []:
-        if not isinstance(entry, Mapping):
-            continue
+    entries = [entry for entry in snapshot.get("entries") or [] if isinstance(entry, Mapping)]
+    for entry, entry_id in zip(entries, _unique_ids(entries), strict=True):
         row = {key: value for key, value in entry.items() if key not in LIST_LEAVES_OUT}
         row["isLightweightEntry"] = True
         file = icon_file(entry.get("icon"))
@@ -158,9 +179,9 @@ def build_explorer_files(snapshot: Mapping[str, Any]) -> ExplorerFiles | None:
             name, image = file
             icons[name] = image
             row["icon"] = icon_url(name)
-        entry_id = str(entry.get("entryId") or "")
         if entry_id:
-            details[entry_id] = _json({**entry, "icon": row.get("icon")})
+            row["entryId"] = entry_id
+            details[entry_id] = _json({**entry, "entryId": entry_id, "icon": row.get("icon")})
             row["detailUrl"] = detail_url(entry_id, version)
         rows.append(row)
     listed = {"meta": dict(meta or {}), "entries": rows}

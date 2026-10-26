@@ -21,3 +21,14 @@ def test_snapshot_builders_keep_entry_ids_metadata_and_readable_entries(monkeypa
     assert explorer['entries'][0]['metadataStatement']['description'] == 'Name'
     bootstrap = m.build_bootstrap_snapshot({'entries': []}, {'generated_at': '2026-01-01T00:00:00+00:00'})
     assert bootstrap['meta']['entryCount'] == 0
+
+
+def test_an_id_already_given_out_gets_the_next_suffix_free():
+    taken = {}
+
+    assert [m.unique_entry_id("aaid:F1D0#0012", taken) for _ in range(3)] == ["aaid:F1D0#0012", "aaid:F1D0#0012~2", "aaid:F1D0#0012~3"]
+    # An id that is itself spelled with a suffix takes that spelling, and the next suffix skips it.
+    assert m.unique_entry_id("akid:ab~2", taken) == "akid:ab~2"
+    assert m.unique_entry_id("akid:ab", taken) == "akid:ab"
+    assert m.unique_entry_id("akid:ab", taken) == "akid:ab~3"
+    assert m.unique_entry_id("akid:ab~2", taken) == "akid:ab~2~2"
