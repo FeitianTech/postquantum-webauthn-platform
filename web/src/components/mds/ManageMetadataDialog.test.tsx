@@ -21,9 +21,8 @@ const WITH_UPLOAD = {
   entries: [UPLOADED],
 };
 const ITEM = {
-  entry: {},
   source: { storedFilename: '0f1e.json', originalFilename: 'custom-metadata.json', uploadedAt: '2026-09-26T10:00:00+00:00' },
-  legalHeader: 'Fixture.',
+  hasLegalHeader: true,
 };
 
 type Routes = Parameters<typeof fixtureRoutes>[0];

@@ -220,7 +220,7 @@ describe('Manage Trusted Metadata: the list', () => {
     expect(
       describeCustomMetadataItem({
         source: { originalFilename: ' statement.json ', storedFilename: 'f00d.json', uploadedAt },
-        legalHeader: 'Terms.',
+        hasLegalHeader: true,
       }),
     ).toEqual({
       name: 'statement.json',
@@ -231,7 +231,7 @@ describe('Manage Trusted Metadata: the list', () => {
   });
 
   it('falls back to the stored name, then metadata.json, and leaves out what is unknown', () => {
-    expect(describeCustomMetadataItem({ source: { storedFilename: 'f00d.json', uploadedAt: 'someday' } })).toEqual({
+    expect(describeCustomMetadataItem({ source: { storedFilename: 'f00d.json', uploadedAt: 'someday' }, hasLegalHeader: false })).toEqual({
       name: 'f00d.json',
       storedFilename: 'f00d.json',
       deleteLabel: 'Delete f00d.json',

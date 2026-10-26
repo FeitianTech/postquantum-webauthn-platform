@@ -52,9 +52,11 @@ def _upload(client, **kwargs):
     )
 
 
-def _seed_victim(app, mds_uploads, namespace: str) -> None:
+def _seed_victim(app, mds_uploads, namespace: str) -> str:
+    """Upload a statement into ``namespace``: the name it is stored under."""
+
     with app.test_request_context("/", headers=visitor_namespace.header(app, namespace)):
-        mds_uploads.save_session_metadata_item(minimal_entry("victim secret entry"))
+        return mds_uploads.save_session_metadata_item(minimal_entry("victim secret entry")).filename
 
 
 def _custom_items(app, cookie_value=None):
@@ -156,15 +158,12 @@ def test_malformed_cookies_never_raise_and_never_bind(session_env, value):
 
 def test_returning_visitor_keeps_their_namespace_via_the_signed_cookie(session_env):
     app = session_env
-    _seed_victim(app, mds_uploads, "victim-namespace")
+    stored = _seed_victim(app, mds_uploads, "victim-namespace")
 
     # A brand-new client (no Flask session cookie at all) carrying only the
     # signed recovery cookie must land back in its own namespace.
     items = _custom_items(app, visitor_namespace.sealed(app, "victim-namespace"))
-    assert len(items) == 1
-    assert items[0]["entry"]["metadataStatement"]["description"] == (
-        "victim secret entry"
-    )
+    assert [item["source"]["storedFilename"] for item in items] == [stored]
 
 
 def test_only_the_signed_cookie_names_the_namespace_never_the_flask_session(session_env):

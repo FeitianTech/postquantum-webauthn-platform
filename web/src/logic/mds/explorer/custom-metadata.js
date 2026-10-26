@@ -252,7 +252,7 @@ export function describeCustomMetadataItem(item) {
             details.push(`Uploaded ${parsed.toLocaleString()}`);
         }
     }
-    if (item?.legalHeader) {
+    if (item?.hasLegalHeader) {
         details.push('Includes legal header');
     }
 

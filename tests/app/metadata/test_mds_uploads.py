@@ -178,9 +178,20 @@ def test_an_upload_without_its_times_is_shown_with_its_name_only():
     )
 
     assert mds_uploads.serialize_session_metadata_item(item) == {
-        "entry": {"metadataStatement": {}},
         "source": {"storedFilename": "stored.json"},
-        "legalHeader": "Legal",
+        "hasLegalHeader": True,
+    }
+
+
+def test_an_upload_is_listed_by_its_names_and_time_alone_never_with_its_statement():
+    item = mds_uploads.SessionMetadataItem(
+        filename="stored.json", payload={"metadataStatement": {"description": "x" * 10_000}}, legal_header=None,
+        entry=None, uploaded_at="2026-10-25T10:00:00+00:00", original_filename="demo.json", mtime=1.0,
+    )
+
+    assert mds_uploads.serialize_session_metadata_item(item) == {
+        "source": {"storedFilename": "stored.json", "originalFilename": "demo.json", "uploadedAt": "2026-10-25T10:00:00+00:00"},
+        "hasLegalHeader": False,
     }
 
 

@@ -352,6 +352,10 @@ def delete_session_metadata_item(
 
 
 def serialize_session_metadata_item(item: SessionMetadataItem) -> dict[str, Any]:
+    """An upload as Manage Metadata lists it, and no more: the name it is stored under
+    (which a delete names), the name it was uploaded as and when, and whether it holds
+    a legal header; the explorer shows its entry (``mds.effective``)."""
+
     source: dict[str, Any] = {
         "storedFilename": item.filename,
     }
@@ -359,14 +363,5 @@ def serialize_session_metadata_item(item: SessionMetadataItem) -> dict[str, Any]
         source["originalFilename"] = item.original_filename
     if item.uploaded_at:
         source["uploadedAt"] = item.uploaded_at
-    if item.mtime is not None:
-        source["modifiedAt"] = datetime.fromtimestamp(item.mtime, timezone.utc).isoformat()
 
-    payload: dict[str, Any] = {
-        "entry": item.payload,
-        "source": source,
-    }
-    if item.legal_header:
-        payload["legalHeader"] = item.legal_header
-
-    return payload
+    return {"source": source, "hasLegalHeader": bool(item.legal_header)}
