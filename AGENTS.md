@@ -213,6 +213,10 @@ its logic out here first.
 - `shared/registration-findings.js`: where a registration's attestation findings are in the
   server's answer (`answerFindings`: `attestationErrors` and `warnings`, a refused Simple
   registration's body too), each a code or a code and its reason after `: `.
+- `shared/attestation-findings.js`: the one table of the findings' sentences, code to English
+  and 中文 (`FINDING_SENTENCES`, its codes held to `tests/fixtures/attestation-finding-codes.json`),
+  and a finding in words (`describeFindings`): its reason after the sentence, a code the table
+  does not know as sent. Only the findings list's chunk imports it.
 - `shared/aaguid.js`: an AAGUID's two readings: `aaguidHex` (any spelling a record or the
   server holds, as hex) and `aaguidGuid` (the dashed GUID, as the server's
   `format_guid_candidate` builds an MDS entry's id).
