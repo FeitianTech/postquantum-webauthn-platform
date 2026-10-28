@@ -50,23 +50,36 @@ export function followStoredCredentialChanges(onChange) {
     return () => window.removeEventListener('storage', listener);
 }
 
+// The browser's storage, or null: there is none where the page is rendered at
+// build time (no window), and reading it throws where the person blocked this
+// site's data.
+function browserStorage() {
+    try {
+        return typeof window === 'undefined' ? null : window.localStorage;
+    } catch (error) {
+        return null;
+    }
+}
+
 export function readStoredCredentials(storageKey) {
-    if (typeof window === 'undefined' || !window.localStorage) {
+    const storage = browserStorage();
+    if (!storage) {
         return [];
     }
     try {
-        return safeParse(window.localStorage.getItem(storageKey));
+        return safeParse(storage.getItem(storageKey));
     } catch (error) {
         return [];
     }
 }
 
 export function persistStoredCredentials(storageKey, records) {
-    if (typeof window === 'undefined' || !window.localStorage) {
+    const storage = browserStorage();
+    if (!storage) {
         return false;
     }
     try {
-        window.localStorage.setItem(storageKey, JSON.stringify(records));
+        storage.setItem(storageKey, JSON.stringify(records));
         return true;
     } catch (error) {
         return false;
@@ -134,14 +147,16 @@ export function persistUnifiedCredentialRecords(records) {
     if (success) {
         seedUnifiedCredentialRecords(payload);
     }
-    if (success && typeof window !== 'undefined' && window.localStorage) {
+    // A write that succeeded had the storage.
+    const storage = success ? browserStorage() : null;
+    if (storage) {
         try {
-            window.localStorage.removeItem(LEGACY_SIMPLE_STORAGE_KEY);
+            storage.removeItem(LEGACY_SIMPLE_STORAGE_KEY);
         } catch (error) {
             // Ignore removal errors.
         }
         try {
-            window.localStorage.removeItem(LEGACY_ADVANCED_STORAGE_KEY);
+            storage.removeItem(LEGACY_ADVANCED_STORAGE_KEY);
         } catch (error) {
             // Ignore removal errors.
         }

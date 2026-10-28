@@ -62,6 +62,30 @@ describe('the saved credentials', () => {
     expect(document.querySelector('[data-count]')).toHaveTextContent('0');
   });
 
+  it('says there is none when the browser blocks its storage, instead of failing', async () => {
+    keepRecords([ES256]);
+    const storage = Object.getOwnPropertyDescriptor(window, 'localStorage')!;
+    Object.defineProperty(window, 'localStorage', {
+      configurable: true,
+      get() {
+        throw new DOMException('The operation is insecure.', 'SecurityError');
+      },
+    });
+    try {
+      stubFetch(warmUpRoutes());
+      renderPage(
+        <ToastProvider>
+          <SavedCredentialsProvider>
+            <SavedCredentials onOpen={vi.fn()} />
+          </SavedCredentialsProvider>
+        </ToastProvider>,
+      );
+      expect(await screen.findByText('No credentials registered yet.')).toBeVisible();
+    } finally {
+      Object.defineProperty(window, 'localStorage', storage);
+    }
+  });
+
   it('lists every credential, simple and advanced, in the order stored, and how many', async () => {
     renderList([ES256, ADVANCED, MLDSA]);
     await waitFor(() => expect(rows()).toHaveLength(3));

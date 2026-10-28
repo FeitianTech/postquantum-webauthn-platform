@@ -106,6 +106,28 @@ describe('saving the saved credentials', () => {
   });
 });
 
+describe('a storage the browser refuses', () => {
+  // Reading window.localStorage throws where the person blocked this site's data.
+  beforeEach(() => {
+    Object.defineProperty(window, 'localStorage', {
+      configurable: true,
+      get() {
+        throw new DOMException('The operation is insecure.', 'SecurityError');
+      },
+    });
+  });
+
+  it('reads as no saved credentials', () => {
+    expect(readStoredCredentials(SHARED)).toEqual([]);
+    expect(readUnifiedCredentialRecords()).toEqual([]);
+  });
+
+  it('refuses every write', () => {
+    expect(persistStoredCredentials(SHARED, [simple])).toBe(false);
+    expect(persistUnifiedCredentialRecords([simple])).toBe(false);
+  });
+});
+
 describe('without a window', () => {
   // The new UI's pages are rendered once at build time, in Node, where there is
   // no browser storage: nothing is read or written.

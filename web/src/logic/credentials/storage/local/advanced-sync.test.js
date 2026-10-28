@@ -375,13 +375,24 @@ describe("stored credentials: artifacts", () => {
     expect(stored.relyingParty.displayName).toBe('RP Display');
   });
 
-  it("changes nothing when the snapshots cannot be fetched", async () => {
+  it("asks nothing for a saved credential the server keeps no artifact of", async () => {
     saveAdvancedCredential({
           credentialId: 'shared-counter',
           publicKey: 'cHVibGlj',
           storageId: 'shared-counter::storage',
         });
+    await expect(ensureAdvancedCredentialSnapshotsPrefetched()).resolves.toBe(false);
+    expect(fetchCredentialArtifactsBulk).not.toHaveBeenCalled();
+  });
+
+  it("changes nothing when the snapshots cannot be fetched", async () => {
+    seedUnifiedCredentialRecords(null);
+    localStorage.setItem(SHARED_STORAGE_KEY, JSON.stringify([
+          { type: 'advanced', credentialId: 'unfetched', storageId: 'unfetched::storage', hasServerArtifact: true },
+        ]));
     fetchCredentialArtifactsBulk.mockRejectedValueOnce(new Error('prefetch failed'));
     await expect(ensureAdvancedCredentialSnapshotsPrefetched()).resolves.toBe(false);
+    expect(fetchCredentialArtifactsBulk).toHaveBeenCalledWith(['unfetched::storage']);
+    expect(JSON.parse(localStorage.getItem(SHARED_STORAGE_KEY))[0].registrationDetailSnapshot).toBeUndefined();
   });
 });
