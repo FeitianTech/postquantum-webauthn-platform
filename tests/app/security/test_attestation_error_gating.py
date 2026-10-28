@@ -166,7 +166,7 @@ def test_with_metadata_a_self_attestation_registers_with_no_root_as_a_warning(si
     assert response.status_code == 200, response.get_json()
     checks = response.get_json()["relyingParty"]["registrationData"]["attestationChecks"]
     assert checks["errors"] == []
-    assert checks["warnings"] == ["trust_path_missing", "No root found for Authenticator", "metadata_entry_missing"]
+    assert checks["warnings"] == ["trust_path_missing", "attestation_root_not_found", "metadata_entry_missing"]
     assert checks["root_valid"] is None
 
 

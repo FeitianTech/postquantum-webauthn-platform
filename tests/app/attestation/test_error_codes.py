@@ -69,7 +69,7 @@ def test_the_simple_tab_refuses_on_these_errors_alone():
         "certificate_chain_unreadable: error parsing asn1 value",
         "certificate_parse_error: error parsing asn1 value",
         "certificate_out_of_validity: CN=Leaf",
-        "No root found for Authenticator",
+        "attestation_root_not_found",
         "metadata_lookup_failed: metadata unreachable",
         "metadata_entry_missing",
         "metadata_not_fido_trusted",
@@ -83,7 +83,7 @@ def test_what_an_attestation_proves_about_the_authenticator_is_no_integrity_erro
 
 def test_a_finding_with_a_reason_has_the_code_before_it():
     assert error_codes.error_code("cose_key_error: 3") == "cose_key_error"
-    assert error_codes.error_code("No root found for Authenticator") == "No root found for Authenticator"
+    assert error_codes.error_code("attestation_root_not_found") == "attestation_root_not_found"
 
 
 def test_integrity_errors_stay_errors_and_the_others_follow_the_warnings_in_order():

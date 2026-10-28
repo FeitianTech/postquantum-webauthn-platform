@@ -75,7 +75,7 @@ def test_an_authenticator_without_an_aaguid_is_found_by_key_identifier():
 def test_an_authenticator_the_metadata_does_not_list_has_no_root():
     outcome = _evaluate("x5c-unlisted")
 
-    assert outcome.trust_path.errors == ["No root found for Authenticator"]
+    assert outcome.trust_path.errors == ["attestation_root_not_found"]
     assert outcome.metadata_entry is None
     assert outcome.metadata_lookup_source is None
 
@@ -84,7 +84,7 @@ def test_a_trust_path_issued_by_a_root_the_entry_does_not_list_has_no_root():
     # Issued by the characterization CA, whose name no root of the entry has.
     outcome = _evaluate("x5c-listed-ed25519-ca")
 
-    assert outcome.trust_path.errors == ["No root found for Authenticator"]
+    assert outcome.trust_path.errors == ["attestation_root_not_found"]
     assert outcome.metadata_entry is None
     assert outcome.metadata_lookup_source == "aaguid"
 
@@ -154,7 +154,7 @@ def test_a_compromised_attestation_key_gets_no_root():
 
     outcome = _evaluate("x5c-listed", verifier)
 
-    assert outcome.trust_path.errors == ["No root found for Authenticator"]
+    assert outcome.trust_path.errors == ["attestation_root_not_found"]
     assert outcome.metadata_entry is None
     assert outcome.metadata_lookup_source == "aaguid"
 
@@ -164,7 +164,7 @@ def test_a_self_attestation_gets_no_root_even_when_its_aaguid_is_listed():
 
     outcome = _evaluate("self-listed")
 
-    assert outcome.trust_path.errors == ["No root found for Authenticator"]
+    assert outcome.trust_path.errors == ["attestation_root_not_found"]
     assert outcome.trust_path.ca_certificate is None
     assert outcome.trust_path.chain_valid is False
     assert outcome.metadata_entry is None

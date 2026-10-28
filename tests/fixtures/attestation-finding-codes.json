@@ -1,0 +1,33 @@
+{
+  "about": "Every code the attestation checks report (server/app/webauthn/attestation). A finding is one of these, or one and its reason after \": \". The server's tests hold the codes the checks write to this list (tests/app/tooling/test_attestation_finding_codes.py), and the page's tests hold its table of sentences to it (web/src/logic/shared/attestation-findings.js): a sentence for each code, none for another.",
+  "codes": [
+    "algorithm_not_allowed",
+    "algorithm_not_in_metadata",
+    "attestation_error",
+    "attestation_invalid",
+    "attestation_root_not_found",
+    "attestation_root_not_trusted",
+    "attestation_signature_invalid",
+    "attested_credential_data_missing",
+    "certificate_chain_invalid",
+    "certificate_chain_unreadable",
+    "certificate_out_of_validity",
+    "certificate_parse_error",
+    "challenge_mismatch",
+    "client_data_type_invalid",
+    "cose_key_error",
+    "cross_origin_not_allowed",
+    "metadata_entry_missing",
+    "metadata_lookup_failed",
+    "metadata_not_available",
+    "metadata_not_fido_trusted",
+    "origin_mismatch",
+    "registration_parse_error",
+    "registration_response_invalid",
+    "rp_id_hash_mismatch",
+    "trust_path_missing",
+    "unsupported_attestation",
+    "user_presence_missing",
+    "user_verification_required_not_satisfied"
+  ]
+}

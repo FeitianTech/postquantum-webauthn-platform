@@ -92,7 +92,7 @@
   },
   "errors": [
    "trust_path_missing",
-   "No root found for Authenticator",
+   "attestation_root_not_found",
    "metadata_entry_missing"
   ],
   "warnings": [],
@@ -249,7 +249,7 @@
    "verification_data": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAMD_7gDA_-4AwP_uAMD_7gAAIFe7B3S249tt86MTnSoI7n_hOaR60rVNauxUAtnOTbOspQECAyYgASFYIHFImSUu18Zf05W4dHSKxKdRFqiEruiu3SxkrTcE79E3IlggeH3t6Sv-JJH14a0gvermjvbV4Oamh95pY2wf4Jm7cUg-NsGWwNxeVICP5_YT78BYgHzkSNduvIQKpt0XQqMneg"
   },
   "errors": [
-   "No root found for Authenticator",
+   "attestation_root_not_found",
    "metadata_entry_missing"
   ],
   "warnings": [],
@@ -357,7 +357,7 @@
    "verification_data": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAABMTExMTExMTExMTExMTExMAIPhhzMfWnCQ107lg-8rXwtkkb-S3OJydTn2mYAXAjRv_pQECAyYgASFYIF8Z0-W1U8ED1NQB6CUbZGeC_kDTYO_64dmnKDZgeMOAIlgg2qrHNoSkqFOIfZ4RN-YmVK1IZJyfhgLFNSfEKEmouAo-NsGWwNxeVICP5_YT78BYgHzkSNduvIQKpt0XQqMneg"
   },
   "errors": [
-   "No root found for Authenticator",
+   "attestation_root_not_found",
    "metadata_entry_missing"
   ],
   "warnings": [],
@@ -464,7 +464,7 @@
   },
   "errors": [
    "trust_path_missing",
-   "No root found for Authenticator",
+   "attestation_root_not_found",
    "metadata_entry_missing"
   ],
   "warnings": [],
@@ -520,7 +520,7 @@
   },
   "errors": [
    "trust_path_missing",
-   "No root found for Authenticator",
+   "attestation_root_not_found",
    "metadata_entry_missing"
   ],
   "warnings": [],

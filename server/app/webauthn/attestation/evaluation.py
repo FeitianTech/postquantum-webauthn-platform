@@ -129,7 +129,7 @@ def evaluate_attestation(
         return MdsEvaluation(TrustPathEvaluation(result, None, False, errors), None, lookup.source)
 
     if not lookup.root:
-        errors.append("No root found for Authenticator")
+        errors.append("attestation_root_not_found")
         return MdsEvaluation(TrustPathEvaluation(result, None, False, errors), None, lookup.source)
 
     try:

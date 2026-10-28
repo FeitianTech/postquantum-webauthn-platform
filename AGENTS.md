@@ -326,11 +326,13 @@ its logic out here first.
   does not); `evaluation.py` checks an attestation against the MDS metadata step by step;
   a root is valid only once the chain verified to it (a date out of range fails the chain), and
   one from the visitor's own uploaded metadata is valid with the warning
-  `metadata_not_fido_trusted`; `error_codes.py`, the codes the checks report (a reason after
-  `: ` only when the exception has one, so none is empty) and `INTEGRITY_ERRORS`, the ones that
-  say the ceremony did not hold, on which alone the Simple tab refuses; `constants.py`'s
-  `UNREADABLE_EXTENSIONS`, what cryptography raises reading a loaded certificate's extensions,
-  caught wherever they are read, and the limits both x5c readers, `certificates.py` and
+  `metadata_not_fido_trusted`; `error_codes.py`, the codes the checks report (every finding a
+  code, `tests/fixtures/attestation-finding-codes.json` lists them for the page's sentences too;
+  a reason after `: ` only when the exception has one, so none is empty) and
+  `INTEGRITY_ERRORS`, the ones that say the ceremony did not hold, on which alone the Simple
+  tab refuses; `constants.py`'s `UNREADABLE_EXTENSIONS`, what cryptography raises reading a
+  loaded certificate's extensions, caught wherever they are read, and the limits both x5c
+  readers, `certificates.py` and
   `trust.py`, apply: a certificate of at most 64 KiB, a chain's first 10 entries; an x5c entry
   is read only from bytes, text or a certificate view, never with `bytes(value)`; a certificate's
   view is whole for the Codec and the MDS pages, and a registration keeps each value in one form,
@@ -416,6 +418,8 @@ Guards on the code and the checkout (`tests/app/tooling/`; each `ALLOWED` list m
 - `test_test_layout.py`: tests import first-party modules at the top, nothing writes
   `sys.modules`, no helper is defined twice, and (with the `tests/fixture_values.py` plugin) no
   fixture's value is or holds a module.
+- `test_attestation_finding_codes.py`: every finding the attestation checks write is a code, and
+  they are the codes `tests/fixtures/attestation-finding-codes.json` lists.
 - `test_commit_messages.py`: the commit message check.
 
 ## Linting
