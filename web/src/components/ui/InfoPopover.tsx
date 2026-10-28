@@ -13,6 +13,7 @@ import {
 import { cx } from '@/lib/cx';
 
 import { InfoIcon } from './icons';
+import { type Language, LanguageToggle } from './LanguageToggle';
 
 const HIDE_DELAY_MS = 200;
 const OPENED = 'info-popover-open';
@@ -125,7 +126,7 @@ type InfoPopoverProps = {
 // as today, and the popup keeps its English size while showing Chinese.
 export function InfoPopover({ label, en, zh }: InfoPopoverProps) {
   const id = useId();
-  const [language, setLanguage] = useState<'en' | 'zh'>('en');
+  const [language, setLanguage] = useState<Language>('en');
   const rootRef = useRef<HTMLSpanElement>(null);
   const popupRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -188,17 +189,7 @@ export function InfoPopover({ label, en, zh }: InfoPopoverProps) {
         <div lang="zh" hidden={language !== 'zh'}>
           {zh}
         </div>
-        <button
-          type="button"
-          onClick={toggleLanguage}
-          aria-label={language === 'en' ? 'ENG, show in Chinese' : '中, show in English'}
-          className={cx(
-            'absolute right-3 bottom-3 h-6 rounded-full border border-line-strong bg-surface px-2 text-caption font-semibold',
-            'text-ink-muted transition-colors hover:border-line-hover hover:text-ink',
-          )}
-        >
-          {language === 'en' ? 'ENG' : '中'}
-        </button>
+        <LanguageToggle language={language} onToggle={toggleLanguage} className="absolute right-3 bottom-3" />
       </div>
     </span>
   );
