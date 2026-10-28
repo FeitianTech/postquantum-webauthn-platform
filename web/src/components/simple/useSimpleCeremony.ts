@@ -11,13 +11,16 @@ import {
   authenticateSimplePasskey,
   ceremonyErrorText,
   keepSimpleCredential,
+  refusedRegistrationResult,
   registerSimplePasskey,
+  registeredResult,
   registeredText,
 } from '@/logic/simple/ceremony.js';
 
 // The Simple tab's two ceremonies, in the steps and words of simple/ceremony.js:
 // the username, what each step is doing, a success as a toast, a failure in place
-// until the next ceremony, and the result panel. The pressed button is busy and
+// until the next ceremony, and the result panel (a registration's attestation
+// findings, an authentication's counter). The pressed button is busy and
 // neither can be pressed again meanwhile. A registration keeps the server's record in this browser; an
 // authentication keeps the server's counter and tints the credential it used.
 export function useSimpleCeremony() {
@@ -71,12 +74,14 @@ export function useSimpleCeremony() {
     try {
       const answer = await registerSimplePasskey(username, { onProgress: setProgress });
       toast({ tone: 'success', message: registeredText(answer) });
+      setResult(registeredResult(answer));
       if (answer.storedCredential && typeof answer.storedCredential === 'object') {
         keepSimpleCredential(answer.storedCredential, username);
         saved.refresh();
       }
     } catch (error) {
       setFailure(ceremonyErrorText(error, 'registration'));
+      setResult(refusedRegistrationResult(error));
     } finally {
       end();
     }

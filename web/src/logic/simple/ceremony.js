@@ -11,6 +11,7 @@ import {
     requireNativeJson,
 } from '../shared/native-json.js';
 import { FailedResponseError, readFailedResponse } from '../shared/failed-response.js';
+import { answerFindings, hasFindings } from '../shared/registration-findings.js';
 import {
     getSimpleCredentialsForEmail,
     prepareCredentialsForServer,
@@ -55,6 +56,7 @@ export const SIMPLE_CEREMONY_TEXT = {
     noServerCredentials: 'No credentials found for this username. Please register first.',
     rejected: 'Authentication was rejected.',
     lastAuthentication: 'Last authentication',
+    lastRegistration: 'Last registration',
 };
 
 /**
@@ -64,6 +66,27 @@ export const SIMPLE_CEREMONY_TEXT = {
  */
 export function registeredText(answer) {
     return `Registration successful! Algorithm: ${answer?.algo || 'Unknown'}`;
+}
+
+/**
+ * What the result panel shows after a registration the server accepted: its
+ * attestation's findings, warnings all (an error would have refused it).
+ * @param {RegistrationAnswer} answer
+ * @returns {CeremonyResultInput}
+ */
+export function registeredResult(answer) {
+    return { title: SIMPLE_CEREMONY_TEXT.lastRegistration, findings: answerFindings(answer) };
+}
+
+/**
+ * What the result panel shows after a registration that failed: the errors the
+ * server refused it for, when it named any; else nothing.
+ * @param {unknown} error
+ * @returns {CeremonyResultInput | null}
+ */
+export function refusedRegistrationResult(error) {
+    const findings = answerFindings(error instanceof FailedResponseError ? error.failure.body : null);
+    return hasFindings(findings) ? { title: SIMPLE_CEREMONY_TEXT.lastRegistration, findings } : null;
 }
 
 const ERROR_NAME_TEXT = {

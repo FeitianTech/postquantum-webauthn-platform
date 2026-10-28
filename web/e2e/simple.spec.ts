@@ -206,6 +206,28 @@ test.describe('/#simple', () => {
     );
   });
 
+  test('lists the errors the server refused a registration for, in words, under the failure', async ({ page, watch }) => {
+    // The server's own answer to a registration made in a cross-origin frame
+    // (its characterization golden), served for this ceremony's completion.
+    watch.allow(/status of 400/);
+    const golden = JSON.parse(readFileSync(join(repo, 'tests', 'app', 'characterization', 'golden', 'routes', 'simple-register-failures.json'), 'utf8'));
+    const refused = golden.requests.find((entry: { body: object }) => 'attestationErrors' in entry.body).body;
+    await page.route('**/api/register/complete?*', (route) => route.fulfill({ status: 400, json: refused }));
+    await addVirtualAuthenticator(page);
+    await openPage(page);
+    await section(page).getByRole('textbox', { name: 'Username' }).fill(username());
+    await section(page).getByRole('button', { name: 'Register Passkey' }).click();
+
+    await expect(section(page).getByRole('alert')).toHaveText('Registration failed: Registration verification failed.');
+    const panel = section(page).locator('[data-ceremony-result]');
+    await expect(panel).toHaveAttribute('data-verdict', 'warning');
+    await expect(panel.locator('[data-finding="cross_origin_not_allowed"] [lang="en"]')).toHaveText(
+      'The credential was created in a cross-origin frame, which this server does not accept',
+    );
+    await expect(panel.locator('[data-finding="cross_origin_not_allowed"]')).toContainText('Error');
+    await expect(rows(page)).toHaveCount(0);
+  });
+
   test('clears every credential, and warns of the ones the server no longer held', async ({ page }) => {
     await openPage(page);
     await keep(page, [

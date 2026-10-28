@@ -132,6 +132,33 @@ describe('registering in the Simple tab', () => {
     expect(storedRecords()).toEqual([]);
   });
 
+  it('lists the attestation\'s findings in the result panel, in words', async () => {
+    const packed = answersOf('simple-register-packed-self');
+    renderTab({ '/api/register/begin': answer(packed[0]), '/api/register/complete': answer(packed[1]) });
+    await useUsername('alice');
+    await userEvent.click(button('Register Passkey'));
+
+    const result = document.querySelector<HTMLElement>('[data-ceremony-result]')!;
+    expect(await within(result).findByText('No FIDO metadata was available to check the authenticator against')).toBeVisible();
+    expect(within(result).getByText('The attestation carries no certificate chain (x5c), so no certificate vouches for its key')).toBeVisible();
+    expect(within(result).getByText('Last registration')).toBeVisible();
+    expect(result).not.toHaveAttribute('data-verdict');
+  });
+
+  it('lists the errors the server refused a registration for, under the failure', async () => {
+    const refused = answersOf('simple-register-failures').find(({ body }) => 'attestationErrors' in body)!;
+    renderTab({ '/api/register/begin': answer(REGISTER[0]), '/api/register/complete': answer(refused) });
+    await useUsername('alice');
+    await userEvent.click(button('Register Passkey'));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Registration failed: Registration verification failed.');
+    const result = document.querySelector<HTMLElement>('[data-ceremony-result]')!;
+    expect(
+      await within(result).findByText('The credential was created in a cross-origin frame, which this server does not accept'),
+    ).toBeVisible();
+    expect(result).toHaveAttribute('data-verdict', 'warning');
+  });
+
   it('says the authenticator\'s refusal by its name', async () => {
     authenticator.create.mockRejectedValueOnce(new DOMException('The operation either timed out or was not allowed.', 'NotAllowedError'));
     renderTab({ '/api/register/begin': answer(REGISTER[0]) });

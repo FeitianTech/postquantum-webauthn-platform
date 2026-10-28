@@ -9,7 +9,9 @@ import {
   authenticateSimplePasskey,
   ceremonyErrorText,
   keepSimpleCredential,
+  refusedRegistrationResult,
   registerSimplePasskey,
+  registeredResult,
   registeredText,
 } from './ceremony.js';
 import { answerResponse, goldenAnswers, installAuthenticator } from '@/test/logic/simple/ceremony-answers.js';
@@ -145,6 +147,29 @@ describe('registering a passkey', () => {
   it('names the algorithm the server chose, or says it is unknown', () => {
     expect(registeredText(REGISTER[1].body)).toBe('Registration successful! Algorithm: ES256 (ECDSA)');
     expect(registeredText({})).toBe('Registration successful! Algorithm: Unknown');
+  });
+
+  it('gives the result panel the attestation\'s findings, warnings all', () => {
+    const [, packed] = goldenAnswers('simple-register-packed-self');
+    expect(registeredResult(packed.body)).toEqual({
+      title: 'Last registration',
+      findings: { errors: [], warnings: ['metadata_not_available', 'trust_path_missing'] },
+    });
+    expect(registeredResult(REGISTER[1].body).findings).toEqual({ errors: [], warnings: [] });
+  });
+
+  it('gives the result panel the errors the server refused a registration for, and nothing for any other failure', async () => {
+    const refused = goldenAnswers('simple-register-failures').find(({ body }) => 'attestationErrors' in body);
+    answering(REGISTER[0], refused);
+    const error = await registerSimplePasskey('alice').catch((thrown) => thrown);
+
+    expect(error).toBeInstanceOf(FailedResponseError);
+    expect(refusedRegistrationResult(error)).toEqual({
+      title: 'Last registration',
+      findings: { errors: ['cross_origin_not_allowed'], warnings: [] },
+    });
+    expect(refusedRegistrationResult(new FailedResponseError({ text: 'No.', body: { error: 'No.' } }))).toBeNull();
+    expect(refusedRegistrationResult(new DOMException('The operation either timed out or was not allowed.', 'NotAllowedError'))).toBeNull();
   });
 });
 
