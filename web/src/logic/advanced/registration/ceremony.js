@@ -48,6 +48,8 @@ export const ADVANCED_CEREMONY_TEXT = {
     invalidHints: 'Invalid hint configuration.',
     findingErrors: 'Its attestation did not verify: see Verification findings.',
     findingWarnings: 'See Verification findings for its warnings.',
+    notKept: 'This browser could not keep the credential: its storage is full or blocked. The credential exists on the authenticator and on the server, but this browser will not list it.',
+    notKeptShort: 'This browser could not keep the credential.',
 };
 
 const COMMON_SUPPORTED_ALGORITHMS = new Set([-7, -257, -8]);
@@ -166,21 +168,29 @@ function textWarnings(json) {
         : [];
 }
 
+// What the toast adds of the attestation's findings: whether it verified, and where they are listed.
+function findingsNote(answer) {
+    const { errors, warnings } = answerFindings(answer);
+    if (errors.length) {
+        return [ADVANCED_CEREMONY_TEXT.findingErrors];
+    }
+    return warnings.length ? [ADVANCED_CEREMONY_TEXT.findingWarnings] : [];
+}
+
 /**
  * A registration's success message, and its tone: a warning, pointing to the
  * result panel's list, when its attestation has findings (an error means the
- * server could not verify it).
+ * server could not verify it), and when this browser could not keep the
+ * credential.
  * @param {RegistrationAnswer} answer
+ * @param {{ kept?: boolean }} [keeping]
  * @returns {{ text: string, tone: 'success' | 'warning' }}
  */
-export function advancedRegisteredMessage(answer) {
+export function advancedRegisteredMessage(answer, { kept = true } = {}) {
     const successMessage = `Advanced registration successful! Algorithm: ${answer.algo || 'Unknown'}`;
-    const { errors, warnings } = answerFindings(answer);
-    if (errors.length) {
-        return { text: `${successMessage}. ${ADVANCED_CEREMONY_TEXT.findingErrors}`, tone: 'warning' };
-    }
-    return warnings.length
-        ? { text: `${successMessage}. ${ADVANCED_CEREMONY_TEXT.findingWarnings}`, tone: 'warning' }
+    const notes = [...findingsNote(answer), ...(kept ? [] : [ADVANCED_CEREMONY_TEXT.notKeptShort])];
+    return notes.length
+        ? { text: `${successMessage}. ${notes.join(' ')}`, tone: 'warning' }
         : { text: successMessage, tone: 'success' };
 }
 

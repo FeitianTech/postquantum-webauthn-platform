@@ -176,7 +176,11 @@ its logic out here first.
   versions to today's format as they are read: when a stored format changes, add a step there
   with an old-format fixture in `src/test/logic/credentials/storage/`. A Simple username is
   `local/simple-credentials.js`'s `simpleUsername`: trimmed as the server trims it, then compared
-  exactly, so "Alice" and "alice" are two accounts, as on the server.
+  exactly, so "Alice" and "alice" are two accounts, as on the server. Each read and write takes
+  the storage inside its try: storage the browser blocks reads as none, and a write it refuses
+  (blocked or full) gives false (`persistStoredCredentials`; a save gives `null`). Both tabs'
+  registrations keep the record before they say anything, and say in place (the result panel's
+  "This browser" row) when the browser would not keep it.
 - `simple/ceremony.js`: the Simple tab's two ceremonies (requests, every step's sentence); a
   registration sends what the browser keeps of the username's passkeys, which begin excludes.
 - `advanced/`: the Advanced tab. `registration/` and `authentication/` each hold their

@@ -147,6 +147,31 @@ test.describe('/#advanced', () => {
     await expect(section(page).locator('[data-ceremony-result] [data-finding="metadata_entry_missing"]')).toBeVisible();
   });
 
+  test('says in place when this browser could not keep the credential, and opens nothing', async ({ page }) => {
+    // The browser refuses the saved credentials' write, as it does when its storage is full.
+    await page.addInitScript((key) => {
+      const setItem = Storage.prototype.setItem;
+      Storage.prototype.setItem = function (name: string, value: string) {
+        if (name === key) throw new DOMException('The quota has been exceeded.', 'QuotaExceededError');
+        return setItem.call(this, name, value);
+      };
+    }, STORAGE_KEY);
+    await addVirtualAuthenticator(page);
+    await openPage(page);
+    await section(page).getByRole('button', { name: 'Create Credential' }).click();
+
+    await expect(page.locator('[data-toast-viewport] [data-tone="warning"]')).toContainText(
+      'Its attestation did not verify: see Verification findings. This browser could not keep the credential.',
+    );
+    const panel = section(page).locator('[data-ceremony-result]');
+    await expect(panel.locator('[data-row="This browser"]')).toHaveText(
+      'This browser could not keep the credential: its storage is full or blocked. The credential exists on the authenticator and on the server, but this browser will not list it.',
+    );
+    await expect(panel.locator('[data-finding="metadata_entry_missing"]')).toBeVisible();
+    await expect(page).toHaveURL(/#advanced$/);
+    await expect(section(page).getByRole('button', { name: 'Saved Credentials 0' })).toBeVisible();
+  });
+
   test('lists the saved credentials in a drawer, and opens a credential\'s details over it', async ({ page }) => {
     await addVirtualAuthenticator(page);
     await openPage(page);

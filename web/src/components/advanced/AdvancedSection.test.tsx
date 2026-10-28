@@ -14,7 +14,7 @@ import { answerResponse, goldenAnswers, installAuthenticator } from '@/test/logi
 
 import { forgetCompletedRecords } from '@/components/credentials/detail/useCredentialDetail';
 import { renderApp } from '@/test/app';
-import { keepRecords, savedRecord, storedRecords, warmUpRoutes } from '@/test/credentials';
+import { STORAGE_KEY, keepRecords, savedRecord, storedRecords, warmUpRoutes } from '@/test/credentials';
 import { json, stubFetch } from '@/test/fetch';
 import { holdingTimers } from '@/test/timers';
 
@@ -196,6 +196,34 @@ describe('a registration', () => {
       expect(result).toHaveAttribute('data-verdict', 'warning');
       expect((screen.getByLabelText('User ID (hex)') as HTMLInputElement).value).not.toBe(userId);
     });
+  });
+
+  it('says in place, and in the toast\'s warning tone, that this browser could not keep the credential, and opens nothing', async () => {
+    authenticator = installAuthenticator(vi, { create: recordedCredential(NONE) });
+    const fetch = renderSection([], registrationRoutes(NONE));
+    await ready();
+    // The browser refuses the write: its storage is full.
+    const setItem = Storage.prototype.setItem;
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (this: Storage, key: string, value: string) {
+      if (key === STORAGE_KEY) throw new DOMException('The quota has been exceeded.', 'QuotaExceededError');
+      setItem.call(this, key, value);
+    });
+
+    await holdingTimers(async () => {
+      await act(async () => fireEvent.click(button('Create Credential')));
+
+      const toast = screen.getByText('Advanced registration successful! Algorithm: ES256 (ECDSA). This browser could not keep the credential.');
+      expect(toast.closest('[data-tone]')).toHaveAttribute('data-tone', 'warning');
+    });
+    const result = document.querySelector('#nav-panel-advanced [data-ceremony-result]')!;
+    expect(result).toHaveAttribute('data-verdict', 'warning');
+    expect(result.querySelector('[data-row="This browser"]')).toHaveTextContent(
+      'This browser could not keep the credential: its storage is full or blocked. The credential exists on the authenticator and on the server, but this browser will not list it.',
+    );
+    expect(result.querySelector('[data-row="Challenge"]')).toBeInTheDocument();
+    expect(storedRecords()).toEqual([]);
+    expect(window.location.hash).toBe('#advanced');
+    expect(fetch.mock.calls.filter(([url]) => String(url).endsWith('/snapshot'))).toEqual([]);
   });
 
   it('lists the attestation\'s findings in the result panel, in words', async () => {

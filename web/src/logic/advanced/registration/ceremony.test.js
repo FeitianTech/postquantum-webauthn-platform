@@ -190,6 +190,16 @@ describe('advancedRegisteredMessage', () => {
     expect(advancedRegisteredMessage(answer).text).toBe('Advanced registration successful! Algorithm: Unknown');
   });
 
+  it('says, as a warning, that this browser could not keep the credential, after what its attestation found', () => {
+    expect(advancedRegisteredMessage(NONE.complete.body, { kept: false })).toEqual({
+      text: 'Advanced registration successful! Algorithm: ES256 (ECDSA). This browser could not keep the credential.',
+      tone: 'warning',
+    });
+    expect(advancedRegisteredMessage(MLDSA.complete.body, { kept: false }).text).toBe(
+      'Advanced registration successful! Algorithm: ML-DSA-44 (PQC). Its attestation did not verify: see Verification findings. This browser could not keep the credential.',
+    );
+  });
+
   it('counts no finding that is not text or is blank, nor a list that is not a list', () => {
     const answer = { ...EVERYTHING.complete.body, warnings: ['  ', 7, null] };
     expect(advancedRegisteredMessage(answer).tone).toBe('success');

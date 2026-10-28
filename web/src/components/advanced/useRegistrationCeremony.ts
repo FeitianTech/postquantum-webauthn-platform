@@ -6,6 +6,7 @@ import { keepRegistrationSnapshot } from '@/logic/credentials/registration/snaps
 import { credentialKey } from '@/logic/credentials/saved-list.js';
 import type { CeremonyResultInput } from '@/logic/shared/ceremony-result.js';
 import {
+  ADVANCED_CEREMONY_TEXT,
   advancedRegisteredMessage,
   advancedRegistrationFailureText,
   registerAdvancedCredential,
@@ -18,9 +19,11 @@ import type { AdvancedRequest } from './useAdvancedRequest';
 // advanced/registration/ceremony.js: the editor's text is the request; progress in a
 // line, the server's warnings and the success as toasts, a failure in place until
 // the next ceremony, the result panel with where the challenge came from. The
-// record the server stored is kept in this browser with the registration as its
-// snapshot, then `openRegistration(key)` opens the credential's details at its
-// registration. Create Credential is busy meanwhile.
+// record the server stored is kept in this browser before anything is said, with
+// the registration as its snapshot, then `openRegistration(key)` opens the
+// credential's details at its registration; a record the browser refused (its
+// storage full or blocked) is said in the toast and in the panel, and there are
+// no details to open. Create Credential is busy meanwhile.
 export function useRegistrationCeremony(request: AdvancedRequest, openRegistration: (key: string) => void) {
   const toast = useToast();
   const saved = useSavedCredentials();
@@ -53,15 +56,19 @@ export function useRegistrationCeremony(request: AdvancedRequest, openRegistrati
         return;
       }
 
-      const message = advancedRegisteredMessage(outcome.answer);
-      toast({ tone: message.tone, message: message.text });
-      latest.current.request.redraw();
       const kept = outcome.record ? saveAdvancedCredential(outcome.record) : null;
-      await keepRegistrationSnapshot({
-        credentialJson: outcome.credentialJson,
-        relyingPartyInfo: outcome.answer.relyingParty ?? null,
-        storageId: kept?.storageId ?? null,
-      });
+      const refused = outcome.record !== null && kept === null;
+      const message = advancedRegisteredMessage(outcome.answer, { kept: !refused });
+      toast({ tone: message.tone, message: message.text });
+      if (refused) setResult((shown) => shown && { ...shown, notKept: ADVANCED_CEREMONY_TEXT.notKept });
+      latest.current.request.redraw();
+      if (kept) {
+        await keepRegistrationSnapshot({
+          credentialJson: outcome.credentialJson,
+          relyingPartyInfo: outcome.answer.relyingParty ?? null,
+          storageId: kept.storageId ?? null,
+        });
+      }
       saved.refresh();
       if (kept) latest.current.openRegistration(credentialKey(kept));
     } catch (error) {
