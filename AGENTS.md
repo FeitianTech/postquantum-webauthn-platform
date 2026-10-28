@@ -210,6 +210,9 @@ its logic out here first.
   `FailedResponseError`): the server's `error`, the codec's `offset` and `path`, what to do for
   a 400, 409, 413 or 503. Never show a raw response body.
 - `shared/ceremony-result.js`: the result panel's signature counter and challenge sentences.
+- `shared/registration-findings.js`: where a registration's attestation findings are in the
+  server's answer (`answerFindings`: `attestationErrors` and `warnings`, a refused Simple
+  registration's body too), each a code or a code and its reason after `: `.
 - `shared/aaguid.js`: an AAGUID's two readings: `aaguidHex` (any spelling a record or the
   server holds, as hex) and `aaguidGuid` (the dashed GUID, as the server's
   `format_guid_candidate` builds an MDS entry's id).
