@@ -93,6 +93,51 @@ test.describe('/#advanced', () => {
     expect(asked).toBe(false);
   });
 
+  test('lists the attestation\'s findings in words under the result, in English or 中文', async ({ page }) => {
+    await addVirtualAuthenticator(page);
+    await openPage(page);
+    await register(page);
+    await page.getByRole('dialog').getByRole('button', { name: 'Close credential details' }).click();
+
+    // The virtual authenticator's attestation names no root the fixture metadata knows.
+    const panel = section(page).locator('[data-ceremony-result]');
+    await expect(panel).toHaveAttribute('data-verdict', 'warning');
+    const findings = panel.locator('[data-findings]');
+    await expect(findings).toContainText('Verification findings');
+    await expect(findings.locator('[data-severity="error"]')).toHaveCount(2);
+    const root = findings.locator('[data-finding="attestation_root_not_found"]');
+    const entry = findings.locator('[data-finding="metadata_entry_missing"]');
+    await expect(root.locator('[lang="en"]')).toHaveText('The metadata names no root certificate that issued this attestation\'s chain');
+    await expect(entry.locator('[lang="en"]')).toHaveText('The metadata has no entry for this authenticator');
+    await expect(entry).toContainText('Error');
+
+    await findings.getByRole('button', { name: 'ENG, show in Chinese' }).click();
+    await expect(entry.locator('[lang="zh"]')).toBeVisible();
+    await expect(entry.locator('[lang="zh"]')).toHaveText('元数据中没有该认证器的条目');
+    await expect(entry.locator('[lang="en"]')).toBeHidden();
+  });
+
+  test('lists the findings after their chunk failed to load ahead', async ({ page, watch }) => {
+    // The network drops the findings' chunk while the page loads it ahead, and is
+    // back before a registration has findings to show.
+    watch.allow(/net::ERR_FAILED/);
+    let down = true;
+    let aborted = 0;
+    await page.route(/\/_next\/static\/chunks\/attestation-findings\.[^/]*\.js$/, async (route) => {
+      if (!down) return route.continue();
+      aborted += 1;
+      return route.abort();
+    });
+    await addVirtualAuthenticator(page);
+    await openPage(page);
+    await expect.poll(() => aborted).toBeGreaterThan(0);
+    down = false;
+
+    await register(page);
+    await page.getByRole('dialog').getByRole('button', { name: 'Close credential details' }).click();
+    await expect(section(page).locator('[data-ceremony-result] [data-finding="metadata_entry_missing"]')).toBeVisible();
+  });
+
   test('lists the saved credentials in a drawer, and opens a credential\'s details over it', async ({ page }) => {
     await addVirtualAuthenticator(page);
     await openPage(page);

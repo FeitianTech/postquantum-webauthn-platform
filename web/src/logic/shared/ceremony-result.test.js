@@ -19,6 +19,7 @@ describe('the signature counter', () => {
         text: 'Higher than the last counter the server saw for this credential, as it should be.',
         after: null,
       }],
+      findings: null,
       warning: false,
     });
   });
@@ -99,5 +100,34 @@ describe('the challenge', () => {
   it('follows the counter when both are shown', () => {
     const described = describeCeremonyResult({ signCount: 2, signCountStatus: 'ok', showChallenge: true });
     expect(described.rows.map((row) => row.label)).toEqual(['Signature counter', 'Challenge']);
+  });
+});
+
+describe('a registration\'s attestation findings', () => {
+  it('are shown under the panel\'s title even without a row, an error making it a warning', () => {
+    const findings = { errors: ['attestation_root_not_found'], warnings: ['metadata_not_available'] };
+    expect(describeCeremonyResult({ title: 'Last registration', findings })).toEqual({
+      title: 'Last registration',
+      rows: [],
+      findings,
+      warning: true,
+    });
+  });
+
+  it('are no warning when they are warnings only', () => {
+    const findings = { errors: [], warnings: ['metadata_not_available'] };
+    expect(describeCeremonyResult({ title: 'Last registration', findings }).warning).toBe(false);
+  });
+
+  it('follow the challenge', () => {
+    const findings = { errors: ['metadata_entry_missing'], warnings: [] };
+    const described = describeCeremonyResult({ showChallenge: true, challengeSource: 'server-session', challengeStatus: 'fresh', findings });
+    expect(described.rows.map((row) => row.label)).toEqual(['Challenge']);
+    expect([described.findings, described.warning]).toEqual([findings, true]);
+  });
+
+  it('leave the panel with nothing to say when there are none', () => {
+    expect(describeCeremonyResult({ title: 'Last registration', findings: { errors: [], warnings: [] } })).toBeNull();
+    expect(describeCeremonyResult({ title: 'Last registration', findings: null })).toBeNull();
   });
 });

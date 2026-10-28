@@ -72,7 +72,10 @@ the CSP and the source rules.
   to the section shown (the others get `CLOSED_ROUTE`). Simple is in the page's chunk; Advanced,
   Codec, MDS and the Analyze Browser panel are chunks of their own (`import()` through
   `lib/lazyModule.ts`): the section the URL names loads at once, behind a `SectionPlaceholder`
-  panel, and the rest once the first view is interactive, each then mounted, hidden.
+  panel, and the rest once the first view is interactive, each then mounted, hidden. So is the
+  attestation findings' list with its sentences (`components/ceremony/FindingsList.tsx`, loaded
+  by `AttestationFindings.tsx`, which the result panel always holds: ahead once the first view
+  is interactive, at once when a result has findings).
 - `src/lib/`: `sections.ts` (`SECTIONS`, `NAV_ID`, `APP_TITLE`, which is also the relying
   party's name; `routeFromHash` / `hashPath`), `useSection.ts` (the section in the hash with
   `replaceState`; what is open inside one as segments after it, e.g.
@@ -209,7 +212,8 @@ its logic out here first.
 - `shared/failed-response.js`: the one reader of a failed response (`readFailedResponse`,
   `FailedResponseError`): the server's `error`, the codec's `offset` and `path`, what to do for
   a 400, 409, 413 or 503. Never show a raw response body.
-- `shared/ceremony-result.js`: the result panel's signature counter and challenge sentences.
+- `shared/ceremony-result.js`: the result panel's signature counter and challenge sentences,
+  and a registration's attestation findings, which the panel lists (amber on an error).
 - `shared/registration-findings.js`: where a registration's attestation findings are in the
   server's answer (`answerFindings`: `attestationErrors` and `warnings`, a refused Simple
   registration's body too), each a code or a code and its reason after `: `.

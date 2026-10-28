@@ -44,4 +44,25 @@ describe('the ceremony result panel', () => {
     );
     expect(screen.getByText('Last ceremony')).toBeVisible();
   });
+
+  it('lists a registration\'s attestation findings under its title, in amber when one is an error', async () => {
+    render(<CeremonyResult result={{ title: 'Last registration', findings: { errors: ['attestation_root_not_found'], warnings: [] } }} />);
+    const panel = document.querySelector('[data-ceremony-result]')!;
+    expect(screen.getByText('Last registration')).toBeVisible();
+    expect(panel.querySelector('dl')).toBeNull();
+    expect(panel).toHaveAttribute('data-verdict', 'warning');
+    expect(await screen.findByText('The metadata names no root certificate that issued this attestation\'s chain')).toBeVisible();
+    expect(panel.querySelector('[data-findings]')).toHaveClass('mt-3');
+  });
+
+  it('lists warnings alone without the amber', async () => {
+    render(
+      <CeremonyResult
+        result={{ title: 'Last registration', showChallenge: true, challengeSource: 'server-session', findings: { errors: [], warnings: ['metadata_not_available'] } }}
+      />,
+    );
+    expect(await screen.findByText('No FIDO metadata was available to check the authenticator against')).toBeVisible();
+    expect(document.querySelector('[data-ceremony-result]')).not.toHaveAttribute('data-verdict');
+    expect(document.querySelector('[data-row="Challenge"]')).toBeVisible();
+  });
 });

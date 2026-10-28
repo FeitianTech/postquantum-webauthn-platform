@@ -437,6 +437,19 @@ describe('registerAdvancedCredential', () => {
       showChallenge: true,
       challengeSource: 'server-session',
       challengeStatus: 'fresh',
+      findings: { errors: [], warnings: [] },
+    });
+  });
+
+  it('gives the result panel the attestation\'s findings the server answered', async () => {
+    serving({ [BEGIN]: MLDSA.begin, [COMPLETE]: MLDSA.complete });
+    authenticatorGiving(recordedCredential(MLDSA));
+    const options = formOptions();
+    await registerAdvancedCredential(text(request()), options);
+
+    expect(options.onResult.mock.calls[0][0].findings).toEqual({
+      errors: ['trust_path_missing'],
+      warnings: ['metadata_not_available'],
     });
   });
 

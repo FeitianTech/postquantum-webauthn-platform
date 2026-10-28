@@ -1,6 +1,11 @@
 // What the server made of the last ceremony, as the panel under each tab's
-// buttons says it: the signature counter and its check, and in the advanced tab
-// where the challenge came from. DOM-free: the result panel shows this model.
+// buttons says it: the signature counter and its check, in the advanced tab
+// where the challenge came from, and a registration's attestation findings
+// (the list that says them loads with their sentences). DOM-free: the result
+// panel shows this model.
+import { hasFindings } from './registration-findings.js';
+
+/** @import { AttestationFindings } from './registration-findings.js' */
 
 // server/app/webauthn/sign_count.py
 const SIGN_COUNT_SENTENCES = {
@@ -69,18 +74,20 @@ function challengeRow({ challengeSource, challengeStatus }) {
  *   showChallenge?: boolean,
  *   challengeSource?: string | null,
  *   challengeStatus?: string | null,
+ *   findings?: AttestationFindings | null,
  * }} CeremonyResultInput
  */
 
 /** @typedef {{ label: string, value: string | null, text: string, after: string | null }} CeremonyResultRow */
-/** @typedef {{ title: string, rows: CeremonyResultRow[], warning: boolean }} CeremonyResultView */
+/** @typedef {{ title: string, rows: CeremonyResultRow[], findings: AttestationFindings | null, warning: boolean }} CeremonyResultView */
 
 /**
  * What the panel shows for a ceremony's result, or null when it has nothing to
  * say. result: title ("Last authentication"), signCount, signCountStatus,
  * consequence (appended to a regressed verdict: what the tab did about it), and
- * with showChallenge, challengeSource and challengeStatus. A regressed counter or
- * a replayed challenge is a warning.
+ * with showChallenge, challengeSource and challengeStatus; and a registration's
+ * findings. A regressed counter, a replayed challenge or an attestation error is
+ * a warning.
  * @param {CeremonyResultInput} [result]
  * @returns {CeremonyResultView | null}
  */
@@ -89,12 +96,16 @@ export function describeCeremonyResult(result = {}) {
         ...counterRow(result),
         ...(result.showChallenge ? challengeRow(result) : []),
     ];
-    if (!rows.length) {
+    const findings = result.findings && hasFindings(result.findings) ? result.findings : null;
+    if (!rows.length && !findings) {
         return null;
     }
     return {
         title: result.title || 'Last ceremony',
         rows,
-        warning: result.signCountStatus === 'regressed' || result.challengeStatus === 'replayed',
+        findings,
+        warning: result.signCountStatus === 'regressed'
+            || result.challengeStatus === 'replayed'
+            || Boolean(findings?.errors.length),
     };
 }

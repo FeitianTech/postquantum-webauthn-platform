@@ -4,13 +4,16 @@ import { AlertIcon } from '@/components/ui/icons';
 import { cx } from '@/lib/cx';
 import { type CeremonyResultInput, describeCeremonyResult } from '@/logic/shared/ceremony-result.js';
 
+import { AttestationFindings } from './AttestationFindings';
+
 // What the server made of the last ceremony, under the tab's buttons: the
 // signature counter and its verdict (and in the Advanced tab where the challenge
-// came from). It stays until the next ceremony starts, unlike a toast, so a
-// warning that an authenticator may have been cloned does not leave by itself.
-// Set off by a hairline above it (it sits inside its tab's card: no card in a
-// card); a warning is an amber box with a mark. The live region is always in
-// the page, so a screen reader hears it fill.
+// came from), and a registration's attestation findings in words. It stays until
+// the next ceremony starts, unlike a toast, so a warning that an authenticator
+// may have been cloned does not leave by itself. Set off by a hairline above it
+// (it sits inside its tab's card: no card in a card); a warning is an amber box
+// with a mark. The live region is always in the page, so a screen reader hears
+// it fill, and so is the findings list's loader, so its chunk comes ahead.
 export function CeremonyResult({ result }: { result: CeremonyResultInput | null }) {
   const view = result ? describeCeremonyResult(result) : null;
   return (
@@ -30,24 +33,27 @@ export function CeremonyResult({ result }: { result: CeremonyResultInput | null 
             {view.warning ? <AlertIcon size={14} aria-hidden="true" /> : null}
             {view.title}
           </p>
-          <dl className="mt-2 grid grid-cols-1 gap-x-4 gap-y-1.5 sm:grid-cols-[max-content_minmax(0,1fr)]">
-            {view.rows.map((row) => (
-              <Fragment key={row.label}>
-                <dt className="text-caption text-ink-muted sm:pt-px">{row.label}</dt>
-                <dd className="text-body text-ink" data-row={row.label}>
-                  {row.value !== null ? (
-                    <>
-                      <code className="font-mono text-label font-semibold">{row.value}</code>{' '}
-                    </>
-                  ) : null}
-                  {row.text}
-                  {row.after ? ` ${row.after}` : null}
-                </dd>
-              </Fragment>
-            ))}
-          </dl>
+          {view.rows.length ? (
+            <dl className="mt-2 grid grid-cols-1 gap-x-4 gap-y-1.5 sm:grid-cols-[max-content_minmax(0,1fr)]">
+              {view.rows.map((row) => (
+                <Fragment key={row.label}>
+                  <dt className="text-caption text-ink-muted sm:pt-px">{row.label}</dt>
+                  <dd className="text-body text-ink" data-row={row.label}>
+                    {row.value !== null ? (
+                      <>
+                        <code className="font-mono text-label font-semibold">{row.value}</code>{' '}
+                      </>
+                    ) : null}
+                    {row.text}
+                    {row.after ? ` ${row.after}` : null}
+                  </dd>
+                </Fragment>
+              ))}
+            </dl>
+          ) : null}
         </>
       ) : null}
+      <AttestationFindings findings={view ? view.findings : null} className="mt-3" />
     </div>
   );
 }

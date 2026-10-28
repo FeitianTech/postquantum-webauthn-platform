@@ -7,6 +7,7 @@ import { applyAuthenticatorAttachmentPreference, enforceAuthenticatorAttachmentW
 import { createCredential, parseCreationOptions, requireNativeJson } from '../../shared/native-json.js';
 import { bufferSourceToUint8Array, bytesToHex } from '../../shared/bytes.js';
 import { FailedResponseError, readFailedResponse } from '../../shared/failed-response.js';
+import { answerFindings } from '../../shared/registration-findings.js';
 /** @import { CeremonyResultInput } from '../../shared/ceremony-result.js' */
 /** @import { SavedCredential } from '../../credentials/saved-list.js' */
 
@@ -348,6 +349,7 @@ export async function registerAdvancedCredential(text, {
             showChallenge: true,
             challengeSource: answer.challengeSource,
             challengeStatus: answer.challengeStatus,
+            findings: answerFindings(answer),
         });
         return {
             registered: true,

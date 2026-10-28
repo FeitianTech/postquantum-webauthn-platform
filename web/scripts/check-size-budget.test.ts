@@ -38,6 +38,7 @@ function anExport(extra: Record<string, string> = {}) {
     '_next/static/chunks/section-codec.0a1b.js': 'codec();',
     '_next/static/chunks/section-mds.0a1b.js': 'mds();',
     '_next/static/chunks/credential-details.0a1b.js': 'details();',
+    '_next/static/chunks/attestation-findings.0a1b.js': 'findings();',
     '_next/static/chunks/analyze-browser.0a1b.js': 'analyze();',
     '_next/static/chunks/546.0a1b.js': 'shared();',
     '_next/static/chunks/pages/_error-1.js': 'error();',

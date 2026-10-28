@@ -111,9 +111,10 @@ the page in a real browser.
 
 - **The export** (`web/out`): three pages (`index`, `404`, `500`) and
   `/_next/static/`. The page's own chunk holds the shell and the Simple tab; the other
-  sections, the credential details and the Analyze Browser panel are chunks of their own,
-  fetched once the first view is interactive (the section the URL names at once), and
-  only Geist is preloaded. Flask's `web_export` blueprint serves it at `/`:
+  sections, the credential details, the Analyze Browser panel and the attestation findings'
+  list (with their sentences in English and 中文) are chunks of their own, fetched once the
+  first view is interactive (the section the URL names at once, the findings list once a
+  result has findings), and only Geist is preloaded. Flask's `web_export` blueprint serves it at `/`:
   HTML `no-cache`; `/_next/static/` immutable for a year, gzipped from the build's
   `.gz` copies; the export's 404 page for an unknown path. No Node runs in production.
 - **Flask** answers everything with a static segment first: `/health`, `/api/…` (a

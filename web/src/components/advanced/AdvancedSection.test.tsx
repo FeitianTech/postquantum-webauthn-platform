@@ -197,6 +197,19 @@ describe('a registration', () => {
     });
   });
 
+  it('lists the attestation\'s findings in the result panel, in words', async () => {
+    authenticator = installAuthenticator(vi, { create: recordedCredential(X5C) });
+    renderSection([], registrationRoutes(X5C));
+    await ready();
+
+    await userEvent.click(button('Create Credential'));
+
+    const result = document.querySelector<HTMLElement>('#nav-panel-advanced [data-ceremony-result]')!;
+    expect(await within(result).findByText('No FIDO metadata was available to check the authenticator against')).toBeVisible();
+    expect(within(result).getByText('Warning')).toBeVisible();
+    expect(within(result).getByText('Last registration')).toBeVisible();
+  });
+
   it('gives the begin answer\'s warnings as a toast', async () => {
     authenticator = installAuthenticator(vi, { create: recordedCredential(NONE) });
     const [, warned] = goldenAnswers('advanced-register-begin-pqc-unavailable');
