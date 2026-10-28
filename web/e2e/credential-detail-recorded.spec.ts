@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
-import { discoverableFor, shownLevel, shownSubViews, expectedFor, keep, report } from './credential-views';
+import { FINDINGS_ADDED, FINDINGS_SECTION, discoverableFor, shownLevel, shownSubViews, expectedFor, keep, report } from './credential-views';
 import { expect, test } from './fixtures';
 import type { ExpectedDifference, ShownSection } from './recorded-words';
 import { recorded } from './recorded';
@@ -92,7 +92,9 @@ test.describe('a saved credential\'s details, as recorded', () => {
       const expected = [...expectedFor(name), ...redrawnFor(record), ...handleFor(record), ...discoverableFor(record)];
       expect(report(legacy, [...detail, ...registration], expected)).toEqual([]);
       expect(legacy.map((section) => section.heading)).toEqual(
-        [...detail, ...registration].map((section) => section.heading).filter((heading) => heading && heading !== 'Registration Details'),
+        [...detail, ...registration]
+          .map((section) => section.heading)
+          .filter((heading) => heading && heading !== 'Registration Details' && heading !== FINDINGS_SECTION),
       );
       expect(shownSubs).toEqual(legacySubs);
     });
@@ -110,8 +112,10 @@ test.describe('a saved credential\'s details, as recorded', () => {
     const shown = await shownLevel(page, 'registration', 'h4, [data-recorded-heading]');
     const shownSubs = await shownSubViews(page);
 
-    expect(report(legacy, shown, [])).toEqual([]);
-    expect(legacy.map((section) => section.heading)).toEqual(shown.map((section) => section.heading));
+    expect(report(legacy, shown, [FINDINGS_ADDED])).toEqual([]);
+    expect(legacy.map((section) => section.heading)).toEqual(
+      shown.map((section) => section.heading).filter((heading) => heading !== FINDINGS_SECTION),
+    );
     expect(shownSubs).toEqual(legacySubs);
   });
 });

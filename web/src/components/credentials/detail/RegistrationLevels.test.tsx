@@ -16,16 +16,45 @@ const NO_ATTESTATION_OBJECT: AttestationView = {
   authenticatorError: '',
 };
 
-function renderRegistration(registration: RegistrationView) {
+const NO_FINDINGS = { errors: [], warnings: [] };
+
+function renderRegistration(registration: RegistrationView, findings: { errors: string[]; warnings: string[] } = NO_FINDINGS) {
   const onCertificate = vi.fn();
   const onAuthenticatorData = vi.fn();
-  render(<RegistrationLevel registration={registration} idBase="detail" onCertificate={onCertificate} onAuthenticatorData={onAuthenticatorData} />);
+  render(
+    <RegistrationLevel
+      registration={registration}
+      findings={findings}
+      idBase="detail"
+      onCertificate={onCertificate}
+      onAuthenticatorData={onAuthenticatorData}
+    />,
+  );
   return { onCertificate, onAuthenticatorData };
 }
 
 const sectionOf = (title: string) => screen.getByRole('heading', { name: title }).closest('section')!;
 
 describe('the registration\'s level', () => {
+  it('lists the attestation\'s findings first, under a title of its own, when the record keeps any', async () => {
+    renderRegistration({ response: { credential: '{}', clientData: '{}', relyingParty: '{}' }, attestation: null }, {
+      errors: ['No root found for Authenticator', 'metadata_entry_missing'],
+      warnings: [],
+    });
+
+    const headings = screen.getAllByRole('heading', { level: 4 }).map((heading) => heading.textContent);
+    expect(headings[0]).toBe('Verification findings');
+    const findings = sectionOf('Verification findings');
+    expect(await within(findings).findByText('The metadata has no entry for this authenticator')).toBeVisible();
+    expect(within(findings).getByText('No root found for Authenticator')).toBeVisible();
+    expect(within(findings).getAllByText('Error')).toHaveLength(2);
+  });
+
+  it('has no findings section when the record keeps none', () => {
+    renderRegistration({ response: { credential: '{}', clientData: '{}', relyingParty: '{}' }, attestation: null });
+    expect(screen.queryByRole('heading', { name: 'Verification findings' })).toBeNull();
+  });
+
   it('says which of the response, its client data and the server\'s data the record lacks, with no attestation', () => {
     renderRegistration({ response: { credential: '', clientData: '', relyingParty: '' }, attestation: null });
 

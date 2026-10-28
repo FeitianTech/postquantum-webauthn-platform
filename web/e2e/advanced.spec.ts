@@ -46,6 +46,12 @@ test.describe('/#advanced', () => {
     const [created] = await authenticator.credentials();
     expect(created.rpId).toBe('localhost');
     await expect(page).toHaveURL(/#advanced\/credential\/.+\/registration$/);
+    // The registration opens on its attestation's findings, in words.
+    const findings = page.getByRole('dialog').locator('[data-level="registration"] [data-section="Verification findings"]');
+    await expect(findings.locator('[data-finding="attestation_root_not_found"] [lang="en"]')).toHaveText(
+      'The metadata names no root certificate that issued this attestation\'s chain',
+    );
+    await expect(findings.locator('[data-severity="error"]')).toHaveCount(2);
     const panel = section(page).locator('[data-ceremony-result]');
     await expect(panel).toContainText('Last registration');
     await expect(panel).toContainText('Issued by this server for this ceremony. First use.');

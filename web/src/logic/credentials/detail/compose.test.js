@@ -72,7 +72,9 @@ describe('composeCredentialDetail', () => {
       'extensions',
       'publicKey',
       'registration',
+      'findings',
     ]);
+    expect(detail.findings).toEqual({ errors: [], warnings: [] });
     expect(detail.properties.checks.map(({ value }) => value)).toEqual([null, null, true, null]);
     expect(detail.userInfo.name).toBe('user@example.com');
     expect(detail.aaguid.values.find(({ label }) => label === 'guid').value).toBe(AAGUID_GUID);
@@ -80,6 +82,11 @@ describe('composeCredentialDetail', () => {
     expect(detail.authenticatorData).toBeNull();
     expect(detail.extensions).toBeNull();
     expect(detail.publicKey.lines[0]).toEqual({ label: 'Algorithm:', value: describeCoseAlgorithm(-7) });
+  });
+
+  it('lists the attestation\'s findings the record keeps', async () => {
+    const { detail } = await detailOf(simpleRecord('packedX5c'));
+    expect(detail.findings).toEqual({ errors: [], warnings: ['metadata_not_available'] });
   });
 
   it('decodes the registration once and shows the browser\'s response the record kept', async () => {

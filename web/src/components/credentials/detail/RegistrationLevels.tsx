@@ -1,9 +1,11 @@
+import { AttestationFindings } from '@/components/ceremony/AttestationFindings';
 import { CertificateSummary } from '@/components/mds/CertificateSummary';
 import { Button } from '@/components/ui/Button';
 import { CodeBlock } from '@/components/ui/CodeBlock';
 import { type AttestationView, type CertificateView, REGISTRATION_TEXT } from '@/logic/credentials/registration/describe.js';
 import { type RegistrationView } from '@/logic/credentials/registration/view.js';
 import { certificateSummary } from '@/logic/mds/explorer/certificate.js';
+import { type AttestationFindings as Findings, FINDINGS_TITLE, hasFindings } from '@/logic/shared/registration-findings.js';
 
 import { DetailSection } from './DetailSections';
 
@@ -78,17 +80,21 @@ function Attestation({
 }
 
 /**
- * The registration's level: the browser's response and its
- * client data, what the server made of it, and the attestation, whose
- * certificates and authenticator data open levels of their own.
+ * The registration's level: the attestation's findings in words, when the
+ * record keeps any (the section's title at once, its list once the list's
+ * chunk has arrived), the browser's response and its client data, what the
+ * server made of it, and the attestation, whose certificates and authenticator
+ * data open levels of their own.
  */
 export function RegistrationLevel({
   registration,
+  findings,
   idBase,
   onCertificate,
   onAuthenticatorData,
 }: {
   registration: RegistrationView;
+  findings: Findings;
   idBase: string;
   onCertificate: (number: number) => void;
   onAuthenticatorData: () => void;
@@ -97,6 +103,11 @@ export function RegistrationLevel({
   // The level starts under the dialog's header: its first section needs no hairline.
   return (
     <div className="space-y-8 [&>section:first-child]:border-t-0 [&>section:first-child]:pt-0">
+      {hasFindings(findings) ? (
+        <DetailSection id={`${idBase}-findings`} title={FINDINGS_TITLE}>
+          <AttestationFindings findings={findings} titled={false} />
+        </DetailSection>
+      ) : null}
       <DetailSection id={`${idBase}-response`} title={REGISTRATION_TEXT.responseTitle}>
         <ol className="list-decimal space-y-5 pl-5 marker:text-ink-muted">
           <li className="min-w-0 pl-1">

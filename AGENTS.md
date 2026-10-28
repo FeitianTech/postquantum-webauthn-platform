@@ -93,7 +93,8 @@ the CSP and the source rules.
     `CredentialDetails` when it is asked for or once the page is interactive) has four levels,
     each a pushed history entry:
     `#<section>/credential/<key>`, `…/registration`, `…/registration/certificate/<n>`,
-    `…/registration/authenticator-data`; a level the credential lacks is corrected upward.
+    `…/registration/authenticator-data`; a level the credential lacks is corrected upward. The
+    registration's level opens on the attestation's findings in words, when the record keeps any.
   - `advanced/`: the Advanced tab. Registration and Authentication segments, both mounted,
     each a form beside its JSON editor. `requestEditor.ts`: the editor's text is the request;
     a form change rewrites in the text only what it changed (`followForm`), an edit the form
@@ -195,7 +196,9 @@ its logic out here first.
   registration keeps), and (`registration/`, `certificates/`, `detail/`) a
   credential's details and registration view as data (`registration/view.js` composes the view
   from `registration/describe.js`'s parts and `registration/relying-party.js`'s copy of the
-  relying party), which `detail/compose.js` composes into a registration state of its own. Registration snapshots (`schemaVersion` 2) hold the
+  relying party), which `detail/compose.js` composes into a registration state of its own, with
+  the record's attestation findings (`detail/findings.js`: its checks, else its summary, as any
+  release kept them). Registration snapshots (`schemaVersion` 2) hold the
   registration as data, never markup, and its certificates without their DER; older composed HTML is never read.
 - `codec/`: the Codec's requests, results and values. `mds/`: the MDS
   explorer's loading (the list fetched ahead, without the cookie: `prefetchExplorerList`; the

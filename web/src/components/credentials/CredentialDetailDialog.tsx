@@ -184,6 +184,7 @@ export function CredentialDetailDialog({
               <div data-level="registration" tabIndex={-1} hidden={level.kind !== 'registration'} className="outline-none">
                 <RegistrationLevel
                   registration={ready.detail.registration}
+                  findings={ready.detail.findings}
                   idBase={`${idBase}-registration`}
                   onCertificate={(number) => openPath([...registrationPath, 'certificate', String(number)])}
                   onAuthenticatorData={() => openPath([...registrationPath, 'authenticator-data'])}

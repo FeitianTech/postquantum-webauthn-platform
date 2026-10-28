@@ -125,6 +125,24 @@ test.describe('a saved credential\'s details', () => {
     await expect(page).toHaveURL(/\/#simple$/);
   });
 
+  test('list the attestation\'s findings in words first on the registration\'s level, and none where there are none', async ({ page }) => {
+    await openPage(page);
+    await keep(page, [named(X5C, 'x5c@example.com'), named(ES256, 'es256@example.com')]);
+    await page.reload();
+
+    await page.goto(`/#simple/credential/id:${X5C.credentialIdBase64Url}/registration`);
+    const findings = detailSection(page, 'Verification findings');
+    await expect(findings.locator('[data-finding="metadata_not_available"] [lang="en"]')).toHaveText(
+      'No FIDO metadata was available to check the authenticator against',
+    );
+    await expect(findings.locator('[data-severity="warning"]')).toContainText('Warning');
+    await expect(shownLevel(page).locator('section').first()).toHaveAttribute('data-section', 'Verification findings');
+
+    await page.goto(`/#simple/credential/id:${ES256.credentialIdBase64Url}/registration`);
+    await expect(detailSection(page, 'Authenticator Response')).toBeVisible();
+    await expect(detailSection(page, 'Verification findings')).toHaveCount(0);
+  });
+
   test('show an ES256 credential the server registered, and correct a level it does not have', async ({ page }) => {
     await openPage(page);
     await keep(page, [named(ES256, 'es256@example.com')]);

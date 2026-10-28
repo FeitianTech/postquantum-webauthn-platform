@@ -46,6 +46,14 @@ test.describe('credentials an earlier release stored', () => {
     const registration = dialog(page).locator('[data-level="registration"]');
     await expect(registration).toContainText('Response for navigator.credentials.create()');
     await expect(registration.locator('[data-section="Authenticator Response"]')).toContainText('"type": "webauthn.create"');
+    // Its attestation's findings in words: the sentence that release's server wrote
+    // for a missing root as it was sent, the code beside it in words.
+    const findings = registration.locator('[data-section="Verification findings"]');
+    await expect(findings.locator('[data-finding="No root found for Authenticator"]')).toContainText('No root found for Authenticator');
+    await expect(findings.locator('[data-finding="metadata_entry_missing"] [lang="en"]')).toHaveText(
+      'The metadata has no entry for this authenticator',
+    );
+    await expect(findings.locator('[data-severity="error"]')).toHaveCount(2);
   });
 
   test('deletes the Simple one, asking first, and clears the Advanced one', async ({ page }) => {

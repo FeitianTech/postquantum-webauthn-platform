@@ -10,8 +10,20 @@ export const STORAGE_KEY = 'postquantum-webauthn.credentials';
 
 const escape = (word: string) => word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
+// The attestation's findings in words, first on the registration's level: a
+// section the recorded page did not have (the server's codes were only in its
+// JSON), every word of it new.
+export const FINDINGS_SECTION = 'Verification findings';
+export const FINDINGS_ADDED: ExpectedDifference = {
+  only: 'shown',
+  token: /^/,
+  section: FINDINGS_SECTION,
+  reason: 'the attestation findings in words, a section the recorded page did not have',
+};
+
 export function expectedFor(name: string): ExpectedDifference[] {
   return [
+    FINDINGS_ADDED,
     { only: 'shown', token: new RegExp(`^${escape(name)}$`), section: '', reason: 'the credential\'s name, the details\' title (new)' },
     {
       only: 'shown',
@@ -73,6 +85,9 @@ export async function keep(page: Page, records: object[]) {
 export async function shownLevel(page: Page, level: string, headings: string) {
   const root = page.getByRole('dialog').locator(`[data-level="${level}"]`);
   await expect(root).toBeVisible();
+  // The findings' list arrives with its chunk: read the level once it is there.
+  const findings = root.locator(`[data-section="${FINDINGS_SECTION}"]`);
+  if (await findings.count()) await expect(findings.locator('[data-findings]')).toBeVisible();
   return readShownText(root, headings);
 }
 
