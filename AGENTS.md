@@ -186,7 +186,9 @@ its logic out here first.
 - `advanced/`: the Advanced tab. `registration/` and `authentication/` each hold their
   request (`request.js`: defaults, build, read back, the form's rules), its validation and
   its ceremony (`ceremony.js`), with Allow Credentials' choices and extension availability
-  under `authentication/`; `editor/` the editor's model and keys, `request-patch.js`
+  under `authentication/`, and the form's algorithms under `registration/`
+  (`algorithm-options.js`: the preferred ones first, in the servers' order, ticked by default);
+  `editor/` the editor's model and keys, `request-patch.js`
   (`followForm`) and what both requests' validation shares; `hints.js`,
   `fake-credentials.js` and `hex-input.js` serve both forms.
 - `credentials/`: the saved list (`saved-list.js`: the records, each row, the warm-up),

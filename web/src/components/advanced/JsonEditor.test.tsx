@@ -151,7 +151,7 @@ describe('a form change over an edit', () => {
       hints: ['security-key', 'client-device'],
       timeout: 0,
     });
-    expect(publicKey().pubKeyCredParams.map((param: { alg: number }) => param.alg)).toEqual([-257, -7, -8, -50, -49, -48]);
+    expect(publicKey().pubKeyCredParams.map((param: { alg: number }) => param.alg)).toEqual([-35, -257, -7, -8, -50, -49, -48]);
 
     // A hint put in goes where the form lists it before the others, which keep their typed order.
     await userEvent.click(chip('Hybrid'));

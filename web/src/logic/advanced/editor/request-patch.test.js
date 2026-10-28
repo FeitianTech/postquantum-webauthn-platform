@@ -75,7 +75,7 @@ describe('a form change on a registration', () => {
       },
     ).publicKey;
     expect(publicKey.hints).toEqual(['security-key', 'client-device']);
-    expect(publicKey.pubKeyCredParams.map((param) => param.alg)).toEqual([-257, -7, -8, -50, -49, -48]);
+    expect(publicKey.pubKeyCredParams.map((param) => param.alg)).toEqual([-35, -257, -7, -8, -50, -49, -48]);
   });
 
   it('keeps a typed timeout of 0, which the form reads and builds as 0 too', () => {
@@ -89,15 +89,15 @@ describe('a form change on a registration', () => {
     const publicKey = follow(
       registrationRequest,
       settings,
-      changeRegistration(settings, 'algorithms', [...settings.algorithms, -35]),
+      changeRegistration(settings, 'algorithms', [...settings.algorithms, -36]),
       (request) => {
         request.publicKey.pubKeyCredParams.reverse();
         request.publicKey.challenge = { $base64url: 'ABEiM0RVZneImaq7zN3u_w' };
         return request;
       },
     ).publicKey;
-    // ES384 (-35) follows RS256 (-257), which the form lists just before it; the rest keeps its typed order.
-    expect(publicKey.pubKeyCredParams.map((param) => param.alg)).toEqual([-257, -35, -7, -8, -50, -49, -48]);
+    // ES512 (-36) follows ES384 (-35), which the form lists just before it; the rest keeps its typed order.
+    expect(publicKey.pubKeyCredParams.map((param) => param.alg)).toEqual([-35, -36, -257, -7, -8, -50, -49, -48]);
     expect(publicKey.challenge).toEqual({ $base64url: 'ABEiM0RVZneImaq7zN3u_w' });
 
     const redrawn = follow(registrationRequest, settings, registration({ challenge: 'ffff' }), (request) => {

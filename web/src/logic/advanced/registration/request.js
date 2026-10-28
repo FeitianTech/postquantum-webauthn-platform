@@ -60,7 +60,7 @@ export function registrationDefaults() {
         excludeCredentials: true,
         fakeCredLength: '128',
         algorithms: ALGORITHM_OPTIONS
-            .filter(option => option.pqc || ['eddsa', 'es256', 'rs256'].includes(option.key))
+            .filter(option => option.preferred)
             .map(option => option.alg),
         hints: [],
         credProps: true,

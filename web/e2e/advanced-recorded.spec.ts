@@ -33,6 +33,17 @@ async function openPage(page: Page) {
 
 const squeeze = (text: string | null) => (text ?? '').replace(/\s+/g, '');
 
+// The form ticks ES384 by default now, so its requests list it after RS256: the
+// seven algorithms both servers offer, in their order (AGENTS.md). The editor
+// writes JSON with its keys sorted and two spaces, as the recording holds it.
+const ES384_TICKED = 'ES384 (-35) is ticked by default: the form offers the seven algorithms both servers offer';
+function withEs384(text: string) {
+  const request = JSON.parse(text);
+  const params: { alg: number; type: string }[] = request.publicKey.pubKeyCredParams;
+  params.splice(params.findIndex((param) => param.alg === -257) + 1, 0, { alg: -35, type: 'public-key' });
+  return JSON.stringify(request, null, 2);
+}
+
 test.describe('the Advanced tab\'s registration, as recorded', () => {
   test('shows the same words, section by section', async ({ page }) => {
     const legacy = recorded<ShownSection[]>('advanced', 'the registration form');
@@ -84,7 +95,8 @@ test.describe('the Advanced tab\'s registration, as recorded', () => {
     await form.getByLabel('User ID (hex)', { exact: true }).fill(USER_ID);
     await form.getByLabel('User Name', { exact: true }).fill(USER_NAME);
     await form.getByLabel('Challenge (hex)', { exact: true }).fill(CHALLENGE);
-    expect(await registrationEditor(page).inputValue()).toBe(legacyDefault);
+    expect(JSON.parse(legacyDefault).publicKey.pubKeyCredParams.map((param: { alg: number }) => param.alg)).not.toContain(-35);
+    expect(await registrationEditor(page).inputValue(), ES384_TICKED).toBe(withEs384(legacyDefault));
     await form.getByLabel('Authenticator Attachment', { exact: true }).selectOption('unspecified');
     await form.getByLabel('Resident Key', { exact: true }).selectOption('required');
     await form.getByLabel('Attestation', { exact: true }).selectOption('none');
@@ -98,7 +110,7 @@ test.describe('the Advanced tab\'s registration, as recorded', () => {
     await form.getByLabel('largeBlob', { exact: true }).selectOption('preferred');
     await form.getByRole('switch', { name: 'prf' }).click();
     await form.getByLabel('prf eval first (hex)', { exact: true }).fill('aa'.repeat(32));
-    expect(await registrationEditor(page).inputValue()).toBe(legacyChanged);
+    expect(await registrationEditor(page).inputValue(), ES384_TICKED).toBe(withEs384(legacyChanged));
   });
 
   test('a registration\'s details show the recorded words at each level', async ({ page }) => {

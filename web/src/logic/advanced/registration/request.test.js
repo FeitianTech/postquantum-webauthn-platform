@@ -33,7 +33,7 @@ describe('the defaults', () => {
       attestation: 'direct',
       excludeCredentials: true,
       fakeCredLength: '128',
-      algorithms: [-48, -49, -50, -8, -7, -257],
+      algorithms: [-48, -49, -50, -8, -7, -257, -35],
       hints: [],
       credProps: true,
       minPinLength: false,
@@ -48,7 +48,7 @@ describe('the defaults', () => {
 
   it('are a new copy each time', () => {
     registrationDefaults().algorithms.push(-7);
-    expect(registrationDefaults().algorithms).toHaveLength(6);
+    expect(registrationDefaults().algorithms).toHaveLength(7);
   });
 });
 
@@ -58,7 +58,7 @@ describe('the request the settings build', () => {
       rp: { name: 'FIDO2/WebAuthn PQC Developer Tools', id: 'localhost' },
       user: { id: { $hex: ALICE }, name: 'alice', displayName: 'alice' },
       challenge: { $hex: CHALLENGE },
-      pubKeyCredParams: [-48, -49, -50, -8, -7, -257].map((alg) => ({ type: 'public-key', alg })),
+      pubKeyCredParams: [-48, -49, -50, -8, -7, -257, -35].map((alg) => ({ type: 'public-key', alg })),
       timeout: 90000,
       authenticatorSelection: {
         authenticatorAttachment: 'cross-platform',

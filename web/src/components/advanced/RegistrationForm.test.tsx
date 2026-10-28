@@ -38,7 +38,7 @@ describe('the registration form, when the page has loaded', () => {
       rp: { name: 'FIDO2/WebAuthn PQC Developer Tools', id: 'localhost' },
       user: { id: { $hex: field('User ID (hex)').value }, name: field('User Name').value, displayName: field('User Name').value },
       challenge: { $hex: field('Challenge (hex)').value },
-      pubKeyCredParams: [-48, -49, -50, -8, -7, -257].map((alg) => ({ type: 'public-key', alg })),
+      pubKeyCredParams: [-48, -49, -50, -8, -7, -257, -35].map((alg) => ({ type: 'public-key', alg })),
       timeout: 90000,
       authenticatorSelection: { authenticatorAttachment: 'cross-platform', residentKey: 'discouraged', requireResidentKey: false, userVerification: 'preferred' },
       attestation: 'direct',
@@ -94,7 +94,7 @@ describe('each field changes the request', () => {
     await userEvent.click(chip('ML-DSA-65'));
 
     expect(chip('EdDSA')).toHaveAttribute('aria-pressed', 'false');
-    expect(publicKey().pubKeyCredParams.map((param: { alg: number }) => param.alg)).toEqual([-48, -50, -7, -257, -36]);
+    expect(publicKey().pubKeyCredParams.map((param: { alg: number }) => param.alg)).toEqual([-48, -50, -7, -257, -35, -36]);
     expect(screen.getByText('PQC')).toBeInTheDocument();
   });
 
