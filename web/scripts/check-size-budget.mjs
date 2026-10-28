@@ -21,7 +21,9 @@ import { parse } from 'parse5';
 // that is worth its bytes.
 export const BUDGET = {
   pages: {
-    'index.html': { raw: 458752, gzip: 142336 },
+    // Measured on 2026-10-28, once the Simple tab listed a registration's attestation findings
+    // and said when this browser could not keep a credential (their sentences' table is a chunk).
+    'index.html': { raw: 460800, gzip: 143360 },
     '404.html': { raw: 355328, gzip: 110592 },
     '500.html': { raw: 355328, gzip: 110592 },
   },

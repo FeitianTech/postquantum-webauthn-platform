@@ -57,25 +57,38 @@ export const SIMPLE_CEREMONY_TEXT = {
     rejected: 'Authentication was rejected.',
     lastAuthentication: 'Last authentication',
     lastRegistration: 'Last registration',
+    notKept: 'This browser could not keep the credential: its storage is full or blocked. The credential exists on your authenticator, but this browser will not list it.',
+    notKeptShort: 'This browser could not keep the credential.',
 };
 
 /**
- * The success toast of a registration, naming the algorithm the server chose.
+ * The success toast of a registration, naming the algorithm the server chose,
+ * and its tone: a warning when this browser could not keep the credential.
  * @param {RegistrationAnswer | null | undefined} answer
- * @returns {string}
+ * @param {{ kept?: boolean }} [keeping]
+ * @returns {{ text: string, tone: 'success' | 'warning' }}
  */
-export function registeredText(answer) {
-    return `Registration successful! Algorithm: ${answer?.algo || 'Unknown'}`;
+export function simpleRegisteredMessage(answer, { kept = true } = {}) {
+    const text = `Registration successful! Algorithm: ${answer?.algo || 'Unknown'}`;
+    return kept
+        ? { text, tone: 'success' }
+        : { text: `${text}. ${SIMPLE_CEREMONY_TEXT.notKeptShort}`, tone: 'warning' };
 }
 
 /**
  * What the result panel shows after a registration the server accepted: its
- * attestation's findings, warnings all (an error would have refused it).
+ * attestation's findings, warnings all (an error would have refused it), and
+ * whether this browser could not keep the credential.
  * @param {RegistrationAnswer} answer
+ * @param {{ kept?: boolean }} [keeping]
  * @returns {CeremonyResultInput}
  */
-export function registeredResult(answer) {
-    return { title: SIMPLE_CEREMONY_TEXT.lastRegistration, findings: answerFindings(answer) };
+export function registeredResult(answer, { kept = true } = {}) {
+    return {
+        title: SIMPLE_CEREMONY_TEXT.lastRegistration,
+        findings: answerFindings(answer),
+        notKept: kept ? null : SIMPLE_CEREMONY_TEXT.notKept,
+    };
 }
 
 /**
@@ -224,10 +237,12 @@ export async function authenticateSimplePasskey(email, { onProgress = () => {} }
 
 /**
  * Keeps what a registration saved in this browser: the server's record, for this email
- * as the server read it (trimmed: simpleUsername).
+ * as the server read it (trimmed: simpleUsername). Says whether it was kept: the
+ * browser refuses the write when its storage is full or blocked.
  * @param {Record<string, unknown>} storedCredential
  * @param {string} email
+ * @returns {boolean}
  */
 export function keepSimpleCredential(storedCredential, email) {
-    saveSimpleCredential({ ...storedCredential, email: simpleUsername(email) });
+    return saveSimpleCredential({ ...storedCredential, email: simpleUsername(email) }) !== null;
 }

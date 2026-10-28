@@ -131,3 +131,28 @@ describe('a registration\'s attestation findings', () => {
     expect(describeCeremonyResult({ title: 'Last registration', findings: null })).toBeNull();
   });
 });
+
+describe('a credential this browser could not keep', () => {
+  const NOT_KEPT = 'This browser could not keep the credential.';
+
+  it('is said in a row of its own, as a warning, after the others', () => {
+    const described = describeCeremonyResult({ title: 'Last registration', showChallenge: true, challengeSource: 'server-session', notKept: NOT_KEPT });
+    expect(described.rows.map((row) => row.label)).toEqual(['Challenge', 'This browser']);
+    expect(described.rows[1]).toEqual({ label: 'This browser', value: null, text: NOT_KEPT, after: null });
+    expect(described.warning).toBe(true);
+  });
+
+  it('is said beside the attestation\'s findings', () => {
+    const findings = { errors: [], warnings: ['metadata_not_available'] };
+    expect(describeCeremonyResult({ title: 'Last registration', findings, notKept: NOT_KEPT })).toEqual({
+      title: 'Last registration',
+      rows: [{ label: 'This browser', value: null, text: NOT_KEPT, after: null }],
+      findings,
+      warning: true,
+    });
+  });
+
+  it('says nothing when the credential was kept', () => {
+    expect(describeCeremonyResult({ title: 'Last registration', notKept: null })).toBeNull();
+  });
+});

@@ -228,6 +228,32 @@ test.describe('/#simple', () => {
     await expect(rows(page)).toHaveCount(0);
   });
 
+  test('says in place when this browser could not keep the credential, and lists none', async ({ page }) => {
+    // The browser refuses the saved credentials' write, as it does when its storage is full.
+    await page.addInitScript((key) => {
+      const setItem = Storage.prototype.setItem;
+      Storage.prototype.setItem = function (name: string, value: string) {
+        if (name === key) throw new DOMException('The quota has been exceeded.', 'QuotaExceededError');
+        return setItem.call(this, name, value);
+      };
+    }, STORAGE_KEY);
+    await addVirtualAuthenticator(page);
+    await openPage(page);
+    await section(page).getByRole('textbox', { name: 'Username' }).fill(username());
+    await section(page).getByRole('button', { name: 'Register Passkey' }).click();
+
+    await expect(page.locator('[data-toast-viewport] [data-tone="warning"]')).toContainText(
+      'Registration successful! Algorithm: EdDSA. This browser could not keep the credential.',
+    );
+    const panel = section(page).locator('[data-ceremony-result]');
+    await expect(panel).toHaveAttribute('data-verdict', 'warning');
+    await expect(panel.locator('[data-row="This browser"]')).toHaveText(
+      'This browser could not keep the credential: its storage is full or blocked. The credential exists on your authenticator, but this browser will not list it.',
+    );
+    await expect(rows(page)).toHaveCount(0);
+    expect(await storedCount(page)).toBe(0);
+  });
+
   test('clears every credential, and warns of the ones the server no longer held', async ({ page }) => {
     await openPage(page);
     await keep(page, [

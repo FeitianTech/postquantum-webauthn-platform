@@ -64,6 +64,12 @@ function challengeRow({ challengeSource, challengeStatus }) {
     }];
 }
 
+// A registration this browser could not keep: the tab's own sentence for it.
+/** @param {CeremonyResultInput} result */
+function keptRow({ notKept }) {
+    return notKept ? [{ label: 'This browser', value: null, text: notKept, after: null }] : [];
+}
+
 /**
  * What a tab hands the result panel: the server's verdicts and the tab's consequence.
  * @typedef {{
@@ -75,6 +81,7 @@ function challengeRow({ challengeSource, challengeStatus }) {
  *   challengeSource?: string | null,
  *   challengeStatus?: string | null,
  *   findings?: AttestationFindings | null,
+ *   notKept?: string | null,
  * }} CeremonyResultInput
  */
 
@@ -85,9 +92,10 @@ function challengeRow({ challengeSource, challengeStatus }) {
  * What the panel shows for a ceremony's result, or null when it has nothing to
  * say. result: title ("Last authentication"), signCount, signCountStatus,
  * consequence (appended to a regressed verdict: what the tab did about it), and
- * with showChallenge, challengeSource and challengeStatus; and a registration's
- * findings. A regressed counter, a replayed challenge or an attestation error is
- * a warning.
+ * with showChallenge, challengeSource and challengeStatus; a registration's
+ * findings; and notKept, the tab's sentence for a registration this browser
+ * could not keep. A regressed counter, a replayed challenge, an attestation
+ * error or a credential not kept is a warning.
  * @param {CeremonyResultInput} [result]
  * @returns {CeremonyResultView | null}
  */
@@ -95,6 +103,7 @@ export function describeCeremonyResult(result = {}) {
     const rows = [
         ...counterRow(result),
         ...(result.showChallenge ? challengeRow(result) : []),
+        ...keptRow(result),
     ];
     const findings = result.findings && hasFindings(result.findings) ? result.findings : null;
     if (!rows.length && !findings) {
@@ -106,6 +115,7 @@ export function describeCeremonyResult(result = {}) {
         findings,
         warning: result.signCountStatus === 'regressed'
             || result.challengeStatus === 'replayed'
-            || Boolean(findings?.errors.length),
+            || Boolean(findings?.errors.length)
+            || Boolean(result.notKept),
     };
 }

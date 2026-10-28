@@ -14,13 +14,15 @@ import {
   refusedRegistrationResult,
   registerSimplePasskey,
   registeredResult,
-  registeredText,
+  simpleRegisteredMessage,
 } from '@/logic/simple/ceremony.js';
 
 // The Simple tab's two ceremonies, in the steps and words of simple/ceremony.js:
 // the username, what each step is doing, a success as a toast, a failure in place
 // until the next ceremony, and the result panel (a registration's attestation
-// findings, an authentication's counter). The pressed button is busy and
+// findings, an authentication's counter). A registration keeps the server's record
+// in this browser before it says anything, so a record the browser refused (its
+// storage full or blocked) is said in the toast and in place. The pressed button is busy and
 // neither can be pressed again meanwhile. A registration keeps the server's record in this browser; an
 // authentication keeps the server's counter and tints the credential it used.
 export function useSimpleCeremony() {
@@ -73,12 +75,12 @@ export function useSimpleCeremony() {
     if (!begin('registration')) return;
     try {
       const answer = await registerSimplePasskey(username, { onProgress: setProgress });
-      toast({ tone: 'success', message: registeredText(answer) });
-      setResult(registeredResult(answer));
-      if (answer.storedCredential && typeof answer.storedCredential === 'object') {
-        keepSimpleCredential(answer.storedCredential, username);
-        saved.refresh();
-      }
+      const record = answer.storedCredential && typeof answer.storedCredential === 'object' ? answer.storedCredential : null;
+      const kept = record ? keepSimpleCredential(record, username) : true;
+      const message = simpleRegisteredMessage(answer, { kept });
+      toast({ tone: message.tone, message: message.text });
+      setResult(registeredResult(answer, { kept }));
+      if (record) saved.refresh();
     } catch (error) {
       setFailure(ceremonyErrorText(error, 'registration'));
       setResult(refusedRegistrationResult(error));

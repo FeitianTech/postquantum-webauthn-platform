@@ -8,7 +8,7 @@ import { answerResponse, installAuthenticator } from '@/test/logic/simple/ceremo
 import { SavedCredentialsProvider } from '@/components/credentials/useSavedCredentials';
 import { ToastProvider } from '@/components/ui/Toast';
 import { CLOSED_ROUTE } from '@/lib/useSection';
-import { answersOf, keepRecords, savedRecord, storedRecords, warmUpRoutes } from '@/test/credentials';
+import { STORAGE_KEY, answersOf, keepRecords, savedRecord, storedRecords, warmUpRoutes } from '@/test/credentials';
 import { json, stubFetch } from '@/test/fetch';
 import { renderPage } from '@/test/page';
 
@@ -119,6 +119,31 @@ describe('registering in the Simple tab', () => {
       expect(record).toMatchObject({ type: 'simple', email: 'alice', credentialIdBase64Url: savedRecord('simple-register-mldsa65').credentialIdBase64Url });
       expect(screen.getByRole('list', { name: 'Saved Credentials' })).toHaveTextContent('MLDSA65');
     });
+  });
+
+  it('says in place, and in the toast\'s warning tone, that this browser could not keep the credential', async () => {
+    renderTab({ '/api/register/begin': answer(REGISTER[0]), '/api/register/complete': answer(REGISTER[1]) });
+    await useUsername('alice');
+    // The browser refuses the write: its storage is full.
+    const setItem = Storage.prototype.setItem;
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (this: Storage, key: string, value: string) {
+      if (key === STORAGE_KEY) throw new DOMException('The quota has been exceeded.', 'QuotaExceededError');
+      setItem.call(this, key, value);
+    });
+
+    await holdingTimers(async () => {
+      await act(async () => fireEvent.click(button('Register Passkey')));
+
+      const toast = screen.getByText('Registration successful! Algorithm: ES256 (ECDSA). This browser could not keep the credential.');
+      expect(toast.closest('[data-tone]')).toHaveAttribute('data-tone', 'warning');
+    });
+    const result = document.querySelector('[data-ceremony-result]')!;
+    expect(result).toHaveAttribute('data-verdict', 'warning');
+    expect(result.querySelector('[data-row="This browser"]')).toHaveTextContent(
+      'This browser could not keep the credential: its storage is full or blocked. The credential exists on your authenticator, but this browser will not list it.',
+    );
+    expect(storedRecords()).toEqual([]);
+    expect(screen.getByText('No credentials registered yet.')).toBeVisible();
   });
 
   it('keeps a refused registration in place, as the server said it', async () => {

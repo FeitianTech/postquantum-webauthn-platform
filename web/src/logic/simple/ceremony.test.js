@@ -12,7 +12,7 @@ import {
   refusedRegistrationResult,
   registerSimplePasskey,
   registeredResult,
-  registeredText,
+  simpleRegisteredMessage,
 } from './ceremony.js';
 import { answerResponse, goldenAnswers, installAuthenticator } from '@/test/logic/simple/ceremony-answers.js';
 
@@ -145,8 +145,15 @@ describe('registering a passkey', () => {
   });
 
   it('names the algorithm the server chose, or says it is unknown', () => {
-    expect(registeredText(REGISTER[1].body)).toBe('Registration successful! Algorithm: ES256 (ECDSA)');
-    expect(registeredText({})).toBe('Registration successful! Algorithm: Unknown');
+    expect(simpleRegisteredMessage(REGISTER[1].body)).toEqual({ text: 'Registration successful! Algorithm: ES256 (ECDSA)', tone: 'success' });
+    expect(simpleRegisteredMessage({}).text).toBe('Registration successful! Algorithm: Unknown');
+  });
+
+  it('says, as a warning, that this browser could not keep the credential', () => {
+    expect(simpleRegisteredMessage(REGISTER[1].body, { kept: false })).toEqual({
+      text: 'Registration successful! Algorithm: ES256 (ECDSA). This browser could not keep the credential.',
+      tone: 'warning',
+    });
   });
 
   it('gives the result panel the attestation\'s findings, warnings all', () => {
@@ -154,8 +161,15 @@ describe('registering a passkey', () => {
     expect(registeredResult(packed.body)).toEqual({
       title: 'Last registration',
       findings: { errors: [], warnings: ['metadata_not_available', 'trust_path_missing'] },
+      notKept: null,
     });
     expect(registeredResult(REGISTER[1].body).findings).toEqual({ errors: [], warnings: [] });
+  });
+
+  it('gives the result panel what to say of a credential this browser could not keep', () => {
+    expect(registeredResult(REGISTER[1].body, { kept: false }).notKept).toBe(
+      'This browser could not keep the credential: its storage is full or blocked. The credential exists on your authenticator, but this browser will not list it.',
+    );
   });
 
   it('gives the result panel the errors the server refused a registration for, and nothing for any other failure', async () => {
@@ -237,12 +251,21 @@ describe('authenticating with a passkey', () => {
 });
 
 describe('keeping a registration', () => {
-  it('saves the server\'s record in this browser, for the name it was registered under', () => {
+  it('saves the server\'s record in this browser, for the name it was registered under, and says so', () => {
     seedUnifiedCredentialRecords([]);
-    keepSimpleCredential(REGISTER[1].body.storedCredential, ' alice@example.com\n');
+    expect(keepSimpleCredential(REGISTER[1].body.storedCredential, ' alice@example.com\n')).toBe(true);
     const [kept] = getAllSimpleCredentials();
     // Named as the server read the username: trimmed, its case as typed.
     expect(kept).toMatchObject({ type: 'simple', email: 'alice@example.com', credentialId: REGISTER[1].body.storedCredential.credentialId });
+  });
+
+  it('says so when the browser refuses to keep it, its storage full', () => {
+    seedUnifiedCredentialRecords([]);
+    vi.spyOn(window.localStorage, 'setItem').mockImplementation(() => {
+      throw new DOMException('The quota has been exceeded.', 'QuotaExceededError');
+    });
+    expect(keepSimpleCredential(REGISTER[1].body.storedCredential, 'alice')).toBe(false);
+    expect(getAllSimpleCredentials()).toEqual([]);
   });
 });
 

@@ -65,4 +65,11 @@ describe('the ceremony result panel', () => {
     expect(document.querySelector('[data-ceremony-result]')).not.toHaveAttribute('data-verdict');
     expect(document.querySelector('[data-row="Challenge"]')).toBeVisible();
   });
+
+  it('says in amber, in a row of its own, that this browser could not keep the credential', () => {
+    render(<CeremonyResult result={{ title: 'Last registration', notKept: 'This browser could not keep the credential.' }} />);
+    const panel = document.querySelector('[data-ceremony-result]')!;
+    expect(panel).toHaveAttribute('data-verdict', 'warning');
+    expect(panel.querySelector('[data-row="This browser"]')).toHaveTextContent('This browser could not keep the credential.');
+  });
 });
