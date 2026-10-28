@@ -169,14 +169,18 @@ describe('advancedRegisteredMessage', () => {
     });
   });
 
-  it('adds the server\'s warnings, as a warning', () => {
-    expect([EVERYTHING.complete.body.warnings, MLDSA.complete.body.warnings]).toEqual([['metadata_not_available'], ['metadata_not_available']]);
+  it('warns of the attestation\'s warnings, pointing to where they are listed, without their codes', () => {
+    expect(EVERYTHING.complete.body.warnings).toEqual(['metadata_not_available']);
     expect(advancedRegisteredMessage(EVERYTHING.complete.body)).toEqual({
-      text: 'Advanced registration successful! Algorithm: ES256 (ECDSA) metadata_not_available',
+      text: 'Advanced registration successful! Algorithm: ES256 (ECDSA). See Verification findings for its warnings.',
       tone: 'warning',
     });
+  });
+
+  it('warns that the attestation did not verify when it has errors', () => {
+    expect(MLDSA.complete.body.attestationErrors).toEqual(['trust_path_missing']);
     expect(advancedRegisteredMessage(MLDSA.complete.body)).toEqual({
-      text: 'Advanced registration successful! Algorithm: ML-DSA-44 (PQC) metadata_not_available',
+      text: 'Advanced registration successful! Algorithm: ML-DSA-44 (PQC). Its attestation did not verify: see Verification findings.',
       tone: 'warning',
     });
   });
@@ -186,11 +190,10 @@ describe('advancedRegisteredMessage', () => {
     expect(advancedRegisteredMessage(answer).text).toBe('Advanced registration successful! Algorithm: Unknown');
   });
 
-  it('leaves out warnings that are not text or are blank, and warnings that are not a list', () => {
-    const answer = { ...EVERYTHING.complete.body, warnings: ['  ', 7, null, 'metadata_not_available'] };
-    expect(advancedRegisteredMessage(answer).text).toBe('Advanced registration successful! Algorithm: ES256 (ECDSA) metadata_not_available');
-    expect(advancedRegisteredMessage({ ...answer, warnings: [' ', 0] }).tone).toBe('success');
-    expect(advancedRegisteredMessage({ ...answer, warnings: 'metadata_not_available' }).tone).toBe('success');
+  it('counts no finding that is not text or is blank, nor a list that is not a list', () => {
+    const answer = { ...EVERYTHING.complete.body, warnings: ['  ', 7, null] };
+    expect(advancedRegisteredMessage(answer).tone).toBe('success');
+    expect(advancedRegisteredMessage({ ...answer, warnings: 'metadata_not_available', attestationErrors: 'trust_path_missing' }).tone).toBe('success');
   });
 });
 

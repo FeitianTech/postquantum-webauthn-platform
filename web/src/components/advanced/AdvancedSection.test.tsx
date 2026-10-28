@@ -178,7 +178,7 @@ describe('a registration', () => {
     await screen.findByRole('heading', { level: 2, name: 'Credential Details' });
   });
 
-  it('says it succeeded with the server\'s warnings, shows where the challenge came from (a replay warns), and draws new values', async () => {
+  it('says it succeeded, in the warning tone for the attestation\'s warnings, shows where the challenge came from (a replay warns), and draws new values', async () => {
     authenticator = installAuthenticator(vi, { create: recordedCredential(X5C) });
     renderSection([], registrationRoutes(X5C));
     await ready();
@@ -187,7 +187,8 @@ describe('a registration', () => {
     await holdingTimers(async () => {
       await act(async () => fireEvent.click(button('Create Credential')));
 
-      expect(screen.getByText('Advanced registration successful! Algorithm: ES256 (ECDSA) metadata_not_available')).toBeInTheDocument();
+      const toast = screen.getByText('Advanced registration successful! Algorithm: ES256 (ECDSA). See Verification findings for its warnings.');
+      expect(toast.closest('[data-tone]')).toHaveAttribute('data-tone', 'warning');
       const result = document.querySelector<HTMLElement>('#nav-panel-advanced [data-ceremony-result]')!;
       expect(result).toHaveTextContent('Last registration');
       // The recorded registration reused the scenario's challenge: a replay, which the panel warns of.

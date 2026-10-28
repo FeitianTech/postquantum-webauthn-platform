@@ -97,6 +97,9 @@ test.describe('/#advanced', () => {
     await addVirtualAuthenticator(page);
     await openPage(page);
     await register(page);
+    await expect(page.locator('[data-toast-viewport] [data-tone="warning"]')).toContainText(
+      'Its attestation did not verify: see Verification findings.',
+    );
     await page.getByRole('dialog').getByRole('button', { name: 'Close credential details' }).click();
 
     // The virtual authenticator's attestation names no root the fixture metadata knows.

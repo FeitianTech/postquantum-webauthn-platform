@@ -46,6 +46,8 @@ export const ADVANCED_CEREMONY_TEXT = {
     registrationCompleting: 'Completing registration...',
     lastRegistration: 'Last registration',
     invalidHints: 'Invalid hint configuration.',
+    findingErrors: 'Its attestation did not verify: see Verification findings.',
+    findingWarnings: 'See Verification findings for its warnings.',
 };
 
 const COMMON_SUPPORTED_ALGORITHMS = new Set([-7, -257, -8]);
@@ -165,15 +167,20 @@ function textWarnings(json) {
 }
 
 /**
- * A registration's success message, and its tone: a warning when the server added warnings.
+ * A registration's success message, and its tone: a warning, pointing to the
+ * result panel's list, when its attestation has findings (an error means the
+ * server could not verify it).
  * @param {RegistrationAnswer} answer
  * @returns {{ text: string, tone: 'success' | 'warning' }}
  */
 export function advancedRegisteredMessage(answer) {
     const successMessage = `Advanced registration successful! Algorithm: ${answer.algo || 'Unknown'}`;
-    const warnings = textWarnings(answer);
-    return warnings.length > 0
-        ? { text: `${successMessage} ${warnings.join(' ')}`, tone: 'warning' }
+    const { errors, warnings } = answerFindings(answer);
+    if (errors.length) {
+        return { text: `${successMessage}. ${ADVANCED_CEREMONY_TEXT.findingErrors}`, tone: 'warning' };
+    }
+    return warnings.length
+        ? { text: `${successMessage}. ${ADVANCED_CEREMONY_TEXT.findingWarnings}`, tone: 'warning' }
         : { text: successMessage, tone: 'success' };
 }
 
