@@ -10,6 +10,7 @@ from fido2 import cbor
 from server.app import visitor_session
 from server.app.config import relying_party, request_limits
 from server.app.routes.advanced import algorithms as advanced_algorithms
+from server.app.webauthn import cose_algorithms
 from server.app.webauthn.attestation import certificates as attestation_certificates
 from tests.app.entry_app import entry_app
 from tests.app.security.ceremony_helpers import (
@@ -253,14 +254,9 @@ def test_advanced_register_begin_uses_default_algorithms_without_pubkeycredparam
 
     assert response.status_code == 200
     body = response.get_json()
-    assert [entry["alg"] for entry in body["publicKey"]["pubKeyCredParams"]] == [
-        -50,
-        -48,
-        -49,
-        -7,
-        -257,
-    ]
-    assert captured["allowed_algorithms"] == [-50, -48, -49, -7, -257]
+    preferred = list(cose_algorithms.PREFERRED_REGISTRATION_ALGORITHMS)
+    assert [entry["alg"] for entry in body["publicKey"]["pubKeyCredParams"]] == preferred
+    assert captured["allowed_algorithms"] == preferred
 
 
 def test_advanced_register_begin_filters_unavailable_pqc_when_classical_algorithms_remain(monkeypatch):

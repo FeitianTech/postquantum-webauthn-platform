@@ -15,10 +15,6 @@ from ...webauthn import cose_algorithms, pqc
 
 logger = logging.getLogger(__name__)
 
-# What a registration offers when its request names no algorithms.
-_DEFAULT_REGISTRATION_ALGORITHMS = (-50, -48, -49, -7, -257)
-
-
 def _verifiable_algorithms() -> set[int]:
     """The COSE algorithms fido2 verifies here: ML-DSA only where cryptography's backend has it."""
 
@@ -71,8 +67,9 @@ def configure_allowed_algorithms(
     temp_server: Any,
     warnings: list[str],
 ) -> str | None:
-    """Set what a registration offers: the requested algorithms, else the defaults, less
-    the ML-DSA ones fido2 cannot verify here. Gives the refusal when nothing is left."""
+    """Set what a registration offers: the requested algorithms, else the preferred ones
+    (``cose_algorithms.PREFERRED_REGISTRATION_ALGORITHMS``), less the ML-DSA ones fido2
+    cannot verify here. Gives the refusal when nothing is left."""
 
     pub_key_cred_params = public_key.get("pubKeyCredParams", [])
     if pub_key_cred_params:
@@ -81,7 +78,9 @@ def configure_allowed_algorithms(
             public_key["pubKeyCredParams"] = [{"type": "public-key", "alg": alg} for alg in requested]
             temp_server.allowed_algorithms = [_public_key_param(alg) for alg in requested]
     else:
-        temp_server.allowed_algorithms = [_public_key_param(alg) for alg in _DEFAULT_REGISTRATION_ALGORITHMS]
+        temp_server.allowed_algorithms = [
+            _public_key_param(alg) for alg in cose_algorithms.PREFERRED_REGISTRATION_ALGORITHMS
+        ]
 
     return _drop_unavailable_pqc(temp_server, warnings)
 

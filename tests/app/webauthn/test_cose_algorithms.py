@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 import pytest
 
 from server.app.webauthn import cose_algorithms
@@ -73,3 +76,10 @@ def test_extract_credential_algorithm_from_mapping_and_objects():
         public_key = _IndexablePublicKey()
 
     assert cose_algorithms.credential_algorithm(_IndexableCredentialObj()) == -8
+
+
+def test_registrations_prefer_the_list_the_page_shares():
+    # The Advanced form's tests read the same list (web/src/logic/advanced/registration/algorithm-options.test.js).
+    shared = json.loads((Path(__file__).parents[2] / "fixtures" / "registration-algorithms.json").read_text())["algorithms"]
+    assert list(cose_algorithms.PREFERRED_REGISTRATION_ALGORITHMS) == shared
+    assert [cose_algorithms.lookup_name(name) for name in ("ML-DSA-44", "ML-DSA-65", "ML-DSA-87", "EdDSA", "ES256", "RS256", "ES384")] == shared

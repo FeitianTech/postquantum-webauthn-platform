@@ -5,6 +5,9 @@ Both ceremonies read the algorithm a request or a stored credential gives with
 punctuation and a ``FIDO_ALG_`` / ``COSE_ALG_`` prefix, then as a suffix, so
 "WebAuthn: RS256 (RSASSA)" reads as -257. What follows "(" is a comment; text
 that names no algorithm gives its last number, so "SHA-256 (RS256)" reads as 256.
+
+``PREFERRED_REGISTRATION_ALGORITHMS`` is the one order a registration offers its
+algorithms in, the most preferred first.
 """
 from __future__ import annotations
 
@@ -12,6 +15,14 @@ import math
 import re
 from collections.abc import Mapping
 from typing import Any
+
+# The algorithms a registration offers when it chooses, most preferred first (the
+# browser takes the first one the authenticator supports): ML-DSA from its
+# smallest parameter set, then EdDSA, ES256, RS256 and ES384. The Simple tab
+# offers them, less any fido2 cannot verify here; an Advanced request that names
+# none gets them; the Advanced form ticks them by default, first in its list.
+# tests/fixtures/registration-algorithms.json holds the page's list to these.
+PREFERRED_REGISTRATION_ALGORITHMS: tuple[int, ...] = (-48, -49, -50, -8, -7, -257, -35)
 
 NAME_MAP: dict[str, int] = {
     "ML-DSA-87": -50,

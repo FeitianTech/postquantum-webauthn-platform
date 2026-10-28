@@ -167,7 +167,7 @@
     ],
     [
      "Content-Length",
-     "571"
+     "634"
     ],
     [
      "X-Content-Type-Options",
@@ -214,11 +214,19 @@
         },
         "pubKeyCredParams": [
          {
+          "alg": -8,
+          "type": "public-key"
+         },
+         {
           "alg": -7,
           "type": "public-key"
          },
          {
           "alg": -257,
+          "type": "public-key"
+         },
+         {
+          "alg": -35,
           "type": "public-key"
          }
         ]
@@ -237,7 +245,7 @@
      }
     }
    ],
-   "bodySha256": "911f2bf6b89b9814f4efced2cb4c3fbe211d6ecb494dbd85bfa6f76f58b4c230",
+   "bodySha256": "4b7d946a00b5ad303dd4b09e55504fe03c9e5bf729e7bef7bebf99456f7ddb69",
    "body": {
     "publicKey": {
      "attestation": "none",
@@ -250,11 +258,19 @@
      "excludeCredentials": [],
      "pubKeyCredParams": [
       {
+       "alg": -8,
+       "type": "public-key"
+      },
+      {
        "alg": -7,
        "type": "public-key"
       },
       {
        "alg": -257,
+       "type": "public-key"
+      },
+      {
+       "alg": -35,
        "type": "public-key"
       }
      ],

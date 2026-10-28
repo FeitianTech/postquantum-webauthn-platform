@@ -357,7 +357,11 @@ its logic out here first.
   `certificates._registration_view`, once: docs/STORAGE.md),
   `webauthn/signature_algorithms.py`
   (the one spelling of a signature algorithm), `webauthn/cose_algorithms.py` (a named COSE
-  algorithm read, for both tabs), `webauthn/attachments.py` (the authenticator attachment
+  algorithm read, for both tabs; and `PREFERRED_REGISTRATION_ALGORITHMS`, the one order a
+  registration offers algorithms in, most preferred first: ML-DSA-44, ML-DSA-65, ML-DSA-87,
+  EdDSA, ES256, RS256, ES384. The Simple tab offers them, less any fido2 cannot verify here; an
+  Advanced request that names none gets them; `tests/fixtures/registration-algorithms.json`
+  holds the Advanced form to the same list), `webauthn/attachments.py` (the authenticator attachment
   hints), `webauthn/pqc.py` (the ML-DSA adapter), `webauthn/mldsa.py` (ML-DSA parameter sets,
   sizes and certificate keys), `webauthn/cose_keys.py` (RS384, RS512, PS384, PS512: the package
   imports it so fido2's `CoseKey` lookups find them), `webauthn/assertion_hash.py` (the Advanced

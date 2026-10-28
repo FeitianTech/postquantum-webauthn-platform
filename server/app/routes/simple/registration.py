@@ -21,6 +21,7 @@ from ...challenge_registry import (
 )
 from ...config import origins, relying_party, request_limits
 from ...mds import provisioning as mds_provisioning
+from ...webauthn import cose_algorithms
 from ...webauthn.attachments import normalize_attachment
 from ...webauthn.attestation import aaguid as attestation_aaguid
 from ...webauthn.attestation import certificates as attestation_certificates
@@ -265,12 +266,12 @@ def register_complete():
     return jsonify(registration_record.build_register_complete_response_payload(reg))
 
 
-# The algorithms the browser is offered, ML-DSA first, of those this server
-# verifies. Begin keeps them in the session, and complete's checks hold the new
-# credential's algorithm to them.
+# The algorithms the browser is offered, the preferred ones in their order, of
+# those this server verifies. Begin keeps them in the session, and complete's
+# checks hold the new credential's algorithm to them.
 _SIMPLE_ALLOWED_ALGORITHMS: tuple[int, ...] = tuple(
     alg
-    for alg in (-50, -49, -48, -8, -7, -257, -35)
+    for alg in cose_algorithms.PREFERRED_REGISTRATION_ALGORITHMS
     if alg in set(CoseKey.supported_algorithms())
 )
 

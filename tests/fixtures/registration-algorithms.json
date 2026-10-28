@@ -1,0 +1,4 @@
+{
+  "about": "The registration algorithms as COSE identifiers, most preferred first: ML-DSA-44, ML-DSA-65, ML-DSA-87, EdDSA, ES256, RS256, ES384. The server offers them in this order (server/app/webauthn/cose_algorithms.py's PREFERRED_REGISTRATION_ALGORITHMS: the Simple tab, and an Advanced request that names none), and the Advanced form lists them first and ticks them by default (web/src/logic/advanced/registration/algorithm-options.js). Both sides' tests hold them to this list.",
+  "algorithms": [-48, -49, -50, -8, -7, -257, -35]
+}

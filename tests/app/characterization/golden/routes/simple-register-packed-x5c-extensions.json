@@ -73,7 +73,7 @@
        "challenge": "uFM6UhsBmwG2NDQyIzVhklKUJxyQPL_0TB4vZ4BU1gw",
        "pubKeyCredParams": [
         {
-         "alg": -50,
+         "alg": -48,
          "type": "public-key"
         },
         {
@@ -81,7 +81,7 @@
          "type": "public-key"
         },
         {
-         "alg": -48,
+         "alg": -50,
          "type": "public-key"
         },
         {
@@ -116,7 +116,7 @@
      }
     }
    ],
-   "bodySha256": "16b78fd91cda97cf651b1c7b7c5c8b0a2c4a239f46c0ceafd5609c8a967d65fd",
+   "bodySha256": "56ded71aeb3adebea06e6b221cbe5572544a51adba89c1d89968ea266f6d3a82",
    "body": {
     "publicKey": {
      "authenticatorSelection": {
@@ -132,7 +132,7 @@
      },
      "pubKeyCredParams": [
       {
-       "alg": -50,
+       "alg": -48,
        "type": "public-key"
       },
       {
@@ -140,7 +140,7 @@
        "type": "public-key"
       },
       {
-       "alg": -48,
+       "alg": -50,
        "type": "public-key"
       },
       {

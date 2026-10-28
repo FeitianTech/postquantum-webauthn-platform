@@ -316,7 +316,7 @@
     ],
     [
      "Content-Length",
-     "577"
+     "640"
     ],
     [
      "X-Content-Type-Options",
@@ -363,10 +363,6 @@
         },
         "pubKeyCredParams": [
          {
-          "alg": -50,
-          "type": "public-key"
-         },
-         {
           "alg": -48,
           "type": "public-key"
          },
@@ -375,11 +371,23 @@
           "type": "public-key"
          },
          {
+          "alg": -50,
+          "type": "public-key"
+         },
+         {
+          "alg": -8,
+          "type": "public-key"
+         },
+         {
           "alg": -7,
           "type": "public-key"
          },
          {
           "alg": -257,
+          "type": "public-key"
+         },
+         {
+          "alg": -35,
           "type": "public-key"
          }
         ]
@@ -398,7 +406,7 @@
      }
     }
    ],
-   "bodySha256": "a28f7e6386ae0b0a6b84f49c3f590e7b8933e331154b2044d2a34afa4d94336d",
+   "bodySha256": "0f4296e3c039006ada5a82e23a8e169059b98d95e4f32144005a399c937bb36b",
    "body": {
     "publicKey": {
      "attestation": "none",
@@ -411,10 +419,6 @@
      "excludeCredentials": [],
      "pubKeyCredParams": [
       {
-       "alg": -50,
-       "type": "public-key"
-      },
-      {
        "alg": -48,
        "type": "public-key"
       },
@@ -423,11 +427,23 @@
        "type": "public-key"
       },
       {
+       "alg": -50,
+       "type": "public-key"
+      },
+      {
+       "alg": -8,
+       "type": "public-key"
+      },
+      {
        "alg": -7,
        "type": "public-key"
       },
       {
        "alg": -257,
+       "type": "public-key"
+      },
+      {
+       "alg": -35,
        "type": "public-key"
       }
      ],
@@ -454,7 +470,7 @@
     ],
     [
      "Content-Length",
-     "577"
+     "640"
     ],
     [
      "X-Content-Type-Options",
@@ -501,10 +517,6 @@
         },
         "pubKeyCredParams": [
          {
-          "alg": -50,
-          "type": "public-key"
-         },
-         {
           "alg": -48,
           "type": "public-key"
          },
@@ -513,11 +525,23 @@
           "type": "public-key"
          },
          {
+          "alg": -50,
+          "type": "public-key"
+         },
+         {
+          "alg": -8,
+          "type": "public-key"
+         },
+         {
           "alg": -7,
           "type": "public-key"
          },
          {
           "alg": -257,
+          "type": "public-key"
+         },
+         {
+          "alg": -35,
           "type": "public-key"
          }
         ]
@@ -536,7 +560,7 @@
      }
     }
    ],
-   "bodySha256": "a28f7e6386ae0b0a6b84f49c3f590e7b8933e331154b2044d2a34afa4d94336d",
+   "bodySha256": "0f4296e3c039006ada5a82e23a8e169059b98d95e4f32144005a399c937bb36b",
    "body": {
     "publicKey": {
      "attestation": "none",
@@ -549,10 +573,6 @@
      "excludeCredentials": [],
      "pubKeyCredParams": [
       {
-       "alg": -50,
-       "type": "public-key"
-      },
-      {
        "alg": -48,
        "type": "public-key"
       },
@@ -561,11 +581,23 @@
        "type": "public-key"
       },
       {
+       "alg": -50,
+       "type": "public-key"
+      },
+      {
+       "alg": -8,
+       "type": "public-key"
+      },
+      {
        "alg": -7,
        "type": "public-key"
       },
       {
        "alg": -257,
+       "type": "public-key"
+      },
+      {
+       "alg": -35,
        "type": "public-key"
       }
      ],

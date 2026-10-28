@@ -11,6 +11,7 @@ from fido2.webauthn import AuthenticatorData
 from server.app.config import relying_party, request_limits
 from server.app.routes.simple import account, stored_sign_count
 from server.app.storage import credentials as storage_credentials
+from server.app.webauthn import cose_algorithms
 from server.app.webauthn.attestation import certificates as attestation_certificates
 from tests.app import visitor_namespace
 from tests.app.entry_app import entry_app
@@ -84,6 +85,14 @@ def test_a_begin_keeps_the_algorithms_it_offers_for_complete():
         kept = [param["alg"] for param in session["simple_register_public_key"]["pubKeyCredParams"]]
     assert kept == offered
     assert -36 not in kept and -65535 not in kept
+
+
+def test_a_begin_offers_the_preferred_algorithms_in_their_order():
+    begin = entry_app().test_client().post(f"/api/register/begin?email={EMAIL}", json={"credentials": []})
+
+    offered = [param["alg"] for param in begin.get_json()["publicKey"]["pubKeyCredParams"]]
+    # fido2 verifies every one of them here.
+    assert offered == list(cose_algorithms.PREFERRED_REGISTRATION_ALGORITHMS)
 
 
 def test_a_credential_whose_algorithm_was_not_offered_is_refused(credential_store, tmp_path):
