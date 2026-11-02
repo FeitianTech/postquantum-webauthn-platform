@@ -27,9 +27,9 @@ spec:
         run.googleapis.com/startup-cpu-boost: "true"
         # Request-based billing: CPU is only allocated while serving requests.
         run.googleapis.com/cpu-throttling: "true"
-        # One instance stays up between visits, billed at the idle rate, so a
-        # visitor rarely meets a cold start.
-        autoscaling.knative.dev/minScale: "1"
+        # No instance is kept between visits: an idle one is not billed, and a
+        # visit after a quiet spell meets a cold start.
+        autoscaling.knative.dev/minScale: "0"
         autoscaling.knative.dev/maxScale: "10"
     spec:
       serviceAccountName: pqcwebauthn-run@feitian-project.iam.gserviceaccount.com
