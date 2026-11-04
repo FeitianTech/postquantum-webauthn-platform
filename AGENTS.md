@@ -203,7 +203,11 @@ its logic out here first.
   request (`request.js`: defaults, build, read back, the form's rules), its validation and
   its ceremony (`ceremony.js`), with Allow Credentials' choices and extension availability
   under `authentication/`, and the form's algorithms under `registration/`
-  (`algorithm-options.js`: the preferred ones first, in the servers' order, ticked by default);
+  (`algorithm-options.js`: the preferred ones first, in the servers' order, ticked by default),
+  and what an MDS statement says it can take (`statement-settings.js`: getInfo's algorithms,
+  else the statement's by their FIDO registry names; user verification; the attachment; FIDO2
+  and U2F only) with the form's changes for it (`statement-changes.js`, which drops a hint the
+  attachment contradicts);
   `editor/` the editor's model and keys, `request-patch.js`
   (`followForm`) and what both requests' validation shares; `hints.js`,
   `fake-credentials.js` and `hex-input.js` serve both forms; `response-parts.js` gives the parts
