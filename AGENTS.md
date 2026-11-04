@@ -80,7 +80,9 @@ the CSP and the source rules.
   party's name; `routeFromHash` / `hashPath`), `useSection.ts` (the section in the hash with
   `replaceState`; what is open inside one as segments after it, e.g.
   `#mds/<entryId>/certificate/<n>`; `open` pushes so Back closes one level, `close`, `replace`,
-  `closeAll` go back as many levels as the page opened: the pushed state's `pqcOpened`; it
+  `closeAll` go back as many levels as the page opened: the pushed state's `pqcOpened`, which
+  counts across sections, so `closeAll` takes at most the levels its caller opened (the
+  details dialog passes its own); it
   tells Next's router, `beforePopState`, to leave Back to the page while the path stays),
   `entrance.ts` (entrances only for what the person brings up: what mounts already shown
   enters only once the page has left its first URL), `lazyModule.ts` (a chunk loaded once,

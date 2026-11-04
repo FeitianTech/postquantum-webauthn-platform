@@ -25,8 +25,12 @@ export type SectionRoute = {
   close: (parent?: string[]) => void;
   /** Shows `path` in place of what the URL names (one this page does not know). */
   replace: (path: string[]) => void;
-  /** Closes every level this page opened, back to `parent` (the list by default), in one step. */
-  closeAll: (parent?: string[]) => void;
+  /**
+   * Closes every level this page opened, back to `parent` (the list by default), in
+   * one step: at most `levels` of them, the ones a dialog opened over what it closes
+   * to (a section another one opened leaves its own levels behind).
+   */
+  closeAll: (parent?: string[], levels?: number) => void;
 };
 
 /** Opens `path` in another section, as a history entry of its own, so Back returns here. */
@@ -163,8 +167,8 @@ export function useSection(): [SectionId | null, (section: SectionId) => void, S
   );
 
   const closeAll = useCallback(
-    (parent: string[] = []) => {
-      const depth = pushedDepth(window.history.state);
+    (parent: string[] = [], levels = Infinity) => {
+      const depth = Math.min(pushedDepth(window.history.state), levels);
       if (depth) {
         landing.current = parent;
         window.history.go(-depth);

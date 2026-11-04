@@ -136,6 +136,9 @@ export function CredentialDetailDialog({
       : level.kind === 'authenticator-data'
         ? 'Authenticator Data'
         : TITLES[level.kind];
+  // × closes the levels this dialog opened, and only those: what another section
+  // opened before them stays (one push per level: the detail, then deeper).
+  const closeLevels = () => closeAll([], level.depth + 1);
   const back =
     level.depth === 1
       ? { onBack: () => close(base), title: 'Return to credential details' }
@@ -146,7 +149,7 @@ export function CredentialDetailDialog({
   return (
     <Dialog
       open={Boolean(row)}
-      onClose={() => closeAll()}
+      onClose={closeLevels}
       labelledBy={titleId}
       returnFocusTo={returnFocusTo}
       className="max-sm:w-[calc(100vw-1rem)]"
@@ -155,7 +158,7 @@ export function CredentialDetailDialog({
         titleId={titleId}
         title={title}
         closeLabel="Close credential details"
-        onClose={() => closeAll()}
+        onClose={closeLevels}
         back={back}
         className="max-sm:pl-4"
       />

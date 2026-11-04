@@ -337,6 +337,19 @@ describe('a saved credential\'s details, the levels', () => {
     expect(window.location.hash).toBe('#simple');
   });
 
+  it('close with × only the levels they opened, back to the section another one opened', async () => {
+    renderShell([ES256], '#simple');
+    // The section as another one opens it: a history entry of its own.
+    window.history.replaceState({ fromNext: true, pqcOpened: 1 }, '', '/#simple');
+    await openDetail();
+    await toRegistration();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Close credential details' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(window.location.hash).toBe('#simple');
+    expect(window.history.state).toEqual({ fromNext: true, pqcOpened: 1 });
+  });
+
   it('correct a certificate the credential does not have to its registration, and another word to the detail', async () => {
     renderShell([X5C], urlOf(X5C, 'registration', 'certificate', '9'));
     await waitFor(() => expect(window.location.hash).toBe(urlOf(X5C, 'registration')));

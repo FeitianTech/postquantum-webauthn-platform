@@ -148,6 +148,21 @@ describe('closing every level at once', () => {
     expect(window.history.state).toBeNull();
   });
 
+  it('goes back only the levels asked for, to the entry another section opened', async () => {
+    window.history.replaceState(null, '', '/#mds/aaguid:x');
+    const { result } = renderHook(() => useSection());
+    act(() => result.current[3]('advanced', []));
+    act(() => result.current[2].open(['credential', 'k']));
+    act(() => result.current[2].open(['credential', 'k', 'registration']));
+    expect(window.history.state).toEqual({ pqcOpened: 3 });
+
+    act(() => result.current[2].closeAll([], 2));
+    await waitFor(() => expect(window.location.hash).toBe('#advanced'));
+    expect(result.current[0]).toBe('advanced');
+    expect(result.current[2].path).toEqual([]);
+    expect(window.history.state).toEqual({ pqcOpened: 1 });
+  });
+
   it('replaces a first level reached by a link with the list, after going back past the rest', async () => {
     window.history.replaceState(null, '', '/#simple/credential/k/registration');
     const { result } = renderHook(() => useSection());
