@@ -11,7 +11,9 @@ import { CondensedBar } from './CondensedBar';
 import { BackButton, EntryHeader, RawButton } from './EntryHeader';
 import { EntrySections } from './EntrySections';
 import { RawEntryDialog } from './RawEntryDialog';
+import { EntrySavedCredentials } from './EntrySavedCredentials';
 import type { EntryDetail } from './useEntryDetail';
+import type { CredentialRowView } from '@/logic/credentials/saved-list.js';
 
 type EntryPageProps = {
   entryId: string;
@@ -21,8 +23,10 @@ type EntryPageProps = {
   /** Opens a certificate's page (MdsSection gives it once it shows them). */
   onOpenCertificate?: (number: number, certificate: string) => void;
   busyCertificate?: number | null;
-  /** False while another page (a certificate) covers this one. */
+  /** False while another page (a certificate) or a dialog (a credential's details) is over this one. */
   active?: boolean;
+  /** The saved credentials with the entry's AAGUID, and how one's details open over the entry. */
+  saved?: { rows: CredentialRowView[]; onOpen: (key: string) => void };
 };
 
 // An authenticator opened from the list or a link (#mds/<entryId>): everything
@@ -36,6 +40,7 @@ export function EntryPage({
   onOpenCertificate,
   busyCertificate = null,
   active = true,
+  saved,
 }: EntryPageProps) {
   const entrance = useEntrance(true);
   const headingRef = useRef<HTMLHeadingElement>(null);
@@ -71,6 +76,7 @@ export function EntryPage({
           <RawButton hasRaw={hasRaw} onRaw={openRaw} size="sm" />
         </CondensedBar>
         <EntryHeader ref={headingRef} entry={detail.entry} hasRaw={hasRaw} onBack={onBack} onRaw={openRaw} />
+        {saved ? <EntrySavedCredentials rows={saved.rows} idBase="mds-entry" onOpen={saved.onOpen} /> : null}
         <EntrySections
           sections={sections}
           entry={detail.entry}

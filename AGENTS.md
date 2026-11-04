@@ -98,7 +98,8 @@ the CSP and the source rules.
     `CredentialDetails` when it is asked for or once the page is interactive) has four levels,
     each a pushed history entry:
     `#<section>/credential/<key>`, `…/registration`, `…/registration/certificate/<n>`,
-    `…/registration/authenticator-data`; a level the credential lacks is corrected upward. The
+    `…/registration/authenticator-data` (over an MDS entry, `#mds/<entryId>/credential/<key>…`);
+    a level the credential lacks is corrected upward. The
     registration's level opens on the attestation's findings in words, when the record keeps any.
     Each part a level shows (the response, its client data, the attestation object, the
     authenticator data, a certificate whose DER the record keeps) has "Decode in Codec"
@@ -120,7 +121,10 @@ the CSP and the source rules.
   - `mds/`: the explorer (the table's rows are grids on one column template set through the
     CSSOM, `--mds-columns`, with `content-visibility: auto`), the filter bar, an entry and its
     certificates (`EntryRouter`; `CondensedBar` portalled into the overlay root, since an
-    entering section is a transform), Manage Metadata, and `entryLink.ts`, how a saved
+    entering section is a transform), the saved credentials with the entry's AAGUID under its
+    header (`EntrySavedCredentials`), a saved credential's details over an entry (the same
+    dialog, given the route under the entry, `routeUnderEntry.ts`; it offers no FIDO MDS over
+    the credential's own entry), Manage Metadata, and `entryLink.ts`, how a saved
     credential opens `#mds/aaguid:<aaguid>`.
   - `analyze-browser/`: the Analyze Browser panel.
 - Tests: vitest with two projects (`web/vitest.config.mts`): `components`
@@ -221,6 +225,8 @@ its logic out here first.
   release kept them) and the parts the Codec decodes (`detail/codec-payloads.js`: only values
   kept whole, never the copies earlier releases cut short in a snapshot's state). Registration snapshots (`schemaVersion` 2) hold the
   registration as data, never markup, and its certificates without their DER; older composed HTML is never read.
+- `credentials/aaguid-credentials.js`: the saved rows an MDS entry lists, their AAGUID read as
+  the entry's by `aaguidHex` on both sides.
 - `codec/`: the Codec's requests, results and values. `mds/`: the MDS
   explorer's loading (the list fetched ahead, without the cookie: `prefetchExplorerList`; the
   session's own rows from `explorer/custom`, merged with it by `mergeCustomEntries`: an upload

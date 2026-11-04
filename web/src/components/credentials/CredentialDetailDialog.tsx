@@ -116,10 +116,13 @@ function useLevelScroll(open: boolean, key: string, level: Level) {
 export function CredentialDetailDialog({
   route,
   returnFocusTo,
+  overEntry,
 }: {
   route: SectionRoute;
   /** Where the focus goes when the details close; by default what had it when they opened. */
   returnFocusTo?: () => HTMLElement | null;
+  /** The MDS entry the details are open over (#mds/<entryId>/credential/<key>), if any. */
+  overEntry?: string;
 }) {
   const saved = useSavedCredentials();
   const titleId = useId();
@@ -183,7 +186,7 @@ export function CredentialDetailDialog({
               ) : null}
               <div className="mt-6">
                 {ready ? (
-                  <DetailSections detail={ready.detail} row={shown} idBase={idBase} onRegistration={onRegistration} />
+                  <DetailSections detail={ready.detail} row={shown} idBase={idBase} onRegistration={onRegistration} overEntry={overEntry} />
                 ) : (
                   <p role="status" className="flex items-center gap-2 text-body-lg text-ink-muted">
                     <Spinner />

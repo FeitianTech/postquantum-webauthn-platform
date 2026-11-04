@@ -3,10 +3,14 @@ import { detailSections } from '@/logic/mds/explorer/detail.js';
 import type { MdsEntry } from '@/logic/mds/explorer/loading.js';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
+import { CredentialDetails } from '@/components/credentials/CredentialDetails';
+import { useSavedCredentials } from '@/components/credentials/useSavedCredentials';
+import { credentialsWithAaguid } from '@/logic/credentials/aaguid-credentials.js';
 import type { SectionRoute } from '@/lib/useSection';
 
 import { CertificatePage } from './CertificatePage';
 import { EntryPage } from './EntryPage';
+import { useRouteUnderEntry } from './routeUnderEntry';
 import { useCertificateDecode } from './useCertificateDecode';
 import { useEntryDetail } from './useEntryDetail';
 import type { ExplorerPhase } from './useMdsExplorer';
@@ -14,10 +18,11 @@ import type { ExplorerPhase } from './useMdsExplorer';
 const CERTIFICATE_NUMBER = /^[1-9]\d*$/;
 
 // What #mds/<entryId>… shows: the entry's page, and over it one of its
-// certificates (…/certificate/<n>). The entry's page stays in the page under a
-// certificate, and Back finds it where it was, the focus on that certificate's
-// button. A path this page does not know (a certificate the entry does not have,
-// another word) shows the entry, and the URL says so.
+// certificates (…/certificate/<n>) or a saved credential's details
+// (…/credential/<key>, with their levels after it, which the dialog checks). The
+// entry's page stays in the page under either, and Back finds it where it was,
+// the focus on what opened them. A path this page does not know (a certificate
+// the entry does not have, another word) shows the entry, and the URL says so.
 export function EntryRouter({ route, entries, phase }: { route: SectionRoute; entries: MdsEntry[]; phase: ExplorerPhase }) {
   const [entryId = '', kind, numberText = ''] = route.path;
   const { detail, retry } = useEntryDetail(entryId, entries, phase);
@@ -41,8 +46,15 @@ export function EntryRouter({ route, entries, phase }: { route: SectionRoute; en
   );
   const wanted = kind === 'certificate' && route.path.length === 3 && CERTIFICATE_NUMBER.test(numberText) ? Number(numberText) : null;
   const certificate = certificates.find((candidate) => candidate.number === wanted && normaliseCertificateBase64(candidate.certificate)) ?? null;
-  const unknownPath = route.path.length > 1 && Boolean(entry) && !certificate;
+  const credentialOpen = kind === 'credential';
+  const unknownPath = route.path.length > 1 && Boolean(entry) && !certificate && !credentialOpen;
+  const underEntry = useRouteUnderEntry(route, entryId);
   const { replace, open, close } = route;
+  const { rows } = useSavedCredentials();
+  const saved = useMemo(
+    () => ({ rows: entry ? credentialsWithAaguid(rows, entry.aaguid) : [], onOpen: (key: string) => open([entryId, 'credential', key]) }),
+    [rows, entry, open, entryId],
+  );
 
   useEffect(() => {
     if (unknownPath) replace([entryId]);
@@ -91,9 +103,11 @@ export function EntryRouter({ route, entries, phase }: { route: SectionRoute; en
           onRetry={retry}
           onOpenCertificate={openCertificate}
           busyCertificate={busy}
-          active={!certificate}
+          active={!certificate && !credentialOpen}
+          saved={saved}
         />
       </div>
+      <CredentialDetails route={underEntry} overEntry={entryId} />
       {entry && certificate ? (
         <CertificatePage
           entry={entry}

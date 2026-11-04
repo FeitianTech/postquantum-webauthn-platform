@@ -83,7 +83,8 @@ the page in a real browser.
   `#mds/aaguid:<aaguid>`): sections as headings and hairlines, identifiers whole in
   Geist Mono with copy, status reports that stack on a phone, a condensed bar once the
   title has scrolled away. A certificate is a page under its entry
-  (`…/certificate/<n>`); the raw entry is a dialog. Back goes up one level, and the list
+  (`…/certificate/<n>`); the raw entry is a dialog, and so are a saved credential's details
+  over it (`…/credential/<key>`). Back goes up one level, and the list
   keeps its filters, sort, widths and scroll.
 
 ## Links between sections

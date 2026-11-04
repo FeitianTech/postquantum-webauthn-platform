@@ -15,6 +15,7 @@ import {
   describeValue,
 } from '@/logic/credentials/detail/sections.js';
 import { type CredentialRowView, SAVED_LIST_TEXT } from '@/logic/credentials/saved-list.js';
+import { entryIdForAaguid } from '@/logic/mds/explorer/entry-link.js';
 
 const TONES: Record<ValueKind, 'success' | 'danger' | 'neutral'> = {
   true: 'success',
@@ -146,8 +147,11 @@ function IdentifierBlock({ identifier }: { identifier: Identifier }) {
   );
 }
 
-function Aaguid({ detail, row }: { detail: CredentialDetail; row: CredentialRowView }) {
+// Over the entry of the credential's own AAGUID (#mds/<entryId>/credential/…),
+// FIDO MDS would only open that entry again: it is not offered there.
+function Aaguid({ detail, row, overEntry }: { detail: CredentialDetail; row: CredentialRowView; overEntry?: string }) {
   const openMdsEntry = useOpenMdsEntry();
+  const offered = Boolean(row.mdsAaguid) && entryIdForAaguid(row.mdsAaguid) !== overEntry;
   const [message, setMessage] = useState<string | null>(null);
   return (
     <div className="min-w-0 space-y-2" data-aaguid="">
@@ -160,7 +164,7 @@ function Aaguid({ detail, row }: { detail: CredentialDetail; row: CredentialRowV
           </span>
         </p>
       ) : null}
-      {row.mdsAaguid ? (
+      {offered ? (
         <Button variant="secondary" size="sm" title={SAVED_LIST_TEXT.openMetadata} onClick={() => setMessage(openMdsEntry(row.mdsAaguid))}>
           FIDO MDS
         </Button>
@@ -174,7 +178,7 @@ function Aaguid({ detail, row }: { detail: CredentialDetail; row: CredentialRowV
   );
 }
 
-function UserInfo({ detail, row, idBase }: { detail: CredentialDetail; row: CredentialRowView; idBase: string }) {
+function UserInfo({ detail, row, idBase, overEntry }: { detail: CredentialDetail; row: CredentialRowView; idBase: string; overEntry?: string }) {
   const { userInfo } = detail;
   return (
     <DetailSection id={`${idBase}-user`} title={userInfo.title}>
@@ -188,7 +192,7 @@ function UserInfo({ detail, row, idBase }: { detail: CredentialDetail; row: Cred
       {userInfo.identifiers.map((identifier) => (
         <IdentifierBlock key={identifier.title} identifier={identifier} />
       ))}
-      <Aaguid detail={detail} row={row} />
+      <Aaguid detail={detail} row={row} overEntry={overEntry} />
     </DetailSection>
   );
 }
@@ -202,16 +206,19 @@ export function DetailSections({
   row,
   idBase,
   onRegistration,
+  overEntry,
 }: {
   detail: CredentialDetail;
   row: CredentialRowView;
   idBase: string;
   onRegistration: () => void;
+  /** The MDS entry the details are open over, if any. */
+  overEntry?: string;
 }) {
   return (
     <div className="space-y-8">
       <Properties detail={detail} idBase={idBase} />
-      <UserInfo detail={detail} row={row} idBase={idBase} />
+      <UserInfo detail={detail} row={row} idBase={idBase} overEntry={overEntry} />
       <DetailSection id={`${idBase}-format`} title={detail.attestationFormat.title}>
         <p className="text-body-lg text-ink" data-format="">
           {detail.attestationFormat.value}

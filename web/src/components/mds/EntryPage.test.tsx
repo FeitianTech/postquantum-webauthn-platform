@@ -5,6 +5,7 @@ import { stringifyAuthenticatorRawData } from '@/logic/mds/raw-stringify.js';
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
+import { SavedCredentialsProvider } from '@/components/credentials/useSavedCredentials';
 import { ToastProvider } from '@/components/ui/Toast';
 import { FIXTURE_ENTRIES, SNAPSHOT_URL, entryNamed, fixtureRoutes, json, resolveFrom, stubFetch } from '@/test/mds';
 import { renderPage } from '@/test/page';
@@ -439,7 +440,10 @@ describe('an entry the list does not hold', () => {
             FIDO MDS Authenticators
           </button>
         </div>
-        <MdsSection active route={{ path: [entryId], open: vi.fn(), close, replace: vi.fn(), closeAll: vi.fn() }} />
+        {/* The details of a saved credential open over an entry: the list both tabs share. */}
+        <SavedCredentialsProvider>
+          <MdsSection active route={{ path: [entryId], open: vi.fn(), close, replace: vi.fn(), closeAll: vi.fn() }} />
+        </SavedCredentialsProvider>
       </ToastProvider>,
     );
     return { close };
@@ -525,7 +529,9 @@ describe('an entry the list does not hold', () => {
             FIDO MDS Authenticators
           </button>
         </div>
-        <MdsSection active route={{ path: [entryId], open: vi.fn(), close: vi.fn(), replace: vi.fn(), closeAll: vi.fn() }} />
+        <SavedCredentialsProvider>
+          <MdsSection active route={{ path: [entryId], open: vi.fn(), close: vi.fn(), replace: vi.fn(), closeAll: vi.fn() }} />
+        </SavedCredentialsProvider>
       </ToastProvider>
     );
     const { rerender } = renderPage(view('aaguid:first'));

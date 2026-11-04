@@ -1,4 +1,9 @@
+import { readFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
+
 import type { Page } from '@playwright/test';
+
+import { STORAGE_KEY } from './credential-views';
 
 import { greyFills } from './design-rules';
 import { expect, test } from './fixtures';
@@ -24,6 +29,15 @@ const entryPage = (page: Page) => section(page).locator('[data-mds-entry]');
 const certificatePage = (page: Page) => section(page).locator('[data-mds-certificate]');
 const part = (page: Page, key: string) => entryPage(page).locator(`[data-section="${key}"]`);
 const pageWidth = (page: Page) => page.evaluate(() => document.documentElement.scrollWidth);
+
+// A Simple credential the server registered (registration-detail-decodes), kept with L1's AAGUID.
+function credentialOfL1() {
+  const golden = JSON.parse(
+    readFileSync(join(resolve(import.meta.dirname, '..', '..'), 'tests', 'app', 'characterization', 'golden', 'routes', 'registration-detail-decodes.json'), 'utf8'),
+  );
+  const complete = golden.requests.find((entry: { request: string }) => entry.request.includes('/register/complete'));
+  return { ...complete.body.storedCredential, type: 'simple', userName: 'l1@example.com', aaguidHex: 'f1d0f1d0000040008000000000000001' };
+}
 
 async function openEntry(page: Page, entryId = L1) {
   await page.goto(`/#mds/${entryId}`);
@@ -241,4 +255,34 @@ test.describe('an MDS entry\'s identifiers', () => {
       }
     });
   }
+});
+
+test.describe('an MDS entry\'s saved credentials', () => {
+  test('lists the ones with its AAGUID, opens one\'s details over the entry, and × then Back return to the entry, then the list', async ({ page }) => {
+    const record = credentialOfL1();
+    await page.goto('/#mds');
+    await page.evaluate(([key, value]) => window.localStorage.setItem(key, value), [STORAGE_KEY, JSON.stringify([record])] as const);
+    await page.reload();
+    await section(page).locator(`tbody tr[data-entry-id="${L1}"]`).getByRole('link').click();
+
+    const saved = part(page, 'savedCredentials');
+    await expect(saved.getByRole('heading', { level: 4 })).toHaveText('Saved Credentials');
+    await saved.getByRole('button', { name: 'l1@example.com' }).click();
+    await expect(page).toHaveURL(new RegExp(`#mds/${L1}/credential/id:${record.credentialIdBase64Url}$`));
+    const dialog = page.getByRole('dialog');
+    await expect(dialog.getByRole('heading', { level: 3, name: 'l1@example.com' })).toBeVisible();
+    await expect(dialog.getByRole('button', { name: 'FIDO MDS' })).toHaveCount(0);
+    expect(await greyFills(page, '[data-overlay-panel]')).toEqual([]);
+
+    await dialog.getByRole('button', { name: 'Show registration details' }).click();
+    await expect(page).toHaveURL(/\/registration$/);
+    await dialog.getByRole('button', { name: 'Close credential details' }).click();
+    await expect(dialog).toBeHidden();
+    await expect(page).toHaveURL(new RegExp(`#mds/${L1}$`));
+    await expect(saved.getByRole('button', { name: 'l1@example.com' })).toBeFocused();
+
+    await page.goBack();
+    await expect(page).toHaveURL(/#mds$/);
+    await expect(section(page).locator('[data-mds-list]')).toBeVisible();
+  });
 });
