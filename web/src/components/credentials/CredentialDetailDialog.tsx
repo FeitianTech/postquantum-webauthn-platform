@@ -10,6 +10,7 @@ import type { CredentialRowView } from '@/logic/credentials/saved-list.js';
 import { DetailSections } from './detail/DetailSections';
 import { AuthenticatorDataLevel, CertificateLevel, RegistrationLevel } from './detail/RegistrationLevels';
 import { useCredentialDetail } from './detail/useCredentialDetail';
+import { useReturnFromCodec } from './detail/useReturnFromCodec';
 import { useSavedCredentials } from './useSavedCredentials';
 
 // What the URL opens inside a credential's details, after #…/credential/<key>:
@@ -39,6 +40,23 @@ function levelName(level: Level) {
 }
 
 const TITLES = { detail: 'Credential Details', registration: 'Registration Details' } as const;
+
+// The header's title for the level shown, and its Back, up one level.
+function levelHeader(level: Level, certificateTitle: string | undefined, key: string, close: SectionRoute['close']) {
+  const title =
+    level.kind === 'certificate'
+      ? (certificateTitle ?? 'Attestation Certificate')
+      : level.kind === 'authenticator-data'
+        ? 'Authenticator Data'
+        : TITLES[level.kind];
+  const back =
+    level.depth === 1
+      ? { onBack: () => close(['credential', key]), title: 'Return to credential details' }
+      : level.depth === 2
+        ? { onBack: () => close(['credential', key, 'registration']), title: 'Return to registration details' }
+        : undefined;
+  return { title, back };
+}
 
 type ReadyDetail = Extract<ReturnType<typeof useCredentialDetail>, { phase: 'ready' }>;
 
@@ -124,27 +142,17 @@ export function CredentialDetailDialog({
   const detail = useCredentialDetail(row?.credential ?? null, row ? key : '', refresh);
   const ready = detail.phase === 'ready' ? detail : null;
 
-  const base = ['credential', key];
-  const registrationPath = [...base, 'registration'];
+  const registrationPath = ['credential', key, 'registration'];
   const { level, certificate, authenticatorData } = useDetailLevel(route, key, rest, ready, Boolean(open && row));
   const levelRef = useLevelScroll(open, key, level);
+  const codecReturn = useReturnFromCodec(levelRef, key, levelName(level));
+  const codec = ready ? { payloads: ready.detail.payloads, onLeave: codecReturn.leave } : null;
 
   const onRegistration = useCallback(() => openPath(registrationPath), [openPath, registrationPath]);
-  const title =
-    level.kind === 'certificate'
-      ? (certificate?.title ?? 'Attestation Certificate')
-      : level.kind === 'authenticator-data'
-        ? 'Authenticator Data'
-        : TITLES[level.kind];
+  const { title, back } = levelHeader(level, certificate?.title, key, close);
   // × closes the levels this dialog opened, and only those: what another section
   // opened before them stays (one push per level: the detail, then deeper).
   const closeLevels = () => closeAll([], level.depth + 1);
-  const back =
-    level.depth === 1
-      ? { onBack: () => close(base), title: 'Return to credential details' }
-      : level.depth === 2
-        ? { onBack: () => close(registrationPath), title: 'Return to registration details' }
-        : undefined;
 
   return (
     <Dialog
@@ -152,6 +160,7 @@ export function CredentialDetailDialog({
       onClose={closeLevels}
       labelledBy={titleId}
       returnFocusTo={returnFocusTo}
+      initialFocus={codecReturn.initialFocus}
       className="max-sm:w-[calc(100vw-1rem)]"
     >
       <OverlayHeader
@@ -183,7 +192,7 @@ export function CredentialDetailDialog({
                 )}
               </div>
             </div>
-            {ready && level.depth >= 1 ? (
+            {ready && codec && level.depth >= 1 ? (
               <div data-level="registration" tabIndex={-1} hidden={level.kind !== 'registration'} className="outline-none">
                 <RegistrationLevel
                   registration={ready.detail.registration}
@@ -191,17 +200,18 @@ export function CredentialDetailDialog({
                   idBase={`${idBase}-registration`}
                   onCertificate={(number) => openPath([...registrationPath, 'certificate', String(number)])}
                   onAuthenticatorData={() => openPath([...registrationPath, 'authenticator-data'])}
+                  codec={codec}
                 />
               </div>
             ) : null}
-            {certificate && level.kind === 'certificate' ? (
+            {codec && certificate && level.kind === 'certificate' ? (
               <div data-level={levelName(level)} tabIndex={-1} className="outline-none">
-                <CertificateLevel view={certificate} idBase={`${idBase}-certificate`} />
+                <CertificateLevel view={certificate} idBase={`${idBase}-certificate`} payload={codec.payloads.certificates[level.number - 1] ?? ''} codec={codec} />
               </div>
             ) : null}
-            {authenticatorData && level.kind === 'authenticator-data' ? (
+            {codec && authenticatorData && level.kind === 'authenticator-data' ? (
               <div data-level="authenticator-data" tabIndex={-1} className="outline-none">
-                <AuthenticatorDataLevel text={authenticatorData.text} />
+                <AuthenticatorDataLevel text={authenticatorData.text} codec={codec} />
               </div>
             ) : null}
           </div>

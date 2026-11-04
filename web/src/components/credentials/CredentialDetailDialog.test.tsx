@@ -312,6 +312,55 @@ describe('a saved credential\'s details, the registration', () => {
   });
 });
 
+describe('a saved credential\'s details, into the Codec', () => {
+  const codecInput = () => within(screen.getByRole('tabpanel', { name: 'Decode' })).getByRole('textbox');
+  const sentTo = (fetch: ReturnType<typeof renderShell>, payload: string) =>
+    fetch.mock.calls.some(([url, init]) => String(url).endsWith('/api/codec') && JSON.parse(String(init?.body)).payload === payload);
+
+  it('open the registration\'s parts in the Codec, decoded, and Back returns to the level, its button focused', async () => {
+    const fetch = renderShell([X5C]);
+    await openDetail('x5c@example.com');
+    await toRegistration();
+    const { attestationObject, clientDataJSON } = (X5C.registrationResponse as { response: Record<string, string> }).response;
+    expect(within(shownLevel()).getByRole('button', { name: 'Decode in Codec: client data' })).toBeVisible();
+    expect(within(shownLevel()).getByRole('button', { name: 'Decode in Codec: response' })).toBeVisible();
+
+    await userEvent.click(within(shownLevel()).getByRole('button', { name: 'Decode in Codec: attestation object' }));
+    await waitFor(() => expect(window.location.hash).toBe('#codec'));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(codecInput()).toHaveValue(attestationObject);
+    await within(screen.getByRole('tabpanel', { name: 'Decode' })).findByRole('heading', { name: 'Codec Output' });
+    expect(sentTo(fetch, attestationObject)).toBe(true);
+
+    await act(async () => {
+      window.history.back();
+    });
+    await waitFor(() => expect(window.location.hash).toBe(urlOf(X5C, 'registration')));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Decode in Codec: attestation object' })).toHaveFocus());
+    expect(clientDataJSON).not.toBe('');
+  });
+
+  it('open a certificate and the authenticator data in the Codec from their own levels', async () => {
+    renderShell([X5C], urlOf(X5C, 'registration', 'certificate', '1'));
+    await screen.findByRole('heading', { level: 2, name: 'Attestation Certificate' });
+    await userEvent.click(screen.getByRole('button', { name: 'Decode in Codec: certificate' }));
+    await waitFor(() => expect(window.location.hash).toBe('#codec'));
+    // The DER the record keeps, in base64, as it keeps it.
+    const [kept] = (X5C.properties as { attestationCertificates: { derBase64: string }[] }).attestationCertificates;
+    expect(codecInput()).toHaveValue(kept.derBase64);
+
+    await act(async () => {
+      window.history.back();
+    });
+    await screen.findByRole('heading', { level: 2, name: 'Attestation Certificate' });
+    await userEvent.click(screen.getByRole('button', { name: 'Back' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Authenticator Data' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Decode in Codec: authenticator data' }));
+    await waitFor(() => expect(window.location.hash).toBe('#codec'));
+    expect(codecInput()).toHaveValue(X5C.authenticatorData as string);
+  });
+});
+
 describe('a saved credential\'s details, the levels', () => {
   it('go back a level with Back, the focus on what opened the one left', async () => {
     renderShell([X5C]);

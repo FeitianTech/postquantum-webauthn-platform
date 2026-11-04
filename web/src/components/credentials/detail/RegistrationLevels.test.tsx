@@ -6,7 +6,7 @@ import userEvent from '@testing-library/user-event';
 import { type AttestationView, type CertificateView, REGISTRATION_TEXT } from '@/logic/credentials/registration/describe.js';
 import { type RegistrationView } from '@/logic/credentials/registration/view.js';
 
-import { CertificateLevel, RegistrationLevel } from './RegistrationLevels';
+import { type CodecLinks, CertificateLevel, RegistrationLevel } from './RegistrationLevels';
 
 const NO_ATTESTATION_OBJECT: AttestationView = {
   body: { kind: 'placeholder', text: REGISTRATION_TEXT.noAttestationObject },
@@ -18,6 +18,12 @@ const NO_ATTESTATION_OBJECT: AttestationView = {
 
 const NO_FINDINGS = { errors: [], warnings: [] };
 
+// A record that keeps none of the parts the Codec reads: no way into it.
+const NO_PAYLOADS: CodecLinks = {
+  payloads: { response: '', attestationObject: '', clientDataJSON: '', authenticatorData: '', certificates: [] },
+  onLeave: () => {},
+};
+
 function renderRegistration(registration: RegistrationView, findings: { errors: string[]; warnings: string[] } = NO_FINDINGS) {
   const onCertificate = vi.fn();
   const onAuthenticatorData = vi.fn();
@@ -28,6 +34,7 @@ function renderRegistration(registration: RegistrationView, findings: { errors: 
       idBase="detail"
       onCertificate={onCertificate}
       onAuthenticatorData={onAuthenticatorData}
+      codec={NO_PAYLOADS}
     />,
   );
   return { onCertificate, onAuthenticatorData };
@@ -103,6 +110,13 @@ describe('the registration\'s level', () => {
   });
 });
 
+describe('the levels\' ways into the Codec', () => {
+  it('are none for parts the record does not keep whole', () => {
+    renderRegistration({ response: { credential: '{}', clientData: '{}', relyingParty: '{}' }, attestation: NO_ATTESTATION_OBJECT });
+    expect(screen.queryByRole('button', { name: /Decode in Codec/ })).toBeNull();
+  });
+});
+
 describe('a certificate\'s level', () => {
   const certificate = (view: Partial<CertificateView>): CertificateView => ({
     title: REGISTRATION_TEXT.certificate,
@@ -114,21 +128,21 @@ describe('a certificate\'s level', () => {
   });
 
   it('gives no summary for a certificate it knows nothing of, and says so', () => {
-    const { container } = render(<CertificateLevel view={certificate({})} idBase="certificate" />);
+    const { container } = render(<CertificateLevel view={certificate({})} idBase="certificate" payload="" codec={NO_PAYLOADS} />);
 
     expect(container.querySelector('[data-certificate-summary]')).toBeNull();
     expect(screen.getByText(REGISTRATION_TEXT.noCertificateDetails)).toBeVisible();
   });
 
   it('gives the issuer alone when the certificate names no subject', () => {
-    const { container } = render(<CertificateLevel view={certificate({ details: { issuer: ' CN=Fixture Root ' } })} idBase="certificate" />);
+    const { container } = render(<CertificateLevel view={certificate({ details: { issuer: ' CN=Fixture Root ' } })} idBase="certificate" payload="" codec={NO_PAYLOADS} />);
 
     expect(container.querySelector('[data-certificate-subject]')).toBeNull();
     expect(container.querySelector('[data-certificate-summary]')).toHaveTextContent('CN=Fixture Root');
   });
 
   it('gives the subject alone when the certificate names no issuer', () => {
-    const { container } = render(<CertificateLevel view={certificate({ details: { subject: 'CN=Fixture Key' } })} idBase="certificate" />);
+    const { container } = render(<CertificateLevel view={certificate({ details: { subject: 'CN=Fixture Key' } })} idBase="certificate" payload="" codec={NO_PAYLOADS} />);
 
     expect(container.querySelector('[data-certificate-subject]')).toHaveTextContent('CN=Fixture Key');
     expect(container.querySelector('[data-certificate-summary] p')).toBeNull();

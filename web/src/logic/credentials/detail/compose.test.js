@@ -73,6 +73,7 @@ describe('composeCredentialDetail', () => {
       'publicKey',
       'registration',
       'findings',
+      'payloads',
     ]);
     expect(detail.findings).toEqual({ errors: [], warnings: [] });
     expect(detail.properties.checks.map(({ value }) => value)).toEqual([null, null, true, null]);
@@ -82,6 +83,19 @@ describe('composeCredentialDetail', () => {
     expect(detail.authenticatorData).toBeNull();
     expect(detail.extensions).toBeNull();
     expect(detail.publicKey.lines[0]).toEqual({ label: 'Algorithm:', value: describeCoseAlgorithm(-7) });
+  });
+
+  it('gives the Codec the registration\'s parts, and its certificate as the decoder listed it', async () => {
+    const record = simpleRecord('packedX5c');
+    const { detail } = await detailOf(record);
+    expect(detail.payloads.attestationObject).toBe(record.registrationResponse.response.attestationObject);
+    expect(detail.payloads.clientDataJSON).toBe(record.registrationResponse.response.clientDataJSON);
+    expect(detail.payloads.authenticatorData).toBe(record.authenticatorData);
+    // The one certificate, as the decoder wrote it: the DER the record keeps, in PEM.
+    const [certificate] = detail.payloads.certificates;
+    expect(detail.payloads.certificates).toHaveLength(1);
+    const der = record.properties.attestationCertificates[0].derBase64;
+    expect(certificate.replace(/-----(BEGIN|END) CERTIFICATE-----|\s/g, '')).toBe(der.replace(/\s/g, ''));
   });
 
   it('lists the attestation\'s findings the record keeps', async () => {

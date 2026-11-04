@@ -32,7 +32,8 @@ export const BUDGET = {
     'section-codec': { raw: 28672, gzip: 10240 },
     // Measured on 2026-10-25, once the page merged a visitor's uploads with the list it holds.
     'section-mds': { raw: 72704, gzip: 21504 },
-    'credential-details': { raw: 27648, gzip: 9216 },
+    // Measured on 2026-11-04, once each part of a registration's details opened in the Codec.
+    'credential-details': { raw: 31744, gzip: 10240 },
     // Measured on 2026-10-28: the attestation findings' list and their sentences in English and 中文.
     'attestation-findings': { raw: 8192, gzip: 4096 },
     'analyze-browser': { raw: 21504, gzip: 8192 },

@@ -18,6 +18,7 @@ import {
     describeUserInfo,
 } from './sections.js';
 import {recordFindings} from './findings.js';
+import {codecPayloads} from './codec-payloads.js';
 import {pickFirstString} from './registration-fields.js';
 import {buildRegistrationContext} from './registration-context.js';
 import {
@@ -29,10 +30,11 @@ import {
 /** @import { RegistrationView } from '../registration/view.js' */
 /** @import { DetailSectionsView } from './sections.js' */
 /** @import { AttestationFindings } from '../../shared/registration-findings.js' */
+/** @import { CodecPayloads } from './codec-payloads.js' */
 
 /**
  * Everything a credential's details show.
- * @typedef {DetailSectionsView & { registration: RegistrationView, findings: AttestationFindings }} CredentialDetail
+ * @typedef {DetailSectionsView & { registration: RegistrationView, findings: AttestationFindings, payloads: CodecPayloads }} CredentialDetail
  */
 
 /**
@@ -50,8 +52,9 @@ export function needsArtifact(cred) {
  * Everything a credential's details show, in their order: the sections
  * (Properties, User info with its AAGUID, Attestation Format, then Authenticator
  * Data, extensions and Public Key when the record has them), `registration` and
- * the attestation's `findings` it lists; and the registration state it was
- * composed into, which the details' levels read.
+ * the attestation's `findings` it lists, and the `payloads` the levels hand the
+ * Codec; and the registration state it was composed into, which the details'
+ * levels read.
  * @param {Record<string, any>} cred
  * @returns {Promise<{ detail: CredentialDetail, state: RegistrationState }>}
  */
@@ -122,6 +125,7 @@ export async function composeCredentialDetail(cred) {
         publicKey: describePublicKey(cred, { describeCoseAlgorithm, describeCoseKeyType, describeMldsaParameterSet }),
         registration,
         findings: recordFindings(cred),
+        payloads: codecPayloads(cred, { snapshotResponse, state }),
     };
     return { detail, state };
 }

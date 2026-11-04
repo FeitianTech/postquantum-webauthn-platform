@@ -100,6 +100,10 @@ the CSP and the source rules.
     `#<section>/credential/<key>`, `…/registration`, `…/registration/certificate/<n>`,
     `…/registration/authenticator-data`; a level the credential lacks is corrected upward. The
     registration's level opens on the attestation's findings in words, when the record keeps any.
+    Each part a level shows (the response, its client data, the attestation object, the
+    authenticator data, a certificate whose DER the record keeps) has "Decode in Codec"
+    (`components/codec/DecodeInCodec.tsx`), and Back from the Codec finds the level as it was
+    left, the button focused (`detail/useReturnFromCodec.ts`).
   - `advanced/`: the Advanced tab. Registration and Authentication segments, both mounted,
     each a form beside its JSON editor. `requestEditor.ts`: the editor's text is the request;
     a form change rewrites in the text only what it changed (`followForm`), an edit the form
@@ -211,7 +215,8 @@ its logic out here first.
   from `registration/describe.js`'s parts and `registration/relying-party.js`'s copy of the
   relying party), which `detail/compose.js` composes into a registration state of its own, with
   the record's attestation findings (`detail/findings.js`: its checks, else its summary, as any
-  release kept them). Registration snapshots (`schemaVersion` 2) hold the
+  release kept them) and the parts the Codec decodes (`detail/codec-payloads.js`: only values
+  kept whole, never the copies earlier releases cut short in a snapshot's state). Registration snapshots (`schemaVersion` 2) hold the
   registration as data, never markup, and its certificates without their DER; older composed HTML is never read.
 - `codec/`: the Codec's requests, results and values. `mds/`: the MDS
   explorer's loading (the list fetched ahead, without the cookie: `prefetchExplorerList`; the

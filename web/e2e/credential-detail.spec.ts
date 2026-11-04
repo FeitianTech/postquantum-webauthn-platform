@@ -125,6 +125,47 @@ test.describe('a saved credential\'s details', () => {
     await expect(page).toHaveURL(/\/#simple$/);
   });
 
+  test('open the attestation object and a certificate in the Codec, decoded, Back returning to the level as it was', async ({ page }) => {
+    await page.setViewportSize({ width: 1024, height: 600 });
+    await openPage(page);
+    await keep(page, [named(X5C, 'x5c@example.com')]);
+    await page.reload();
+    const url = `#simple/credential/id:${X5C.credentialIdBase64Url}/registration`;
+    await page.goto(`/${url}`);
+    await expect(dialog(page).getByRole('heading', { level: 2 })).toHaveText('Registration Details');
+
+    const decodeObject = dialog(page).getByRole('button', { name: 'Decode in Codec: attestation object' });
+    await decodeObject.scrollIntoViewIfNeeded();
+    const scroller = dialog(page).locator('[data-overlay-scroll]');
+    expect(await scroller.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+    // Where the button sits in the dialog's view, which Back finds again.
+    const place = () =>
+      decodeObject.evaluate((button) => Math.round(button.getBoundingClientRect().top - button.closest('[data-overlay-scroll]')!.getBoundingClientRect().top));
+    const left = await place();
+    await decodeObject.click();
+
+    await expect(page).toHaveURL(/\/#codec$/);
+    const decoding = page.getByRole('tabpanel', { name: 'Codec' }).locator('#codec-mode-panel-decode');
+    const { attestationObject } = (X5C.registrationResponse as { response: Record<string, string> }).response;
+    await expect(decoding.getByRole('textbox', { name: 'Input to decode' })).toHaveValue(attestationObject);
+    await expect(decoding.getByRole('region', { name: 'Codec Output' }).locator('[data-role="outcome"]')).toHaveText('Success✓');
+
+    await page.goBack();
+    await expect(page).toHaveURL(new RegExp(`${url}$`));
+    await expect(decodeObject).toBeFocused();
+    await expect.poll(async () => Math.abs((await place()) - left)).toBeLessThanOrEqual(1);
+
+    await dialog(page).getByRole('button', { name: 'Attestation Certificate' }).click();
+    await dialog(page).getByRole('button', { name: 'Decode in Codec: certificate' }).click();
+    await expect(page).toHaveURL(/\/#codec$/);
+    const [kept] = (X5C.properties as { attestationCertificates: { derBase64: string }[] }).attestationCertificates;
+    await expect(decoding.getByRole('textbox', { name: 'Input to decode' })).toHaveValue(kept.derBase64);
+    await expect(decoding.getByRole('region', { name: 'Codec Output' }).locator('[data-role="type"]')).toContainText('X.509');
+    await page.goBack();
+    await expect(page).toHaveURL(new RegExp(`${url}/certificate/1$`));
+    await expect(dialog(page).getByRole('button', { name: 'Decode in Codec: certificate' })).toBeFocused();
+  });
+
   test('list the attestation\'s findings in words first on the registration\'s level, and none where there are none', async ({ page }) => {
     await openPage(page);
     await keep(page, [named(X5C, 'x5c@example.com'), named(ES256, 'es256@example.com')]);

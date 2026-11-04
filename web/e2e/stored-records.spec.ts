@@ -56,6 +56,18 @@ test.describe('credentials an earlier release stored', () => {
     await expect(findings.locator('[data-severity="error"]')).toHaveCount(2);
   });
 
+  test('opens the Advanced one\'s certificate in the Codec, from the PEM its saved snapshot kept', async ({ page }) => {
+    await openWithRecords(page, '#simple');
+    const key = await rows(page).filter({ hasText: ADVANCED }).getAttribute('data-credential-key');
+    await page.goto(`/#simple/credential/${encodeURIComponent(key!).replace(/%3A/gi, ':')}/registration/certificate/1`);
+    await dialog(page).getByRole('button', { name: 'Decode in Codec: certificate' }).click();
+
+    await expect(page).toHaveURL(/\/#codec$/);
+    const decoding = page.locator('#codec-mode-panel-decode');
+    await expect(decoding.getByRole('textbox', { name: 'Input to decode' })).toHaveValue(/^-----BEGIN CERTIFICATE-----\n[\s\S]+-----END CERTIFICATE-----$/);
+    await expect(decoding.getByRole('region', { name: 'Codec Output' }).locator('[data-role="outcome"]')).toHaveText('Success✓');
+  });
+
   test('deletes the Simple one, asking first, and clears the Advanced one', async ({ page }) => {
     await openWithRecords(page, '#simple');
     await expect(rows(page)).toHaveCount(2);
