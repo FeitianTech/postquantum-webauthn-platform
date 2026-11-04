@@ -140,6 +140,16 @@ describe('an authentication', () => {
     expect(ADVANCED_ASSERTION_TEXT.authenticated).toBe('Advanced authentication successful!');
   });
 
+  it('gives the browser\'s JSON of its assertion once it gave one, before the server judges it', async () => {
+    serving(first);
+    const options = formOptions({ onResponse: vi.fn() });
+    await authenticateAdvancedCredential(request(), options);
+
+    expect(options.onResponse).toHaveBeenCalledTimes(1);
+    expect(options.onResponse).toHaveBeenCalledWith(sent(1).body.__assertion_response);
+    expect(options.onResponse.mock.invocationCallOrder[0]).toBeLessThan(fetch.mock.invocationCallOrder[1]);
+  });
+
   it('gives the browser the begin\'s extensions, and sends every extension result as its JSON writes it', async () => {
     serving({
       begin: { ...regressed.begin, body: { ...regressed.begin.body, publicKey: { ...regressed.begin.body.publicKey, extensions: { largeBlob: { read: true } } } } },
@@ -182,8 +192,11 @@ describe('a refused authentication', () => {
   it('names the credential the server refused, with where its challenge came from', async () => {
     serving(refused);
     authenticatorGiving(recordedAssertion(refused));
-    const outcome = await authenticateAdvancedCredential(request(), formOptions());
+    const options = formOptions({ onResponse: vi.fn() });
+    const outcome = await authenticateAdvancedCredential(request(), options);
 
+    // The assertion the server refused, still the browser's to decode.
+    expect(options.onResponse).toHaveBeenCalledWith(sent(1).body.__assertion_response);
     expect(outcome).toEqual({
       authenticated: false,
       text: 'Advanced authentication failed: Invalid signature. Start the ceremony again.',

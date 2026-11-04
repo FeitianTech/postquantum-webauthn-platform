@@ -707,12 +707,24 @@ describe('registerAdvancedCredential', () => {
     );
   });
 
+  it('gives the browser\'s JSON of its credential once it gave one, before the server judges it', async () => {
+    serving({ [BEGIN]: NONE.begin, [COMPLETE]: NONE.complete });
+    const options = formOptions({ onResponse: vi.fn() });
+    const outcome = await registerAdvancedCredential(text(request()), options);
+
+    expect(options.onResponse).toHaveBeenCalledTimes(1);
+    expect(options.onResponse).toHaveBeenCalledWith(outcome.credentialJson);
+    expect(options.onResponse.mock.invocationCallOrder[0]).toBeLessThan(fetch.mock.invocationCallOrder[1]);
+  });
+
   it('says a refused completion as the server says it, and gives the result panel its challenge', async () => {
     serving({ [BEGIN]: COMPLETE_FAILURES[11], [COMPLETE]: COMPLETE_FAILURES[12] });
-    const options = formOptions();
+    const options = formOptions({ onResponse: vi.fn() });
     const outcome = await registerAdvancedCredential(text(request()), options);
 
     expect(asked()).toEqual([BEGIN, COMPLETE]);
+    // The response the server refused, still the browser's to decode.
+    expect(options.onResponse).toHaveBeenCalledWith(sent(1).body.__credential_response);
     expect(outcome.text).toBe('Credential registration failed: Wrong challenge in response. Start the ceremony again.');
     expect(options.onResult).toHaveBeenCalledWith({
       title: 'Last registration',

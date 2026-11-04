@@ -28,7 +28,8 @@ export const BUDGET = {
     '500.html': { raw: 355328, gzip: 110592 },
   },
   chunks: {
-    'section-advanced': { raw: 94208, gzip: 27648 },
+    // Measured on 2026-11-04, once the last ceremony's response opened its parts in the Codec.
+    'section-advanced': { raw: 96256, gzip: 28672 },
     'section-codec': { raw: 28672, gzip: 10240 },
     // Measured on 2026-10-25, once the page merged a visitor's uploads with the list it holds.
     'section-mds': { raw: 72704, gzip: 21504 },

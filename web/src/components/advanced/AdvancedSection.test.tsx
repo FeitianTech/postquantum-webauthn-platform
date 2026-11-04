@@ -357,6 +357,28 @@ describe('an authentication', () => {
     });
   });
 
+  it('gives the assertion\'s parts under the result, each opening in the Codec, and Back returns to the button', async () => {
+    await onAuthentication({ ...authenticationRoutes(recorded.first), '/api/codec': () => json({ error: 'The payload is not valid CBOR.' }, 422) });
+    expect(document.querySelector('[data-response-parts]')).toBeNull();
+
+    await userEvent.click(button('Assert Credential'));
+    const parts = await screen.findByRole('group', { name: 'Decode in Codec' });
+    expect(result()).not.toContainElement(parts);
+    expect(within(parts).getAllByRole('button').map((part) => part.textContent)).toEqual(['Response', 'Client data', 'Authenticator data']);
+
+    const clientData = within(parts).getByRole('button', { name: 'Client data' });
+    await userEvent.click(clientData);
+    await waitFor(() => expect(window.location.hash).toBe('#codec'));
+    const sent = (recordedAssertion(recorded.first).toJSON().response as unknown as { clientDataJSON: string }).clientDataJSON;
+    await waitFor(() => expect(within(screen.getByRole('tabpanel', { name: 'Decode' })).getByRole('textbox')).toHaveValue(sent));
+
+    await act(async () => {
+      window.history.back();
+    });
+    await waitFor(() => expect(window.location.hash).toBe('#advanced'));
+    await waitFor(() => expect(clientData).toHaveFocus());
+  });
+
   it('reports a counter that went backwards, and that this tab does not reject the assertion', async () => {
     await onAuthentication(authenticationRoutes(recorded.regressed), recordedAssertion(recorded.regressed));
 

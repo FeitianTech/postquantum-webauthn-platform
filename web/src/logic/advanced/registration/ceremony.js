@@ -264,8 +264,9 @@ function postJson(path, body) {
  * asks for the extension whatever the text says, read when the ceremony gets
  * there). It says what it does through
  * onStart (the request checked: the last ceremony's messages may go),
- * onProgress, onWarning (the server's warnings about the request) and onResult
- * (the result panel's input, shared/ceremony-result.js). Gives
+ * onProgress, onWarning (the server's warnings about the request), onResponse
+ * (the browser's JSON of its credential, once it gave one, before the server
+ * judges it) and onResult (the result panel's input, shared/ceremony-result.js). Gives
  * `{registered: true, answer, credential, credentialJson, publicKey, record}`,
  * or `{registered: false, text, context}` with the failure's sentence.
  * @param {string} text
@@ -274,6 +275,7 @@ function postJson(path, body) {
  *     onStart?: () => void,
  *     onProgress?: (text: string) => void,
  *     onWarning?: (text: string) => void,
+ *     onResponse?: (credentialJson: Record<string, unknown>) => void,
  *     onResult?: (result: CeremonyResultInput) => void,
  * }} steps
  * @returns {Promise<RegistrationOutcome>}
@@ -283,6 +285,7 @@ export async function registerAdvancedCredential(text, {
     onStart = () => {},
     onProgress = () => {},
     onWarning = () => {},
+    onResponse = () => {},
     onResult = () => {},
 }) {
     /**
@@ -341,6 +344,7 @@ export async function registerAdvancedCredential(text, {
 
         // Its JSON as the browser writes it: the attachment, and every extension output in base64url.
         const { credential, json: credentialJson } = await createCredential(createOptions.publicKey);
+        onResponse(credentialJson);
 
         onProgress(ADVANCED_CEREMONY_TEXT.registrationCompleting);
 

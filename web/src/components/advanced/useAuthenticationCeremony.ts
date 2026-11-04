@@ -28,6 +28,8 @@ export function useAuthenticationCeremony(request: AuthenticationRequest) {
   const [progress, setProgress] = useState<string | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
   const [result, setResult] = useState<CeremonyResultInput | null>(null);
+  // The browser's JSON of what it gave, whose parts the result opens in the Codec.
+  const [response, setResponse] = useState<Record<string, unknown> | null>(null);
   const busy = useRef(false);
   const latest = useRef(request);
   latest.current = request;
@@ -45,8 +47,10 @@ export function useAuthenticationCeremony(request: AuthenticationRequest) {
         onStart: () => {
           setFailure(null);
           setResult(null);
+          setResponse(null);
         },
         onProgress: setProgress,
+        onResponse: setResponse,
       });
       if (!outcome.authenticated) {
         if (outcome.failedCredentialId) saved.flashCredential(outcome.failedCredentialId, 'failure');
@@ -73,5 +77,5 @@ export function useAuthenticationCeremony(request: AuthenticationRequest) {
     }
   }, [toast, saved]);
 
-  return { running, progress, failure, result, assert };
+  return { running, progress, failure, result, response, assert };
 }

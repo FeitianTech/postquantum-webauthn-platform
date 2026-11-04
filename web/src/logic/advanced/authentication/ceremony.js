@@ -84,8 +84,9 @@ function postJson(path, body) {
  * this browser keeps. The form's views give: ensureHints (the hints' check, which
  * may narrow allowCredentials and may throw) and hashAlgorithm() (the Hash
  * Algorithm, read when the ceremony gets there). It says what it does
- * through onStart (the request checked: the last ceremony's messages may go)
- * and onProgress. Gives `{authenticated: true, answer, result}`, or
+ * through onStart (the request checked: the last ceremony's messages may go),
+ * onProgress and onResponse (the browser's JSON of its assertion, once it gave
+ * one, before the server judges it). Gives `{authenticated: true, answer, result}`, or
  * `{authenticated: false, text, result, failedCredentialId}` with the
  * failure's sentence (the result panel's input, shared/ceremony-result.js,
  * when the server answered the assertion; the credential it refused, if it
@@ -96,6 +97,7 @@ function postJson(path, body) {
  *     hashAlgorithm: () => string,
  *     onStart?: () => void,
  *     onProgress?: (text: string) => void,
+ *     onResponse?: (assertionJson: Record<string, unknown>) => void,
  * }} steps
  * @returns {Promise<AuthenticationOutcome>}
  */
@@ -104,6 +106,7 @@ export async function authenticateAdvancedCredential(text, {
     hashAlgorithm,
     onStart = () => {},
     onProgress = () => {},
+    onResponse = () => {},
 }) {
     try {
         requireNativeJson();
@@ -140,6 +143,7 @@ export async function authenticateAdvancedCredential(text, {
 
         // Its JSON as the browser writes it: the attachment, and every extension output in base64url.
         const { json: assertionResponse } = await getAssertion(publicKey);
+        onResponse(assertionResponse);
 
         onProgress(ADVANCED_ASSERTION_TEXT.completing);
 

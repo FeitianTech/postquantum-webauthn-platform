@@ -66,6 +66,28 @@ test.describe('/#advanced', () => {
     await expect(section(page).getByLabel('User Name')).not.toHaveValue(name);
   });
 
+  test('opens a part of the response under the result in the Codec, decoded, and Back returns to it', async ({ page }) => {
+    await addVirtualAuthenticator(page);
+    await openPage(page);
+    await register(page);
+    await page.getByRole('dialog').getByRole('button', { name: 'Close credential details' }).click();
+
+    const parts = section(page).getByRole('group', { name: 'Decode in Codec' });
+    await expect(parts.getByRole('button')).toHaveText(['Response', 'Attestation object', 'Client data', 'Authenticator data']);
+    await expect(section(page).locator('[data-ceremony-result]').getByRole('group')).toHaveCount(0);
+    const attestationObject = parts.getByRole('button', { name: 'Attestation object' });
+    await attestationObject.click();
+
+    await expect(page).toHaveURL(/\/#codec$/);
+    const decoding = page.getByRole('tabpanel', { name: 'Codec' }).locator('#codec-mode-panel-decode');
+    await expect(decoding.getByRole('textbox', { name: 'Input to decode' })).toHaveValue(/^o2Nm/);
+    await expect(decoding.getByRole('region', { name: 'Codec Output' }).locator('[data-role="outcome"]')).toHaveText('Success✓');
+
+    await page.goBack();
+    await expect(page).toHaveURL(/\/#advanced$/);
+    await expect(attestationObject).toBeFocused();
+  });
+
   test('registers from an edited JSON: the form follows the edit, and the request sent is the edit', async ({ page }) => {
     await addVirtualAuthenticator(page);
     await openPage(page);

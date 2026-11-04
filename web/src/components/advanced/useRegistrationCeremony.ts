@@ -31,6 +31,8 @@ export function useRegistrationCeremony(request: AdvancedRequest, openRegistrati
   const [progress, setProgress] = useState<string | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
   const [result, setResult] = useState<CeremonyResultInput | null>(null);
+  // The browser's JSON of what it gave, whose parts the result opens in the Codec.
+  const [response, setResponse] = useState<Record<string, unknown> | null>(null);
   const busy = useRef(false);
   const latest = useRef({ request, openRegistration });
   latest.current = { request, openRegistration };
@@ -46,8 +48,10 @@ export function useRegistrationCeremony(request: AdvancedRequest, openRegistrati
         onStart: () => {
           setFailure(null);
           setResult(null);
+          setResponse(null);
         },
         onProgress: setProgress,
+        onResponse: setResponse,
         onWarning: (message) => toast({ tone: 'warning', message }),
         onResult: setResult,
       });
@@ -80,5 +84,5 @@ export function useRegistrationCeremony(request: AdvancedRequest, openRegistrati
     }
   }, [toast, saved]);
 
-  return { running, progress, failure, result, register };
+  return { running, progress, failure, result, response, register };
 }

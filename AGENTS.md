@@ -108,7 +108,8 @@ the CSP and the source rules.
     each a form beside its JSON editor. `requestEditor.ts`: the editor's text is the request;
     a form change rewrites in the text only what it changed (`followForm`), an edit the form
     can follow updates the form at once. `useAdvancedRequest` / `useAuthenticationRequest`
-    hold each request; `useRegistrationCeremony` / `useAuthenticationCeremony` run them;
+    hold each request; `useRegistrationCeremony` / `useAuthenticationCeremony` run them and keep
+    the browser's response, whose parts `ResponseParts` opens in the Codec under the result;
     `fieldText.ts` is the only copy of the form's labels, options, errors and info popups
     (English and 中文).
   - `codec/`: Decode / Encode. A payload another section hands it (`route.handoff`) is shown in
@@ -201,7 +202,9 @@ its logic out here first.
   (`algorithm-options.js`: the preferred ones first, in the servers' order, ticked by default);
   `editor/` the editor's model and keys, `request-patch.js`
   (`followForm`) and what both requests' validation shares; `hints.js`,
-  `fake-credentials.js` and `hex-input.js` serve both forms.
+  `fake-credentials.js` and `hex-input.js` serve both forms; `response-parts.js` gives the parts
+  of a ceremony's response the Codec reads (no signature alone: the decoder has no reading for
+  one).
 - `credentials/`: the saved list (`saved-list.js`: the records, each row, the warm-up),
   deletion (`delete-flow.js`, through the list's report: from the server's storage first, an
   Advanced credential's artifact or a Simple one's record (`storage/simple-records-client.js`, both

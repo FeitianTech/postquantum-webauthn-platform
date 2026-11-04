@@ -24,6 +24,7 @@ import { AuthenticationForm } from './AuthenticationForm';
 import { CredentialsDrawer, DRAWER_ID } from './CredentialsDrawer';
 import { JsonEditor } from './JsonEditor';
 import { RegistrationForm } from './RegistrationForm';
+import { ResponseParts } from './ResponseParts';
 import type { RequestEditor } from './requestEditor';
 
 type Ceremony = 'registration' | 'authentication';
@@ -124,7 +125,7 @@ function CeremonyStatus({
   shown,
 }: {
   supported: boolean;
-  shown: { progress: string | null; failure: string | null; result: CeremonyResultInput | null };
+  shown: { progress: string | null; failure: string | null; result: CeremonyResultInput | null; response: Record<string, unknown> | null };
 }) {
   return (
     <>
@@ -144,6 +145,7 @@ function CeremonyStatus({
       </div>
       <div className="mt-4 empty:hidden">
         <CeremonyResult result={shown.result} />
+        <ResponseParts response={shown.response} />
       </div>
     </>
   );
