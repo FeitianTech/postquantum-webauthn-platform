@@ -133,6 +133,127 @@ describe('the section in the URL, inside Next', () => {
   });
 });
 
+describe('what a section hands the one it opens', () => {
+  const DECODE = { kind: 'decode', payload: 'o2NmbXRkbm9uZQ' } as const;
+
+  it('reaches the section opened, beside its path, and is gone on Back and Forward', async () => {
+    window.history.replaceState(null, '', '/#simple/credential/k');
+    const { result } = renderHook(() => useSection());
+
+    act(() => result.current[3]('codec', [], DECODE));
+    expect(result.current[0]).toBe('codec');
+    expect(result.current[2].handoff).toBe(DECODE);
+    // The URL carries the section only.
+    expect(window.location.hash).toBe('#codec');
+
+    await act(async () => {
+      window.history.back();
+    });
+    await waitFor(() => expect(window.location.hash).toBe('#simple/credential/k'));
+    expect(result.current[2].handoff).toBeNull();
+    await act(async () => {
+      window.history.forward();
+    });
+    await waitFor(() => expect(result.current[0]).toBe('codec'));
+    expect(result.current[2].handoff).toBeNull();
+  });
+
+  it('is gone once a tab is chosen, a level opened or the list shown', () => {
+    window.history.replaceState(null, '', '/#mds/aaguid:x');
+    const { result } = renderHook(() => useSection());
+
+    act(() => result.current[3]('codec', [], DECODE));
+    act(() => result.current[1]('simple'));
+    expect(result.current[2].handoff).toBeNull();
+
+    act(() => result.current[3]('codec', [], DECODE));
+    act(() => result.current[2].open(['elsewhere']));
+    expect(result.current[2].handoff).toBeNull();
+
+    act(() => result.current[3]('codec', [], DECODE));
+    // Reached by a link: closing shows the list in its place.
+    window.history.replaceState(null, '', '/#codec');
+    act(() => result.current[2].close());
+    expect(result.current[2].handoff).toBeNull();
+  });
+
+  it('is nothing for a section opened without one', () => {
+    window.history.replaceState(null, '', '/#simple');
+    const { result } = renderHook(() => useSection());
+    act(() => result.current[3]('mds', ['aaguid:x']));
+    expect(result.current[2].handoff).toBeNull();
+  });
+});
+
+describe('the focus, once Back returns from another section', () => {
+  function focusedButton(parent: HTMLElement = document.body) {
+    const button = document.createElement('button');
+    parent.append(button);
+    button.focus();
+    return button;
+  }
+
+  async function goAndComeBack(result: { current: ReturnType<typeof useSection> }) {
+    act(() => result.current[3]('codec', []));
+    (document.activeElement as HTMLElement | null)?.blur();
+    await act(async () => {
+      window.history.back();
+    });
+    await waitFor(() => expect(result.current[0]).toBe('simple'));
+    await act(async () => {
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+    });
+  }
+
+  it('goes back to what had it when the other section was opened', async () => {
+    window.history.replaceState(null, '', '/#simple');
+    const button = focusedButton();
+    const { result } = renderHook(() => useSection());
+
+    await goAndComeBack(result);
+    expect(button).toHaveFocus();
+    button.remove();
+  });
+
+  it('stays where it is when that control has left the page, or is under a dialog', async () => {
+    window.history.replaceState(null, '', '/#simple');
+    const gone = focusedButton();
+    const { result } = renderHook(() => useSection());
+    act(() => result.current[3]('codec', []));
+    gone.remove();
+    await act(async () => {
+      window.history.back();
+    });
+    await waitFor(() => expect(result.current[0]).toBe('simple'));
+    expect(document.activeElement).toBe(document.body);
+
+    const under = document.createElement('div');
+    under.setAttribute('inert', '');
+    document.body.append(under);
+    const covered = focusedButton(under);
+    await goAndComeBack(result);
+    expect(covered).not.toHaveFocus();
+    under.remove();
+  });
+
+  it('is not moved by Back within a section', async () => {
+    window.history.replaceState(null, '', '/#simple');
+    const button = focusedButton();
+    const { result } = renderHook(() => useSection());
+    act(() => result.current[2].open(['credential', 'k']));
+    button.blur();
+    await act(async () => {
+      window.history.back();
+    });
+    await waitFor(() => expect(result.current[2].path).toEqual([]));
+    await act(async () => {
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+    });
+    expect(button).not.toHaveFocus();
+    button.remove();
+  });
+});
+
 describe('closing every level at once', () => {
   it('goes back as many entries as levels were opened, to the list', async () => {
     window.history.replaceState(null, '', '/#simple');

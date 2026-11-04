@@ -82,7 +82,10 @@ the CSP and the source rules.
   `#mds/<entryId>/certificate/<n>`; `open` pushes so Back closes one level, `close`, `replace`,
   `closeAll` go back as many levels as the page opened: the pushed state's `pqcOpened`, which
   counts across sections, so `closeAll` takes at most the levels its caller opened (the
-  details dialog passes its own); it
+  details dialog passes its own); `go(section, path, handoff)` opens another section, pushing,
+  and gives it `route.handoff` until the next move (what the URL does not carry, so a payload
+  is never in a link or the history), and Back to the entry it left gives the focus back to
+  the control that left; it
   tells Next's router, `beforePopState`, to leave Back to the page while the path stays),
   `entrance.ts` (entrances only for what the person brings up: what mounts already shown
   enters only once the page has left its first URL), `lazyModule.ts` (a chunk loaded once,

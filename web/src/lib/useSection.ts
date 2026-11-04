@@ -1,5 +1,5 @@
 import Router from 'next/router';
-import { createContext, useCallback, useContext, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 
 import { noteMoved } from './entrance';
 import { DEFAULT_SECTION, type SectionId, hashPath, routeFromHash } from './sections';
@@ -16,9 +16,18 @@ function pushedDepth(entry: unknown): number {
   return typeof value === 'number' ? value : value ? 1 : 0;
 }
 
+/**
+ * What a section hands the one it opens, beside the path: what the URL does not
+ * carry (it would put a payload in every history entry and every link copied).
+ * The Codec takes a payload to decode.
+ */
+export type Handoff = { kind: 'decode'; payload: string };
+
 /** What is open inside the section (the hash's segments after `#section/`), and how to open and close it. */
 export type SectionRoute = {
   path: string[];
+  /** What the section that opened this one handed it, until the person moves on (none by default). */
+  handoff?: Handoff | null;
   /** Opens `path` in this section, as a history entry of its own. */
   open: (path: string[]) => void;
   /** Goes back to `parent` (the list by default): the browser's Back when this page opened what is shown. */
@@ -33,13 +42,16 @@ export type SectionRoute = {
   closeAll: (parent?: string[], levels?: number) => void;
 };
 
-/** Opens `path` in another section, as a history entry of its own, so Back returns here. */
-export type GoToSection = (section: SectionId, path: string[]) => void;
+/**
+ * Opens `path` in another section, as a history entry of its own, so Back returns
+ * here (and the focus to what had it), handing it `handoff`.
+ */
+export type GoToSection = (section: SectionId, path: string[], handoff?: Handoff) => void;
 
 const nothing = () => {};
 
 /** The route of a section not shown: nothing open in it, and nothing it can open. */
-export const CLOSED_ROUTE: SectionRoute = { path: [], open: nothing, close: nothing, replace: nothing, closeAll: nothing };
+export const CLOSED_ROUTE: SectionRoute = { path: [], handoff: null, open: nothing, close: nothing, replace: nothing, closeAll: nothing };
 
 // Outside the shell there is no other section to open.
 const SectionNavigation = createContext<GoToSection>(nothing);
@@ -67,6 +79,35 @@ function keepBackForThePage() {
   }
 }
 
+// Back to an entry another section was opened from gives the focus back to what
+// had it there (the link's button), once the section is shown again; focusing it
+// brings it into view. Something no longer in the page, or under a dialog, is left.
+function useFocusReturn() {
+  const left = useRef(new Map<string, HTMLElement>());
+  const due = useRef<HTMLElement | null>(null);
+  const remember = useCallback(() => {
+    const focused = document.activeElement;
+    if (focused instanceof HTMLElement && focused !== document.body) left.current.set(window.location.hash, focused);
+  }, []);
+  // Back fires popstate and, between two hashes, hashchange: either finds it.
+  const arrived = useCallback(() => {
+    const element = left.current.get(window.location.hash);
+    if (!element) return;
+    due.current = element;
+    left.current.delete(window.location.hash);
+  }, []);
+  // After the commit that shows the section again.
+  useEffect(() => {
+    const element = due.current;
+    if (!element) return;
+    due.current = null;
+    requestAnimationFrame(() => {
+      if (element.isConnected && !element.closest('[hidden], [inert]')) element.focus();
+    });
+  });
+  return { remember, arrived };
+}
+
 function writeUrl(method: 'pushState' | 'replaceState', state: unknown, path: string) {
   window.history[method](state, '', `${window.location.pathname}${window.location.search}#${path}`);
 }
@@ -83,6 +124,8 @@ function writeUrl(method: 'pushState' | 'replaceState', state: unknown, path: st
 export function useSection(): [SectionId | null, (section: SectionId) => void, SectionRoute, GoToSection] {
   const [section, setSection] = useState<SectionId | null>(null);
   const [path, setPath] = useState<string[]>([]);
+  const [handoff, setHandoff] = useState<Handoff | null>(null);
+  const { remember, arrived } = useFocusReturn();
   // Where closing every level lands, once the browser has gone back.
   const landing = useRef<string[] | null>(null);
 
@@ -107,9 +150,11 @@ export function useSection(): [SectionId | null, (section: SectionId) => void, S
       }
       setSection(route.section);
       setPath(route.path);
+      setHandoff(null);
     };
     const followLater = () => {
       noteMoved();
+      arrived();
       follow(false);
     };
     follow(true);
@@ -127,19 +172,29 @@ export function useSection(): [SectionId | null, (section: SectionId) => void, S
     noteMoved();
     setSection(next);
     setPath([]);
+    setHandoff(null);
     // Another section in this entry's place: nothing is open in it, so nothing
     // this page pushed leads to it any more.
     const { [PUSHED]: _levels, ...kept } = (window.history.state ?? {}) as Record<string, unknown>;
     writeUrl('replaceState', kept, hashPath(next));
   }, []);
 
-  const go = useCallback((next: SectionId, nextPath: string[]) => {
+  const go = useCallback((next: SectionId, nextPath: string[], handed: Handoff | null = null) => {
     noteMoved();
     setSection(next);
     setPath(nextPath);
+    setHandoff(handed);
     const entry = window.history.state ?? {};
     writeUrl('pushState', { ...entry, [PUSHED]: pushedDepth(entry) + 1 }, hashPath(next, nextPath));
   }, []);
+
+  const goToSection = useCallback<GoToSection>(
+    (next, nextPath, handed) => {
+      remember();
+      go(next, nextPath, handed);
+    },
+    [go, remember],
+  );
 
   // Only the section shown is given these (CLOSED_ROUTE otherwise), so they
   // are never called before a section is chosen.
@@ -153,6 +208,7 @@ export function useSection(): [SectionId | null, (section: SectionId) => void, S
       }
       noteMoved();
       setPath(parent);
+      setHandoff(null);
       writeUrl('replaceState', window.history.state, hashPath(section!, parent));
     },
     [section],
@@ -179,5 +235,5 @@ export function useSection(): [SectionId | null, (section: SectionId) => void, S
     [replace],
   );
 
-  return [section, choose, { path, open, close, replace, closeAll }, go];
+  return [section, choose, { path, handoff, open, close, replace, closeAll }, goToSection];
 }
