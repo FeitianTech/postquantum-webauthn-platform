@@ -328,7 +328,8 @@ describe('a saved credential\'s details, into the Codec', () => {
     await userEvent.click(within(shownLevel()).getByRole('button', { name: 'Decode in Codec: attestation object' }));
     await waitFor(() => expect(window.location.hash).toBe('#codec'));
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
-    expect(codecInput()).toHaveValue(attestationObject);
+    // The Codec takes the payload once its section has mounted.
+    await waitFor(() => expect(codecInput()).toHaveValue(attestationObject));
     await within(screen.getByRole('tabpanel', { name: 'Decode' })).findByRole('heading', { name: 'Codec Output' });
     expect(sentTo(fetch, attestationObject)).toBe(true);
 
@@ -347,7 +348,7 @@ describe('a saved credential\'s details, into the Codec', () => {
     await waitFor(() => expect(window.location.hash).toBe('#codec'));
     // The DER the record keeps, in base64, as it keeps it.
     const [kept] = (X5C.properties as { attestationCertificates: { derBase64: string }[] }).attestationCertificates;
-    expect(codecInput()).toHaveValue(kept.derBase64);
+    await waitFor(() => expect(codecInput()).toHaveValue(kept.derBase64));
 
     await act(async () => {
       window.history.back();
@@ -357,7 +358,7 @@ describe('a saved credential\'s details, into the Codec', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Authenticator Data' }));
     await userEvent.click(await screen.findByRole('button', { name: 'Decode in Codec: authenticator data' }));
     await waitFor(() => expect(window.location.hash).toBe('#codec'));
-    expect(codecInput()).toHaveValue(X5C.authenticatorData as string);
+    await waitFor(() => expect(codecInput()).toHaveValue(X5C.authenticatorData as string));
   });
 });
 
