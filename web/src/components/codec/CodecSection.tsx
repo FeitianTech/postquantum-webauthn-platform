@@ -1,5 +1,5 @@
 import { type CodecMode, ENCODER_FORMATS, codecProgressText } from '@/logic/codec/request.js';
-import { type ReactNode, useCallback, useRef, useState } from 'react';
+import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 
 import { Button } from '@/components/ui/Button';
 import { Select, TextArea } from '@/components/ui/Field';
@@ -8,6 +8,7 @@ import { SegmentedControl, segmentIds } from '@/components/ui/SegmentedControl';
 import { Switch } from '@/components/ui/Switch';
 import { useEntrance } from '@/lib/entrance';
 import { NAV_ID, SECTIONS } from '@/lib/sections';
+import { CLOSED_ROUTE, type SectionRoute } from '@/lib/useSection';
 
 import { CodecOutput } from './CodecOutput';
 import { FailureNotice } from './FailureNotice';
@@ -144,15 +145,37 @@ function ModePanel({ mode, active, codec }: { mode: CodecMode; active: boolean; 
   );
 }
 
+// What another section hands the Codec (a saved credential's attestation object,
+// an Advanced response's part): shown in Decode, from the top, in its input and
+// decoded. It is taken each time the router hands it, which is once a move (the
+// next move takes it away); the latest decode is called through a ref, so turning
+// Lenient on does not decode it again. The Codec opens nothing inside itself: a
+// path after #codec is corrected away.
+function useCodecRoute(route: SectionRoute, decodeText: (text: string) => Promise<void>, setMode: (mode: CodecMode) => void) {
+  const latest = useRef(decodeText);
+  latest.current = decodeText;
+  const { handoff, path, replace } = route;
+  useEffect(() => {
+    if (handoff?.kind !== 'decode') return;
+    setMode('decode');
+    window.scrollTo({ top: 0 });
+    void latest.current(handoff.payload);
+  }, [handoff, setMode]);
+  useEffect(() => {
+    if (path.length) replace([]);
+  }, [path.length, replace]);
+}
+
 // The Codec section: decode what a WebAuthn or CTAP payload holds, or encode a
 // value back to bytes. Each mode keeps its own input and answer.
-export function CodecSection({ active }: { active: boolean }) {
+export function CodecSection({ active, route = CLOSED_ROUTE }: { active: boolean; route?: SectionRoute }) {
   const section = SECTIONS.find((candidate) => candidate.id === 'codec')!;
   const entrance = useEntrance(active);
   const ids = segmentIds(NAV_ID, 'codec');
   const [mode, setMode] = useState<CodecMode>('decode');
   const decode = useCodec('decode');
   const encode = useCodec('encode');
+  useCodecRoute(route, decode.decodeText, setMode);
 
   return (
     <section

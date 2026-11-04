@@ -74,7 +74,7 @@ export function AppShell() {
                 )
               ) : option.id === 'codec' ? (
                 codec.module ? (
-                  <codec.module.CodecSection key={option.id} active={option.id === section} />
+                  <codec.module.CodecSection key={option.id} active={option.id === section} route={routeOf('codec')} />
                 ) : (
                   <SectionPlaceholder key={option.id} id="codec" active={option.id === section} failed={codec.failed} onRetry={codec.retry} />
                 )

@@ -182,6 +182,12 @@ describe('the app shell', () => {
     expect(await within(mds).findByRole('table', { name: 'FIDO MDS authenticators' })).toBeInTheDocument();
   });
 
+  it('gives the Codec its route, which opens nothing inside it', async () => {
+    renderApp('#codec/elsewhere');
+    await screen.findByRole('heading', { level: 2, name: 'Codec' });
+    await waitFor(() => expect(window.location.hash).toBe('#codec'));
+  });
+
   it('opens the section the hash names, and follows the hash when it changes', async () => {
     renderApp('#advanced');
 

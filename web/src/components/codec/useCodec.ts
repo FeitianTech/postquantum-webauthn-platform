@@ -20,7 +20,8 @@ export type CodecFailure = { text: string; offset: number | null; path: string |
 // last run gave, in this order: a check that fails leaves the last answer where
 // it was; a run clears the last answer before asking; a failure leaves none. The
 // button is busy while a run is out (so a second click does nothing), and Clear
-// drops the answer of a run still out.
+// drops the answer of a run still out. What another section hands the Codec is
+// put in the input and decoded at once (decodeText).
 export function useCodec(mode: CodecMode) {
   const toast = useToast();
   const [input, setInput] = useState('');
@@ -32,8 +33,8 @@ export function useCodec(mode: CodecMode) {
   // Counts runs and clears, so an answer that arrives after either is dropped.
   const generation = useRef(0);
 
-  const run = useCallback(async () => {
-    const invalid = validateCodecInput(mode, input, mode === 'encode' ? format : null);
+  const runWith = useCallback(async (text: string) => {
+    const invalid = validateCodecInput(mode, text, mode === 'encode' ? format : null);
     if (invalid) {
       setFailure({ text: invalid, offset: null, path: null });
       return;
@@ -44,7 +45,7 @@ export function useCodec(mode: CodecMode) {
     setFailure(null);
     setRunning(true);
     try {
-      const payload = await requestCodec(buildCodecRequest(mode, input, { format, lenient }));
+      const payload = await requestCodec(buildCodecRequest(mode, text, { format, lenient }));
       if (current !== generation.current) return;
       setAnswer(payload);
       toast({ tone: 'success', message: codecSuccessText(mode) });
@@ -55,7 +56,16 @@ export function useCodec(mode: CodecMode) {
     } finally {
       if (current === generation.current) setRunning(false);
     }
-  }, [mode, input, format, lenient, toast]);
+  }, [mode, format, lenient, toast]);
+
+  const run = useCallback(() => runWith(input), [runWith, input]);
+  const decodeText = useCallback(
+    (text: string) => {
+      setInput(text);
+      return runWith(text);
+    },
+    [runWith],
+  );
 
   const clear = useCallback(() => {
     generation.current += 1;
@@ -65,7 +75,7 @@ export function useCodec(mode: CodecMode) {
     setRunning(false);
   }, []);
 
-  return { input, setInput, lenient, setLenient, format, setFormat, running, answer, failure, run, clear };
+  return { input, setInput, lenient, setLenient, format, setFormat, running, answer, failure, run, decodeText, clear };
 }
 
 export type CodecPanelState = ReturnType<typeof useCodec>;

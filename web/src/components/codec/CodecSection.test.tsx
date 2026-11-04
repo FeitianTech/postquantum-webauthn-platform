@@ -1,7 +1,10 @@
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
+import { useState } from 'react';
+
 import { ToastProvider } from '@/components/ui/Toast';
+import { CLOSED_ROUTE, type SectionRoute } from '@/lib/useSection';
 import answers from '@/test/codec-answers.json';
 import { renderPage } from '@/test/page';
 
@@ -45,6 +48,27 @@ function renderCodec() {
     </ToastProvider>,
   );
   return screen.getByRole('tabpanel', { name: 'Codec' });
+}
+
+// The section with the route the router gives it, which a test changes as the router would.
+let routeTo: (route: SectionRoute) => void = () => {};
+function Routed({ first }: { first: SectionRoute }) {
+  const [route, setRoute] = useState(first);
+  routeTo = setRoute;
+  return <CodecSection active route={route} />;
+}
+
+function renderRoutedCodec(first: SectionRoute = CLOSED_ROUTE) {
+  renderPage(
+    <ToastProvider>
+      <div role="tablist" aria-label="Sections">
+        <button type="button" role="tab" id="nav-tab-codec" aria-selected="true">
+          Codec
+        </button>
+      </div>
+      <Routed first={first} />
+    </ToastProvider>,
+  );
 }
 
 const decodePanel = () => screen.getByRole('tabpanel', { name: 'Decode' });
@@ -273,6 +297,41 @@ describe('decoding', () => {
     await userEvent.click(within(decodePanel()).getByRole('button', { name: 'Clear' }));
     await act(async () => pending.resolve(reply('decode-nan-strict')));
     expect(within(decodePanel()).queryByRole('alert')).toBeNull();
+  });
+});
+
+describe('what another section hands the Codec', () => {
+  const CERTIFICATE = RECORDED['decode-certificate'].request.payload as string;
+  const handed = (payload: string): SectionRoute => ({ ...CLOSED_ROUTE, handoff: { kind: 'decode', payload } });
+
+  it('shows Decode from the top with the payload in its input, and decodes it', async () => {
+    fetchMock.mockImplementation(async () => reply('decode-certificate'));
+    const scrollTo = vi.spyOn(window, 'scrollTo');
+    renderRoutedCodec();
+    await userEvent.click(screen.getByRole('tab', { name: 'Encode' }));
+
+    act(() => routeTo(handed(CERTIFICATE)));
+    expect(screen.getByRole('tab', { name: 'Decode' })).toHaveAttribute('aria-selected', 'true');
+    expect(within(decodePanel()).getByRole('textbox')).toHaveValue(CERTIFICATE);
+    expect(scrollTo).toHaveBeenCalledWith({ top: 0 });
+    await within(decodePanel()).findByRole('heading', { name: 'Codec Output' });
+    expect(sentBodies()).toEqual([{ payload: CERTIFICATE, mode: 'decode' }]);
+    expect(within(encodePanel()).getByRole('textbox', { hidden: true })).toHaveValue('');
+  });
+
+  it('decodes it once: turning Lenient on afterwards sends nothing', async () => {
+    fetchMock.mockImplementation(async () => reply('decode-certificate'));
+    renderRoutedCodec(handed(CERTIFICATE));
+    await within(decodePanel()).findByRole('heading', { name: 'Codec Output' });
+
+    await userEvent.click(within(decodePanel()).getByRole('switch', { name: 'Best effort (lenient)' }));
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('corrects a path after #codec away: the Codec opens nothing inside itself', () => {
+    const replace = vi.fn();
+    renderRoutedCodec({ ...CLOSED_ROUTE, path: ['elsewhere'], replace });
+    expect(replace).toHaveBeenCalledWith([]);
   });
 });
 

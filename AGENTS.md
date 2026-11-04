@@ -107,7 +107,9 @@ the CSP and the source rules.
     hold each request; `useRegistrationCeremony` / `useAuthenticationCeremony` run them;
     `fieldText.ts` is the only copy of the form's labels, options, errors and info popups
     (English and 中文).
-  - `codec/`: Decode / Encode. Its tests render real answers from `src/test/codec-answers.json`,
+  - `codec/`: Decode / Encode. A payload another section hands it (`route.handoff`) is shown in
+    Decode, in its input, and decoded; `#codec` opens nothing inside it, so a path after it is
+    corrected away. Its tests render real answers from `src/test/codec-answers.json`,
     which `tests/app/tooling/test_web_codec_answers.py` keeps equal to what `/api/codec`
     answers (`CODEC_ANSWERS_WRITE=1` rewrites it).
   - `mds/`: the explorer (the table's rows are grids on one column template set through the
