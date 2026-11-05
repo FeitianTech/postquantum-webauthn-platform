@@ -20,6 +20,7 @@ import { useAdvancedRequest } from './useAdvancedRequest';
 import { useAuthenticationCeremony } from './useAuthenticationCeremony';
 import { useAuthenticationRequest } from './useAuthenticationRequest';
 import { useRegistrationCeremony } from './useRegistrationCeremony';
+import { useRegistrationHandoff } from './useRegistrationHandoff';
 import { AuthenticationForm } from './AuthenticationForm';
 import { CredentialsDrawer, DRAWER_ID } from './CredentialsDrawer';
 import { JsonEditor } from './JsonEditor';
@@ -183,6 +184,7 @@ export function AdvancedSection({ active, route }: { active: boolean; route: Sec
   const [ceremony, setCeremony] = useState<Ceremony>('registration');
   const request = useAdvancedRequest();
   const assertion = useAuthenticationRequest();
+  useRegistrationHandoff(route, request, setCeremony);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const drawerButton = useRef<HTMLButtonElement>(null);
   const createButton = useRef<HTMLButtonElement>(null);

@@ -111,6 +111,8 @@ the CSP and the source rules.
     can follow updates the form at once. `useAdvancedRequest` / `useAuthenticationRequest`
     hold each request; `useRegistrationCeremony` / `useAuthenticationCeremony` run them and keep
     the browser's response, whose parts `ResponseParts` opens in the Codec under the result;
+    a registration another section hands it (`route.handoff`, an MDS statement's settings)
+    shows Registration, each setting set with the form's own setter (`useRegistrationHandoff`);
     `fieldText.ts` is the only copy of the form's labels, options, errors and info popups
     (English and 中文).
   - `codec/`: Decode / Encode. A payload another section hands it (`route.handoff`) is shown in

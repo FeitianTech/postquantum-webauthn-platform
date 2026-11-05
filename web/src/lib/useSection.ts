@@ -4,6 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState } f
 import { noteMoved } from './entrance';
 import { DEFAULT_SECTION, type SectionId, hashPath, routeFromHash } from './sections';
 import { useIsomorphicLayoutEffect } from './useIsomorphicLayoutEffect';
+import type { StatementSettings } from '@/logic/advanced/registration/statement-settings.js';
 
 // A history entry this page pushed to open something inside a section (an MDS
 // entry, its certificate), so the page's own Back can be the browser's. Its
@@ -19,9 +20,10 @@ function pushedDepth(entry: unknown): number {
 /**
  * What a section hands the one it opens, beside the path: what the URL does not
  * carry (it would put a payload in every history entry and every link copied).
- * The Codec takes a payload to decode.
+ * The Codec takes a payload to decode; the Advanced tab, what an MDS statement
+ * says its registration can ask for.
  */
-export type Handoff = { kind: 'decode'; payload: string };
+export type Handoff = { kind: 'decode'; payload: string } | { kind: 'registration'; settings: StatementSettings };
 
 /** What is open inside the section (the hash's segments after `#section/`), and how to open and close it. */
 export type SectionRoute = {
