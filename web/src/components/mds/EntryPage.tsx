@@ -1,11 +1,16 @@
 import { detailSections, detailTitle, formatDetailSubtitle } from '@/logic/mds/explorer/detail.js';
 import { ENTRY_LINK_MESSAGES } from '@/logic/mds/explorer/entry-link.js';
 import { getAuthenticatorRawData } from '@/logic/mds/raw-data.js';
+import type { MdsEntry } from '@/logic/mds/explorer/loading.js';
 import { type MouseEvent, useEffect, useMemo, useRef, useState } from 'react';
+
+import { TRY_IN_ADVANCED_TEXT, statementSettings } from '@/logic/advanced/registration/statement-settings.js';
 
 import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/icons';
+import { useToast } from '@/components/ui/Toast';
 import { useEntrance } from '@/lib/entrance';
+import { useSectionNavigation } from '@/lib/useSection';
 
 import { CondensedBar } from './CondensedBar';
 import { BackButton, EntryHeader, RawButton } from './EntryHeader';
@@ -29,6 +34,20 @@ type EntryPageProps = {
   saved?: { rows: CredentialRowView[]; onOpen: (key: string) => void };
 };
 
+// Try in Advanced: the Advanced registration, set for what the entry's statement
+// says it can take (its algorithms, user verification, attachment), as a
+// history entry of its own; nothing for a statement that says none of it.
+function useTryInAdvanced(entry: MdsEntry | null) {
+  const go = useSectionNavigation();
+  const toast = useToast();
+  const settings = useMemo(() => (entry ? statementSettings(entry.metadataStatement as Record<string, unknown> | undefined) : null), [entry]);
+  if (!entry || !settings) return undefined;
+  return () => {
+    toast({ tone: 'success', message: TRY_IN_ADVANCED_TEXT.filled(detailTitle(entry)) });
+    go('advanced', [], { kind: 'registration', settings });
+  };
+}
+
 // An authenticator opened from the list or a link (#mds/<entryId>): everything
 // explorer/detail.js shows of it, in its order, as sections; and while it is not
 // there yet, or cannot be, what the jump from a saved credential says.
@@ -49,6 +68,7 @@ export function EntryPage({
   const entry = detail.phase === 'found' ? detail.entry : null;
   const sections = useMemo(() => (entry ? detailSections(entry) : []), [entry]);
   const hasRaw = useMemo(() => Boolean(entry && getAuthenticatorRawData(entry)), [entry]);
+  const tryInAdvanced = useTryInAdvanced(entry);
 
   // The heading takes the focus once there is one: at once, or when the entry arrives.
   useEffect(() => {
@@ -75,7 +95,7 @@ export function EntryPage({
         >
           <RawButton hasRaw={hasRaw} onRaw={openRaw} size="sm" />
         </CondensedBar>
-        <EntryHeader ref={headingRef} entry={detail.entry} hasRaw={hasRaw} onBack={onBack} onRaw={openRaw} />
+        <EntryHeader ref={headingRef} entry={detail.entry} hasRaw={hasRaw} onBack={onBack} onRaw={openRaw} onTryInAdvanced={tryInAdvanced} />
         {saved ? <EntrySavedCredentials rows={saved.rows} idBase="mds-entry" onOpen={saved.onOpen} /> : null}
         <EntrySections
           sections={sections}

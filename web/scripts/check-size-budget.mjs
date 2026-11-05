@@ -31,8 +31,9 @@ export const BUDGET = {
     // Measured on 2026-11-04, once the last ceremony's response opened its parts in the Codec.
     'section-advanced': { raw: 96256, gzip: 28672 },
     'section-codec': { raw: 28672, gzip: 10240 },
-    // Measured on 2026-11-04, once an entry listed its saved credentials and opened their details.
-    'section-mds': { raw: 73728, gzip: 23552 },
+    // Measured on 2026-11-04, once an entry offered Try in Advanced (its statement read as the
+    // Advanced registration's settings, with the FIDO registry's algorithm names).
+    'section-mds': { raw: 76800, gzip: 24576 },
     // Measured on 2026-11-04, once each part of a registration's details opened in the Codec.
     'credential-details': { raw: 31744, gzip: 10240 },
     // Measured on 2026-10-28: the attestation findings' list and their sentences in English and 中文.

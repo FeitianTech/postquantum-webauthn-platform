@@ -286,3 +286,29 @@ test.describe('an MDS entry\'s saved credentials', () => {
     await expect(section(page).locator('[data-mds-list]')).toBeVisible();
   });
 });
+
+test.describe('an MDS entry\'s Try in Advanced', () => {
+  test('opens the Advanced registration asking for what the statement says, and Back returns to the entry', async ({ page }) => {
+    await openEntry(page);
+    await entryPage(page).locator('[data-entry-header]').getByRole('button', { name: 'Try in Advanced' }).click();
+
+    await expect(page).toHaveURL(/\/#advanced$/);
+    const advanced = page.getByRole('tabpanel', { name: 'Advanced Authentication' });
+    await expect(advanced.getByRole('tab', { name: 'Registration' })).toHaveAttribute('aria-selected', 'true');
+    const editor = advanced.getByRole('textbox', { name: 'JSON Editor (CredentialCreationOptions)' });
+    await expect.poll(async () => JSON.parse(await editor.inputValue()).publicKey.pubKeyCredParams.map(({ alg }: { alg: number }) => alg)).toEqual([-8, -7]);
+    expect(JSON.parse(await editor.inputValue()).publicKey.authenticatorSelection).toMatchObject({
+      userVerification: 'required',
+      authenticatorAttachment: 'cross-platform',
+    });
+    await expect(page.getByText('The Advanced registration now asks for what the metadata of Fixture Security Key L1 says.')).toBeVisible();
+    // The form shows what the editor asks: only the statement's algorithms ticked.
+    const form = page.locator('#advanced-ceremony-panel-registration');
+    await expect(form.getByRole('button', { name: 'EdDSA', exact: true })).toHaveAttribute('aria-pressed', 'true');
+    await expect(form.getByRole('button', { name: 'ML-DSA-44', exact: true })).toHaveAttribute('aria-pressed', 'false');
+
+    await page.goBack();
+    await expect(page).toHaveURL(new RegExp(`#mds/${L1}$`));
+    await expect(entryPage(page).getByRole('heading', { level: 3, name: 'Fixture Security Key L1' })).toBeFocused();
+  });
+});

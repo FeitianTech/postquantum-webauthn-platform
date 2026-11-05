@@ -9,6 +9,7 @@ import { SavedCredentialsProvider } from '@/components/credentials/useSavedCrede
 import { ToastProvider } from '@/components/ui/Toast';
 import { FIXTURE_ENTRIES, SNAPSHOT_URL, entryNamed, fixtureRoutes, json, resolveFrom, stubFetch } from '@/test/mds';
 import { renderPage } from '@/test/page';
+import { SectionNavigationProvider } from '@/lib/useSection';
 
 import { EntryPage } from './EntryPage';
 import { MdsSection } from './MdsSection';
@@ -425,6 +426,42 @@ describe('the MDS entry page: what an entry may lack', () => {
     const number = within(section('statusReports')).getAllByRole('cell')[3];
     expect(number.querySelector('code')).toHaveTextContent(/^0$/);
     expect(within(number).getByRole('button', { name: 'Copy certificate number' })).toBeInTheDocument();
+  });
+});
+
+describe('Try in Advanced', () => {
+  function renderOpening(entry: MdsEntry) {
+    const go = vi.fn();
+    renderPage(
+      <ToastProvider>
+        <SectionNavigationProvider value={go}>
+          <EntryPage entryId={entry.entryId} detail={{ phase: 'found', entry }} onBack={vi.fn()} onRetry={vi.fn()} />
+        </SectionNavigationProvider>
+      </ToastProvider>,
+    );
+    return go;
+  }
+
+  it('opens the Advanced registration with what the statement says, and says so', async () => {
+    const go = renderOpening(entryNamed('Fixture Security Key L1'));
+    const header = document.querySelector<HTMLElement>('[data-entry-header]')!;
+    await userEvent.click(within(header).getByRole('button', { name: 'Try in Advanced' }));
+
+    expect(go).toHaveBeenCalledWith('advanced', [], {
+      kind: 'registration',
+      settings: { algorithms: [-8, -7], userVerification: 'required', attachment: 'cross-platform' },
+    });
+    expect(await screen.findByText('The Advanced registration now asks for what the metadata of Fixture Security Key L1 says.')).toBeInTheDocument();
+  });
+
+  it('is offered for a U2F authenticator, which WebAuthn registers through CTAP1', () => {
+    renderOpening(entryNamed('Fixture U2F Key'));
+    expect(screen.getByRole('button', { name: 'Try in Advanced' })).toBeInTheDocument();
+  });
+
+  it('is not offered for a UAF authenticator', () => {
+    renderOpening(entryNamed('Fixture UAF Authenticator'));
+    expect(screen.queryByRole('button', { name: 'Try in Advanced' })).toBeNull();
   });
 });
 

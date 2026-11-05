@@ -90,12 +90,15 @@ the page in a real browser.
 ## Links between sections
 
 - A control that opens another section (a saved credential's FIDO MDS, Decode in
-  Codec) is a secondary button. It pushes a history entry, so Back returns to the
-  place it left. The focus goes back to that control when the page still holds it;
-  the credential details, which a dialog remounts, put their Decode in Codec button
-  back themselves, where it was in the level's view.
-- What a control hands the section it opens (a payload for the Codec) goes through
-  the section router, never the URL: the hash names the section alone.
+  Codec, an MDS entry's Try in Advanced) is a secondary button. It pushes a history
+  entry, so Back returns to the place it left. The focus goes back to that control
+  when the page still holds it; the credential details, which a dialog remounts, put
+  their Decode in Codec button back themselves, where it was in the level's view. An
+  MDS entry is not kept while its section is hidden: Back from Try in Advanced shows
+  it again as it arrives, its heading taking the focus.
+- What a control hands the section it opens (a payload for the Codec, an MDS
+  statement's settings for the Advanced registration) goes through the section
+  router, never the URL: the hash names the section alone.
 
 ## Browser security
 

@@ -2,6 +2,7 @@ import { detailSubtitleParts, detailTitle } from '@/logic/mds/explorer/detail.js
 import type { MdsEntry } from '@/logic/mds/explorer/loading.js';
 import { identifierLabel } from '@/logic/mds/explorer/rows.js';
 import { RAW_DATA_BUTTON_TITLE, RAW_DATA_UNAVAILABLE_TITLE } from '@/logic/mds/raw-data.js';
+import { TRY_IN_ADVANCED_TEXT } from '@/logic/advanced/registration/statement-settings.js';
 import { type MouseEvent, forwardRef } from 'react';
 
 import { BackButton } from '@/components/ui/BackButton';
@@ -61,11 +62,13 @@ type EntryHeaderProps = {
   hasRaw: boolean;
   onBack: () => void;
   onRaw: (event: MouseEvent<HTMLButtonElement>) => void;
+  /** Opens the Advanced registration set for what the statement says, when it says anything it can take. */
+  onTryInAdvanced?: () => void;
 };
 
-// Back, the entry's name (else "Authenticator"), its subtitle and Raw.
+// Back, the entry's name (else "Authenticator"), its subtitle, Try in Advanced and Raw.
 export const EntryHeader = forwardRef<HTMLHeadingElement, EntryHeaderProps>(function EntryHeader(
-  { entry, hasRaw, onBack, onRaw },
+  { entry, hasRaw, onBack, onRaw, onTryInAdvanced },
   headingRef,
 ) {
   return (
@@ -75,7 +78,14 @@ export const EntryHeader = forwardRef<HTMLHeadingElement, EntryHeaderProps>(func
         <h3 ref={headingRef} tabIndex={-1} className="min-w-0 text-heading font-semibold break-words text-ink outline-none">
           {detailTitle(entry)}
         </h3>
-        <RawButton hasRaw={hasRaw} onRaw={onRaw} />
+        <div className="flex shrink-0 flex-wrap justify-end gap-2">
+          {onTryInAdvanced ? (
+            <Button variant="secondary" title={TRY_IN_ADVANCED_TEXT.title} onClick={onTryInAdvanced}>
+              {TRY_IN_ADVANCED_TEXT.button}
+            </Button>
+          ) : null}
+          <RawButton hasRaw={hasRaw} onRaw={onRaw} />
+        </div>
       </div>
       <Subtitle entry={entry} />
     </div>

@@ -184,3 +184,32 @@ describe('an MDS entry\'s saved credentials', () => {
     expect(saved()).toBeNull();
   });
 });
+
+describe('an MDS entry\'s Try in Advanced', () => {
+  const L1 = 'aaguid:f1d0f1d0-0000-4000-8000-000000000001';
+  const editor = () => screen.getByRole('textbox', { name: 'JSON Editor (CredentialCreationOptions)' }) as HTMLTextAreaElement;
+
+  it('opens the Advanced registration asking for what the statement says, and Back returns to the entry', async () => {
+    openAt('#mds');
+    await loaded();
+    await userEvent.click(link(L1));
+    await userEvent.click(await screen.findByRole('button', { name: 'Try in Advanced' }));
+
+    await waitFor(() => expect(window.location.hash).toBe('#advanced'));
+    expect(window.history.state).toEqual({ fromNext: true, pqcOpened: 2 });
+    await waitFor(() => expect(JSON.parse(editor().value).publicKey.pubKeyCredParams.map(({ alg }: { alg: number }) => alg)).toEqual([-8, -7]));
+    expect(JSON.parse(editor().value).publicKey.authenticatorSelection).toMatchObject({
+      userVerification: 'required',
+      authenticatorAttachment: 'cross-platform',
+    });
+    expect(screen.getByRole('tab', { name: 'Registration' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByText('The Advanced registration now asks for what the metadata of Fixture Security Key L1 says.')).toBeInTheDocument();
+
+    await act(async () => {
+      window.history.back();
+    });
+    await waitFor(() => expect(window.location.hash).toBe(`#mds/${L1}`));
+    // The entry's page comes back as a page arrives: its heading takes the focus.
+    await waitFor(() => expect(screen.getByRole('heading', { level: 3, name: 'Fixture Security Key L1' })).toHaveFocus());
+  });
+});

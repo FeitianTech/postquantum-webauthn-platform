@@ -85,7 +85,8 @@ the CSP and the source rules.
   details dialog passes its own); `go(section, path, handoff)` opens another section, pushing,
   and gives it `route.handoff` until the next move (what the URL does not carry, so a payload
   is never in a link or the history), and Back to the entry it left gives the focus back to
-  the control that left; it
+  the control that left, when the page still holds it (an MDS entry, remounted, focuses its
+  heading); it
   tells Next's router, `beforePopState`, to leave Back to the page while the path stays),
   `entrance.ts` (entrances only for what the person brings up: what mounts already shown
   enters only once the page has left its first URL), `lazyModule.ts` (a chunk loaded once,
@@ -126,7 +127,10 @@ the CSP and the source rules.
     entering section is a transform), the saved credentials with the entry's AAGUID under its
     header (`EntrySavedCredentials`), a saved credential's details over an entry (the same
     dialog, given the route under the entry, `routeUnderEntry.ts`; it offers no FIDO MDS over
-    the credential's own entry), Manage Metadata, and `entryLink.ts`, how a saved
+    the credential's own entry), Try in Advanced in the entry's header (when its statement
+    says what the Advanced registration can take, `statement-settings.js`: it hands the
+    settings to Advanced; Back shows the entry again, which a hidden section does not keep,
+    its heading focused), Manage Metadata, and `entryLink.ts`, how a saved
     credential opens `#mds/aaguid:<aaguid>`.
   - `analyze-browser/`: the Analyze Browser panel.
 - Tests: vitest with two projects (`web/vitest.config.mts`): `components`
