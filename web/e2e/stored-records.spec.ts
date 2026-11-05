@@ -9,7 +9,7 @@ import { type VirtualCredential, addVirtualAuthenticator } from './virtual-authe
 // an Advanced credential it registered, as it stored them, and the virtual
 // authenticator's credentials (their private keys and counters), recorded
 // (recorded.ts). The site lists them, opens their details, deletes them, and
-// authenticates with the Advanced one once its key is back on an authenticator;
+// authenticates in Advanced with each once its key is back on an authenticator;
 // the server holds nothing of either (a fresh run's stores).
 
 type StoredRecord = Record<string, unknown> & { type: string; credentialIdBase64Url: string };
@@ -18,6 +18,7 @@ const { records, credentials } = recorded<{ records: StoredRecord[]; credentials
 const SIMPLE = 'current-ui-simple@example.com';
 const ADVANCED = 'current-ui-advanced';
 const advancedRecord = records.find((record) => record.type === 'advanced')!;
+const simpleRecord = records.find((record) => record.type === 'simple')!;
 
 const simpleSection = (page: Page) => page.getByRole('tabpanel', { name: 'Simple Authentication' });
 const rows = (page: Page) => simpleSection(page).locator('li[data-credential-key]');
@@ -92,15 +93,15 @@ test.describe('credentials an earlier release stored', () => {
     expect(await page.evaluate((storageKey) => JSON.parse(window.localStorage.getItem(storageKey) ?? '[]').length, STORAGE_KEY)).toBe(0);
   });
 
-  test('authenticates with the Advanced one, chosen in Allow Credentials, once its key is back on an authenticator; the Simple one is not offered', async ({ page }) => {
+  test('authenticates with the Advanced one, chosen in Allow Credentials, once its key is back on an authenticator', async ({ page }) => {
     const authenticator = await addVirtualAuthenticator(page);
     await authenticator.add(credentials.find((credential) => base64url(credential.credentialId) === advancedRecord.credentialIdBase64Url)!);
     await openWithRecords(page, '#advanced');
     await advanced(page).getByRole('tab', { name: 'Authentication' }).click();
     const form = page.locator('#advanced-ceremony-panel-authentication');
     const allow = form.getByLabel('Allow Credentials', { exact: true });
-    // A simple credential is the Simple tab's: the server refuses it here.
-    await expect(allow.locator('option').filter({ hasText: SIMPLE })).toHaveCount(0);
+    // Both are offered: the tabs share the saved list.
+    await expect(allow.locator('option').filter({ hasText: SIMPLE })).toHaveCount(1);
     await allow.selectOption(await allow.locator('option').filter({ hasText: ADVANCED }).getAttribute('value'));
     const editor = advanced(page).getByRole('textbox', { name: 'JSON Editor (CredentialRequestOptions)' });
     expect(JSON.parse(await editor.inputValue()).publicKey.allowCredentials).toHaveLength(1);
@@ -110,5 +111,26 @@ test.describe('credentials an earlier release stored', () => {
     await expect(advanced(page).locator('[data-ceremony-result]').locator('[data-row="Challenge"]')).toContainText(
       'Issued by this server for this ceremony.',
     );
+  });
+
+  test('authenticates in Advanced with the Simple one, chosen in Allow Credentials, and keeps its counter', async ({ page }) => {
+    const authenticator = await addVirtualAuthenticator(page);
+    await authenticator.add(credentials.find((credential) => base64url(credential.credentialId) === simpleRecord.credentialIdBase64Url)!);
+    await openWithRecords(page, '#advanced');
+    await advanced(page).getByRole('tab', { name: 'Authentication' }).click();
+    const allow = page.locator('#advanced-ceremony-panel-authentication').getByLabel('Allow Credentials', { exact: true });
+    await allow.selectOption(await allow.locator('option').filter({ hasText: SIMPLE }).getAttribute('value'));
+    const editor = advanced(page).getByRole('textbox', { name: 'JSON Editor (CredentialRequestOptions)' });
+    expect(JSON.parse(await editor.inputValue()).publicKey.allowCredentials).toHaveLength(1);
+
+    await advanced(page).getByRole('button', { name: 'Assert Credential' }).click();
+    await expect(page.getByText('Advanced authentication successful!')).toBeVisible();
+    // The server read its key from what this browser sent; the browser keeps the new counter.
+    await expect
+      .poll(() => page.evaluate((storageKey) => {
+        const kept = JSON.parse(window.localStorage.getItem(storageKey) ?? '[]') as { type: string; signCount: number }[];
+        return kept.find((record) => record.type === 'simple')?.signCount;
+      }, STORAGE_KEY))
+      .toBe(2);
   });
 });

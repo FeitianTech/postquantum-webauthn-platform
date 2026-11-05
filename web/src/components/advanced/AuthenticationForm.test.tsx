@@ -115,13 +115,18 @@ describe('the authentication form, when the page has loaded', () => {
     expect(field('Allow Credentials')).toHaveValue(PLAIN_ID);
   });
 
-  it('offers and sends the advanced credentials only: a Simple one is the Simple tab\'s, which the server refuses here', async () => {
+  it('offers and sends the Simple tab\'s credentials beside the advanced ones, in the list\'s order', async () => {
     const simple = savedRecord('simple-register-es256', { email: 'simple@example.com', userName: 'simple@example.com' });
+    const SIMPLE_ID = simple.credentialIdHex as string;
     renderAuthenticationForm([CAPABLE, simple, PLAIN]);
     await ready();
 
-    expect(options('Allow Credentials').map((option) => option.value)).toEqual(['all', 'empty', CAPABLE_ID, PLAIN_ID]);
-    expect(ids()).toEqual([CAPABLE_ID, PLAIN_ID]);
+    expect(options('Allow Credentials').map((option) => option.value)).toEqual(['all', 'empty', CAPABLE_ID, SIMPLE_ID, PLAIN_ID]);
+    expect(options('Allow Credentials')[3].textContent).toBe('simple@example.com (ES256 (-7))');
+    expect(ids()).toEqual([CAPABLE_ID, SIMPLE_ID, PLAIN_ID]);
+
+    await userEvent.selectOptions(field('Allow Credentials'), SIMPLE_ID);
+    expect(ids()).toEqual([SIMPLE_ID]);
   });
 
   it('reads an edit whose hints refuse the credential it names as All, and sends the edit as typed', async () => {

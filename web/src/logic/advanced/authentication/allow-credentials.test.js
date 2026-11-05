@@ -40,10 +40,10 @@ describe('the Allow Credentials choices', () => {
     expect(allowCredentialChoices(undefined, [])).toEqual([]);
   });
 
-  it('are made from the advanced credentials only, which the ceremony sends', () => {
+  it('are made from every saved credential, simple and advanced, which the ceremony sends', () => {
     const simple = { ...PLATFORM, type: 'simple' };
     const advanced = { ...ROAMING, type: 'advanced' };
-    expect(authenticationCredentials([simple, advanced, null, { ...UNATTACHED }])).toEqual([advanced]);
+    expect(authenticationCredentials([simple, advanced, null, 'not a record'])).toEqual([simple, advanced]);
     expect(authenticationCredentials(undefined)).toEqual([]);
   });
 

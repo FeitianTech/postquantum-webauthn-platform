@@ -14,7 +14,7 @@ import { UPDATE_BROWSER_TEXT } from '../../shared/native-json.js';
 import { answerResponse, credentialToJSON, installAuthenticator } from '@/test/logic/simple/ceremony-answers.js';
 import { advancedAuthentications, recordedAssertion } from '@/test/logic/advanced/advanced-answers.js';
 
-// The advanced records this browser keeps, as the server is sent them.
+// The saved credentials this browser keeps, as the server is sent them.
 vi.mock('../../credentials/storage/local/advanced-credentials.js', () => ({ prepareAdvancedCredentialsForServer: vi.fn() }));
 
 const BEGIN = '/api/advanced/authenticate/begin';

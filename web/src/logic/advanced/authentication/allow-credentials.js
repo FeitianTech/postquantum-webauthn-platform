@@ -1,8 +1,8 @@
 // The Allow Credentials select of the Advanced tab's authentication, with no
 // page: its first two choices' words, the saved credentials an authentication
-// can use (the advanced ones), those it offers (with an ID whose attachment the
-// authentication's hints allow), each one's words, and the choice kept when the
-// offer changes. DOM-free.
+// can use (every one, simple and advanced), those it offers (with an ID whose
+// attachment the authentication's hints allow), each one's words, and the choice
+// kept when the offer changes. DOM-free.
 import { describeCredentialAlgorithmWith } from '../../credentials/algorithm-tag.js';
 import { describeCoseAlgorithm } from '../../credentials/cose-labels.js';
 import { getCredentialIdHex, getStoredCredentialAttachment } from '../../credentials/record-fields.js';
@@ -26,14 +26,13 @@ export const ALLOW_CREDENTIALS_TEXT = {
 };
 
 /**
- * The saved credentials an authentication can use: the advanced ones, which its
- * ceremony sends the server. A simple credential is the Simple tab's: the server
- * keeps it for that tab's own sign-in, and refuses it here.
+ * The saved credentials an authentication can use: every one this browser keeps,
+ * simple and advanced, which its ceremony sends the server with their keys.
  * @param {SavedCredential[] | null | undefined} storedCredentials
  * @returns {SavedCredential[]}
  */
 export function authenticationCredentials(storedCredentials) {
-    return (storedCredentials || []).filter(cred => cred && cred.type === 'advanced');
+    return (storedCredentials || []).filter(cred => cred && typeof cred === 'object');
 }
 
 /**

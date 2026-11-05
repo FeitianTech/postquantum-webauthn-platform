@@ -349,4 +349,44 @@ describe("stored credentials: advanced", () => {
     expect(getAllAdvancedCredentials()).toHaveLength(1);
     expect(getAllAdvancedCredentials()[0]).toMatchObject({ signCount: 9, email: '', authenticatorAttachment: 'cross-platform', resident: false });
   });
+
+  it("sends the server every saved credential, simple and advanced, each with its key and counter", () => {
+    saveSimpleCredential({
+          credentialId: 'simple-signed-in',
+          email: 'simple@example.com',
+          publicKey: 'c2ltcGxl',
+          publicKeyAlgorithm: -8,
+          aaguid: 'AAAAAAAAAAAAAAAAAAAAAA',
+          authenticatorAttachment: 'cross-platform',
+          signCount: 3,
+        });
+    saveAdvancedCredential({
+          credentialId: 'advanced-signed-in',
+          publicKey: 'YWR2YW5jZWQ',
+          algorithm: -7,
+          signCount: 7,
+          clientExtensionOutputs: { credProps: { rk: false } },
+        });
+
+    expect(prepareAdvancedCredentialsForServer()).toEqual([
+      {
+        credentialId: 'simple-signed-in',
+        publicKey: 'c2ltcGxl',
+        aaguid: 'AAAAAAAAAAAAAAAAAAAAAA',
+        signCount: 3,
+        algorithm: -8,
+        authenticatorAttachment: 'cross-platform',
+        resident: null,
+      },
+      {
+        credentialId: 'advanced-signed-in',
+        publicKey: 'YWR2YW5jZWQ',
+        aaguid: null,
+        signCount: 7,
+        algorithm: -7,
+        authenticatorAttachment: null,
+        resident: false,
+      },
+    ]);
+  });
 });

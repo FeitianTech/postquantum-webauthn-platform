@@ -291,6 +291,29 @@ test.describe('/#advanced authentication', () => {
     await expect(page.getByRole('dialog')).toHaveCount(0);
   });
 
+  test('authenticates with a credential the Simple tab registered, and the Simple tab then signs in with it', async ({ page }) => {
+    await addVirtualAuthenticator(page);
+    await page.goto('/#simple');
+    const simple = page.getByRole('tabpanel', { name: 'Simple Authentication' });
+    await simple.getByRole('textbox', { name: 'Username' }).fill('simple-in-advanced');
+    await simple.getByRole('button', { name: 'Register Passkey' }).click();
+    await expect(page.getByText(/^Registration successful! Algorithm: /)).toBeVisible();
+
+    const sections = page.getByRole('tablist', { name: 'Sections' });
+    await sections.getByRole('tab', { name: 'Advanced Authentication' }).click();
+    await toAuthentication(page);
+    await expect(authentication(page).getByLabel('Allow Credentials', { exact: true }).locator('option').filter({ hasText: 'simple-in-advanced' })).toHaveCount(1);
+    await section(page).getByRole('button', { name: 'Assert Credential' }).click();
+    await expect(page.getByText('Advanced authentication successful!')).toBeVisible();
+    await expect(result(page).locator('[data-row="Signature counter"]')).toContainText('Higher than the last counter the server saw');
+
+    // The server's own record of it lags; the counter this browser kept carries the Advanced one.
+    await sections.getByRole('tab', { name: 'Simple Authentication' }).click();
+    await simple.getByRole('button', { name: 'Authenticate', exact: true }).click();
+    await expect(page.getByText('Authentication successful! You have been verified.')).toBeVisible();
+    await expect(simple.locator('[data-ceremony-result]')).toContainText('Higher than the last counter the server saw for this credential, as it should be.');
+  });
+
   test('authenticates from an edited JSON: the form follows the edit, and the request sent is the edit', async ({ page }) => {
     await addVirtualAuthenticator(page);
     await registerPasskey(page);

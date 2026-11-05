@@ -12,6 +12,7 @@ import {
     readAdvancedCredentialPartitions,
 } from './advanced-storage-shaping.js';
 import { prepareAdvancedCredentialsForServerFromSource } from './advanced-server-payload.js';
+import { getAllStoredCredentialsInOrder } from '../records.js';
 
 /** @import { SavedCredential } from '../../saved-list.js' */
 
@@ -182,10 +183,13 @@ export function updateAdvancedCredentialSignCount(credentialId, signCount, stora
 }
 
 /**
- * @param {Array<Record<string, any>> | null} [credentials] The records sent (the stored ones when not given).
+ * What the Advanced authentication sends the server of the saved credentials:
+ * each one's key material and counter. Every saved credential, simple and
+ * advanced (the tabs share the list), when none are given.
+ * @param {Array<Record<string, any>> | null} [credentials] The records sent (every stored one when not given).
  * @returns {Array<Record<string, unknown>>}
  */
 export function prepareAdvancedCredentialsForServer(credentials = null) {
-    const source = Array.isArray(credentials) ? credentials : getAllAdvancedCredentials();
+    const source = Array.isArray(credentials) ? credentials : getAllStoredCredentialsInOrder();
     return prepareAdvancedCredentialsForServerFromSource(source);
 }

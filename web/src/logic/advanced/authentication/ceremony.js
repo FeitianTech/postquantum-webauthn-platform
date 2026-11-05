@@ -80,8 +80,8 @@ function postJson(path, body) {
 }
 
 /**
- * Authenticates with the editor's text, sending the server the advanced records
- * this browser keeps. The form's views give: ensureHints (the hints' check, which
+ * Authenticates with the editor's text, sending the server every saved
+ * credential this browser keeps, simple and advanced. The form's views give: ensureHints (the hints' check, which
  * may narrow allowCredentials and may throw) and hashAlgorithm() (the Hash
  * Algorithm, read when the ceremony gets there). It says what it does
  * through onStart (the request checked: the last ceremony's messages may go),

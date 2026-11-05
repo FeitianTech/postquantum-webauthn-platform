@@ -208,8 +208,10 @@ its logic out here first.
 - `advanced/`: the Advanced tab. `registration/` and `authentication/` each hold their
   request (`request.js`: defaults, build, read back, the form's rules), its validation and
   its ceremony (`ceremony.js`), with Allow Credentials' choices and extension availability
-  under `authentication/`, and the form's algorithms under `registration/`
-  (`algorithm-options.js`: the preferred ones first, in the servers' order, ticked by default),
+  under `authentication/` (an authentication offers and sends every saved credential, the
+  Simple tab's too: `prepareAdvancedCredentialsForServer`), and the form's algorithms under
+  `registration/` (`algorithm-options.js`: the preferred ones first, in the servers' order,
+  ticked by default),
   and what an MDS statement says it can take (`statement-settings.js`: getInfo's algorithms,
   else the statement's by their FIDO registry names; user verification; the attachment; FIDO2
   and U2F only) with the form's changes for it (`statement-changes.js`, which drops a hint the
@@ -550,7 +552,11 @@ deliberate change (the characterization goldens show what it changes).
 - The CSP has no `'unsafe-inline'`: an inline handler, `<script>` or `style` attribute simply
   does not run. Style at run time through the CSSOM from a ref.
 - The Simple and Advanced tabs share the saved credential list and its storage: verify both
-  flows when you touch either.
+  flows when you touch either. Advanced authentication uses Simple credentials too, for the
+  `rpId` its request names (the page's host by default), while a Simple credential is for
+  `FIDO_SERVER_RP_ID`: the two agree in production and in the e2e tests (`localhost`). It
+  writes nothing on the server, so the server's record of a Simple credential's counter lags
+  until the next Simple sign-in, which compares with the page's copy too.
 - Begin/complete flows depend on Flask session state.
 - fido2 finds a COSE key class by walking `CoseKey`'s subclasses, and the first class with an
   algorithm ID wins: an app subclass can add an algorithm, never replace fido2's.
