@@ -368,3 +368,79 @@ def test_an_authentication_keeps_a_record_stored_whole_as_its_counter_record(cre
             "user_handle": records[0]["user_handle"],
         }
     ]
+
+
+# --------------------------------------------------------------------------
+# A SIMPLE credential in the ADVANCED authentication -- the tabs share the
+# saved list; the Advanced tab writes nothing on the server.
+# --------------------------------------------------------------------------
+
+
+def _as_the_advanced_tab_sends(saved):
+    """The entry the page sends the Advanced authentication for a saved record (``advanced-server-payload.js``)."""
+
+    return {
+        "credentialId": saved["credentialIdBase64Url"],
+        "publicKey": saved["publicKey"],
+        "aaguid": saved["aaguid"],
+        "signCount": saved["signCount"],
+        "algorithm": saved["publicKeyAlgorithm"],
+        "authenticatorAttachment": saved.get("authenticatorAttachment"),
+        # credProps.rk as the browser reported it, else null (``resident-key.js``).
+        "resident": ((saved.get("clientExtensionOutputs") or {}).get("credProps") or {}).get("rk"),
+    }
+
+
+def _authenticate_in_advanced(client, authenticator, entry, *, counter):
+    begin = client.post(
+        "/api/advanced/authenticate/begin",
+        json={"publicKey": {"challenge": {"$base64url": b64u(b"\x62" * 32)}}, "__storedCredentials": [entry]},
+    )
+    assert begin.status_code == 200, begin.get_json()
+    challenge = unb64u(begin.get_json()["publicKey"]["challenge"])
+    return client.post(
+        "/api/advanced/authenticate/complete",
+        json={
+            "publicKey": {"challenge": {"$base64url": b64u(challenge)}},
+            "__storedCredentials": [entry],
+            "__assertion_response": assertion_payload(authenticator, challenge=challenge, counter=counter),
+        },
+        headers={"Origin": ORIGIN},
+    )
+
+
+def test_a_simple_credential_authenticates_in_advanced_and_simple_then_stores_the_latest_counter(credential_store):
+    authenticator = Authenticator()
+    client = entry_app().test_client()
+    saved = register_simple(client, authenticator, counter=5).get_json()["storedCredential"]
+
+    advanced = _authenticate_in_advanced(client, authenticator, _as_the_advanced_tab_sends(saved), counter=6)
+
+    # The server read the record's key (the signature verified) and its counter (5, so 6 is ok).
+    assert advanced.status_code == 200, advanced.get_json()
+    body = advanced.get_json()
+    assert body["status"] == "OK"
+    assert body["signatureVerified"] is True
+    assert body["signCount"] == 6
+    assert body["signCountStatus"] == "ok"
+    # The Simple tab's record on the server is left as it was ...
+    assert credential_store(authenticator.credential_id) == 5
+
+    # ... and the next Simple sign-in, the page's copy at 6, stores the authenticator's latest.
+    simple = authenticate_simple(client, authenticator, counter=7, client_sign_count=6)
+    assert simple.status_code == 200, simple.get_json()
+    assert simple.get_json()["signCountStatus"] == "ok"
+    assert credential_store(authenticator.credential_id) == 7
+
+
+def test_a_simple_sign_in_refuses_the_counter_an_advanced_authentication_already_saw(credential_store):
+    authenticator = Authenticator()
+    client = entry_app().test_client()
+    saved = register_simple(client, authenticator, counter=5).get_json()["storedCredential"]
+    assert _authenticate_in_advanced(client, authenticator, _as_the_advanced_tab_sends(saved), counter=6).status_code == 200
+
+    # The page's copy holds 6 once the Advanced authentication updated it: 6 again is a replay.
+    response = authenticate_simple(client, authenticator, counter=6, client_sign_count=6)
+
+    _assert_cloned_rejection(response, authenticator)
+    assert credential_store(authenticator.credential_id) == 5
