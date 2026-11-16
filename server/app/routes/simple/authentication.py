@@ -1,6 +1,7 @@
 """The Simple tab's authentication: begin issues the options and keeps the ceremony's
-state in the session; complete verifies the assertion and checks its signature counter
-(``stored_sign_count``)."""
+state in the session; complete verifies the assertion, checks its backup flags
+(``assertion_checks``: BS without BE is refused, a BE that is not the registration's is
+its warning) and its signature counter (``stored_sign_count``)."""
 from __future__ import annotations
 
 import hashlib
@@ -20,6 +21,7 @@ from ...challenge_registry import (
 from ...config import relying_party
 from ...encoding import encode_base64url
 from ...webauthn import assertion_checks, client_binary
+from ...webauthn.attestation import error_codes
 from .. import ceremony_session, json_body
 from . import account, parsing, stored_sign_count
 
@@ -202,11 +204,28 @@ def _matched_credential_id(matched_credential: Any) -> bytes:
         return b""
 
 
-def _asserted_sign_count(response_mapping: Mapping[str, Any]) -> int | None:
-    """The counter in the authenticatorData the signature was just verified over; ``None`` if it does not read."""
+def _backup_findings(
+    auth_data: Any, session_credentials: list[Any], credential_id: bytes
+) -> tuple[list[str], list[str]]:
+    """The assertion's backup findings: the integrity errors, which refuse it, and the warnings.
 
-    auth_data = assertion_checks.assertion_parts(response_mapping).auth_data
-    return auth_data.counter if auth_data is not None else None
+    The BE the registration had is the one the page's record kept, sent with the credential.
+    """
+
+    entry = stored_sign_count.client_supplied_entry(session_credentials, credential_id) or {}
+    errors, warnings = assertion_checks.backup_findings(auth_data, entry.get("backupEligible"))
+    findings = error_codes.integrity_errors_only({"errors": errors, "warnings": warnings})
+    return findings["errors"], findings["warnings"]
+
+
+def _refused_assertion(authenticated_id: str, message: str, errors: list[str]) -> Any:
+    """The 400 refusing an assertion its checks found an integrity error in."""
+
+    logger.warning("Rejected assertion for credential %s: %s", authenticated_id, ", ".join(errors))
+    return (
+        jsonify({"error": message, "failedCredentialId": authenticated_id, "assertionErrors": errors}),
+        400,
+    )
 
 
 @bp.route("/api/authenticate/complete", methods=["POST"])
@@ -235,7 +254,9 @@ def authenticate_complete():
         if authenticated_id_bytes
         else None
     )
-    sign_count = _asserted_sign_count(response_mapping)
+    # The authenticatorData the signature was just verified over.
+    auth_data = assertion_checks.assertion_parts(response_mapping).auth_data
+    sign_count = auth_data.counter if auth_data is not None else None
 
     username = session.pop("simple_credentials_email", None)
 
@@ -252,6 +273,15 @@ def authenticate_complete():
             400,
         )
 
+    backup_errors, warnings = _backup_findings(auth_data, session_credentials, authenticated_id_bytes)
+    if backup_errors:
+        return _refused_assertion(
+            encode_base64url(authenticated_id_bytes),
+            "The authenticator data says this credential is backed up but not backup eligible, "
+            "so authentication was rejected.",
+            backup_errors,
+        )
+
     rejection, sign_count_verdict = stored_sign_count.enforce_sign_count(
         username,
         authenticated_id_bytes,
@@ -261,16 +291,21 @@ def authenticate_complete():
     if rejection is not None:
         return rejection
 
-    return jsonify(_authenticated_payload(authenticated_id, sign_count, sign_count_verdict))
+    return jsonify(_authenticated_payload(authenticated_id, sign_count, sign_count_verdict, warnings))
 
 
-def _authenticated_payload(authenticated_id: str | None, sign_count: int, sign_count_verdict: str) -> dict[str, Any]:
-    """The answer to a verified assertion, with the counter and what the check made of it."""
+def _authenticated_payload(
+    authenticated_id: str | None, sign_count: int, sign_count_verdict: str, warnings: list[str]
+) -> dict[str, Any]:
+    """The answer to a verified assertion, with the counter and what the check made of it, and the warnings when there are any."""
 
-    return {
+    payload: dict[str, Any] = {
         "status": "OK",
         "hintsUsed": [],
         "authenticatedCredentialId": authenticated_id,
         "signCount": sign_count,
         "signCountStatus": sign_count_verdict,
     }
+    if warnings:
+        payload["warnings"] = warnings
+    return payload

@@ -1,5 +1,5 @@
 {
-  "about": "Every code the attestation checks report (server/app/webauthn/attestation). A finding is one of these, or one and its reason after \": \". The server's tests hold the codes the checks write to this list (tests/app/tooling/test_attestation_finding_codes.py), and the page's tests hold its table of sentences to it (web/src/logic/shared/attestation-findings.js): a sentence for each code, none for another.",
+  "about": "Every code the attestation and assertion checks report (server/app/webauthn/attestation, server/app/webauthn/assertion_checks.py). A finding is one of these, or one and its reason after \": \". The server's tests hold the codes the checks write to this list (tests/app/tooling/test_attestation_finding_codes.py), and the page's tests hold its table of sentences to it (web/src/logic/shared/attestation-findings.js): a sentence for each code, none for another.",
   "codes": [
     "algorithm_not_allowed",
     "algorithm_not_in_metadata",
@@ -9,6 +9,7 @@
     "attestation_root_not_trusted",
     "attestation_signature_invalid",
     "attested_credential_data_missing",
+    "backup_eligibility_changed",
     "backup_state_without_eligibility",
     "certificate_chain_invalid",
     "certificate_chain_unreadable",

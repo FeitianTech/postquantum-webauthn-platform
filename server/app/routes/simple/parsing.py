@@ -62,6 +62,8 @@ def _serialize_credential_for_session(entry: Mapping[str, Any]) -> dict[str, Any
         ("algorithm", "algorithm"),
         ("publicKeyAlgorithm", "publicKeyAlgorithm"),
         ("type", "type"),
+        # The BE flag the page's record kept from the registration (assertion_checks).
+        ("backupEligible", "backupEligible"),
     ):
         if source_key in entry:
             serialized[dest_key] = entry[source_key]

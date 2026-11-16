@@ -18,6 +18,8 @@ from server.app.storage import credentials as storage_credentials
 from tests.app.characterization import material
 from tests.app.entry_app import entry_app
 from tests.app.security.ceremony_helpers import (
+    FLAG_BE,
+    FLAG_BS,
     ORIGIN,
     Authenticator,
     assertion_payload,
@@ -231,3 +233,44 @@ def test_simple_authenticate_begin_accepts_stored_credentials_alias(monkeypatch)
             # The credentials' digest, never their public keys: complete is sent them again.
             assert "simple_credentials" not in session_state
             assert isinstance(session_state["simple_credentials_digest"], str)
+
+
+def test_a_sign_in_backed_up_without_backup_eligibility_is_refused_before_its_counter_is_kept(credential_store):
+    client = entry_app().test_client()
+    authenticator = Authenticator()
+    register_simple(client, authenticator, counter=1)
+
+    refused = authenticate_simple(client, authenticator, counter=5, extra_flags=FLAG_BS)
+    accepted = authenticate_simple(client, authenticator, counter=2)
+
+    assert refused.status_code == 400
+    assert refused.get_json() == {
+        "error": (
+            "The authenticator data says this credential is backed up but not backup eligible, "
+            "so authentication was rejected."
+        ),
+        "failedCredentialId": b64u(authenticator.credential_id),
+        "assertionErrors": ["backup_state_without_eligibility"],
+    }
+    # Refused before the counter check: 5 was never stored.
+    assert (accepted.status_code, accepted.get_json()["signCountStatus"]) == (200, "ok")
+
+
+@pytest.mark.parametrize(
+    ("backup_eligible", "flags", "warnings"),
+    [
+        (True, FLAG_BE | FLAG_BS, None),
+        (None, 0, None),
+        (True, 0, ["backup_eligibility_changed: set at registration, not set now"]),
+        (False, FLAG_BE, ["backup_eligibility_changed: not set at registration, set now"]),
+    ],
+)
+def test_a_sign_in_says_when_backup_eligibility_is_not_the_registrations(credential_store, backup_eligible, flags, warnings):
+    client = entry_app().test_client()
+    authenticator = Authenticator()
+    register_simple(client, authenticator, counter=1)
+
+    response = authenticate_simple(client, authenticator, counter=2, backup_eligible=backup_eligible, extra_flags=flags)
+
+    assert response.status_code == 200, response.get_json()
+    assert response.get_json().get("warnings") == warnings

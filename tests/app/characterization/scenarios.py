@@ -60,7 +60,12 @@ def _simple_register(r: Recorder, client, authenticator, *, email: str = EMAIL, 
     )
 
 
-def _simple_authenticate(r: Recorder, client, authenticator, *, counter: int, valid: bool = True, entry=None):
+def _simple_authenticate(
+    r: Recorder, client, authenticator, *, counter: int, valid: bool = True, entry=None, **assertion: Any
+):
+    """A Simple authentication's begin and complete; ``assertion`` goes to ``assertion_payload``
+    (the backup flags, the userHandle)."""
+
     credentials = [entry or authenticator.stored_credential_entry()]
     begin = r.post(client, f"/api/authenticate/begin?email={EMAIL}", json={"credentials": credentials})
     challenge = unb64u(begin.get_json()["publicKey"]["challenge"])
@@ -68,7 +73,9 @@ def _simple_authenticate(r: Recorder, client, authenticator, *, counter: int, va
         client,
         f"/api/authenticate/complete?email={EMAIL}",
         json={
-            "credential": m.assertion_payload(authenticator, challenge=challenge, counter=counter, valid_signature=valid),
+            "credential": m.assertion_payload(
+                authenticator, challenge=challenge, counter=counter, valid_signature=valid, **assertion
+            ),
             "credentials": credentials,
         },
         headers=HEADERS,
@@ -489,7 +496,11 @@ def _advanced_authenticate(
     attachment: str | None = None,
     origin: str | None = None,
     extra: dict[str, Any] | None = None,
+    **assertion: Any,
 ):
+    """An Advanced authentication's begin and complete; ``assertion`` goes to ``assertion_payload``
+    (the backup flags, the userHandle)."""
+
     options = options or _auth_options()
     entries = entries if entries is not None else [authenticator.stored_credential_entry(declared_algorithm=-7)]
     challenge = unb64u(options["challenge"]["$base64url"])
@@ -508,7 +519,7 @@ def _advanced_authenticate(
             "__storedCredentials": entries,
             "__assertion_response": m.assertion_payload(
                 authenticator, challenge=challenge, counter=counter, valid_signature=valid, attachment=attachment,
-                **signed_by,
+                **signed_by, **assertion,
             ),
             **(extra or {}),
         },
@@ -928,3 +939,24 @@ def _(r: Recorder) -> None:
     client = r.client()
     _advanced_register(r, client, m.Authenticator("adv-backed-up-alone"), extra_flags=FLAG_BS)
     _advanced_register(r, client, m.Authenticator("adv-backup-eligible"), extra_flags=FLAG_BE | FLAG_BS)
+
+
+@scenario("simple-authenticate-backup-flags")
+def _(r: Recorder) -> None:
+    client = r.client()
+    authenticator = m.Authenticator("simple-auth-backup")
+    _simple_register(r, client, authenticator, counter=1, extra_flags=FLAG_BE)
+    entry = authenticator.stored_credential_entry(backup_eligible=True)
+    _simple_authenticate(r, client, authenticator, counter=2, entry=entry, extra_flags=FLAG_BE | FLAG_BS)
+    _simple_authenticate(r, client, authenticator, counter=3, entry=entry)
+    _simple_authenticate(r, client, authenticator, counter=4, entry=entry, extra_flags=FLAG_BS)
+
+
+@scenario("advanced-authenticate-backup-flags")
+def _(r: Recorder) -> None:
+    client = r.client()
+    authenticator = m.Authenticator("adv-auth-backup")
+    entries = [authenticator.stored_credential_entry(declared_algorithm=-7, backup_eligible=True)]
+    _advanced_authenticate(r, client, authenticator, entries=entries, counter=1, extra_flags=FLAG_BE | FLAG_BS)
+    _advanced_authenticate(r, client, authenticator, entries=entries, counter=2)
+    _advanced_authenticate(r, client, authenticator, entries=entries, counter=3, extra_flags=FLAG_BS)

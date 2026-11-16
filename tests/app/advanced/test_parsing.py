@@ -157,3 +157,14 @@ def test_optional_bool_flag_and_first_value_helpers():
     mapping = {'resident': 'maybe', 'residentKey': 'true'}
     assert advanced_parsing._extract_flag_from_mapping(mapping, ('resident', 'residentKey')) is True
     assert advanced_parsing._extract_flag_from_mapping({}, ('resident',)) is None
+
+
+def test_the_backup_eligibility_the_page_kept_is_read_only_as_a_flag():
+    authenticator = Authenticator()
+    entries = [
+        authenticator.stored_credential_entry(backup_eligible=False),
+        {**authenticator.stored_credential_entry(), "backupEligible": "true"},
+        authenticator.stored_credential_entry(),
+    ]
+
+    assert [record["backupEligible"] for record in parsing._parse_client_supplied_credentials(entries)] == [False, None, None]

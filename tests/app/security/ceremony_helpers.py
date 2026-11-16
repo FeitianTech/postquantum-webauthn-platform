@@ -376,13 +376,18 @@ def authenticate_simple(
     counter: int,
     client_sign_count: int | None = None,
     email: str | None = SIMPLE_EMAIL,
+    backup_eligible: bool | None = None,
+    extra_flags: int = 0,
+    user_handle: bytes | None = None,
 ) -> Any:
     """Authenticate with ``authenticator`` through the Simple tab's routes; complete's answer.
 
-    ``client_sign_count`` is the counter the browser's copy of the credential claims.
+    ``client_sign_count`` is the counter the browser's copy of the credential claims, and
+    ``backup_eligible`` the BE flag it kept from the registration; ``extra_flags`` and
+    ``user_handle`` are the assertion's (``assertion_payload``).
     """
 
-    entry = authenticator.stored_credential_entry()
+    entry = authenticator.stored_credential_entry(backup_eligible=backup_eligible)
     if client_sign_count is not None:
         entry["signCount"] = client_sign_count
     query = _simple_query(email)
@@ -391,7 +396,12 @@ def authenticate_simple(
     challenge = unb64u(begin.get_json()["publicKey"]["challenge"])
     return client.post(
         f"/api/authenticate/complete{query}",
-        json=simple_complete_body(assertion_payload(authenticator, challenge=challenge, counter=counter), [entry]),
+        json=simple_complete_body(
+            assertion_payload(
+                authenticator, challenge=challenge, counter=counter, extra_flags=extra_flags, user_handle=user_handle
+            ),
+            [entry],
+        ),
         headers={"Origin": ORIGIN},
     )
 

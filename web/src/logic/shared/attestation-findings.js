@@ -1,6 +1,7 @@
-// What the attestation checks found, in words: the sentence, in English and
-// 中文, for each code the server reports (server/app/webauthn/attestation;
-// tests/fixtures/attestation-finding-codes.json lists them for both sides), and
+// What the attestation and assertion checks found, in words: the sentence, in
+// English and 中文, for each code the server reports (server/app/webauthn/attestation
+// and assertion_checks.py; tests/fixtures/attestation-finding-codes.json lists them
+// for both sides), and
 // a finding read as its code, its sentence and the reason the server put after
 // ": ". A code this table does not know is shown as it was sent. DOM-free: the
 // findings list shows this model.
@@ -55,6 +56,10 @@ export const FINDING_SENTENCES = Object.freeze({
     backup_state_without_eligibility: {
         en: 'The authenticator data says the credential is backed up (BS) but not backup eligible (BE)',
         zh: '认证器数据表明凭据已备份（BS），但不具备备份资格（BE）',
+    },
+    backup_eligibility_changed: {
+        en: 'The credential\'s backup eligibility (BE) is not what it was at registration',
+        zh: '凭据的备份资格（BE）与注册时不同',
     },
     algorithm_not_allowed: {
         en: 'The credential\'s algorithm is not one the request offered (pubKeyCredParams)',

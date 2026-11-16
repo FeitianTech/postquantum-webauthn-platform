@@ -86,6 +86,10 @@ def _parse_client_supplied_credentials(
                     "signCount": int(entry.get("signCount"))
                     if isinstance(entry.get("signCount"), int) and not isinstance(entry.get("signCount"), bool)
                     else 0,
+                    # The BE flag the page's record kept from the registration (assertion_checks).
+                    "backupEligible": entry.get("backupEligible")
+                    if isinstance(entry.get("backupEligible"), bool)
+                    else None,
                 }
             )
         except Exception:

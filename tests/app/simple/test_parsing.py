@@ -134,3 +134,11 @@ def test_parse_client_credentials_skips_malformed_entries_and_keeps_valid_entrie
     assert len(serialized) == 1
     assert serialized[0]["credentialId"] == b64u(b"good-credential")
     assert serialized[0]["signCount"] == 4
+
+
+def test_the_backup_eligibility_the_page_kept_is_read_with_its_credential():
+    entry = Authenticator().stored_credential_entry(backup_eligible=True)
+
+    _, serialized = parsing._parse_client_credentials([entry])
+
+    assert serialized[0]["backupEligible"] is True

@@ -5,12 +5,16 @@ from __future__ import annotations
 import types
 from types import SimpleNamespace
 
+import pytest
+
 from server.app.config import relying_party
 from server.app.routes.advanced import algorithms as advanced_algorithms
 from server.app.routes.advanced import parsing as advanced_parsing
 from server.app.webauthn import assertion_hash
 from tests.app.entry_app import entry_app
 from tests.app.security.ceremony_helpers import (
+    FLAG_BE,
+    FLAG_BS,
     Authenticator,
     assertion_payload,
     b64u,
@@ -45,6 +49,36 @@ def test_a_verified_assertion_reports_the_credentials_algorithm_and_counter():
     body = response.get_json()
     assert (body["status"], body["algorithm"], body["signCount"]) == ("OK", -7, 7)
     assert body["authenticatedCredentialId"] == b64u(authenticator.credential_id)
+
+
+@pytest.mark.parametrize(
+    ("backup_eligible", "flags", "reported"),
+    [
+        (True, FLAG_BE | FLAG_BS, {}),
+        (None, FLAG_BS, {"assertionErrors": ["backup_state_without_eligibility"]}),
+        (True, 0, {"warnings": ["backup_eligibility_changed: set at registration, not set now"]}),
+        (
+            True,
+            FLAG_BS,
+            {
+                "assertionErrors": ["backup_state_without_eligibility"],
+                "warnings": ["backup_eligibility_changed: set at registration, not set now"],
+            },
+        ),
+    ],
+)
+def test_a_verified_assertion_reports_what_its_backup_flags_say_and_refuses_nothing(backup_eligible, flags, reported):
+    authenticator = Authenticator()
+    credentials = [authenticator.stored_credential_entry(backup_eligible=backup_eligible)]
+    client = entry_app().test_client()
+    begin(client, credentials)
+
+    response = complete(client, credentials, assertion_payload(authenticator, challenge=CHALLENGE, extra_flags=flags))
+
+    assert response.status_code == 200, response.get_json()
+    body = response.get_json()
+    assert (body["status"], body["verified"]) == ("OK", True)
+    assert {key: body[key] for key in ("assertionErrors", "warnings") if key in body} == reported
 
 
 def test_a_complete_that_sends_no_credentials_finds_none_whatever_its_begin_was_sent():

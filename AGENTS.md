@@ -366,7 +366,9 @@ its logic out here first.
   (`extract_attestation_details`) only once the state is consumed and fido2 accepted the
   response; the Simple tab refuses a registration only on an integrity error, every other
   attestation finding its warning, while the Advanced tab completes and reports them all as
-  errors; an Advanced ceremony is for the RP ID its request names (`rp.id`, `rpId`), else the
+  errors; a sign-in's checks (`webauthn/assertion_checks.py`) answer the same way: the Simple
+  tab refuses one on an integrity error (400 with `assertionErrors`), the Advanced tab reports
+  them (`assertionErrors`), and a warning is the answer's `warnings` in both; an Advanced ceremony is for the RP ID its request names (`rp.id`, `rpId`), else the
   configured one, and its complete for the one its begin kept beside its state (`advanced_rp`,
   `advanced_auth_rp`); `routes/advanced/request_members.py` names the member of the wrong JSON
   type, 400); `routes/ceremony_session.py` (every begin: refused, the session kept as
@@ -420,7 +422,10 @@ its logic out here first.
   imports it so fido2's `CoseKey` lookups find them), `webauthn/assertion_hash.py` (the Advanced
   tab's hash choice for an assertion), `webauthn/sign_count.py`, `webauthn/client_binary.py`
   (bytes a client sends, read one way for both tabs), `webauthn/assertion_checks.py` (an
-  assertion's authenticator data and userHandle, read one way for both tabs), `webauthn/client_credentials.py` (a saved
+  assertion's authenticator data and userHandle, read one way for both tabs, and its backup
+  flags: BS set without BE an integrity error, a BE that is not the one the page's record kept
+  from the registration, sent with each credential as `backupEligible`, a warning, since this
+  site has no backup policy), `webauthn/client_credentials.py` (a saved
   credential the page sends back, read into its key material for both tabs),
   `webauthn/registration_facts.py` (what a verified registration's authData and extension
   outputs say, the relying party's view of it and the saved credential record, each in one key

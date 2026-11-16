@@ -1,4 +1,5 @@
-"""The codes the attestation checks report, and the ones that refuse a Simple registration.
+"""The codes the attestation and assertion checks report, and the ones that refuse a Simple
+registration or sign-in.
 
 An error or warning is a code (``trust_path_missing``), or a code and the
 message of the exception behind it, after ": " (``cose_key_error: …``). An
@@ -14,10 +15,10 @@ from fido2.attestation import InvalidData, InvalidSignature, UnsupportedType
 
 # The errors that say the ceremony itself did not hold: the response is not the
 # one the request asked for, or its attestation statement does not verify. The
-# Simple tab refuses a registration on these alone. Every other error says what
-# the attestation proves about the authenticator (its chain, its root, its
-# metadata), which a relying party that asked for no attestation does not hold
-# against the registration.
+# Simple tab refuses a registration, or a sign-in, on these alone. Every other
+# error says what the attestation proves about the authenticator (its chain, its
+# root, its metadata), which a relying party that asked for no attestation does
+# not hold against the registration.
 INTEGRITY_ERRORS = frozenset(
     {
         "registration_response_invalid",
@@ -71,6 +72,13 @@ def short_rsa_modulus(bits: int) -> str:
     """The warning of an RSA credential key whose modulus is under 2048 bits, with its size (``public_key_checks``)."""
 
     return f"rsa_modulus_too_short: {bits} bits"
+
+
+def changed_backup_eligibility(registered: bool) -> str:
+    """The warning of an assertion whose BE is not the one its registration kept, and how it changed (``assertion_checks``)."""
+
+    how = "set at registration, not set now" if registered else "not set at registration, set now"
+    return f"backup_eligibility_changed: {how}"
 
 
 def with_reason(code: str, exc: BaseException) -> str:

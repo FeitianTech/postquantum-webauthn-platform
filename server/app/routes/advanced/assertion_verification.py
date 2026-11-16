@@ -126,9 +126,20 @@ def _result_algorithm(auth_result: Any) -> Any:
         return None
 
 
-def _asserted_sign_count(response: Any) -> int | None:
-    auth_data = assertion_checks.assertion_parts(response).auth_data
-    return auth_data.counter if auth_data is not None else None
+def _assertion_findings(auth_data: Any, selected_record: Any) -> dict[str, list[str]]:
+    """What the assertion's checks found, as the answer reports them: ``assertionErrors`` and
+    ``warnings``, each only when there are any. The Advanced tab refuses none of them."""
+
+    if auth_data is None:
+        return {}
+    record = selected_record if isinstance(selected_record, Mapping) else {}
+    errors, warnings = assertion_checks.backup_findings(auth_data, record.get("backupEligible"))
+    reported: dict[str, list[str]] = {}
+    if errors:
+        reported["assertionErrors"] = errors
+    if warnings:
+        reported["warnings"] = warnings
+    return reported
 
 
 def _verified_payload(
@@ -146,7 +157,8 @@ def _verified_payload(
     if credential_id_bytes:
         authenticated_id = encode_base64url(credential_id_bytes)
 
-    sign_count_value = _asserted_sign_count(response)
+    auth_data = assertion_checks.assertion_parts(response).auth_data
+    sign_count_value = auth_data.counter if auth_data is not None else None
 
     if auth_alg is not None:
         debug_info["algorithm"] = auth_alg
@@ -170,6 +182,7 @@ def _verified_payload(
         response_payload["signCountStatus"] = sign_count_status(
             stored_sign_count, sign_count_value
         )
+    response_payload.update(_assertion_findings(auth_data, selected_record))
     return response_payload
 
 

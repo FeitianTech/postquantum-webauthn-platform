@@ -1,4 +1,4 @@
-"""Every attestation finding the checks write is a code, and the shared list holds each one.
+"""Every attestation and assertion finding the checks write is a code, and the shared list holds each one.
 
 A finding is a code (``trust_path_missing``) or a code and its reason after ": "
 (``webauthn/attestation/error_codes.py``). The checks write each one as a
@@ -17,16 +17,17 @@ from pathlib import Path
 from server.app.webauthn.attestation import error_codes
 
 _REPO = Path(__file__).resolve().parents[3]
-_ATTESTATION = _REPO / "server" / "app" / "webauthn" / "attestation"
+_WEBAUTHN = _REPO / "server" / "app" / "webauthn"
 _CHECK_MODULES = (
-    "checks",
-    "response_checks",
-    "public_key_checks",
-    "statement_checks",
-    "classical",
-    "evaluation",
-    "metadata_checks",
-    "error_codes",
+    "attestation/checks",
+    "attestation/response_checks",
+    "attestation/public_key_checks",
+    "attestation/statement_checks",
+    "attestation/classical",
+    "attestation/evaluation",
+    "attestation/metadata_checks",
+    "attestation/error_codes",
+    "assertion_checks",
 )
 _CODES = json.loads((_REPO / "tests" / "fixtures" / "attestation-finding-codes.json").read_text(encoding="utf-8"))["codes"]
 
@@ -60,7 +61,7 @@ def _written(source: str, *, returned: bool) -> list[str]:
 
 def _findings() -> dict[str, list[str]]:
     return {
-        name: _written((_ATTESTATION / f"{name}.py").read_text(encoding="utf-8"), returned=name == "error_codes")
+        name: _written((_WEBAUTHN / f"{name}.py").read_text(encoding="utf-8"), returned=name.endswith("error_codes"))
         for name in _CHECK_MODULES
     }
 
