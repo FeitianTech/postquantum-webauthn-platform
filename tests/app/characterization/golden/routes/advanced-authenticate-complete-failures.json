@@ -504,7 +504,7 @@
     ],
     [
      "Content-Length",
-     "301"
+     "329"
     ],
     [
      "X-Content-Type-Options",
@@ -547,7 +547,7 @@
      "contents": null
     }
    ],
-   "bodySha256": "c2699a4229b37779d221c79684ed992364c570adfe84d975177a332cf359b6e6",
+   "bodySha256": "500ec53b2e8fb6e8f98941cb101df3d081bdf67a4d367fca742c25e0e6474e88",
    "body": {
     "algorithm": -7,
     "algorithmDescription": "ES256 (ECDSA)",
@@ -559,6 +559,7 @@
     "signCountStatus": "ok",
     "signatureVerified": true,
     "status": "OK",
+    "userHandleStatus": "absent",
     "verified": true
    }
   },
@@ -572,7 +573,7 @@
     ],
     [
      "Content-Length",
-     "301"
+     "329"
     ],
     [
      "X-Content-Type-Options",
@@ -615,7 +616,7 @@
      "contents": null
     }
    ],
-   "bodySha256": "c2699a4229b37779d221c79684ed992364c570adfe84d975177a332cf359b6e6",
+   "bodySha256": "500ec53b2e8fb6e8f98941cb101df3d081bdf67a4d367fca742c25e0e6474e88",
    "body": {
     "algorithm": -7,
     "algorithmDescription": "ES256 (ECDSA)",
@@ -627,6 +628,7 @@
     "signCountStatus": "ok",
     "signatureVerified": true,
     "status": "OK",
+    "userHandleStatus": "absent",
     "verified": true
    }
   },
@@ -997,7 +999,7 @@
     ],
     [
      "Content-Length",
-     "315"
+     "343"
     ],
     [
      "X-Content-Type-Options",
@@ -1040,7 +1042,7 @@
      "contents": null
     }
    ],
-   "bodySha256": "35c0829e3350f08bb6d27c7d3db502552fbe2c81720c1ad77d0372e90a5ae804",
+   "bodySha256": "90fd6556deab62371bff61e35501352212dbfe8bc648efff6abf66a87113c08b",
    "body": {
     "algorithm": -7,
     "algorithmDescription": "ES256 (ECDSA)",
@@ -1054,6 +1056,7 @@
     "signCountStatus": "ok",
     "signatureVerified": true,
     "status": "OK",
+    "userHandleStatus": "absent",
     "verified": true
    }
   }

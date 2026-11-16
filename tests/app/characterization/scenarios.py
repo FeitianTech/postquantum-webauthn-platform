@@ -987,3 +987,15 @@ def _(r: Recorder) -> None:
     _simple_authenticate(r, client, authenticator, counter=5, user_handle=b"user_id")
     _rewrite_simple_records(client, lambda records: [])
     _simple_authenticate(r, client, authenticator, counter=6, user_handle=b"another account's handle")
+
+
+@scenario("advanced-authenticate-user-handle")
+def _(r: Recorder) -> None:
+    client = r.client()
+    authenticator = m.Authenticator("adv-auth-handle")
+    entries = [authenticator.stored_credential_entry(declared_algorithm=-7, user_handle=b"the saved handle")]
+    _advanced_authenticate(r, client, authenticator, entries=entries, counter=1, user_handle=b"the saved handle")
+    _advanced_authenticate(r, client, authenticator, entries=entries, counter=2, user_handle=b"another handle")
+    _advanced_authenticate(r, client, authenticator, entries=entries, counter=3)
+    unkept = [authenticator.stored_credential_entry(declared_algorithm=-7)]
+    _advanced_authenticate(r, client, authenticator, entries=unkept, counter=4, user_handle=b"the saved handle")

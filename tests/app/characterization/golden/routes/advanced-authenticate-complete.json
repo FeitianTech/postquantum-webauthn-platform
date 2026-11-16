@@ -83,7 +83,7 @@
     ],
     [
      "Content-Length",
-     "298"
+     "326"
     ],
     [
      "X-Content-Type-Options",
@@ -126,7 +126,7 @@
      "contents": null
     }
    ],
-   "bodySha256": "3a588cd281306ce51a7f39cc18cd6f181cffc95b3693c459bb5fb49678134259",
+   "bodySha256": "c8b69f5957c4e8d63a131283fea617dba0033685de2938378bb1ffbc14cce557",
    "body": {
     "algorithm": -7,
     "algorithmDescription": "ES256 (ECDSA)",
@@ -138,6 +138,7 @@
     "signCountStatus": "ok",
     "signatureVerified": true,
     "status": "OK",
+    "userHandleStatus": "absent",
     "verified": true
    }
   },
@@ -223,7 +224,7 @@
     ],
     [
      "Content-Length",
-     "308"
+     "336"
     ],
     [
      "X-Content-Type-Options",
@@ -266,7 +267,7 @@
      "contents": null
     }
    ],
-   "bodySha256": "5b5901612dbc21d98ce1ec6f04eacf9951194cc2cdac834e31c78cc23b85a5d2",
+   "bodySha256": "c3217f7bd7f4017b4391e2d957daee8778a40d2222b4536f4f3234670c42e715",
    "body": {
     "algorithm": -7,
     "algorithmDescription": "ES256 (ECDSA)",
@@ -278,6 +279,7 @@
     "signCountStatus": "regressed",
     "signatureVerified": true,
     "status": "OK",
+    "userHandleStatus": "absent",
     "verified": true
    }
   },
@@ -645,7 +647,7 @@
     ],
     [
      "Content-Length",
-     "301"
+     "329"
     ],
     [
      "X-Content-Type-Options",
@@ -688,7 +690,7 @@
      "contents": null
     }
    ],
-   "bodySha256": "5fee52ab7b4ce18236a4155e3ef3067cdc486ce777cc502c7c6570414c21affb",
+   "bodySha256": "b2259d3f92c2abce630ee2436ef3d6290b35107341b389fede0dd69ef074cbca",
    "body": {
     "algorithm": -7,
     "algorithmDescription": "ES256 (ECDSA)",
@@ -700,6 +702,7 @@
     "signCountStatus": "ok",
     "signatureVerified": true,
     "status": "OK",
+    "userHandleStatus": "absent",
     "verified": true
    }
   },
@@ -785,7 +788,7 @@
     ],
     [
      "Content-Length",
-     "293"
+     "321"
     ],
     [
      "X-Content-Type-Options",
@@ -828,7 +831,7 @@
      "contents": null
     }
    ],
-   "bodySha256": "01198d1b73e1f1ade81f7ee6648957b4e4cbcfd6744d295075966e313e14f59b",
+   "bodySha256": "6b4c08fdcba808eb41ef1cb858798951a5bed8ffddb85d3d44641dcebabdf95c",
    "body": {
     "algorithm": -8,
     "algorithmDescription": "EdDSA",
@@ -840,6 +843,7 @@
     "signCountStatus": "ok",
     "signatureVerified": true,
     "status": "OK",
+    "userHandleStatus": "absent",
     "verified": true
    }
   },
@@ -925,7 +929,7 @@
     ],
     [
      "Content-Length",
-     "304"
+     "332"
     ],
     [
      "X-Content-Type-Options",
@@ -968,7 +972,7 @@
      "contents": null
     }
    ],
-   "bodySha256": "6dc3b2bc8122bdca1193c2187ca380aafc1b6393dab38bf92accd31f367d9c38",
+   "bodySha256": "a9df3ec5bad6ddaeefab8287b6f6c942fa9157ea0466397dfb10316cebdbc501",
    "body": {
     "algorithm": -49,
     "algorithmDescription": "ML-DSA-65 (PQC)",
@@ -980,6 +984,7 @@
     "signCountStatus": "ok",
     "signatureVerified": true,
     "status": "OK",
+    "userHandleStatus": "absent",
     "verified": true
    }
   },

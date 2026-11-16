@@ -428,7 +428,9 @@ its logic out here first.
   (bytes a client sends, read one way for both tabs), `webauthn/assertion_checks.py` (an
   assertion's authenticator data and userHandle, read one way for both tabs; the userHandle's
   `match`, `mismatch`, `absent` or `not-compared`, every sign-in answer's `userHandleStatus`
-  (a mismatch the integrity error `user_handle_mismatch`); and its backup
+  (a mismatch the integrity error `user_handle_mismatch`): the Simple tab's against the
+  account's record, the Advanced tab's against the saved credential's, which the page sends
+  with each credential as `userHandleHex`; and its backup
   flags: BS set without BE an integrity error, a BE that is not the one the page's record kept
   from the registration, sent with each credential as `backupEligible`, a warning, since this
   site has no backup policy), `webauthn/client_credentials.py` (a saved

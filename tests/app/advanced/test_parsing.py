@@ -168,3 +168,18 @@ def test_the_backup_eligibility_the_page_kept_is_read_only_as_a_flag():
     ]
 
     assert [record["backupEligible"] for record in parsing._parse_client_supplied_credentials(entries)] == [False, None, None]
+
+
+def test_the_user_handle_the_page_kept_is_read_as_hex():
+    authenticator = Authenticator()
+    entries = [
+        authenticator.stored_credential_entry(user_handle=b"handle"),
+        {**authenticator.stored_credential_entry(), "userHandleHex": "not hex"},
+        {**authenticator.stored_credential_entry(), "userHandleHex": ""},
+        {**authenticator.stored_credential_entry(), "userHandleHex": 12},
+        authenticator.stored_credential_entry(),
+    ]
+
+    assert [record["userHandle"] for record in parsing._parse_client_supplied_credentials(entries)] == [
+        b"handle", None, None, None, None
+    ]

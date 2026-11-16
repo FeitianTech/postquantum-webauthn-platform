@@ -81,6 +81,28 @@ def test_a_verified_assertion_reports_what_its_backup_flags_say_and_refuses_noth
     assert {key: body[key] for key in ("assertionErrors", "warnings") if key in body} == reported
 
 
+@pytest.mark.parametrize(
+    ("kept", "returned", "status", "errors"),
+    [
+        (b"handle", b"handle", "match", None),
+        (b"handle", b"another", "mismatch", ["user_handle_mismatch"]),
+        (b"handle", None, "absent", None),
+        (None, b"handle", "not-compared", None),
+    ],
+)
+def test_a_verified_assertion_reports_its_user_handle_against_the_saved_credentials(kept, returned, status, errors):
+    authenticator = Authenticator()
+    credentials = [authenticator.stored_credential_entry(user_handle=kept)]
+    client = entry_app().test_client()
+    begin(client, credentials)
+
+    response = complete(client, credentials, assertion_payload(authenticator, challenge=CHALLENGE, user_handle=returned))
+
+    assert response.status_code == 200, response.get_json()
+    body = response.get_json()
+    assert (body["verified"], body["userHandleStatus"], body.get("assertionErrors")) == (True, status, errors)
+
+
 def test_a_complete_that_sends_no_credentials_finds_none_whatever_its_begin_was_sent():
     authenticator = Authenticator()
     credentials = [authenticator.stored_credential_entry()]

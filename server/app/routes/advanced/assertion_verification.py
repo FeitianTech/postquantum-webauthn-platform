@@ -126,15 +126,20 @@ def _result_algorithm(auth_result: Any) -> Any:
         return None
 
 
-def _assertion_findings(auth_data: Any, selected_record: Any) -> dict[str, list[str]]:
-    """What the assertion's checks found, as the answer reports them: ``assertionErrors`` and
-    ``warnings``, each only when there are any. The Advanced tab refuses none of them."""
+def _assertion_findings(parts: assertion_checks.AssertionParts, selected_record: Any) -> dict[str, Any]:
+    """What the assertion's checks found, as the answer reports them: ``userHandleStatus``
+    against the saved record's user handle, and ``assertionErrors`` and ``warnings``, each
+    only when there are any. The Advanced tab refuses none of them."""
 
-    if auth_data is None:
-        return {}
     record = selected_record if isinstance(selected_record, Mapping) else {}
-    errors, warnings = assertion_checks.backup_findings(auth_data, record.get("backupEligible"))
-    reported: dict[str, list[str]] = {}
+    errors, warnings = (
+        assertion_checks.backup_findings(parts.auth_data, record.get("backupEligible"))
+        if parts.auth_data is not None
+        else ([], [])
+    )
+    user_handle_status = assertion_checks.user_handle_status(parts.user_handle, record.get("userHandle"))
+    errors.extend(assertion_checks.user_handle_findings(user_handle_status))
+    reported: dict[str, Any] = {"userHandleStatus": user_handle_status}
     if errors:
         reported["assertionErrors"] = errors
     if warnings:
@@ -157,8 +162,8 @@ def _verified_payload(
     if credential_id_bytes:
         authenticated_id = encode_base64url(credential_id_bytes)
 
-    auth_data = assertion_checks.assertion_parts(response).auth_data
-    sign_count_value = auth_data.counter if auth_data is not None else None
+    parts = assertion_checks.assertion_parts(response)
+    sign_count_value = parts.auth_data.counter if parts.auth_data is not None else None
 
     if auth_alg is not None:
         debug_info["algorithm"] = auth_alg
@@ -182,7 +187,7 @@ def _verified_payload(
         response_payload["signCountStatus"] = sign_count_status(
             stored_sign_count, sign_count_value
         )
-    response_payload.update(_assertion_findings(auth_data, selected_record))
+    response_payload.update(_assertion_findings(parts, selected_record))
     return response_payload
 
 

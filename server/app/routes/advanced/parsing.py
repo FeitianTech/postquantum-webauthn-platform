@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Iterable, Mapping
 from typing import Any
 
+from ... import encoding
 from ...webauthn import client_credentials, cose_algorithms
 from ...webauthn.attachments import normalize_attachment
 
@@ -86,16 +87,30 @@ def _parse_client_supplied_credentials(
                     "signCount": int(entry.get("signCount"))
                     if isinstance(entry.get("signCount"), int) and not isinstance(entry.get("signCount"), bool)
                     else 0,
-                    # The BE flag the page's record kept from the registration (assertion_checks).
+                    # The BE flag the page's record kept from the registration, and its user
+                    # handle (assertion_checks).
                     "backupEligible": entry.get("backupEligible")
                     if isinstance(entry.get("backupEligible"), bool)
                     else None,
+                    "userHandle": _user_handle(entry),
                 }
             )
         except Exception:
             continue
 
     return records
+
+
+def _user_handle(entry: Mapping[str, Any]) -> bytes | None:
+    """The user handle the page's record keeps, sent as hex (``userHandleHex``); None when none is sent or it does not read."""
+
+    value = entry.get("userHandleHex")
+    if not isinstance(value, str) or not value:
+        return None
+    try:
+        return encoding.decode_hex(value, ignore_whitespace=False)
+    except encoding.EncodingError:
+        return None
 
 
 def _resident_flag(entry: Mapping[str, Any]) -> bool | None:
