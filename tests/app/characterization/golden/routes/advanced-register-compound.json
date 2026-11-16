@@ -1,0 +1,762 @@
+{
+ "scenario": "advanced-register-compound",
+ "requests": [
+  {
+   "request": "POST /api/advanced/register/begin",
+   "status": 200,
+   "headers": [
+    [
+     "Content-Type",
+     "application/json"
+    ],
+    [
+     "Content-Length",
+     "448"
+    ],
+    [
+     "X-Content-Type-Options",
+     "nosniff"
+    ],
+    [
+     "X-Frame-Options",
+     "DENY"
+    ],
+    [
+     "Referrer-Policy",
+     "no-referrer"
+    ],
+    [
+     "Content-Security-Policy",
+     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; require-trusted-types-for 'script'; trusted-types nextjs nextjs#bundler; report-uri /api/csp-report; report-to csp"
+    ],
+    [
+     "Reporting-Endpoints",
+     "csp=\"/api/csp-report\""
+    ],
+    [
+     "Permissions-Policy",
+     "accelerometer=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-create=(self), publickey-credentials-get=(self), screen-wake-lock=(), usb=(), xr-spatial-tracking=()"
+    ],
+    [
+     "Vary",
+     "Cookie"
+    ]
+   ],
+   "cookies": [
+    {
+     "name": "session",
+     "attributes": [
+      "HttpOnly",
+      "Path=/",
+      "SameSite=Lax"
+     ],
+     "contents": {
+      "advanced_original_request": {
+       "publicKey": {
+        "challenge": {
+         "$base64url": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE"
+        },
+        "pubKeyCredParams": [
+         {
+          "alg": -7,
+          "type": "public-key"
+         }
+        ]
+       }
+      },
+      "advanced_register_allowed_attachments": [],
+      "advanced_rp": {
+       "id": "localhost",
+       "name": "FIDO2/WebAuthn PQC Developer Tools"
+      },
+      "advanced_state": {
+       "challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
+       "issued_at": 1790000000.0,
+       "user_verification": "preferred"
+      }
+     }
+    }
+   ],
+   "bodySha256": "1f58a6d263cf763775f234e5c2d26bbdc2851ffc1601713c9b67ba6283b6186a",
+   "body": {
+    "publicKey": {
+     "attestation": "none",
+     "authenticatorSelection": {
+      "requireResidentKey": false,
+      "residentKey": "preferred",
+      "userVerification": "preferred"
+     },
+     "challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
+     "excludeCredentials": [],
+     "pubKeyCredParams": [
+      {
+       "alg": -7,
+       "type": "public-key"
+      }
+     ],
+     "rp": {
+      "id": "localhost",
+      "name": "FIDO2/WebAuthn PQC Developer Tools"
+     },
+     "timeout": 90000,
+     "user": {
+      "displayName": "A. User",
+      "id": "dXNlci1oYW5kbGU",
+      "name": "user@example.com"
+     }
+    }
+   }
+  },
+  {
+   "request": "POST /api/advanced/register/complete",
+   "status": 200,
+   "headers": [
+    [
+     "Content-Type",
+     "application/json"
+    ],
+    [
+     "Content-Length",
+     "9521"
+    ],
+    [
+     "X-Content-Type-Options",
+     "nosniff"
+    ],
+    [
+     "X-Frame-Options",
+     "DENY"
+    ],
+    [
+     "Referrer-Policy",
+     "no-referrer"
+    ],
+    [
+     "Content-Security-Policy",
+     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; require-trusted-types-for 'script'; trusted-types nextjs nextjs#bundler; report-uri /api/csp-report; report-to csp"
+    ],
+    [
+     "Reporting-Endpoints",
+     "csp=\"/api/csp-report\""
+    ],
+    [
+     "Permissions-Policy",
+     "accelerometer=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-create=(self), publickey-credentials-get=(self), screen-wake-lock=(), usb=(), xr-spatial-tracking=()"
+    ],
+    [
+     "Vary",
+     "Cookie"
+    ]
+   ],
+   "cookies": [
+    {
+     "name": "fido.mds.session",
+     "attributes": [
+      "Max-Age=31536000",
+      "HttpOnly",
+      "Path=/",
+      "SameSite=Lax"
+     ],
+     "contents": "Gc8h9BGoLKIan6lMLV7GGqAZrt798Ux0-yGsM98pQtQ"
+    },
+    {
+     "name": "session",
+     "attributes": [
+      "Max-Age=0",
+      "HttpOnly",
+      "Path=/",
+      "SameSite=Lax"
+     ],
+     "contents": null
+    }
+   ],
+   "bodySha256": "f68be587f238591934630218071c7832fe033121f043f8a83e017e77d8395599",
+   "body": {
+    "actualResidentKey": null,
+    "algo": "ES256 (ECDSA)",
+    "algorithmsUsed": [
+     -7
+    ],
+    "attestationAaguidMatch": null,
+    "attestationChecks": {
+     "aaguid_match": null,
+     "attestation_format": "compound",
+     "authenticator_data": {
+      "algorithm": -7,
+      "algorithm_allowed": true,
+      "attested_credential_data": true,
+      "cose_key_valid": true,
+      "counter": 0,
+      "credential_aaguid": "00000000000000000000000000000000",
+      "credential_id_length": 32,
+      "user_present": true,
+      "user_verification_required": false,
+      "user_verification_satisfied": true,
+      "user_verified": true
+     },
+     "client_data": {
+      "challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
+      "challenge_matches": true,
+      "cross_origin": false,
+      "cross_origin_ok": true,
+      "expected_challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
+      "expected_origin": "http://localhost",
+      "expected_type": "webauthn.create",
+      "origin": "http://localhost",
+      "origin_valid": true,
+      "type": "webauthn.create",
+      "type_valid": true
+     },
+     "errors": [
+      "unsupported_attestation: Attestation format \"compound\" is not supported",
+      "attestation_signature_invalid"
+     ],
+     "hash_binding": {
+      "client_data_hash": "doGvfm6hPFgAmYfVFqA7PvgOTa9BLrwnQEFa2ZYkK1c",
+      "verification_data": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAAAAAAAAAAAAAAAAAAAAAAAAIIEh3nV_DRW6D2rWL_8Tr62lyMj-y5WaNYjPt4xrKtzYpQECAyYgASFYIFSeN18RSqF6H8G08YaSrcUdIc0oTD0oE69y3cjkLao8Ilggdu2Gt0f2GIJEQQXR6pO4WvE3hLHoINXASP7s96PIqGR2ga9-bqE8WACZh9UWoDs--A5Nr0EuvCdAQVrZliQrVw"
+     },
+     "metadata": {
+      "aaguid": null,
+      "algorithm_supported": null,
+      "available": false,
+      "certification_level": null,
+      "description": null,
+      "latest_status": null,
+      "root_certificates_present": false
+     },
+     "root_valid": false,
+     "rp_id_hash_valid": true,
+     "signature_valid": false,
+     "warnings": []
+    },
+    "attestationErrors": [
+     "unsupported_attestation: Attestation format \"compound\" is not supported",
+     "attestation_signature_invalid"
+    ],
+    "attestationFormat": "compound",
+    "attestationRootValid": false,
+    "attestationRpIdHashValid": true,
+    "attestationSignatureValid": false,
+    "attestationSummary": {
+     "aaguidMatch": null,
+     "errors": [
+      "unsupported_attestation: Attestation format \"compound\" is not supported",
+      "attestation_signature_invalid"
+     ],
+     "metadata": {
+      "aaguid": null,
+      "algorithm_supported": null,
+      "available": false,
+      "certification_level": null,
+      "description": null,
+      "latest_status": null,
+      "root_certificates_present": false
+     },
+     "rootValid": false,
+     "rpIdHashValid": true,
+     "signatureValid": false,
+     "verified": false
+    },
+    "attestationVerified": false,
+    "challengeSource": "server-session",
+    "challengeStatus": "fresh",
+    "credProtectUsed": "none",
+    "enforceCredProtectUsed": false,
+    "excludeCredentialsUsed": false,
+    "hintsUsed": [],
+    "relyingParty": {
+     "aaguid": {
+      "guid": "00000000-0000-0000-0000-000000000000",
+      "raw": "00000000000000000000000000000000"
+     },
+     "attestationFmt": "compound",
+     "authenticatorDataHash": "1e2876c5e9c801ea50cfd5cdf99d16b684427c43b5d39c88132b081ff8490481",
+     "createdAt": "2026-09-21T14:13:20+00:00",
+     "credentialId": "8121de757f0d15ba0f6ad62fff13afada5c8c8fecb959a3588cfb78c6b2adcd8",
+     "credentialIdBase64": "gSHedX8NFboPatYv/xOvraXIyP7LlZo1iM+3jGsq3Ng=",
+     "credentialIdBase64Url": "gSHedX8NFboPatYv_xOvraXIyP7LlZo1iM-3jGsq3Ng",
+     "device": {
+      "name": "Unknown device",
+      "type": "unknown"
+     },
+     "largeBlob": false,
+     "publicKeyAlgorithm": -7,
+     "registrationData": {
+      "attestationChecks": {
+       "aaguid_match": null,
+       "attestation_format": "compound",
+       "authenticator_data": {
+        "algorithm": -7,
+        "algorithm_allowed": true,
+        "attested_credential_data": true,
+        "cose_key_valid": true,
+        "counter": 0,
+        "credential_aaguid": "00000000000000000000000000000000",
+        "credential_id_length": 32,
+        "user_present": true,
+        "user_verification_required": false,
+        "user_verification_satisfied": true,
+        "user_verified": true
+       },
+       "client_data": {
+        "challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
+        "challenge_matches": true,
+        "cross_origin": false,
+        "cross_origin_ok": true,
+        "expected_challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
+        "expected_origin": "http://localhost",
+        "expected_type": "webauthn.create",
+        "origin": "http://localhost",
+        "origin_valid": true,
+        "type": "webauthn.create",
+        "type_valid": true
+       },
+       "errors": [
+        "unsupported_attestation: Attestation format \"compound\" is not supported",
+        "attestation_signature_invalid"
+       ],
+       "hash_binding": {
+        "client_data_hash": "doGvfm6hPFgAmYfVFqA7PvgOTa9BLrwnQEFa2ZYkK1c",
+        "verification_data": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAAAAAAAAAAAAAAAAAAAAAAAAIIEh3nV_DRW6D2rWL_8Tr62lyMj-y5WaNYjPt4xrKtzYpQECAyYgASFYIFSeN18RSqF6H8G08YaSrcUdIc0oTD0oE69y3cjkLao8Ilggdu2Gt0f2GIJEQQXR6pO4WvE3hLHoINXASP7s96PIqGR2ga9-bqE8WACZh9UWoDs--A5Nr0EuvCdAQVrZliQrVw"
+       },
+       "metadata": {
+        "aaguid": null,
+        "algorithm_supported": null,
+        "available": false,
+        "certification_level": null,
+        "description": null,
+        "latest_status": null,
+        "root_certificates_present": false
+       },
+       "root_valid": false,
+       "rp_id_hash_valid": true,
+       "signature_valid": false,
+       "warnings": []
+      },
+      "attestationSummary": {
+       "aaguidMatch": null,
+       "errors": [
+        "unsupported_attestation: Attestation format \"compound\" is not supported",
+        "attestation_signature_invalid"
+       ],
+       "metadata": {
+        "aaguid": null,
+        "algorithm_supported": null,
+        "available": false,
+        "certification_level": null,
+        "description": null,
+        "latest_status": null,
+        "root_certificates_present": false
+       },
+       "rootValid": false,
+       "rpIdHashValid": true,
+       "signatureValid": false,
+       "verified": false
+      },
+      "authenticatorData": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d976345000000000000000000000000000000000000000000208121de757f0d15ba0f6ad62fff13afada5c8c8fecb959a3588cfb78c6b2adcd8a5010203262001215820549e375f114aa17a1fc1b4f18692adc51d21cd284c3d2813af72ddc8e42daa3c22582076ed86b747f61882444105d1ea93b85af13784b1e820d5c048feecf7a3c8a864",
+      "authenticatorDataHash": "1e2876c5e9c801ea50cfd5cdf99d16b684427c43b5d39c88132b081ff8490481",
+      "clientExtensionResults": {},
+      "flags": {
+       "AT": true,
+       "BE": false,
+       "BS": false,
+       "ED": false,
+       "UP": true,
+       "UV": true
+      },
+      "signatureCounter": 0
+     },
+     "rpIdHash": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763",
+     "rpIdHashBase64": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2M",
+     "rpIdHashExpected": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763",
+     "rpIdHashExpectedBase64": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2M",
+     "rpIdHashMatch": true,
+     "userHandle": {
+      "base64": "dXNlci1oYW5kbGU=",
+      "base64url": "dXNlci1oYW5kbGU",
+      "hex": "757365722d68616e646c65"
+     }
+    },
+    "status": "OK",
+    "storedCredential": {
+     "aaguid": "AAAAAAAAAAAAAAAAAAAAAA",
+     "aaguidGuid": "00000000-0000-0000-0000-000000000000",
+     "aaguidHex": "00000000000000000000000000000000",
+     "artifactVersion": 1,
+     "attestationFormat": "compound",
+     "clientExtensionOutputs": {},
+     "createdAt": 1790000000.0,
+     "credentialId": "gSHedX8NFboPatYv_xOvraXIyP7LlZo1iM-3jGsq3Ng",
+     "credentialIdBase64Url": "gSHedX8NFboPatYv_xOvraXIyP7LlZo1iM-3jGsq3Ng",
+     "credentialIdHex": "8121de757f0d15ba0f6ad62fff13afada5c8c8fecb959a3588cfb78c6b2adcd8",
+     "displayName": "A. User",
+     "hasServerArtifact": true,
+     "largeBlob": false,
+     "localStorageId": "gSHedX8NFboPatYv_xOvraXI::1a0c4506c00::4110b1115577483bb1e4e759ca896a94",
+     "properties": {
+      "aaguid": "00000000000000000000000000000000",
+      "aaguidGuid": "00000000-0000-0000-0000-000000000000",
+      "aaguidHex": "00000000000000000000000000000000",
+      "attestationAaguidMatch": null,
+      "attestationRootValid": false,
+      "attestationRpIdHashValid": true,
+      "attestationSignatureValid": false,
+      "attestationSummary": {
+       "aaguidMatch": null,
+       "errors": [
+        "unsupported_attestation: Attestation format \"compound\" is not supported",
+        "attestation_signature_invalid"
+       ],
+       "metadata": {
+        "aaguid": null,
+        "algorithm_supported": null,
+        "available": false,
+        "certification_level": null,
+        "description": null,
+        "latest_status": null,
+        "root_certificates_present": false
+       },
+       "rootValid": false,
+       "rpIdHashValid": true,
+       "signatureValid": false,
+       "verified": false
+      },
+      "authenticatorAttachment": null,
+      "authenticatorDataHash": "1e2876c5e9c801ea50cfd5cdf99d16b684427c43b5d39c88132b081ff8490481",
+      "credentialIdLength": 32,
+      "excludeCredentialsSentCount": 0,
+      "excludeCredentialsUsed": false,
+      "fakeCredentialIdLengthRequested": null,
+      "hintsSent": [],
+      "largeBlobClientOutput": {},
+      "largeBlobRequested": {},
+      "residentKey": null,
+      "residentKeyRequested": null,
+      "residentKeyRequired": false,
+      "resolvedAuthenticatorAttachments": [],
+      "rpIdHash": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763",
+      "rpIdHashBase64": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2M",
+      "rpIdHashExpected": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763",
+      "rpIdHashExpectedBase64": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2M"
+     },
+     "publicKey": "pQECAyYgASFYIFSeN18RSqF6H8G08YaSrcUdIc0oTD0oE69y3cjkLao8Ilggdu2Gt0f2GIJEQQXR6pO4WvE3hLHoINXASP7s96PIqGQ",
+     "publicKeyAlgorithm": -7,
+     "publicKeyType": 2,
+     "relyingParty": {
+      "aaguid": {
+       "guid": "00000000-0000-0000-0000-000000000000",
+       "raw": "00000000000000000000000000000000"
+      },
+      "attestationFmt": "compound",
+      "authenticatorDataHash": "1e2876c5e9c801ea50cfd5cdf99d16b684427c43b5d39c88132b081ff8490481",
+      "createdAt": "2026-09-21T14:13:20+00:00",
+      "credentialId": "8121de757f0d15ba0f6ad62fff13afada5c8c8fecb959a3588cfb78c6b2adcd8",
+      "credentialIdBase64": "gSHedX8NFboPatYv/xOvraXIyP7LlZo1iM+3jGsq3Ng=",
+      "credentialIdBase64Url": "gSHedX8NFboPatYv_xOvraXIyP7LlZo1iM-3jGsq3Ng",
+      "device": {
+       "name": "Unknown device",
+       "type": "unknown"
+      },
+      "largeBlob": false,
+      "publicKeyAlgorithm": -7,
+      "rpIdHash": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763",
+      "rpIdHashBase64": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2M",
+      "rpIdHashExpected": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763",
+      "rpIdHashExpectedBase64": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2M",
+      "rpIdHashMatch": true,
+      "userHandle": {
+       "base64": "dXNlci1oYW5kbGU=",
+       "base64url": "dXNlci1oYW5kbGU",
+       "hex": "757365722d68616e646c65"
+      }
+     },
+     "signCount": 0,
+     "storageId": "gSHedX8NFboPatYv_xOvraXI::1a0c4506c00::4110b1115577483bb1e4e759ca896a94",
+     "type": "advanced",
+     "userHandle": "dXNlci1oYW5kbGU",
+     "userHandleBase64": "dXNlci1oYW5kbGU=",
+     "userHandleBase64Url": "dXNlci1oYW5kbGU",
+     "userHandleHex": "757365722d68616e646c65",
+     "userName": "user@example.com"
+    }
+   },
+   "stored": [
+    {
+     "file": "artifacts/Gc8h9BGoLKIan6lMLV7GGqAZrt798Ux0-yGsM98pQtQ/d78ae9afb9e74da003129a2df52c8be5c85cb59a56cb72f2c3782368a4dda021.json",
+     "sha256": "4a2fd2ae02f65900bdb117d70a8709ae16afc8fc11b342ab3c72e68367182b0c",
+     "content": {
+      "storageId": "gSHedX8NFboPatYv_xOvraXI::1a0c4506c00::4110b1115577483bb1e4e759ca896a94",
+      "createdAt": 1790000000.0,
+      "updatedAt": 1790000000.0,
+      "payload": {
+       "schemaVersion": 1,
+       "storedCredential": {
+        "type": "advanced",
+        "userName": "user@example.com",
+        "displayName": "A. User",
+        "largeBlob": false,
+        "credentialId": "gSHedX8NFboPatYv_xOvraXIyP7LlZo1iM-3jGsq3Ng",
+        "credentialIdBase64Url": "gSHedX8NFboPatYv_xOvraXIyP7LlZo1iM-3jGsq3Ng",
+        "credentialIdHex": "8121de757f0d15ba0f6ad62fff13afada5c8c8fecb959a3588cfb78c6b2adcd8",
+        "aaguid": "AAAAAAAAAAAAAAAAAAAAAA",
+        "aaguidHex": "00000000000000000000000000000000",
+        "aaguidGuid": "00000000-0000-0000-0000-000000000000",
+        "publicKeyAlgorithm": -7,
+        "publicKey": "pQECAyYgASFYIFSeN18RSqF6H8G08YaSrcUdIc0oTD0oE69y3cjkLao8Ilggdu2Gt0f2GIJEQQXR6pO4WvE3hLHoINXASP7s96PIqGQ",
+        "publicKeyType": 2,
+        "signCount": 0,
+        "createdAt": 1790000000.0,
+        "clientExtensionOutputs": {},
+        "attestationFormat": "compound",
+        "authenticatorData": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d976345000000000000000000000000000000000000000000208121de757f0d15ba0f6ad62fff13afada5c8c8fecb959a3588cfb78c6b2adcd8a5010203262001215820549e375f114aa17a1fc1b4f18692adc51d21cd284c3d2813af72ddc8e42daa3c22582076ed86b747f61882444105d1ea93b85af13784b1e820d5c048feecf7a3c8a864",
+        "authenticatorDataHash": "1e2876c5e9c801ea50cfd5cdf99d16b684427c43b5d39c88132b081ff8490481",
+        "clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIiwiY2hhbGxlbmdlIjoiTVRFeE1URXhNVEV4TVRFeE1URXhNVEV4TVRFeE1URXhNVEV4TVRFeE1URSIsIm9yaWdpbiI6Imh0dHA6Ly9sb2NhbGhvc3QiLCJjcm9zc09yaWdpbiI6ZmFsc2V9",
+        "relyingParty": {
+         "aaguid": {
+          "raw": "00000000000000000000000000000000",
+          "guid": "00000000-0000-0000-0000-000000000000"
+         },
+         "attestationFmt": "compound",
+         "createdAt": "2026-09-21T14:13:20+00:00",
+         "credentialId": "8121de757f0d15ba0f6ad62fff13afada5c8c8fecb959a3588cfb78c6b2adcd8",
+         "credentialIdBase64": "gSHedX8NFboPatYv/xOvraXIyP7LlZo1iM+3jGsq3Ng=",
+         "credentialIdBase64Url": "gSHedX8NFboPatYv_xOvraXIyP7LlZo1iM-3jGsq3Ng",
+         "rpIdHash": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763",
+         "rpIdHashBase64": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2M",
+         "rpIdHashExpected": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763",
+         "rpIdHashExpectedBase64": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2M",
+         "rpIdHashMatch": true,
+         "authenticatorDataHash": "1e2876c5e9c801ea50cfd5cdf99d16b684427c43b5d39c88132b081ff8490481",
+         "device": {
+          "name": "Unknown device",
+          "type": "unknown"
+         },
+         "largeBlob": false,
+         "publicKeyAlgorithm": -7,
+         "registrationData": {
+          "authenticatorData": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d976345000000000000000000000000000000000000000000208121de757f0d15ba0f6ad62fff13afada5c8c8fecb959a3588cfb78c6b2adcd8a5010203262001215820549e375f114aa17a1fc1b4f18692adc51d21cd284c3d2813af72ddc8e42daa3c22582076ed86b747f61882444105d1ea93b85af13784b1e820d5c048feecf7a3c8a864",
+          "authenticatorDataHash": "1e2876c5e9c801ea50cfd5cdf99d16b684427c43b5d39c88132b081ff8490481",
+          "clientExtensionResults": {},
+          "flags": {
+           "UP": true,
+           "UV": true,
+           "BE": false,
+           "BS": false,
+           "AT": true,
+           "ED": false
+          },
+          "signatureCounter": 0,
+          "attestationChecks": {
+           "attestation_format": "compound",
+           "signature_valid": false,
+           "root_valid": false,
+           "rp_id_hash_valid": true,
+           "aaguid_match": null,
+           "client_data": {
+            "type": "webauthn.create",
+            "expected_type": "webauthn.create",
+            "type_valid": true,
+            "challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
+            "expected_challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
+            "challenge_matches": true,
+            "origin": "http://localhost",
+            "expected_origin": "http://localhost",
+            "origin_valid": true,
+            "cross_origin": false,
+            "cross_origin_ok": true
+           },
+           "authenticator_data": {
+            "user_present": true,
+            "user_verified": true,
+            "user_verification_required": false,
+            "user_verification_satisfied": true,
+            "attested_credential_data": true,
+            "counter": 0,
+            "credential_id_length": 32,
+            "credential_aaguid": "00000000000000000000000000000000",
+            "algorithm": -7,
+            "algorithm_allowed": true,
+            "cose_key_valid": true
+           },
+           "metadata": {
+            "available": false,
+            "description": null,
+            "aaguid": null,
+            "algorithm_supported": null,
+            "root_certificates_present": false,
+            "latest_status": null,
+            "certification_level": null
+           },
+           "hash_binding": {
+            "client_data_hash": "doGvfm6hPFgAmYfVFqA7PvgOTa9BLrwnQEFa2ZYkK1c",
+            "verification_data": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAAAAAAAAAAAAAAAAAAAAAAAAIIEh3nV_DRW6D2rWL_8Tr62lyMj-y5WaNYjPt4xrKtzYpQECAyYgASFYIFSeN18RSqF6H8G08YaSrcUdIc0oTD0oE69y3cjkLao8Ilggdu2Gt0f2GIJEQQXR6pO4WvE3hLHoINXASP7s96PIqGR2ga9-bqE8WACZh9UWoDs--A5Nr0EuvCdAQVrZliQrVw"
+           },
+           "errors": [
+            "unsupported_attestation: Attestation format \"compound\" is not supported",
+            "attestation_signature_invalid"
+           ],
+           "warnings": []
+          },
+          "attestationSummary": {
+           "signatureValid": false,
+           "rootValid": false,
+           "rpIdHashValid": true,
+           "aaguidMatch": null,
+           "errors": [
+            "unsupported_attestation: Attestation format \"compound\" is not supported",
+            "attestation_signature_invalid"
+           ],
+           "verified": false,
+           "metadata": {
+            "available": false,
+            "description": null,
+            "aaguid": null,
+            "algorithm_supported": null,
+            "root_certificates_present": false,
+            "latest_status": null,
+            "certification_level": null
+           }
+          }
+         },
+         "userHandle": {
+          "base64": "dXNlci1oYW5kbGU=",
+          "base64url": "dXNlci1oYW5kbGU",
+          "hex": "757365722d68616e646c65"
+         }
+        },
+        "properties": {
+         "excludeCredentialsSentCount": 0,
+         "excludeCredentialsUsed": false,
+         "credentialIdLength": 32,
+         "fakeCredentialIdLengthRequested": null,
+         "hintsSent": [],
+         "resolvedAuthenticatorAttachments": [],
+         "authenticatorAttachment": null,
+         "largeBlobRequested": {},
+         "largeBlobClientOutput": {},
+         "residentKeyRequested": null,
+         "residentKeyRequired": false,
+         "attestationSignatureValid": false,
+         "attestationRootValid": false,
+         "attestationRpIdHashValid": true,
+         "attestationAaguidMatch": null,
+         "attestationChecks": {
+          "attestation_format": "compound",
+          "signature_valid": false,
+          "root_valid": false,
+          "rp_id_hash_valid": true,
+          "aaguid_match": null,
+          "client_data": {
+           "type": "webauthn.create",
+           "expected_type": "webauthn.create",
+           "type_valid": true,
+           "challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
+           "expected_challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
+           "challenge_matches": true,
+           "origin": "http://localhost",
+           "expected_origin": "http://localhost",
+           "origin_valid": true,
+           "cross_origin": false,
+           "cross_origin_ok": true
+          },
+          "authenticator_data": {
+           "user_present": true,
+           "user_verified": true,
+           "user_verification_required": false,
+           "user_verification_satisfied": true,
+           "attested_credential_data": true,
+           "counter": 0,
+           "credential_id_length": 32,
+           "credential_aaguid": "00000000000000000000000000000000",
+           "algorithm": -7,
+           "algorithm_allowed": true,
+           "cose_key_valid": true
+          },
+          "metadata": {
+           "available": false,
+           "description": null,
+           "aaguid": null,
+           "algorithm_supported": null,
+           "root_certificates_present": false,
+           "latest_status": null,
+           "certification_level": null
+          },
+          "hash_binding": {
+           "client_data_hash": "doGvfm6hPFgAmYfVFqA7PvgOTa9BLrwnQEFa2ZYkK1c",
+           "verification_data": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAAAAAAAAAAAAAAAAAAAAAAAAIIEh3nV_DRW6D2rWL_8Tr62lyMj-y5WaNYjPt4xrKtzYpQECAyYgASFYIFSeN18RSqF6H8G08YaSrcUdIc0oTD0oE69y3cjkLao8Ilggdu2Gt0f2GIJEQQXR6pO4WvE3hLHoINXASP7s96PIqGR2ga9-bqE8WACZh9UWoDs--A5Nr0EuvCdAQVrZliQrVw"
+          },
+          "errors": [
+           "unsupported_attestation: Attestation format \"compound\" is not supported",
+           "attestation_signature_invalid"
+          ],
+          "warnings": []
+         },
+         "attestationSummary": {
+          "signatureValid": false,
+          "rootValid": false,
+          "rpIdHashValid": true,
+          "aaguidMatch": null,
+          "errors": [
+           "unsupported_attestation: Attestation format \"compound\" is not supported",
+           "attestation_signature_invalid"
+          ],
+          "verified": false,
+          "metadata": {
+           "available": false,
+           "description": null,
+           "aaguid": null,
+           "algorithm_supported": null,
+           "root_certificates_present": false,
+           "latest_status": null,
+           "certification_level": null
+          }
+         },
+         "aaguid": "00000000000000000000000000000000",
+         "aaguidHex": "00000000000000000000000000000000",
+         "aaguidGuid": "00000000-0000-0000-0000-000000000000",
+         "rpIdHash": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763",
+         "rpIdHashBase64": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2M",
+         "rpIdHashExpected": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763",
+         "rpIdHashExpectedBase64": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2M",
+         "residentKey": null,
+         "authenticatorDataHash": "1e2876c5e9c801ea50cfd5cdf99d16b684427c43b5d39c88132b081ff8490481"
+        },
+        "registrationResponse": {
+         "clientExtensionResults": {},
+         "id": "gSHedX8NFboPatYv_xOvraXIyP7LlZo1iM-3jGsq3Ng",
+         "rawId": "gSHedX8NFboPatYv_xOvraXIyP7LlZo1iM-3jGsq3Ng",
+         "response": {
+          "attestationObject": "o2NmbXRoY29tcG91bmRnYXR0U3RtdIKiY2ZtdGZwYWNrZWRnYXR0U3RtdKJjYWxnJmNzaWdYRzBFAiEArLHpjrYH5ueVoVo5vnjlIXFFfLeg37trNmCZLlwLDBQCIEU7d1k78670TvfiHjIf8seuVvqPffe7_X3chn63gzdUomNmbXRmcGFja2VkZ2F0dFN0bXSiY2FsZyZjc2lnWEcwRQIhAKyx6Y62B-bnlaFaOb545SFxRXy3oN-7azZgmS5cCwwUAiBFO3dZO_Ou9E734h4yH_LHrlb6j333u_193IZ-t4M3VGhhdXRoRGF0YVikSZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAAAAAAAAAAAAAAAAAAAAAAAAIIEh3nV_DRW6D2rWL_8Tr62lyMj-y5WaNYjPt4xrKtzYpQECAyYgASFYIFSeN18RSqF6H8G08YaSrcUdIc0oTD0oE69y3cjkLao8Ilggdu2Gt0f2GIJEQQXR6pO4WvE3hLHoINXASP7s96PIqGQ",
+          "clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIiwiY2hhbGxlbmdlIjoiTVRFeE1URXhNVEV4TVRFeE1URXhNVEV4TVRFeE1URXhNVEV4TVRFeE1URSIsIm9yaWdpbiI6Imh0dHA6Ly9sb2NhbGhvc3QiLCJjcm9zc09yaWdpbiI6ZmFsc2V9"
+         },
+         "type": "public-key"
+        },
+        "userHandle": "dXNlci1oYW5kbGU",
+        "userHandleBase64": "dXNlci1oYW5kbGU=",
+        "userHandleBase64Url": "dXNlci1oYW5kbGU",
+        "userHandleHex": "757365722d68616e646c65"
+       }
+      }
+     }
+    }
+   ],
+   "deviceLogEvents": [
+    {
+     "timestamp": "<datetime scrubbed>",
+     "rp_id": "localhost",
+     "aaguid": {
+      "$bytes": "00000000000000000000000000000000"
+     },
+     "device_name_mds": null,
+     "attestation_object": {
+      "$bytes": "a363666d7468636f6d706f756e646761747453746d7482a263666d74667061636b65646761747453746d74a263616c67266373696758473045022100acb1e98eb607e6e795a15a39be78e52171457cb7a0dfbb6b3660992e5c0b0c140220453b77593bf3aef44ef7e21e321ff2c7ae56fa8f7df7bbfd7ddc867eb7833754a263666d74667061636b65646761747453746d74a263616c67266373696758473045022100acb1e98eb607e6e795a15a39be78e52171457cb7a0dfbb6b3660992e5c0b0c140220453b77593bf3aef44ef7e21e321ff2c7ae56fa8f7df7bbfd7ddc867eb783375468617574684461746158a449960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d976345000000000000000000000000000000000000000000208121de757f0d15ba0f6ad62fff13afada5c8c8fecb959a3588cfb78c6b2adcd8a5010203262001215820549e375f114aa17a1fc1b4f18692adc51d21cd284c3d2813af72ddc8e42daa3c22582076ed86b747f61882444105d1ea93b85af13784b1e820d5c048feecf7a3c8a864"
+     },
+     "signature_valid": null,
+     "root_valid": null,
+     "rp_id_hash_valid": null,
+     "aaguid_match": null
+    }
+   ]
+  }
+ ]
+}

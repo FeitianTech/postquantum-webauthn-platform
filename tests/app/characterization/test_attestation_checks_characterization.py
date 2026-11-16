@@ -4,8 +4,8 @@ A table of registration responses -- valid, tampered, wrongly typed, bound to th
 wrong origin, challenge or RP, missing UP, UV or the attested credential, backed up
 without being backup eligible, using a
 disallowed algorithm, a broken COSE key or one that cannot be used for its
-algorithm, a statement fido2 fails on, ML-DSA, and the captured attestation
-formats -- goes through the checks with no MDS verifier,
+algorithm, a statement fido2 fails on, a compound one, ML-DSA, and the captured
+attestation formats -- goes through the checks with no MDS verifier,
 and ``metadata_checks.finalize_metadata_results`` gets fake metadata entries and
 verifiers. Every result must equal ``golden/attestation-checks.json``.
 """
@@ -42,6 +42,17 @@ def _with_statement(payload, statement):
 
     attestation = cbor.decode(unb64u(payload["response"]["attestationObject"]))
     payload["response"]["attestationObject"] = b64u(cbor.encode({"fmt": "packed", "attStmt": statement, "authData": attestation["authData"]}))
+    return payload
+
+
+def _as_compound(payload):
+    """``payload``'s attestation as a compound statement (L3 section 8.9) holding its own statement twice."""
+
+    attestation = cbor.decode(unb64u(payload["response"]["attestationObject"]))
+    statement = {"fmt": attestation["fmt"], "attStmt": attestation["attStmt"]}
+    payload["response"]["attestationObject"] = b64u(
+        cbor.encode({"fmt": "compound", "attStmt": [statement, statement], "authData": attestation["authData"]})
+    )
     return payload
 
 
@@ -106,6 +117,7 @@ def _cases():
         "options-challenge-text": (build(), None, {"challenge": "not a challenge at all"}),
         "no-challenge": (build(), None, None),
         "state-uv-enum": (build(user_verified=False), {"challenge": b64u(CHALLENGE), "user_verification": __import__("fido2.webauthn", fromlist=["x"]).UserVerificationRequirement.REQUIRED}, None),
+        "compound-two-statements": (_as_compound(build(attestation="self")), state, ES256_ONLY),
         "x5c-not-a-list": (_with_statement(build(), {"alg": -7, "sig": b"\x01", "x5c": "not a list"}), state, ES256_ONLY),
         "not-a-mapping": (["not", "a", "mapping"], state, None),
         "unparsable": ({"id": "x", "rawId": "x", "type": "public-key", "response": {}}, state, None),

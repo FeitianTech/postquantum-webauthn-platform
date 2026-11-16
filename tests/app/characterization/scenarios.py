@@ -999,3 +999,37 @@ def _(r: Recorder) -> None:
     _advanced_authenticate(r, client, authenticator, entries=entries, counter=3)
     unkept = [authenticator.stored_credential_entry(declared_algorithm=-7)]
     _advanced_authenticate(r, client, authenticator, entries=unkept, counter=4, user_handle=b"the saved handle")
+
+
+def _as_compound(credential: dict[str, Any]) -> dict[str, Any]:
+    """``credential``'s attestation as a compound statement (L3 section 8.9) holding its own statement twice."""
+
+    attestation = cbor.decode(unb64u(credential["response"]["attestationObject"]))
+    statement = {"fmt": attestation["fmt"], "attStmt": attestation["attStmt"]}
+    credential["response"]["attestationObject"] = b64u(
+        cbor.encode({"fmt": "compound", "attStmt": [statement, statement], "authData": attestation["authData"]})
+    )
+    return credential
+
+
+@scenario("simple-register-compound")
+def _(r: Recorder) -> None:
+    client = r.client()
+    challenge = _simple_begin(r, client)
+    credential = _as_compound(m.registration_payload(m.Authenticator("simple-compound"), challenge=challenge, attestation="self"))
+    r.post(client, f"/api/register/complete?email={EMAIL}", json=credential, headers=HEADERS)
+
+
+@scenario("advanced-register-compound")
+def _(r: Recorder) -> None:
+    client = r.client()
+    options = _options()
+    begin = r.post(client, "/api/advanced/register/begin", json={"publicKey": copy.deepcopy(options)})
+    challenge = unb64u(begin.get_json()["publicKey"]["challenge"])
+    credential = _as_compound(m.registration_payload(m.Authenticator("adv-compound"), challenge=challenge, attestation="self"))
+    r.post(
+        client,
+        "/api/advanced/register/complete",
+        json={"publicKey": copy.deepcopy(options), "__credential_response": credential},
+        headers=HEADERS,
+    )

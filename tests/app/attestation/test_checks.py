@@ -10,6 +10,7 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 import pytest
+from fido2 import cbor
 from fido2.attestation import (
     Attestation,
     AttestationResult,
@@ -25,7 +26,14 @@ from tests.app import fido2_stand_ins
 from tests.app import fido2_stand_ins as stand_ins
 from tests.app.entry_app import entry_app
 from tests.app.fido2_stand_ins import AuthData, ClientData
-from tests.app.security.ceremony_helpers import b64u
+from tests.app.security.ceremony_helpers import (
+    ORIGIN,
+    RP_ID,
+    Authenticator,
+    b64u,
+    registration_payload,
+    unb64u,
+)
 
 CHALLENGE = b"the-challenge"
 ES256_ONLY = {"pubKeyCredParams": [{"alg": -7}]}
@@ -362,3 +370,28 @@ def test_perform_attestation_checks_reports_an_mldsa_signature_that_does_not_ver
     assert result["root_valid"] is False
     assert any(error.startswith("attestation_invalid:") for error in result["errors"])
     assert "attestation_signature_invalid" in result["errors"]
+
+
+def test_a_compound_attestation_is_reported_unsupported_by_its_format(monkeypatch):
+    # WebAuthn L3 section 8.9: statements of other formats over one authData. fido2 2.2.1
+    # verifies no compound statement, and this server verifies one statement at a time
+    # (its chain, root and metadata), so it names the format it does not verify.
+    monkeypatch.setattr(mds_verifier, "get_mds_verifier", lambda: None)
+    challenge = b"\x01" * 32
+    payload = registration_payload(Authenticator(), challenge=challenge, attestation="packed")
+    packed = cbor.decode(unb64u(payload["response"]["attestationObject"]))
+    statement = {"fmt": "packed", "attStmt": packed["attStmt"]}
+    payload["response"]["attestationObject"] = b64u(
+        cbor.encode({"fmt": "compound", "attStmt": [statement, statement], "authData": packed["authData"]})
+    )
+
+    result = attestation_checks.perform_attestation_checks(
+        payload, {"challenge": b64u(challenge)}, None, None, ORIGIN, RP_ID
+    )
+
+    assert result["attestation_format"] == "compound"
+    assert result["errors"] == [
+        'unsupported_attestation: Attestation format "compound" is not supported',
+        "attestation_signature_invalid",
+    ]
+    assert (result["signature_valid"], result["root_valid"]) == (False, False)
