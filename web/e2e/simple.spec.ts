@@ -177,13 +177,18 @@ test.describe('/#simple', () => {
     expect(await late).toBe(200);
   });
 
-  test('deletes a registered passkey from the server, then from this browser', async ({ page }) => {
-    await addVirtualAuthenticator(page);
+  test('deletes a registered passkey from the server, then from this browser, and tells the browser it is gone', async ({ page }) => {
+    const authenticator = await addVirtualAuthenticator(page);
     await openPage(page);
     const name = username();
     await registerPasskey(page, name);
+    expect(await authenticator.credentials()).toHaveLength(1);
 
     await rows(page).filter({ hasText: name }).getByRole('button', { name: 'Delete' }).click();
+    // Chromium has the Signal API: the question says the browser will be told.
+    await expect(page.getByRole('alertdialog', { name: 'Delete credential' })).toContainText(
+      'This browser will also be told the credential is gone, so its passkey manager may remove it.',
+    );
     const [deletion] = await Promise.all([
       page.waitForResponse((answer) => new URL(answer.url()).pathname.startsWith('/api/simple/credentials/')),
       page.getByRole('alertdialog', { name: 'Delete credential' }).getByRole('button', { name: 'Delete' }).click(),
@@ -194,6 +199,8 @@ test.describe('/#simple', () => {
     expect(await deletion.json()).toEqual({ status: 'deleted' });
     await expect(page.getByText('Deletion successful.')).toBeVisible();
     await expect(rows(page)).toHaveCount(0);
+    // signalUnknownCredential: the authenticator no longer holds the passkey.
+    await expect.poll(async () => (await authenticator.credentials()).length).toBe(0);
   });
 
   test('keeps a failure in place, with its sentence', async ({ page }) => {

@@ -1,6 +1,8 @@
 // Deleting a saved credential, and all of them: in what order, and what each
 // outcome says. DOM-free. The list asks the person in a dialog first, and its
-// report says where messages and progress go.
+// report says where messages and progress go. Each credential gone from this
+// browser is signalled to the browser itself (./deletion-signal.js).
+import { SIGNAL_TEXT, canSignalDeletion, signalDeletedCredential } from './deletion-signal.js';
 import { deleteCredentialArtifact } from './storage/artifacts-client.js';
 import { getAllAdvancedCredentials, removeAdvancedCredential } from './storage/local/advanced-credentials.js';
 import { getAllSimpleCredentials, removeSimpleCredential, simpleUsername } from './storage/local/simple-credentials.js';
@@ -36,16 +38,29 @@ export const DELETE_TEXT = {
 };
 
 /**
- * The question before deleting one credential, naming whose it is.
+ * The question before deleting one credential, naming whose it is, and saying so
+ * where the browser will be told it is gone.
  * @param {Record<string, any>} credential
+ * @param {any} [scope]
  * @returns {string}
  */
-export function deleteConfirmation(credential) {
+export function deleteConfirmation(credential, scope = globalThis) {
     const label = credential.userName || credential.username || credential.email || 'this credential';
-    return `Are you sure you want to delete the credential for ${label}? This action cannot be undone.`;
+    const question = `Are you sure you want to delete the credential for ${label}? This action cannot be undone.`;
+    return canSignalDeletion(scope) ? `${question} ${SIGNAL_TEXT.one}` : question;
 }
 
 export const CLEAR_ALL_CONFIRMATION = 'Are you sure you want to delete all saved credentials? This action cannot be undone.';
+
+/**
+ * The question before deleting every saved credential, saying so where the
+ * browser will be told they are gone.
+ * @param {any} [scope]
+ * @returns {string}
+ */
+export function clearAllConfirmation(scope = globalThis) {
+    return canSignalDeletion(scope) ? `${CLEAR_ALL_CONFIRMATION} ${SIGNAL_TEXT.all}` : CLEAR_ALL_CONFIRMATION;
+}
 
 function clearingWithIssues(failedCount) {
     const noun = failedCount === 1 ? 'credential' : 'credentials';
@@ -63,6 +78,9 @@ function clearedWithAbsent(absentCount) {
  * copy), or 'failed' with the sentence that says why.
  * @typedef {{ status: string, error: string }} DeletionOutcome
  */
+
+// The outcomes that leave a credential gone: what the list reports as deleted.
+const GONE = ['deleted', 'absent'];
 
 /**
  * Where a saved credential is kept: the server's copy when it has one (an advanced
@@ -90,21 +108,23 @@ function whereKept(credential) {
 
 /**
  * Deletes one saved credential where it is kept: from the server's storage first,
- * when it keeps a copy, then from this browser.
+ * when it keeps a copy, then from this browser; once it is gone, the browser is
+ * told (without waiting for it).
  * @param {Record<string, any>} credential
+ * @param {any} scope
  * @returns {Promise<DeletionOutcome>}
  */
-async function deleteEverywhere(credential) {
+async function deleteEverywhere(credential, scope) {
     const { onServer, here } = whereKept(credential);
-    if (!onServer) {
-        return here() ? { status: 'deleted', error: '' } : { status: 'failed', error: DELETE_TEXT.notRemovedLocally };
-    }
-    const answer = await onServer();
+    const answer = onServer ? await onServer() : { status: 'deleted' };
     if (answer.status === 'failed') {
         return { status: 'failed', error: answer.error || DELETE_TEXT.serverRefused };
     }
     if (!here()) {
-        return { status: 'failed', error: DELETE_TEXT.removedFromServerOnly };
+        return { status: 'failed', error: onServer ? DELETE_TEXT.removedFromServerOnly : DELETE_TEXT.notRemovedLocally };
+    }
+    if (GONE.includes(answer.status)) {
+        void signalDeletedCredential(credential, scope);
     }
     return { status: answer.status, error: '' };
 }
@@ -114,9 +134,10 @@ async function deleteEverywhere(credential) {
  * copy (both tabs' credentials do), then from this browser.
  * @param {Record<string, any> | null | undefined} credential
  * @param {DeletionReport} report
+ * @param {any} [scope] the page's global, which the browser is told through
  * @returns {Promise<void>}
  */
-export async function deleteSavedCredential(credential, report) {
+export async function deleteSavedCredential(credential, report, scope = globalThis) {
     if (report.isRunning()) {
         report.status(DELETE_TEXT.inProgress, 'info');
         return;
@@ -131,7 +152,7 @@ export async function deleteSavedCredential(credential, report) {
     report.progress(DELETE_TEXT.deleting);
 
     try {
-        const outcome = await deleteEverywhere(credential);
+        const outcome = await deleteEverywhere(credential, scope);
         if (outcome.status === 'failed') {
             report.status(outcome.error, 'error');
             return;
@@ -155,9 +176,10 @@ export async function deleteSavedCredential(credential, report) {
  * they go one at a time; other usernames' and the advanced ones go at once.
  * @param {Record<string, any>[]} simpleCredentials
  * @param {Array<Record<string, any> | null>} advancedCredentials
+ * @param {any} scope
  * @returns {Promise<DeletionOutcome[]>}
  */
-async function deleteAll(simpleCredentials, advancedCredentials) {
+async function deleteAll(simpleCredentials, advancedCredentials, scope) {
     /** @type {Map<string, Record<string, any>[]>} */
     const byUsername = new Map();
     simpleCredentials.forEach(credential => {
@@ -167,7 +189,7 @@ async function deleteAll(simpleCredentials, advancedCredentials) {
     const inTurn = async credentials => {
         const outcomes = [];
         for (const credential of credentials) {
-            outcomes.push(await deleteEverywhere(credential));
+            outcomes.push(await deleteEverywhere(credential, scope));
         }
         return outcomes;
     };
@@ -182,9 +204,10 @@ async function deleteAll(simpleCredentials, advancedCredentials) {
  * Deletes every saved credential, each from the server's storage first when it
  * keeps a copy, then from this browser.
  * @param {DeletionReport} report
+ * @param {any} [scope] the page's global, which the browser is told through
  * @returns {Promise<void>}
  */
-export async function clearSavedCredentials(report) {
+export async function clearSavedCredentials(report, scope = globalThis) {
     if (report.isRunning()) {
         report.status(DELETE_TEXT.inProgress, 'info');
         return;
@@ -202,9 +225,9 @@ export async function clearSavedCredentials(report) {
     report.progress(DELETE_TEXT.clearing);
 
     try {
-        const outcomes = await deleteAll(simpleCredentials, advancedCredentials);
+        const outcomes = await deleteAll(simpleCredentials, advancedCredentials, scope);
         const absentCount = outcomes.filter(outcome => outcome.status === 'absent').length;
-        const failedCount = outcomes.filter(outcome => !['deleted', 'absent'].includes(outcome.status)).length;
+        const failedCount = outcomes.filter(outcome => !GONE.includes(outcome.status)).length;
 
         await report.reload();
 

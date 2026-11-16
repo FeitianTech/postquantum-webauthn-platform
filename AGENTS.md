@@ -225,7 +225,11 @@ its logic out here first.
 - `credentials/`: the saved list (`saved-list.js`: the records, each row, the warm-up),
   deletion (`delete-flow.js`, through the list's report: from the server's storage first, an
   Advanced credential's artifact or a Simple one's record (`storage/simple-records-client.js`, both
-  answers read by `storage/deletion-request.js`), then from this browser), the algorithm tag, whether a credential
+  answers read by `storage/deletion-request.js`), then from this browser; each one gone is then
+  signalled to the browser where it has the Signal API, `deletion-signal.js`:
+  signalUnknownCredential with the RP ID whose SHA-256 the record keeps (its rpIdHash), else the
+  page's host, and the question says so; never on a server's answer that a credential is unknown,
+  since a credential this browser lacks may be another browser's), the algorithm tag, whether a credential
   is discoverable (`resident-key.js`: credProps.rk as the browser reported it, else unknown; a
   stored `residentKey` is never read, since earlier versions derived it from BE or the request),
   hydration from a server artifact (`hydrate.js`), a certificate's text (`certificates/text.js`: the

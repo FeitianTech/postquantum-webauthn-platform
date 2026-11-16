@@ -3,10 +3,12 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   CLEAR_ALL_CONFIRMATION,
   DELETE_TEXT,
+  clearAllConfirmation,
   clearSavedCredentials,
   deleteConfirmation,
   deleteSavedCredential,
 } from './delete-flow.js';
+import { SIGNAL_TEXT, signalDeletedCredential } from './deletion-signal.js';
 import { deleteCredentialArtifact } from './storage/artifacts-client.js';
 import { getAllAdvancedCredentials, removeAdvancedCredential } from './storage/local/advanced-credentials.js';
 import { getAllSimpleCredentials, removeSimpleCredential } from './storage/local/simple-credentials.js';
@@ -17,6 +19,7 @@ import { deleteSimpleCredentialRecord } from './storage/simple-records-client.js
 // as each test says.
 
 vi.mock('./storage/artifacts-client.js', () => ({ deleteCredentialArtifact: vi.fn() }));
+vi.mock('./deletion-signal.js', async (importOriginal) => ({ ...(await importOriginal()), signalDeletedCredential: vi.fn() }));
 vi.mock('./storage/simple-records-client.js', () => ({ deleteSimpleCredentialRecord: vi.fn() }));
 vi.mock('./storage/local/advanced-credentials.js', () => ({
   getAllAdvancedCredentials: vi.fn(),
@@ -79,6 +82,48 @@ describe('the question before deleting', () => {
     expect(deleteConfirmation({ email: 'e' })).toContain('for e?');
     expect(deleteConfirmation({})).toContain('for this credential?');
     expect(CLEAR_ALL_CONFIRMATION).toBe('Are you sure you want to delete all saved credentials? This action cannot be undone.');
+  });
+
+  it('says the browser will be told, where it can be', () => {
+    const signals = { PublicKeyCredential: { signalUnknownCredential: () => {} } };
+    expect(deleteConfirmation({ userName: 'alice' }, signals)).toBe(
+      `Are you sure you want to delete the credential for alice? This action cannot be undone. ${SIGNAL_TEXT.one}`,
+    );
+    expect(clearAllConfirmation(signals)).toBe(`${CLEAR_ALL_CONFIRMATION} ${SIGNAL_TEXT.all}`);
+    expect(deleteConfirmation({ userName: 'alice' }, {})).not.toContain(SIGNAL_TEXT.one);
+    expect(clearAllConfirmation({})).toBe(CLEAR_ALL_CONFIRMATION);
+    expect(clearAllConfirmation()).toBe(CLEAR_ALL_CONFIRMATION);
+  });
+});
+
+describe('telling the browser a deleted credential is gone', () => {
+  const PAGE = { location: { hostname: 'localhost' } };
+  const told = () => vi.mocked(signalDeletedCredential).mock.calls;
+
+  it('tells it once one is gone, with the page\'s global, and not one the server or this browser kept', async () => {
+    await deleteSavedCredential(SIMPLE, flow().report, PAGE);
+    await deleteSavedCredential(ADVANCED, flow({ artifact: { status: 'absent' } }).report, PAGE);
+    expect(told()).toEqual([[SIMPLE, PAGE], [ADVANCED, PAGE]]);
+
+    vi.mocked(signalDeletedCredential).mockClear();
+    await deleteSavedCredential(SIMPLE, flow({ record: { status: 'failed' } }).report, PAGE);
+    await deleteSavedCredential(ADVANCED, flow({ removeAdvanced: false }).report, PAGE);
+    await deleteSavedCredential({ type: 'simple', credentialId: 'EEEE' }, flow({ removeSimple: false }).report, PAGE);
+    expect(told()).toEqual([]);
+  });
+
+  it('tells it each one Clear All removed, and none it reports as kept', async () => {
+    const kept = { ...ADVANCED, storageId: 's-2' };
+    const { report } = flow({ advanced: [ADVANCED, kept] });
+    vi.mocked(deleteCredentialArtifact).mockImplementation(async (id) => ({ status: id === 's-2' ? 'unknown' : 'absent' }));
+    await clearSavedCredentials(report, PAGE);
+    expect(told()).toEqual([[SIMPLE, PAGE], [ADVANCED, PAGE]]);
+  });
+
+  it('tells it through the page\'s own global by default', async () => {
+    await deleteSavedCredential(SIMPLE, flow().report);
+    await clearSavedCredentials(flow({ simple: [] }).report);
+    expect(told()).toEqual([[SIMPLE, globalThis], [ADVANCED, globalThis]]);
   });
 });
 

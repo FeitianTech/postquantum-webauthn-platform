@@ -4,6 +4,7 @@ import { act, fireEvent, render, screen, waitFor, within } from '@testing-librar
 import userEvent from '@testing-library/user-event';
 
 import { ToastProvider } from '@/components/ui/Toast';
+import { SIGNAL_TEXT } from '@/logic/credentials/deletion-signal.js';
 import { STORAGE_KEY, keepRecords, savedRecord, simpleRecordRoutes, storedRecords, warmUpRoutes } from '@/test/credentials';
 import { json, stubFetch } from '@/test/fetch';
 import { renderPage } from '@/test/page';
@@ -291,6 +292,66 @@ describe('the focus once a deletion has ended', () => {
     renderList([ADVANCED], { [ADVANCED_PATH]: () => json({ error: 'The stored credentials could not be read.' }, 503) });
     await deleteRow('advanced@example.com');
     await waitFor(() => expect(within(rowNamed('advanced@example.com')).getByRole('button', { name: 'Delete' })).toHaveFocus());
+  });
+});
+
+describe('telling the browser a deleted credential is gone', () => {
+  // A browser with the Signal API's signalUnknownCredential.
+  function signalling(signalUnknownCredential = vi.fn(async (_options: object) => undefined)) {
+    vi.stubGlobal('PublicKeyCredential', { signalUnknownCredential });
+    return signalUnknownCredential;
+  }
+
+  it('says so before deleting one, and tells it the credential\'s RP ID and ID once it is deleted', async () => {
+    const signalUnknownCredential = signalling();
+    renderList([ES256, MLDSA]);
+    await userEvent.click(within(await waitFor(() => rowNamed('user@example.com'))).getByRole('button', { name: 'Delete' }));
+    expect(await screen.findByRole('alertdialog', { name: 'Delete credential' })).toHaveTextContent(
+      `Are you sure you want to delete the credential for user@example.com? This action cannot be undone. ${SIGNAL_TEXT.one}`,
+    );
+    expect(signalUnknownCredential).not.toHaveBeenCalled();
+
+    await confirmIn('Delete');
+    await waitFor(() => expect(rows()).toHaveLength(1));
+    // The server registered it for the RP ID "localhost", the page's host here.
+    await waitFor(() =>
+      expect(signalUnknownCredential).toHaveBeenCalledExactlyOnceWith({ rpId: 'localhost', credentialId: ES256.credentialIdBase64Url }),
+    );
+  });
+
+  it('says so before Clear All, and tells it each one removed', async () => {
+    const signalUnknownCredential = signalling();
+    renderList([ES256, ADVANCED], { [ADVANCED_PATH]: () => json({ status: 'deleted' }) });
+    await waitFor(() => expect(rows()).toHaveLength(2));
+    await userEvent.click(screen.getByRole('button', { name: 'Clear All' }));
+    expect(await screen.findByRole('alertdialog', { name: 'Clear All' })).toHaveTextContent(SIGNAL_TEXT.all);
+
+    await confirmIn('Clear All');
+    await waitFor(() => expect(signalUnknownCredential).toHaveBeenCalledTimes(2));
+    expect(signalUnknownCredential.mock.calls.map(([options]) => options)).toEqual(
+      expect.arrayContaining([
+        { rpId: 'localhost', credentialId: ES256.credentialIdBase64Url },
+        { rpId: 'localhost', credentialId: ADVANCED.credentialIdBase64Url },
+      ]),
+    );
+  });
+
+  it('says what it says without it where the browser refuses', async () => {
+    const refusing = signalling(vi.fn(async () => Promise.reject(new DOMException('Not allowed.', 'SecurityError'))));
+    renderList([ES256]);
+    await userEvent.click(within(await waitFor(() => rowNamed('user@example.com'))).getByRole('button', { name: 'Delete' }));
+    await holdingTimers(async () => {
+      await act(async () => fireEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Delete' })));
+      expect(screen.getByText('Deletion successful.')).toBeVisible();
+    });
+    await waitFor(() => expect(refusing).toHaveBeenCalled());
+    expect(document.querySelector('[role="alert"]')).toBeNull();
+  });
+
+  it('asks without it where the browser cannot be told', async () => {
+    renderList([MLDSA]);
+    await userEvent.click(within(await waitFor(() => rowNamed('ml@example.com'))).getByRole('button', { name: 'Delete' }));
+    expect(await screen.findByRole('alertdialog', { name: 'Delete credential' })).not.toHaveTextContent(SIGNAL_TEXT.one);
   });
 });
 

@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/Button';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Spinner } from '@/components/ui/icons';
 import { cx } from '@/lib/cx';
-import { CLEAR_ALL_CONFIRMATION, deleteConfirmation } from '@/logic/credentials/delete-flow.js';
+import { clearAllConfirmation, deleteConfirmation } from '@/logic/credentials/delete-flow.js';
 import { type CredentialRowView, SAVED_LIST_TEXT } from '@/logic/credentials/saved-list.js';
 
 import { CredentialRow } from './CredentialRow';
@@ -77,7 +77,7 @@ export function useCredentialDeletion(fallback: () => HTMLElement | null): Crede
     <ConfirmDialog
       open={asking}
       title={question?.kind === 'one' ? 'Delete credential' : 'Clear All'}
-      question={question?.kind === 'one' ? deleteConfirmation(question.row.credential) : CLEAR_ALL_CONFIRMATION}
+      question={question?.kind === 'one' ? deleteConfirmation(question.row.credential) : clearAllConfirmation()}
       confirmLabel={question?.kind === 'one' ? 'Delete' : 'Clear All'}
       onConfirm={() => void answer()}
       onCancel={() => setAsking(false)}

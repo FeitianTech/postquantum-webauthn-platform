@@ -22,8 +22,9 @@ import { parse } from 'parse5';
 export const BUDGET = {
   pages: {
     // Measured on 2026-10-28, once the Simple tab listed a registration's attestation findings
-    // and said when this browser could not keep a credential (their sentences' table is a chunk).
-    'index.html': { raw: 460800, gzip: 143360 },
+    // and said when this browser could not keep a credential (their sentences' table is a chunk);
+    // raised on 2026-11-16 by the 1,578 bytes the deletions' signal to the browser measured.
+    'index.html': { raw: 462378, gzip: 143360 },
     '404.html': { raw: 355328, gzip: 110592 },
     '500.html': { raw: 355328, gzip: 110592 },
   },
