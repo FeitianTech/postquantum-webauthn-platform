@@ -166,6 +166,34 @@ test.describe('a saved credential\'s details', () => {
     await expect(dialog(page).getByRole('button', { name: 'Decode in Codec: certificate' })).toBeFocused();
   });
 
+  test('give under the checks what FIDO\'s metadata said of the authenticator, and nothing where the record keeps none', async ({ page }) => {
+    await openPage(page);
+    // The server's record of the fixture's revoked key, as a registration keeps it since.
+    const kept = X5C.properties as { attestationChecks: { metadata: object } };
+    const metadata = {
+      ...kept.attestationChecks.metadata,
+      latest_status: 'Revoked',
+      certification_level: 'FIDO Certified L1 • Fixture Revoked Key • (FIDO20020230110005)',
+    };
+    await keep(page, [
+      named({ ...X5C, properties: { ...kept, attestationChecks: { ...kept.attestationChecks, metadata } } }, 'x5c@example.com'),
+      named(ES256, 'es256@example.com'),
+    ]);
+    await page.reload();
+
+    await page.goto(`/#simple/credential/id:${X5C.credentialIdBase64Url}`);
+    const checks = detailSection(page, 'Properties').locator('[data-check]');
+    await expect(checks).toHaveCount(6);
+    await expect(checks.nth(4)).toHaveAttribute('data-check', 'MDS Status');
+    await expect(checks.nth(4).locator('[data-value]')).toContainText('Revoked');
+    await expect(checks.nth(5)).toHaveAttribute('data-check', 'MDS Certification');
+    await expect(checks.nth(5).locator('[data-value]')).toContainText('FIDO Certified L1 • Fixture Revoked Key • (FIDO20020230110005)');
+    expect(await greyFills(page, '[data-overlay-panel]')).toEqual([]);
+
+    await page.goto(`/#simple/credential/id:${ES256.credentialIdBase64Url}`);
+    await expect(detailSection(page, 'Properties').locator('[data-check]')).toHaveCount(4);
+  });
+
   test('list the attestation\'s findings in words first on the registration\'s level, and none where there are none', async ({ page }) => {
     await openPage(page);
     await keep(page, [named(X5C, 'x5c@example.com'), named(ES256, 'es256@example.com')]);

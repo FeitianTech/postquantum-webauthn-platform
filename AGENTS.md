@@ -239,8 +239,10 @@ its logic out here first.
   from `registration/describe.js`'s parts and `registration/relying-party.js`'s copy of the
   relying party), which `detail/compose.js` composes into a registration state of its own, with
   the record's attestation findings (`detail/findings.js`: its checks, else its summary, as any
-  release kept them) and the parts the Codec decodes (`detail/codec-payloads.js`: only values
-  kept whole, never the copies earlier releases cut short in a snapshot's state). Registration snapshots (`schemaVersion` 2) hold the
+  release kept them), the parts the Codec decodes (`detail/codec-payloads.js`: only values
+  kept whole, never the copies earlier releases cut short in a snapshot's state), and under the
+  four checks of Properties what FIDO's metadata said of the authenticator (`detail/sections.js`:
+  the MDS status and certification the record keeps, nothing for a record that keeps none). Registration snapshots (`schemaVersion` 2) hold the
   registration as data, never markup, and its certificates without their DER; older composed HTML is never read.
 - `credentials/aaguid-credentials.js`: the saved rows an MDS entry lists, their AAGUID read as
   the entry's by `aaguidHex` on both sides.

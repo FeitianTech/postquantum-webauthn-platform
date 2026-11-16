@@ -139,8 +139,26 @@ function describeRootChecks(attestationChecksData) {
     });
 }
 
+// What FIDO's metadata said of the authenticator when it registered, under the
+// four checks: its entry's latest status and its highest certification, as the
+// MDS explorer writes them. None for a record that keeps neither (an earlier
+// release's, or no entry matched).
+const METADATA_ROWS = [['latest_status', 'MDS Status'], ['certification_level', 'MDS Certification']];
+
 /**
- * "Properties": discoverable, large blob, minPinLength, then the four checks and their note.
+ * @param {Record<string, any> | null} attestationChecksData
+ * @returns {Check[]}
+ */
+function describeMetadataStatus(attestationChecksData) {
+    const metadata = attestationChecksData?.metadata;
+    return METADATA_ROWS
+        .filter(([key]) => typeof metadata?.[key] === 'string' && metadata[key])
+        .map(([key, label]) => ({ label, value: metadata[key], rootChecks: null }));
+}
+
+/**
+ * "Properties": discoverable, large blob, minPinLength, then the four checks and their note,
+ * and what FIDO's metadata said of the authenticator.
  * @returns {PropertiesView}
  */
 export function describeProperties({
@@ -180,6 +198,7 @@ export function describeProperties({
                 }),
                 rootChecks: null,
             },
+            ...describeMetadataStatus(attestationChecksData),
         ],
     };
 }

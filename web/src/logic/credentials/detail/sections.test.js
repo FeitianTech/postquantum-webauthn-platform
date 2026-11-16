@@ -93,6 +93,26 @@ describe('describeProperties', () => {
     expect(properties({ attestationChecks: { rootChecks: { fidoMds: 'pass' } } }).checks[1].rootChecks).toBeNull();
   });
 
+  it('gives under the checks the MDS entry\'s latest status and certification the record keeps', () => {
+    const metadata = { available: true, latest_status: 'Update Available', certification_level: 'FIDO Certified L2 • Key • (1)' };
+    expect(checkValues(properties({ properties: { attestationSummary: { metadata } } }))).toMatchObject({
+      'MDS Status': 'Update Available',
+      'MDS Certification': 'FIDO Certified L2 • Key • (1)',
+    });
+    // An authenticator whose only entry is revoked: no entry is available, its status says why.
+    const revoked = properties({ attestationChecks: { metadata: { available: false, latest_status: 'Revoked', certification_level: null } } });
+    expect(revoked.checks.map(({ label }) => label).slice(4)).toEqual(['MDS Status']);
+  });
+
+  it('gives nothing new for a record that keeps no status: an earlier release\'s, or one no entry matched', () => {
+    const labels = (record) => properties(record).checks.map(({ label }) => label);
+    const FOUR = ['Signature Valid', 'Root Valid', 'RPID Hash Valid', 'AAGUID Match'];
+    expect(labels(simpleRecord('es256'))).toEqual(FOUR);
+    expect(labels({ attestationChecks: { metadata: { available: false, latest_status: null, certification_level: '' } } })).toEqual(FOUR);
+    expect(labels({ attestationChecks: { metadata: null } })).toEqual(FOUR);
+    expect(labels({})).toEqual(FOUR);
+  });
+
   it('names no roots when the checks name none, or there are no checks', () => {
     expect(properties(simpleRecord('es256')).checks[1].rootChecks).toBeNull();
     expect(properties({}).checks[1].rootChecks).toBeNull();

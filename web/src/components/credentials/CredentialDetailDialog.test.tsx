@@ -95,6 +95,18 @@ describe('a saved credential\'s details, the detail', () => {
     expect(properties.querySelector('[data-root-checks]')).toHaveTextContent('Chain');
   });
 
+  it('give under the checks what FIDO\'s metadata said of the authenticator, where the record keeps it', async () => {
+    const kept = X5C.properties as { attestationChecks: { metadata: object } };
+    const metadata = { ...kept.attestationChecks.metadata, latest_status: 'Revoked', certification_level: 'FIDO Certified L1 • Key • (1)' };
+    renderShell([{ ...X5C, properties: { ...kept, attestationChecks: { ...kept.attestationChecks, metadata } } }]);
+    await openDetail('x5c@example.com');
+
+    const rows = Array.from(section('Properties').querySelectorAll<HTMLElement>('[data-check]')).slice(4);
+    expect(rows.map((row) => row.dataset.check)).toEqual(['MDS Status', 'MDS Certification']);
+    expect(rows[0]).toHaveTextContent('MDS StatusRevoked');
+    expect(rows[1]).toHaveTextContent('MDS CertificationFIDO Certified L1 • Key • (1)');
+  });
+
   it('give the user at creation, each identifier in every spelling and the AAGUID, in Geist Mono with copy', async () => {
     renderShell([ES256]);
     await openDetail();
