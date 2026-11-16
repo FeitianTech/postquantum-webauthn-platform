@@ -343,8 +343,8 @@ describe('a saved credential\'s details, into the Codec', () => {
 
   it('open a certificate and the authenticator data in the Codec from their own levels', async () => {
     renderShell([X5C], urlOf(X5C, 'registration', 'certificate', '1'));
-    await screen.findByRole('heading', { level: 2, name: 'Attestation Certificate' });
-    await userEvent.click(screen.getByRole('button', { name: 'Decode in Codec: certificate' }));
+    // The header names the level at once; its content comes once the detail is ready.
+    await userEvent.click(await screen.findByRole('button', { name: 'Decode in Codec: certificate' }));
     await waitFor(() => expect(window.location.hash).toBe('#codec'));
     // The DER the record keeps, in base64, as it keeps it.
     const [kept] = (X5C.properties as { attestationCertificates: { derBase64: string }[] }).attestationCertificates;

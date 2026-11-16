@@ -126,7 +126,8 @@ describe('a saved credential\'s details over an MDS entry', () => {
     const dialog = await screen.findByRole('dialog');
     await within(dialog).findByRole('button', { name: 'Show registration details' });
     expect(within(dialog).getByRole('heading', { level: 3, name: 'key@example.com' })).toBeVisible();
-    expect(screen.getByRole('heading', { level: 3, name: 'Fixture Security Key L1', hidden: true })).toBeInTheDocument();
+    // The entry's detail comes on its own, beside the credential's.
+    expect(await screen.findByRole('heading', { level: 3, name: 'Fixture Security Key L1', hidden: true })).toBeInTheDocument();
     // FIDO MDS would only open this entry again.
     expect(within(dialog).queryByRole('button', { name: 'FIDO MDS' })).toBeNull();
 
