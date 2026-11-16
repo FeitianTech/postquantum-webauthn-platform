@@ -9,7 +9,6 @@ import logging
 from collections.abc import Mapping
 from typing import Any
 
-from fido2.webauthn import AuthenticatorData
 from flask import Blueprint, abort, jsonify, request, session
 
 from ...challenge_registry import (
@@ -20,7 +19,7 @@ from ...challenge_registry import (
 )
 from ...config import relying_party
 from ...encoding import encode_base64url
-from ...webauthn import client_binary
+from ...webauthn import assertion_checks, client_binary
 from .. import ceremony_session, json_body
 from . import account, parsing, stored_sign_count
 
@@ -206,20 +205,8 @@ def _matched_credential_id(matched_credential: Any) -> bytes:
 def _asserted_sign_count(response_mapping: Mapping[str, Any]) -> int | None:
     """The counter in the authenticatorData the signature was just verified over; ``None`` if it does not read."""
 
-    # It is base64url: the standard-alphabet decode used here previously
-    # silently dropped '-' and '_' and could misread the counter.
-    credential_response = response_mapping.get("response")
-    auth_data_value = (
-        credential_response.get("authenticatorData")
-        if isinstance(credential_response, Mapping)
-        else None
-    )
-    try:
-        return AuthenticatorData(
-            client_binary.decode_base64url_bytes(auth_data_value)
-        ).counter
-    except Exception:
-        return None
+    auth_data = assertion_checks.assertion_parts(response_mapping).auth_data
+    return auth_data.counter if auth_data is not None else None
 
 
 @bp.route("/api/authenticate/complete", methods=["POST"])

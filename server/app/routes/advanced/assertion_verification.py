@@ -13,13 +13,11 @@ from collections.abc import Mapping
 from typing import Any
 
 from fido2.cose import CoseKey, UnsupportedKey
-from fido2.webauthn import AuthenticatorData
 from flask import jsonify
 
-from ... import encoding
 from ...config import relying_party
 from ...encoding import encode_base64url
-from ...webauthn import assertion_hash, client_binary, pqc
+from ...webauthn import assertion_checks, assertion_hash, client_binary, pqc
 from ...webauthn.sign_count import sign_count_status
 from . import algorithms
 
@@ -129,16 +127,8 @@ def _result_algorithm(auth_result: Any) -> Any:
 
 
 def _asserted_sign_count(response: Any) -> int | None:
-    credential_response = response.get("response", {}) if isinstance(response, Mapping) else {}
-    if isinstance(credential_response, Mapping):
-        auth_data_b64 = credential_response.get("authenticatorData")
-        if isinstance(auth_data_b64, str):
-            try:
-                auth_data_bytes = encoding.decode_base64url(auth_data_b64)
-                return AuthenticatorData(auth_data_bytes).counter
-            except Exception:
-                return None
-    return None
+    auth_data = assertion_checks.assertion_parts(response).auth_data
+    return auth_data.counter if auth_data is not None else None
 
 
 def _verified_payload(

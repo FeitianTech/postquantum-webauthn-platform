@@ -419,7 +419,8 @@ its logic out here first.
   sizes and certificate keys), `webauthn/cose_keys.py` (RS384, RS512, PS384, PS512: the package
   imports it so fido2's `CoseKey` lookups find them), `webauthn/assertion_hash.py` (the Advanced
   tab's hash choice for an assertion), `webauthn/sign_count.py`, `webauthn/client_binary.py`
-  (bytes a client sends, read one way for both tabs), `webauthn/client_credentials.py` (a saved
+  (bytes a client sends, read one way for both tabs), `webauthn/assertion_checks.py` (an
+  assertion's authenticator data and userHandle, read one way for both tabs), `webauthn/client_credentials.py` (a saved
   credential the page sends back, read into its key material for both tabs),
   `webauthn/registration_facts.py` (what a verified registration's authData and extension
   outputs say, the relying party's view of it and the saved credential record, each in one key

@@ -229,9 +229,9 @@ def find_server_record_index(records: list[Any] | None, credential_id: bytes) ->
     return None
 
 
-def client_supplied_sign_count(
-    session_credentials: Iterable[Any], credential_id: bytes
-) -> int | None:
+def client_supplied_entry(session_credentials: Iterable[Any], credential_id: bytes) -> Mapping[str, Any] | None:
+    """The entry the browser sent for ``credential_id``; None when it sent none."""
+
     for entry in session_credentials or ():
         if not isinstance(entry, Mapping):
             continue
@@ -243,8 +243,15 @@ def client_supplied_sign_count(
         except Exception:
             continue
         if entry_id == credential_id:
-            return _as_counter(entry.get("signCount"))
+            return entry
     return None
+
+
+def client_supplied_sign_count(
+    session_credentials: Iterable[Any], credential_id: bytes
+) -> int | None:
+    entry = client_supplied_entry(session_credentials, credential_id)
+    return _as_counter(entry.get("signCount")) if entry is not None else None
 
 
 def resolve_stored_sign_count(
