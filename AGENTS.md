@@ -105,7 +105,8 @@ the CSP and the source rules.
     Each part a level shows (the response, its client data, the attestation object, the
     authenticator data, a certificate whose DER the record keeps) has "Decode in Codec"
     (`components/codec/DecodeInCodec.tsx`), and Back from the Codec finds the level as it was
-    left, the button focused (`detail/useReturnFromCodec.ts`).
+    left, the button focused (`detail/useReturnFromCodec.ts`, which keeps the place outside the
+    dialog: over an MDS entry the dialog is mounted again).
   - `advanced/`: the Advanced tab. Registration and Authentication segments, both mounted,
     each a form beside its JSON editor. `requestEditor.ts`: the editor's text is the request;
     a form change rewrites in the text only what it changed (`followForm`), an edit the form

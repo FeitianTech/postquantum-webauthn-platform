@@ -119,7 +119,7 @@ export function CredentialDetailDialog({
   overEntry,
 }: {
   route: SectionRoute;
-  /** Where the focus goes when the details close; by default what had it when they opened. */
+  /** Where the focus goes when the details close, asked then; by default what had it when they opened. */
   returnFocusTo?: () => HTMLElement | null;
   /** The MDS entry the details are open over (#mds/<entryId>/credential/<key>), if any. */
   overEntry?: string;
@@ -148,7 +148,7 @@ export function CredentialDetailDialog({
   const registrationPath = ['credential', key, 'registration'];
   const { level, certificate, authenticatorData } = useDetailLevel(route, key, rest, ready, Boolean(open && row));
   const levelRef = useLevelScroll(open, key, level);
-  const codecReturn = useReturnFromCodec(levelRef, key, levelName(level));
+  const codecReturn = useReturnFromCodec(levelRef, levelName(level));
   const codec = ready ? { payloads: ready.detail.payloads, onLeave: codecReturn.leave } : null;
 
   const onRegistration = useCallback(() => openPath(registrationPath), [openPath, registrationPath]);

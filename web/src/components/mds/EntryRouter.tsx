@@ -88,6 +88,22 @@ export function EntryRouter({ route, entries, phase }: { route: SectionRoute; en
     document.querySelector<HTMLElement>(`[data-mds-entry] [data-certificate="${left}"]`)?.focus({ preventScroll: true });
   }, [shown]);
 
+  // × over the entry gives the focus to the credential's button under its
+  // header, found again by its key (Back from the Codec mounts the entry's page
+  // again, so what opened the details is gone), else to the entry's heading.
+  // Asked once the URL has closed them: the key is the last one open.
+  const pageRef = useRef<HTMLDivElement>(null);
+  const detailKey = useRef('');
+  if (credentialOpen) detailKey.current = numberText;
+  const detailReturn = useCallback(() => {
+    const page = pageRef.current;
+    return (
+      page &&
+      (page.querySelector<HTMLElement>(`[data-credential-key="${CSS.escape(detailKey.current)}"] button`) ??
+        page.querySelector<HTMLElement>('[data-mds-entry] h3'))
+    );
+  }, []);
+
   const shownCertificate = certificate?.certificate ?? '';
   const decodeShown = useCallback(() => {
     void decode(shownCertificate);
@@ -95,7 +111,7 @@ export function EntryRouter({ route, entries, phase }: { route: SectionRoute; en
 
   return (
     <>
-      <div hidden={Boolean(certificate)}>
+      <div ref={pageRef} hidden={Boolean(certificate)}>
         <EntryPage
           entryId={entryId}
           detail={detail}
@@ -107,7 +123,7 @@ export function EntryRouter({ route, entries, phase }: { route: SectionRoute; en
           saved={saved}
         />
       </div>
-      <CredentialDetails route={underEntry} overEntry={entryId} />
+      <CredentialDetails route={underEntry} overEntry={entryId} returnFocusTo={detailReturn} />
       {entry && certificate ? (
         <CertificatePage
           entry={entry}

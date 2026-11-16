@@ -95,7 +95,9 @@ the page in a real browser.
   when the page still holds it; the credential details, which a dialog remounts, put
   their Decode in Codec button back themselves, where it was in the level's view. An
   MDS entry is not kept while its section is hidden: Back from Try in Advanced shows
-  it again as it arrives, its heading taking the focus.
+  it again as it arrives, its heading taking the focus. Details over an entry come
+  back with it, and find their place as the others do; their × gives the focus to
+  the credential's button under the entry's header, else to the entry's heading.
 - What a control hands the section it opens (a payload for the Codec, an MDS
   statement's settings for the Advanced registration) goes through the section
   router, never the URL: the hash names the section alone.

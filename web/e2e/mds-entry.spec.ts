@@ -258,7 +258,8 @@ test.describe('an MDS entry\'s identifiers', () => {
 });
 
 test.describe('an MDS entry\'s saved credentials', () => {
-  test('lists the ones with its AAGUID, opens one\'s details over the entry, and × then Back return to the entry, then the list', async ({ page }) => {
+  test('lists the ones with its AAGUID, opens one\'s details over the entry, the Codec and back, and × then Back return to the entry, then the list', async ({ page }) => {
+    await page.setViewportSize({ width: 1024, height: 600 });
     const record = credentialOfL1();
     await page.goto('/#mds');
     await page.evaluate(([key, value]) => window.localStorage.setItem(key, value), [STORAGE_KEY, JSON.stringify([record])] as const);
@@ -276,6 +277,24 @@ test.describe('an MDS entry\'s saved credentials', () => {
 
     await dialog.getByRole('button', { name: 'Show registration details' }).click();
     await expect(page).toHaveURL(/\/registration$/);
+
+    // The Codec and Back: the hidden section let the entry's page and the details
+    // go, and they come back with the button focused where it was in the view.
+    const decodeObject = dialog.getByRole('button', { name: 'Decode in Codec: attestation object' });
+    await decodeObject.scrollIntoViewIfNeeded();
+    expect(await dialog.locator('[data-overlay-scroll]').evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+    const place = () =>
+      decodeObject.evaluate((button) => Math.round(button.getBoundingClientRect().top - button.closest('[data-overlay-scroll]')!.getBoundingClientRect().top));
+    const left = await place();
+    await decodeObject.click();
+    await expect(page).toHaveURL(/\/#codec$/);
+    const { attestationObject } = record.registrationResponse.response;
+    await expect(page.locator('#codec-mode-panel-decode').getByRole('textbox', { name: 'Input to decode' })).toHaveValue(attestationObject);
+    await page.goBack();
+    await expect(page).toHaveURL(new RegExp(`#mds/${L1}/credential/id:${record.credentialIdBase64Url}/registration$`));
+    await expect(decodeObject).toBeFocused();
+    await expect.poll(async () => Math.abs((await place()) - left)).toBeLessThanOrEqual(1);
+
     await dialog.getByRole('button', { name: 'Close credential details' }).click();
     await expect(dialog).toBeHidden();
     await expect(page).toHaveURL(new RegExp(`#mds/${L1}$`));

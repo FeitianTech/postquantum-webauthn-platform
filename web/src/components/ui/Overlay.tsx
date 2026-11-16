@@ -19,7 +19,7 @@ type OverlayProps = {
   /** The id of the element that names the panel, or `label` for a name with none on screen. */
   labelledBy?: string;
   label?: string;
-  /** Where focus goes when it closes; by default what had focus when it opened. */
+  /** Where focus goes when it closes, asked then; by default what had focus when it opened. */
   returnFocusTo?: () => HTMLElement | null;
   /** Where focus goes when it opens; by default the panel itself. */
   initialFocus?: () => HTMLElement | null;
@@ -134,7 +134,7 @@ function useOverlayLayer({ open, mounted, target, rootRef, panelRef, onClose, re
     const root = rootRef.current;
     const panel = panelRef.current;
     if (!open || !mounted || !root || !panel) return undefined;
-    const giveBackTo = returnFocusRef.current?.() ?? (document.activeElement as HTMLElement | null);
+    const openedFrom = document.activeElement as HTMLElement | null;
 
     LAYERS.at(-1)?.setAttribute('inert', '');
     LAYERS.push(root);
@@ -162,6 +162,8 @@ function useOverlayLayer({ open, mounted, target, rootRef, panelRef, onClose, re
       LAYERS.splice(LAYERS.indexOf(root), 1);
       if (wasTop) LAYERS.at(-1)?.removeAttribute('inert');
       if (!LAYERS.length) inert?.removeAttribute('inert');
+      // Asked now: what opened it may have been mounted again meanwhile.
+      const giveBackTo = returnFocusRef.current?.() ?? openedFrom;
       if (giveBackTo?.isConnected) giveBackTo.focus({ preventScroll: true });
     };
     // A layer mounted open (a dialog whose chunk arrived once it was asked for)

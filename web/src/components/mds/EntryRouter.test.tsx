@@ -1,16 +1,29 @@
 // Opening an MDS entry from the list and going back, through the whole page:
 // the URL (#mds/<entryId>), the history, and the list found as it was.
-import { act, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { forgetCompletedRecords } from '@/components/credentials/detail/useCredentialDetail';
 import { renderApp } from '@/test/app';
 import { DETAIL_SCENARIO, decodeRoute, keepRecords, savedRecord, warmUpRoutes } from '@/test/credentials';
+import type { Route } from '@/test/fetch';
 import { entryNamed, fixtureRoutes, stubFetch } from '@/test/mds';
 
+// The decoder's answers, late once `slow` is set: details mounted again then
+// compose their level after they have opened.
+let slow = false;
+function decoder(): Route {
+  const decode = decodeRoute();
+  return async (init, url) => {
+    if (slow) await new Promise((resolve) => setTimeout(resolve, 200));
+    return decode(init, url);
+  };
+}
+
 function openAt(hash: string, records: object[] = []) {
+  slow = false;
   keepRecords(records);
-  stubFetch(fixtureRoutes({ ...warmUpRoutes(), '/api/codec': decodeRoute() }));
+  stubFetch(fixtureRoutes({ ...warmUpRoutes(), '/api/codec': decoder() }));
   renderApp(hash);
 }
 
@@ -137,6 +150,18 @@ describe('a saved credential\'s details over an MDS entry', () => {
     const dialog = await screen.findByRole('dialog');
     expect(await within(dialog).findByRole('button', { name: 'FIDO MDS' })).toBeVisible();
 
+    // After the Codec, × gives the focus to the entry's heading, which lists no such credential.
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Show registration details' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Decode in Codec: attestation object' }));
+    await waitFor(() => expect(window.location.hash).toBe('#codec'));
+    await act(async () => {
+      window.history.back();
+    });
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Decode in Codec: attestation object' })).toHaveFocus());
+    await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Close credential details' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    await waitFor(() => expect(screen.getByRole('heading', { level: 3, name: 'Fixture Security Key L2' })).toHaveFocus());
+
     act(() => {
       window.location.hash = `#mds/${L1}/credential/id:unknown`;
     });
@@ -176,6 +201,57 @@ describe('an MDS entry\'s saved credentials', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Back' }));
     await waitFor(() => expect(list()).toBeVisible());
     expect(window.location.hash).toBe('#mds');
+  });
+
+  it('open details that find their place again after the Codec, and × gives the focus back to the credential\'s button', async () => {
+    openAt('#mds', [OF_L1]);
+    await loaded();
+    await userEvent.click(link(L1));
+    await waitFor(() => expect(saved()).not.toBeNull());
+    await userEvent.click(within(saved()!).getByRole('button', { name: 'l1@example.com' }));
+    await userEvent.click(await within(await screen.findByRole('dialog')).findByRole('button', { name: 'Show registration details' }));
+    const registration = `#mds/${L1}/credential/id:${OF_L1.credentialIdBase64Url}/registration`;
+    await waitFor(() => expect(window.location.hash).toBe(registration));
+    await userEvent.click(await screen.findByRole('button', { name: 'Decode in Codec: attestation object' }));
+    await waitFor(() => expect(window.location.hash).toBe('#codec'));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+
+    // The hidden section let the entry's page and the details go: Back mounts
+    // them again, and the button is put back once their level is composed, and
+    // kept there while the level's late parts change its size, until the person scrolls.
+    const watched: string[] = [];
+    const stopped: string[] = [];
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        private level = '';
+        constructor(private readonly resized: () => void) {}
+        observe(target: HTMLElement) {
+          if (!target.dataset.level) return;
+          this.level = target.dataset.level;
+          watched.push(this.level);
+          this.resized();
+        }
+        disconnect() {
+          if (this.level) stopped.push(this.level);
+        }
+      },
+    );
+    slow = true;
+    await act(async () => {
+      window.history.back();
+    });
+    await waitFor(() => expect(window.location.hash).toBe(registration));
+    expect(await screen.findByRole('dialog')).toHaveFocus();
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Decode in Codec: attestation object' })).toHaveFocus());
+    expect(watched).toEqual(['registration']);
+    fireEvent.wheel(document.querySelector('[data-overlay-scroll]')!);
+    expect(stopped).toEqual(['registration']);
+
+    await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Close credential details' }));
+    await waitFor(() => expect(window.location.hash).toBe(`#mds/${L1}`));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    await waitFor(() => expect(within(saved()!).getByRole('button', { name: 'l1@example.com' })).toHaveFocus());
   });
 
   it('are not there for an entry this browser keeps none of', async () => {
