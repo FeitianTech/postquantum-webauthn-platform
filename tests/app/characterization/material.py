@@ -240,10 +240,12 @@ def registration_payload(
     tamper: bool = False,
     user_present: bool = True,
     include_credential: bool = True,
+    extra_flags: int = 0,
 ) -> dict[str, Any]:
     """A registration response; ``attestation`` is ``none``, ``self`` or ``x5c``.
 
-    ``tamper`` flips a bit of the attestation signature after signing.
+    ``tamper`` flips a bit of the attestation signature after signing;
+    ``extra_flags`` are authData flag bits set beside UP, UV and AT.
     """
 
     client_data = ceremony_helpers.client_data(
@@ -251,7 +253,7 @@ def registration_payload(
     )
     auth_data = authenticator.authenticator_data(
         rp_id=rp_id, counter=counter, user_verified=user_verified, cose_key_bytes=cose_key_bytes,
-        user_present=user_present, include_credential=include_credential,
+        user_present=user_present, include_credential=include_credential, extra_flags=extra_flags,
     )
     statement: dict[str, Any] = {}
     if attestation == "self":
@@ -325,9 +327,12 @@ def assertion_payload(
     valid_signature: bool = True,
     origin: str = ceremony_helpers.ORIGIN,
     attachment: str | None = None,
+    extra_flags: int = 0,
+    user_handle: bytes | None = None,
 ) -> dict[str, Any]:
     payload = ceremony_helpers.assertion_payload(
-        authenticator, challenge=challenge, counter=counter, valid_signature=valid_signature, origin=origin
+        authenticator, challenge=challenge, counter=counter, valid_signature=valid_signature, origin=origin,
+        extra_flags=extra_flags, user_handle=user_handle,
     )
     if attachment is not None:
         payload["authenticatorAttachment"] = attachment

@@ -31,6 +31,8 @@ _ECDSA_HASHES = {"es256": hashes.SHA256, "es384": hashes.SHA384, "es512": hashes
 
 FLAG_UP = 0x01
 FLAG_UV = 0x04
+FLAG_BE = 0x08
+FLAG_BS = 0x10
 FLAG_AT = 0x40
 
 
@@ -109,8 +111,9 @@ class Authenticator:
         user_verified: bool = True,
         cose_key_bytes: bytes | None = None,
         user_present: bool = True,
+        extra_flags: int = 0,
     ) -> bytes:
-        flags = FLAG_UP if user_present else 0
+        flags = (FLAG_UP if user_present else 0) | extra_flags
         if user_verified:
             flags |= FLAG_UV
         if include_credential:
@@ -137,12 +140,16 @@ class Authenticator:
         declared_algorithm: int | None = None,
         cose_key_bytes: bytes | None = None,
         resident: bool = True,
+        backup_eligible: bool | None = None,
+        user_handle: bytes | None = None,
     ) -> dict[str, Any]:
         """Build the client-supplied credential record the advanced tab sends.
 
         ``declared_algorithm`` populates the ``algorithm`` field, which is
         independent of the COSE key's own label 3 -- that independence is the
-        heart of the custom-algorithm bypass.
+        heart of the custom-algorithm bypass. ``backup_eligible`` is the BE flag
+        the page's record kept from the registration, and ``user_handle`` the
+        record's user handle, each sent only when given.
         """
 
         entry: dict[str, Any] = {
@@ -155,6 +162,10 @@ class Authenticator:
         }
         if declared_algorithm is not None:
             entry["algorithm"] = declared_algorithm
+        if backup_eligible is not None:
+            entry["backupEligible"] = backup_eligible
+        if user_handle is not None:
+            entry["userHandleHex"] = user_handle.hex()
         return entry
 
 
@@ -215,11 +226,13 @@ def registration_payload(
     attestation: str = "none",
     attestation_key: ec.EllipticCurvePrivateKey | None = None,
     x5c: Sequence[bytes] = (),
+    extra_flags: int = 0,
 ) -> dict[str, Any]:
     """Build a complete, genuinely-signed registration response.
 
     ``attestation`` is ``none`` or ``packed`` (``packed_statement``, with
-    ``attestation_key`` and ``x5c``).
+    ``attestation_key`` and ``x5c``); ``extra_flags`` are authData flag bits
+    set beside UP, UV and AT (the backup flags).
     """
 
     data = client_data(
@@ -227,7 +240,7 @@ def registration_payload(
         cross_origin=cross_origin,
     )
     auth_data = authenticator.authenticator_data(
-        rp_id=rp_id, cose_key_bytes=cose_key_bytes, counter=counter
+        rp_id=rp_id, cose_key_bytes=cose_key_bytes, counter=counter, extra_flags=extra_flags
     )
     statement: dict[str, Any] = {}
     if attestation == "packed":
@@ -254,31 +267,38 @@ def assertion_payload(
     rp_id: str = RP_ID,
     counter: int = 1,
     valid_signature: bool = True,
+    extra_flags: int = 0,
+    user_handle: bytes | None = None,
 ) -> dict[str, Any]:
     """Build an assertion response.
 
     With ``valid_signature=False`` the signature is a real signature over the
     WRONG message -- structurally well formed, cryptographically invalid.
+    ``extra_flags`` are authData flag bits set beside UP and UV (the backup
+    flags); ``user_handle``, when given, is the response's userHandle.
     """
 
     data = client_data(challenge=challenge, ceremony_type="webauthn.get", origin=origin)
     auth_data = authenticator.authenticator_data(
-        rp_id=rp_id, counter=counter, include_credential=False
+        rp_id=rp_id, counter=counter, include_credential=False, extra_flags=extra_flags
     )
     signed_message = auth_data + hashlib.sha256(data).digest()
     if not valid_signature:
         signed_message = b"not-the-assertion-message" + signed_message
     signature = authenticator.sign(signed_message)
 
+    response = {
+        "clientDataJSON": b64u(data),
+        "authenticatorData": b64u(auth_data),
+        "signature": b64u(signature),
+    }
+    if user_handle is not None:
+        response["userHandle"] = b64u(user_handle)
     return {
         "id": b64u(authenticator.credential_id),
         "rawId": b64u(authenticator.credential_id),
         "type": "public-key",
-        "response": {
-            "clientDataJSON": b64u(data),
-            "authenticatorData": b64u(auth_data),
-            "signature": b64u(signature),
-        },
+        "response": response,
         "clientExtensionResults": {},
     }
 

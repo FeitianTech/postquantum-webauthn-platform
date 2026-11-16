@@ -13,7 +13,14 @@ from typing import Any
 from fido2.webauthn import AuthenticatorData
 
 AAGUID = bytes.fromhex("00112233445566778899aabbccddeeff")
-ES256_KEY = {1: 2, 3: -7, -1: 1, -2: b"\x01" * 32, -3: b"\x02" * 32}
+# P-256's generator: a point on the curve, so the key loads as a real one would.
+ES256_KEY = {
+    1: 2,
+    3: -7,
+    -1: 1,
+    -2: bytes.fromhex("6b17d1f2e12c4247f8bce6e563a440f277037d812deb33a0f4a13945d898c296"),
+    -3: bytes.fromhex("4fe342e2fe1a7f9b8ee7eb4a7c0f9e162bce33576b315ececbb6406837bf51f5"),
+}
 UP_AT = int(AuthenticatorData.FLAG.UP | AuthenticatorData.FLAG.AT)
 _A_CREDENTIAL = object()
 
