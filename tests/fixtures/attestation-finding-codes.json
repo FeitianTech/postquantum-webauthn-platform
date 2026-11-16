@@ -18,6 +18,7 @@
     "cose_key_error",
     "cross_origin_not_allowed",
     "metadata_entry_missing",
+    "metadata_entry_revoked",
     "metadata_lookup_failed",
     "metadata_not_available",
     "metadata_not_fido_trusted",

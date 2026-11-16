@@ -12,21 +12,33 @@ from ...mds import verifier as mds_verifier
 from . import error_codes
 
 
-def _metadata_entry_by_aaguid(verifier: Any, credential_aaguid_bytes: bytes) -> Any:
-    """The metadata entry for the credential's AAGUID, or ``None``; a failed lookup is no entry."""
+def _metadata_entry_by_aaguid(verifier: Any, credential_aaguid_bytes: bytes) -> tuple[Any, Any]:
+    """The metadata entry for the credential's AAGUID and, when it has none, the revoked
+    entry it has (which the app's verifier finds apart); a failed lookup is neither."""
 
     try:
         aaguid_obj = Aaguid(credential_aaguid_bytes)
     except (TypeError, ValueError):
-        return None
+        return None, None
     if verifier is None:
         verifier = mds_verifier.get_mds_verifier()
     if verifier is None:
-        return None
+        return None, None
     try:
-        return verifier.find_entry_by_aaguid(aaguid_obj)
+        entry = verifier.find_entry_by_aaguid(aaguid_obj)
+        if entry is None and isinstance(verifier, mds_verifier.IndexedVerifier):
+            return None, verifier.find_revoked_entry_by_aaguid(aaguid_obj)
+        return entry, None
     except Exception:
-        return None
+        return None, None
+
+
+def _report_revoked(errors: list[str]) -> None:
+    """An authenticator whose only entry is revoked is reported as revoked, not as having none."""
+
+    if "metadata_entry_missing" in errors:
+        errors.remove("metadata_entry_missing")
+    errors.append("metadata_entry_revoked")
 
 
 def _listed_algorithms(algorithms: Any) -> list[int]:
@@ -120,8 +132,9 @@ def finalize_metadata_results(
     root_check_details: dict[str, bool | None] | None,
     root_valid: bool | None,
 ) -> None:
+    revoked_entry = None
     if metadata_entry is None and credential_aaguid_bytes:
-        fallback_entry = _metadata_entry_by_aaguid(verifier, credential_aaguid_bytes)
+        fallback_entry, revoked_entry = _metadata_entry_by_aaguid(verifier, credential_aaguid_bytes)
         if fallback_entry is not None:
             metadata_entry = fallback_entry
             metadata_lookup_source = "aaguid"
@@ -143,6 +156,10 @@ def finalize_metadata_results(
         latest = statement_fields.latest_status_code(reports)
         if latest in error_codes.UNSAFE_STATUSES:
             results["errors"].append(error_codes.unsafe_status(latest))
+    elif revoked_entry is not None:
+        # No entry vouches for the authenticator; its revoked one says why, and what it was.
+        facts.update(_status_facts(_status_reports(revoked_entry)))
+        _report_revoked(results["errors"])
 
     credential_aaguid_value = credential_aaguid_bytes if credential_aaguid_bytes else None
     certificate_aaguid_value = certificate_aaguid_bytes if certificate_aaguid_bytes else None

@@ -62,6 +62,15 @@ describe('a finding', () => {
     });
   });
 
+  it('says an authenticator whose metadata entry is revoked is revoked', () => {
+    expect(describeFinding('metadata_entry_revoked', 'warning')).toMatchObject({
+      code: 'metadata_entry_revoked',
+      known: true,
+      en: 'FIDO\'s metadata has revoked this authenticator\'s entry',
+      zh: 'FIDO 元数据已撤销该认证器的条目',
+    });
+  });
+
   it('gives no reason where none follows the code', () => {
     expect(describeFinding('  trust_path_missing:  ', 'warning')).toMatchObject({
       code: 'trust_path_missing',

@@ -331,7 +331,9 @@ its logic out here first.
   within a budget: a listing reads only what was written since), `effective.py` (a visitor's
   uploads as the explorer lists them, `explorer/custom`, and resolve with them in front),
   `verifier.py` (the verified entries indexed from their JSON by fido2's keys, each parsed when
-  found, a visitor's uploads in front).
+  found, a visitor's uploads in front; a revoked entry is never found, but asked for apart by
+  its AAGUID, so a registration whose authenticator has only a revoked entry reports
+  `metadata_entry_revoked`, not a missing entry).
 - Leaves the rest import: `encoding.py` (base64, base64url and hex, written and read strictly),
   `json_values.py` (`make_json_safe`, and `as_bytes`, the one reading of a value as bytes),
   `aaguid.py` (an AAGUID's GUID spelling), `env_flags.py`, `accept_encoding.py` (whether a request's

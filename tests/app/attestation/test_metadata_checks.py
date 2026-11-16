@@ -9,9 +9,11 @@ import json
 from types import SimpleNamespace
 
 import pytest
+from fido2.mds3 import MdsAttestationVerifier
 
 from server.app.mds import entries as mds_entries
 from server.app.mds import statement_fields
+from server.app.mds import verifier as mds_verifier
 from server.app.webauthn.attestation import metadata_checks
 
 from ..metadata import mds_fixture
@@ -83,13 +85,13 @@ def _fixture_entry(description):
     return next(raw for raw in payload["entries"] if raw.get("metadataStatement", {}).get("description") == description)
 
 
-def _finalized(metadata_entry, aaguid=b"\x01" * 16):
-    results = {"authenticator_data": {"algorithm": -7}, "errors": [], "warnings": []}
+def _finalized(metadata_entry, aaguid=b"\x01" * 16, *, verifier=None, errors=()):
+    results = {"authenticator_data": {"algorithm": -7}, "errors": list(errors), "warnings": []}
     metadata_checks.finalize_metadata_results(
         results,
         metadata_entry=metadata_entry,
         metadata_lookup_source="aaguid" if metadata_entry is not None else None,
-        verifier=None,
+        verifier=verifier,
         credential_aaguid_bytes=aaguid,
         certificate_aaguid_bytes=b"",
         root_check_details=None,
@@ -153,3 +155,40 @@ def test_the_other_statuses_and_the_certification_levels_are_shown_not_findings(
     assert results["metadata"]["latest_status"] == statement_fields.latest_status(
         [{"status": status, "effectiveDate": "2026-01-01"} for status in statuses[-1:]]
     )
+
+
+REVOKED_KEY = bytes.fromhex("f1d0f1d0000040008000000000000005")
+
+
+def _fixture_payload():
+    return json.loads((mds_fixture.SNAPSHOT_DIR / "fido-mds3.verified.json").read_text(encoding="utf-8"))
+
+
+@pytest.mark.parametrize(
+    ("errors", "reported"),
+    [
+        # A self or none attestation: no evaluation looked for the entry.
+        ((), ["metadata_entry_revoked"]),
+        # An attestation with a chain, whose evaluation found no entry.
+        (("attestation_root_not_found", "metadata_entry_missing"), ["attestation_root_not_found", "metadata_entry_revoked"]),
+    ],
+)
+def test_an_authenticator_whose_only_entry_is_revoked_is_reported_as_revoked_with_its_status(errors, reported):
+    verifier = mds_verifier.IndexedVerifier(mds_verifier.PackagedEntries(_fixture_payload()["entries"]))
+
+    results = _finalized(None, REVOKED_KEY, verifier=verifier, errors=errors)
+
+    assert results["errors"] == reported
+    metadata = results["metadata"]
+    assert (metadata["available"], metadata["description"]) == (False, None)
+    assert metadata["latest_status"] == "Revoked"
+    assert metadata["certification_level"] == "FIDO Certified L1 • Fixture Revoked Key • (FIDO20020230110005)"
+
+
+def test_a_verifier_that_keeps_no_revoked_entry_reports_none():
+    payload = mds_entries.parse_payload({**_fixture_payload(), "nextUpdate": "2099-01-01"})
+
+    results = _finalized(None, REVOKED_KEY, verifier=MdsAttestationVerifier(payload))
+
+    assert results["errors"] == []
+    assert (results["metadata"]["available"], results["metadata"]["latest_status"]) == (False, None)

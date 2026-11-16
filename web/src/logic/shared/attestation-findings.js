@@ -108,6 +108,10 @@ export const FINDING_SENTENCES = Object.freeze({
         en: 'The metadata has no entry for this authenticator',
         zh: '元数据中没有该认证器的条目',
     },
+    metadata_entry_revoked: {
+        en: 'FIDO\'s metadata has revoked this authenticator\'s entry',
+        zh: 'FIDO 元数据已撤销该认证器的条目',
+    },
     attestation_root_not_found: {
         en: 'The metadata names no root certificate that issued this attestation\'s chain',
         zh: '元数据中没有签发该证明证书链的根证书',

@@ -30,6 +30,8 @@ from .ceremony_helpers import (
 
 # The fixture snapshot's entry whose getInfo lists ES256 and EdDSA, and no other algorithm.
 ES256_AND_EDDSA_AAGUID = uuid.UUID("f1d0f1d0-0000-4000-8000-000000000001").bytes
+# The fixture snapshot's "Fixture Revoked Key": its only entry is revoked.
+REVOKED_KEY_AAGUID = uuid.UUID("f1d0f1d0-0000-4000-8000-000000000005").bytes
 
 # --------------------------------------------------------------------------
 # NEGATIVE -- the simple flow gates on errors.
@@ -339,3 +341,19 @@ def test_an_unsafe_mds_status_is_an_advanced_error_and_the_record_keeps_the_stat
     assert payload["attestationErrors"] == ["metadata_status_unsafe: ATTESTATION_KEY_COMPROMISE"]
     kept = payload["storedCredential"]["properties"]["attestationSummary"]["metadata"]
     assert (kept["latest_status"], kept["certification_level"]) == ("Attestation KEY Compromise", L1_CERTIFICATION)
+
+
+def test_an_authenticator_whose_only_mds_entry_is_revoked_is_a_simple_warning_saying_so(simple_storage, mds_fixture_snapshot):
+    response = complete_simple_registration(entry_app().test_client(), Authenticator(aaguid=REVOKED_KEY_AAGUID))
+
+    assert response.status_code == 200, response.get_json()
+    body = response.get_json()
+    checks = body["relyingParty"]["registrationData"]["attestationChecks"]
+    assert checks["errors"] == []
+    assert checks["warnings"] == ["metadata_entry_revoked"]
+    assert checks["metadata"]["available"] is False
+    kept = body["storedCredential"]["properties"]["attestationSummary"]["metadata"]
+    assert (kept["latest_status"], kept["certification_level"]) == (
+        "Revoked",
+        "FIDO Certified L1 • Fixture Revoked Key • (FIDO20020230110005)",
+    )

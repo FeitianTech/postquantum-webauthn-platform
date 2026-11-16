@@ -7,8 +7,9 @@ JSON (``PackagedEntries``) by the keys fido2's tables use, and an entry is parse
 when it is first found. The rules are fido2's and the merge's they replace:
 
 - an entry is found by its own ``aaguid`` and ``attestationCertificateKeyIdentifiers``
-  (not its statement's); a revoked entry is never found; of the entries with one
-  key, the last wins;
+  (not its statement's); a revoked entry is never found, but asked for apart by its
+  AAGUID (``find_revoked_entry_by_aaguid``), so a registration can say so; of the
+  entries with one key, the last wins;
 - a visitor's upload hides every packaged entry whose statement has its
   statement's AAGUID, even when the upload itself is revoked; of two uploads with
   one such AAGUID the first listed (the newer) is kept;
@@ -27,6 +28,7 @@ from fido2.mds3 import (
     MdsAttestationVerifier,
     MetadataBlobPayload,
     MetadataBlobPayloadEntry,
+    filter_revoked,
 )
 from fido2.webauthn import Aaguid
 from flask import g, has_request_context
@@ -76,11 +78,16 @@ class PackagedEntries:
     def __init__(self, raw_entries: list[Any]):
         self.raw = raw_entries
         self._by_aaguid: dict[bytes, list[int]] = {}
+        self._revoked_by_aaguid: dict[bytes, list[int]] = {}
         self._by_key_identifier: dict[bytes, list[int]] = {}
         for index, raw in enumerate(raw_entries):
-            if not isinstance(raw, Mapping) or _revoked(raw):
+            if not isinstance(raw, Mapping):
                 continue
             aaguid = _entry_aaguid(raw)
+            if _revoked(raw):
+                if aaguid:
+                    self._revoked_by_aaguid.setdefault(aaguid, []).append(index)
+                continue
             if aaguid:
                 self._by_aaguid.setdefault(aaguid, []).append(index)
             for identifier in _key_identifiers(raw):
@@ -108,6 +115,11 @@ class PackagedEntries:
         """The last entry with ``aaguid`` that no upload hides."""
 
         return self._last(self._by_aaguid.get(bytes(aaguid), []), hidden)
+
+    def revoked_by_aaguid(self, aaguid: bytes, hidden: frozenset[str]) -> MetadataBlobPayloadEntry | None:
+        """The last revoked entry with ``aaguid`` that no upload hides."""
+
+        return self._last(self._revoked_by_aaguid.get(bytes(aaguid), []), hidden)
 
     def by_key_identifier(self, identifier: bytes, hidden: frozenset[str]) -> MetadataBlobPayloadEntry | None:
         """The last entry with the key identifier that no upload hides."""
@@ -138,10 +150,22 @@ class IndexedVerifier(MdsAttestationVerifier):
         super().__init__(MetadataBlobPayload(legal_header="", no=0, next_update=today, entries=tuple(kept)))
         self.packaged = packaged
         self._hidden = frozenset(hidden)
+        # fido2's tables leave revoked uploads out; the newest of an AAGUID is kept here.
+        self._revoked_uploads: dict[bytes, MetadataBlobPayloadEntry] = {}
+        for entry in kept:
+            if entry.aaguid and not filter_revoked(entry):
+                self._revoked_uploads.setdefault(bytes(entry.aaguid), entry)
 
     def find_entry_by_aaguid(self, aaguid: Aaguid) -> MetadataBlobPayloadEntry | None:
         found = self.packaged.by_aaguid(aaguid, self._hidden) if self.packaged is not None else None
         return found if found is not None else super().find_entry_by_aaguid(aaguid)
+
+    def find_revoked_entry_by_aaguid(self, aaguid: Aaguid) -> MetadataBlobPayloadEntry | None:
+        """The revoked entry with ``aaguid``, which ``find_entry_by_aaguid`` never finds: the
+        packaged one no upload hides, else a revoked upload's."""
+
+        found = self.packaged.revoked_by_aaguid(aaguid, self._hidden) if self.packaged is not None else None
+        return found if found is not None else self._revoked_uploads.get(bytes(aaguid))
 
     def find_entry_by_chain(self, certificate_chain: Sequence[bytes]) -> MetadataBlobPayloadEntry | None:
         for der in certificate_chain:

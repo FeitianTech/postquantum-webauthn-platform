@@ -34,6 +34,7 @@ OTHER = "0badc0de-0000-4000-8000-000000000001"
 DUPLICATED = "d0d0d0d0-0000-4000-8000-000000000001"
 REVOKED_LAST = "e0e0e0e0-0000-4000-8000-000000000001"
 STATEMENT_ONLY = "5a5a5a5a-0000-4000-8000-000000000001"
+FIXTURE_REVOKED = "f1d0f1d0-0000-4000-8000-000000000005"
 
 
 def _certificate(seed: int) -> bytes:
@@ -156,6 +157,20 @@ def test_the_rules_the_lookups_follow(mds_fixture_snapshot):
     assert by_aaguid(STATEMENT_ONLY) is None
     assert _described(indexed.find_entry_by_chain([SHARED_WITH_UPLOAD])) == "key identifier, last"
     assert _described(indexed.find_entry_by_chain([UPLOAD_ONLY])) == "upload by key identifier"
+
+
+def test_a_revoked_entry_is_found_apart_by_its_aaguid_and_uploads_hide_it_as_they_hide_the_others(mds_fixture_snapshot):
+    packaged = mds_verifier.PackagedEntries(_packaged(mds_fixture_snapshot))
+    with_uploads = mds_verifier.IndexedVerifier(packaged, _uploads())
+    revoked = lambda verifier, aaguid: _described(verifier.find_revoked_entry_by_aaguid(Aaguid.parse(aaguid)))  # noqa: E731
+
+    assert with_uploads.find_entry_by_aaguid(Aaguid.parse(FIXTURE_REVOKED)) is None
+    assert revoked(with_uploads, FIXTURE_REVOKED) == "Fixture Revoked Key"
+    assert revoked(with_uploads, REVOKED_LAST) == "revoked, last"
+    assert revoked(with_uploads, DUPLICATED) == "revoked upload"  # it hides the packaged entries
+    assert revoked(with_uploads, PACKAGED) is None
+    assert revoked(mds_verifier.IndexedVerifier(packaged), DUPLICATED) is None
+    assert revoked(mds_verifier.IndexedVerifier(None, _uploads()), DUPLICATED) == "revoked upload"
 
 
 def test_only_the_entry_found_is_parsed_and_it_is_parsed_once(mds_fixture_snapshot, monkeypatch):
