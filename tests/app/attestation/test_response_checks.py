@@ -45,3 +45,21 @@ def test_credential_facts_report_a_public_key_that_does_not_parse(public_key, al
     assert facts["algorithm"] == algorithm
     assert facts["cose_key_valid"] is False
     assert [error.split(":")[0] for error in results["errors"]] == ["cose_key_error"]
+
+
+def test_credential_facts_report_a_key_that_reads_but_cannot_be_used():
+    results = {"errors": []}
+    off_curve = {**stand_ins.ES256_KEY, -2: b"\x01" * 32, -3: b"\x02" * 32}
+
+    facts = response_checks._credential_facts(results, stand_ins.CredentialData(public_key=off_curve))
+
+    assert (facts["algorithm"], facts["cose_key_valid"]) == (-7, False)
+    assert results["errors"] == ["cose_key_invalid: the point is not on P-256"]
+
+
+def test_credential_facts_find_a_key_on_its_curve_valid():
+    results = {"errors": []}
+
+    facts = response_checks._credential_facts(results, stand_ins.CredentialData())
+
+    assert (facts["algorithm"], facts["cose_key_valid"], results["errors"]) == (-7, True, [])

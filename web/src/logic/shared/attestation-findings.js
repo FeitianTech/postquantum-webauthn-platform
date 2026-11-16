@@ -60,6 +60,10 @@ export const FINDING_SENTENCES = Object.freeze({
         en: 'The credential\'s public key (a COSE key) could not be read',
         zh: '无法读取凭据的公钥（COSE 密钥）',
     },
+    cose_key_invalid: {
+        en: 'The credential\'s public key cannot be used for its algorithm',
+        zh: '凭据的公钥无法用于其算法',
+    },
     unsupported_attestation: {
         en: 'This server does not verify this attestation format',
         zh: '本服务器不验证此证明格式',

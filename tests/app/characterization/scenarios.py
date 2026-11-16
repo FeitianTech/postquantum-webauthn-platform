@@ -10,6 +10,8 @@ import copy
 from collections.abc import Callable
 from typing import Any
 
+from fido2 import cbor
+
 from server.app.routes.advanced import algorithms as advanced_algorithms
 from server.app.storage import credential_artifacts, credentials
 
@@ -877,3 +879,29 @@ def _(r: Recorder) -> None:
             json={**body, "__assertion_response": m.as_browser_writes_it(assertion, advanced, outputs)},
             headers=HEADERS,
         )
+
+
+# -- what a credential's key, its backup flags and its user handle are checked for ---
+
+
+def _changed_key(authenticator, labels: dict[int, Any]) -> bytes:
+    """``authenticator``'s COSE key with some of its labels changed."""
+
+    return cbor.encode({**authenticator.cose_key, **labels})
+
+
+@scenario("simple-register-cose-key")
+def _(r: Recorder) -> None:
+    client = r.client()
+    off_curve = m.Authenticator("simple-key-off-curve")
+    _simple_register(r, client, off_curve, cose_key_bytes=_changed_key(off_curve, {-2: b"\x01" * 32, -3: b"\x02" * 32}))
+    _simple_register(r, client, m.Authenticator("simple-key-on-curve"))
+
+
+@scenario("advanced-register-cose-key")
+def _(r: Recorder) -> None:
+    client = r.client()
+    wrong_curve = m.Authenticator("adv-key-wrong-curve", key_type="ed25519")
+    eddsa = _options(pubKeyCredParams=[{"type": "public-key", "alg": -8}])
+    _advanced_register(r, client, wrong_curve, options=eddsa, cose_key_bytes=_changed_key(wrong_curve, {-1: 7}))
+    _advanced_register(r, client, m.Authenticator("adv-key-ed25519", key_type="ed25519"), options=eddsa)

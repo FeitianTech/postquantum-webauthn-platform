@@ -2,8 +2,9 @@
 
 A table of registration responses -- valid, tampered, wrongly typed, bound to the
 wrong origin, challenge or RP, missing UP, UV or the attested credential, using a
-disallowed algorithm or a broken COSE key, a statement fido2 fails on, ML-DSA, and
-the captured attestation formats -- goes through the checks with no MDS verifier,
+disallowed algorithm, a broken COSE key or one that cannot be used for its
+algorithm, a statement fido2 fails on, ML-DSA, and the captured attestation
+formats -- goes through the checks with no MDS verifier,
 and ``metadata_checks.finalize_metadata_results`` gets fake metadata entries and
 verifiers. Every result must equal ``golden/attestation-checks.json``.
 """
@@ -38,9 +39,15 @@ def _with_statement(payload, statement):
 def _cases():
     es256 = material.Authenticator("checks-es256", aaguid=bytes(range(16)))
     mldsa = material.Authenticator("checks-mldsa44", key_type="ML-DSA-44")
+    ed25519 = material.Authenticator("checks-ed25519", key_type="ed25519")
+    rs256 = material.Authenticator("checks-rs256", key_type="rs256")
     state = {"challenge": b64u(CHALLENGE), "user_verification": "preferred"}
     build = lambda authenticator=es256, **kwargs: material.registration_payload(  # noqa: E731
         authenticator, challenge=CHALLENGE, **kwargs
+    )
+    # The credential's own key with some of its labels changed, in a "none" attestation.
+    changed = lambda labels, authenticator=es256: build(  # noqa: E731
+        authenticator, cose_key_bytes=cbor.encode({**authenticator.cose_key, **labels})
     )
     cases = {
         "none-valid": (build(), state, ES256_ONLY),
@@ -67,6 +74,18 @@ def _cases():
         "algorithm-not-allowed": (build(), state, {"pubKeyCredParams": [{"type": "public-key", "alg": -257}, {"alg": "x"}, "y"]}),
         "cose-key-broken": (build(cose_key_bytes=b"\xa1\x01\x02"), state, ES256_ONLY),
         "cose-key-unknown-algorithm": (build(cose_key_bytes=es256.cose_key_with_declared_algorithm(-12345)), state, ES256_ONLY),
+        "cose-key-ec2-off-curve": (changed({-2: b"\x01" * 32, -3: b"\x02" * 32}), state, ES256_ONLY),
+        "cose-key-ec2-wrong-curve": (changed({-1: 2}), state, ES256_ONLY),
+        "cose-key-ec2-compressed": (changed({-3: True}), state, ES256_ONLY),
+        "cose-key-wrong-key-type": (changed({1: 3}), state, ES256_ONLY),
+        "cose-key-okp-valid": (build(ed25519), state, None),
+        "cose-key-eddsa-on-ed448": (changed({-1: 7}, ed25519), state, None),
+        "cose-key-ed25519-on-ed448": (changed({3: -19, -1: 7}, ed25519), state, None),
+        "cose-key-okp-short": (changed({-2: b"\x01" * 31}, ed25519), state, None),
+        "cose-key-mldsa-valid": (build(mldsa), state, None),
+        "cose-key-mldsa-short": (changed({-1: b"\x01" * 1311}, mldsa), state, None),
+        "cose-key-rsa-valid": (build(rs256), state, None),
+        "cose-key-rsa-unloadable": (changed({-2: b"\x02"}, rs256), state, None),
         "options-challenge-base64url": (build(), None, {"challenge": {"$base64url": b64u(CHALLENGE)}}),
         "options-challenge-base64": (build(), None, {"challenge": {"$base64": __import__("base64").b64encode(CHALLENGE).decode()}}),
         "options-challenge-hex": (build(), None, {"challenge": {"$hex": CHALLENGE.hex()}}),

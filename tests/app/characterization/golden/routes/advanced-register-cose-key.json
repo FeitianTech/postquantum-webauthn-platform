@@ -1,0 +1,1469 @@
+{
+ "scenario": "advanced-register-cose-key",
+ "requests": [
+  {
+   "request": "POST /api/advanced/register/begin",
+   "status": 200,
+   "headers": [
+    [
+     "Content-Type",
+     "application/json"
+    ],
+    [
+     "Content-Length",
+     "448"
+    ],
+    [
+     "X-Content-Type-Options",
+     "nosniff"
+    ],
+    [
+     "X-Frame-Options",
+     "DENY"
+    ],
+    [
+     "Referrer-Policy",
+     "no-referrer"
+    ],
+    [
+     "Content-Security-Policy",
+     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; require-trusted-types-for 'script'; trusted-types nextjs nextjs#bundler; report-uri /api/csp-report; report-to csp"
+    ],
+    [
+     "Reporting-Endpoints",
+     "csp=\"/api/csp-report\""
+    ],
+    [
+     "Permissions-Policy",
+     "accelerometer=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-create=(self), publickey-credentials-get=(self), screen-wake-lock=(), usb=(), xr-spatial-tracking=()"
+    ],
+    [
+     "Vary",
+     "Cookie"
+    ]
+   ],
+   "cookies": [
+    {
+     "name": "session",
+     "attributes": [
+      "HttpOnly",
+      "Path=/",
+      "SameSite=Lax"
+     ],
+     "contents": {
+      "advanced_original_request": {
+       "publicKey": {
+        "challenge": {
+         "$base64url": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE"
+        },
+        "pubKeyCredParams": [
+         {
+          "alg": -8,
+          "type": "public-key"
+         }
+        ]
+       }
+      },
+      "advanced_register_allowed_attachments": [],
+      "advanced_rp": {
+       "id": "localhost",
+       "name": "FIDO2/WebAuthn PQC Developer Tools"
+      },
+      "advanced_state": {
+       "challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
+       "issued_at": 1790000000.0,
+       "user_verification": "preferred"
+      }
+     }
+    }
+   ],
+   "bodySha256": "02447fd59ccee623868fa06decd2271093e32d3ed1fc0e9cea3cd3d7635ea153",
+   "body": {
+    "publicKey": {
+     "attestation": "none",
+     "authenticatorSelection": {
+      "requireResidentKey": false,
+      "residentKey": "preferred",
+      "userVerification": "preferred"
+     },
+     "challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
+     "excludeCredentials": [],
+     "pubKeyCredParams": [
+      {
+       "alg": -8,
+       "type": "public-key"
+      }
+     ],
+     "rp": {
+      "id": "localhost",
+      "name": "FIDO2/WebAuthn PQC Developer Tools"
+     },
+     "timeout": 90000,
+     "user": {
+      "displayName": "A. User",
+      "id": "dXNlci1oYW5kbGU",
+      "name": "user@example.com"
+     }
+    }
+   }
+  },
+  {
+   "request": "POST /api/advanced/register/complete",
+   "status": 200,
+   "headers": [
+    [
+     "Content-Type",
+     "application/json"
+    ],
+    [
+     "Content-Length",
+     "9080"
+    ],
+    [
+     "X-Content-Type-Options",
+     "nosniff"
+    ],
+    [
+     "X-Frame-Options",
+     "DENY"
+    ],
+    [
+     "Referrer-Policy",
+     "no-referrer"
+    ],
+    [
+     "Content-Security-Policy",
+     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; require-trusted-types-for 'script'; trusted-types nextjs nextjs#bundler; report-uri /api/csp-report; report-to csp"
+    ],
+    [
+     "Reporting-Endpoints",
+     "csp=\"/api/csp-report\""
+    ],
+    [
+     "Permissions-Policy",
+     "accelerometer=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-create=(self), publickey-credentials-get=(self), screen-wake-lock=(), usb=(), xr-spatial-tracking=()"
+    ],
+    [
+     "Vary",
+     "Cookie"
+    ]
+   ],
+   "cookies": [
+    {
+     "name": "fido.mds.session",
+     "attributes": [
+      "Max-Age=31536000",
+      "HttpOnly",
+      "Path=/",
+      "SameSite=Lax"
+     ],
+     "contents": "y7a22hDGMJbVWvLaQpWMyAJpVpRrBM03YqbmmYSx30o"
+    },
+    {
+     "name": "session",
+     "attributes": [
+      "Max-Age=0",
+      "HttpOnly",
+      "Path=/",
+      "SameSite=Lax"
+     ],
+     "contents": null
+    }
+   ],
+   "bodySha256": "1a5f0958198d3a46628b4577fbe35bf55a6be7c6efa82cbc1256b5dcbaf889ec",
+   "body": {
+    "actualResidentKey": null,
+    "algo": "EdDSA",
+    "algorithmsUsed": [
+     -8
+    ],
+    "attestationAaguidMatch": null,
+    "attestationChecks": {
+     "aaguid_match": null,
+     "attestation_format": "none",
+     "authenticator_data": {
+      "algorithm": -8,
+      "algorithm_allowed": true,
+      "attested_credential_data": true,
+      "cose_key_valid": false,
+      "counter": 0,
+      "credential_aaguid": "00000000000000000000000000000000",
+      "credential_id_length": 32,
+      "user_present": true,
+      "user_verification_required": false,
+      "user_verification_satisfied": true,
+      "user_verified": true
+     },
+     "client_data": {
+      "challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
+      "challenge_matches": true,
+      "cross_origin": false,
+      "cross_origin_ok": true,
+      "expected_challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
+      "expected_origin": "http://localhost",
+      "expected_type": "webauthn.create",
+      "origin": "http://localhost",
+      "origin_valid": true,
+      "type": "webauthn.create",
+      "type_valid": true
+     },
+     "errors": [
+      "cose_key_invalid: crv 7 is not Ed25519 (6), the curve of COSE algorithm -8"
+     ],
+     "hash_binding": {
+      "client_data_hash": "doGvfm6hPFgAmYfVFqA7PvgOTa9BLrwnQEFa2ZYkK1c",
+      "verification_data": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAAAAAAAAAAAAAAAAAAAAAAAAICZnkRxWK92GRI-wP2D1-ARM1PjDZvwdIImHfM69zk6TpAEBAycgByFYIJ1PHfbOooLh4HmWznMXBmDXL8wHFwH6c53d5AflpYiodoGvfm6hPFgAmYfVFqA7PvgOTa9BLrwnQEFa2ZYkK1c"
+     },
+     "metadata": {
+      "aaguid": null,
+      "algorithm_supported": null,
+      "available": false,
+      "certification_level": null,
+      "description": null,
+      "latest_status": null,
+      "root_certificates_present": false
+     },
+     "root_valid": null,
+     "rp_id_hash_valid": true,
+     "signature_valid": null,
+     "warnings": []
+    },
+    "attestationErrors": [
+     "cose_key_invalid: crv 7 is not Ed25519 (6), the curve of COSE algorithm -8"
+    ],
+    "attestationFormat": "none",
+    "attestationRootValid": null,
+    "attestationRpIdHashValid": true,
+    "attestationSignatureValid": null,
+    "attestationSummary": {
+     "aaguidMatch": null,
+     "errors": [
+      "cose_key_invalid: crv 7 is not Ed25519 (6), the curve of COSE algorithm -8"
+     ],
+     "metadata": {
+      "aaguid": null,
+      "algorithm_supported": null,
+      "available": false,
+      "certification_level": null,
+      "description": null,
+      "latest_status": null,
+      "root_certificates_present": false
+     },
+     "rootValid": null,
+     "rpIdHashValid": true,
+     "signatureValid": null,
+     "verified": false
+    },
+    "attestationVerified": false,
+    "challengeSource": "server-session",
+    "challengeStatus": "fresh",
+    "credProtectUsed": "none",
+    "enforceCredProtectUsed": false,
+    "excludeCredentialsUsed": false,
+    "hintsUsed": [],
+    "relyingParty": {
+     "aaguid": {
+      "guid": "00000000-0000-0000-0000-000000000000",
+      "raw": "00000000000000000000000000000000"
+     },
+     "attestationFmt": "none",
+     "authenticatorDataHash": "cef7dc8444a9e2de035e18646287f45a37f707ae8bfaa5f2a2b20f8bf76a61fb",
+     "createdAt": "2026-09-21T14:13:20+00:00",
+     "credentialId": "2667911c562bdd86448fb03f60f5f8044cd4f8c366fc1d2089877ccebdce4e93",
+     "credentialIdBase64": "JmeRHFYr3YZEj7A/YPX4BEzU+MNm/B0giYd8zr3OTpM=",
+     "credentialIdBase64Url": "JmeRHFYr3YZEj7A_YPX4BEzU-MNm_B0giYd8zr3OTpM",
+     "device": {
+      "name": "Unknown device",
+      "type": "unknown"
+     },
+     "largeBlob": false,
+     "publicKeyAlgorithm": -8,
+     "registrationData": {
+      "attestationChecks": {
+       "aaguid_match": null,
+       "attestation_format": "none",
+       "authenticator_data": {
+        "algorithm": -8,
+        "algorithm_allowed": true,
+        "attested_credential_data": true,
+        "cose_key_valid": false,
+        "counter": 0,
+        "credential_aaguid": "00000000000000000000000000000000",
+        "credential_id_length": 32,
+        "user_present": true,
+        "user_verification_required": false,
+        "user_verification_satisfied": true,
+        "user_verified": true
+       },
+       "client_data": {
+        "challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
+        "challenge_matches": true,
+        "cross_origin": false,
+        "cross_origin_ok": true,
+        "expected_challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
+        "expected_origin": "http://localhost",
+        "expected_type": "webauthn.create",
+        "origin": "http://localhost",
+        "origin_valid": true,
+        "type": "webauthn.create",
+        "type_valid": true
+       },
+       "errors": [
+        "cose_key_invalid: crv 7 is not Ed25519 (6), the curve of COSE algorithm -8"
+       ],
+       "hash_binding": {
+        "client_data_hash": "doGvfm6hPFgAmYfVFqA7PvgOTa9BLrwnQEFa2ZYkK1c",
+        "verification_data": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAAAAAAAAAAAAAAAAAAAAAAAAICZnkRxWK92GRI-wP2D1-ARM1PjDZvwdIImHfM69zk6TpAEBAycgByFYIJ1PHfbOooLh4HmWznMXBmDXL8wHFwH6c53d5AflpYiodoGvfm6hPFgAmYfVFqA7PvgOTa9BLrwnQEFa2ZYkK1c"
+       },
+       "metadata": {
+        "aaguid": null,
+        "algorithm_supported": null,
+        "available": false,
+        "certification_level": null,
+        "description": null,
+        "latest_status": null,
+        "root_certificates_present": false
+       },
+       "root_valid": null,
+       "rp_id_hash_valid": true,
+       "signature_valid": null,
+       "warnings": []
+      },
+      "attestationSummary": {
+       "aaguidMatch": null,
+       "errors": [
+        "cose_key_invalid: crv 7 is not Ed25519 (6), the curve of COSE algorithm -8"
+       ],
+       "metadata": {
+        "aaguid": null,
+        "algorithm_supported": null,
+        "available": false,
+        "certification_level": null,
+        "description": null,
+        "latest_status": null,
+        "root_certificates_present": false
+       },
+       "rootValid": null,
+       "rpIdHashValid": true,
+       "signatureValid": null,
+       "verified": false
+      },
+      "authenticatorData": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d976345000000000000000000000000000000000000000000202667911c562bdd86448fb03f60f5f8044cd4f8c366fc1d2089877ccebdce4e93a40101032720072158209d4f1df6cea282e1e07996ce73170660d72fcc071701fa739ddde407e5a588a8",
+      "authenticatorDataHash": "cef7dc8444a9e2de035e18646287f45a37f707ae8bfaa5f2a2b20f8bf76a61fb",
+      "clientExtensionResults": {},
+      "flags": {
+       "AT": true,
+       "BE": false,
+       "BS": false,
+       "ED": false,
+       "UP": true,
+       "UV": true
+      },
+      "signatureCounter": 0
+     },
+     "rpIdHash": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763",
+     "rpIdHashBase64": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2M",
+     "rpIdHashExpected": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763",
+     "rpIdHashExpectedBase64": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2M",
+     "rpIdHashMatch": true,
+     "userHandle": {
+      "base64": "dXNlci1oYW5kbGU=",
+      "base64url": "dXNlci1oYW5kbGU",
+      "hex": "757365722d68616e646c65"
+     }
+    },
+    "status": "OK",
+    "storedCredential": {
+     "aaguid": "AAAAAAAAAAAAAAAAAAAAAA",
+     "aaguidGuid": "00000000-0000-0000-0000-000000000000",
+     "aaguidHex": "00000000000000000000000000000000",
+     "artifactVersion": 1,
+     "attestationFormat": "none",
+     "clientExtensionOutputs": {},
+     "createdAt": 1790000000.0,
+     "credentialId": "JmeRHFYr3YZEj7A_YPX4BEzU-MNm_B0giYd8zr3OTpM",
+     "credentialIdBase64Url": "JmeRHFYr3YZEj7A_YPX4BEzU-MNm_B0giYd8zr3OTpM",
+     "credentialIdHex": "2667911c562bdd86448fb03f60f5f8044cd4f8c366fc1d2089877ccebdce4e93",
+     "displayName": "A. User",
+     "hasServerArtifact": true,
+     "largeBlob": false,
+     "localStorageId": "JmeRHFYr3YZEj7A_YPX4BEzU::1a0c4506c00::0e255bcbc78d4075969cd005466c3675",
+     "properties": {
+      "aaguid": "00000000000000000000000000000000",
+      "aaguidGuid": "00000000-0000-0000-0000-000000000000",
+      "aaguidHex": "00000000000000000000000000000000",
+      "attestationAaguidMatch": null,
+      "attestationRootValid": null,
+      "attestationRpIdHashValid": true,
+      "attestationSignatureValid": null,
+      "attestationSummary": {
+       "aaguidMatch": null,
+       "errors": [
+        "cose_key_invalid: crv 7 is not Ed25519 (6), the curve of COSE algorithm -8"
+       ],
+       "metadata": {
+        "aaguid": null,
+        "algorithm_supported": null,
+        "available": false,
+        "certification_level": null,
+        "description": null,
+        "latest_status": null,
+        "root_certificates_present": false
+       },
+       "rootValid": null,
+       "rpIdHashValid": true,
+       "signatureValid": null,
+       "verified": false
+      },
+      "authenticatorAttachment": null,
+      "authenticatorDataHash": "cef7dc8444a9e2de035e18646287f45a37f707ae8bfaa5f2a2b20f8bf76a61fb",
+      "credentialIdLength": 32,
+      "excludeCredentialsSentCount": 0,
+      "excludeCredentialsUsed": false,
+      "fakeCredentialIdLengthRequested": null,
+      "hintsSent": [],
+      "largeBlobClientOutput": {},
+      "largeBlobRequested": {},
+      "residentKey": null,
+      "residentKeyRequested": null,
+      "residentKeyRequired": false,
+      "resolvedAuthenticatorAttachments": [],
+      "rpIdHash": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763",
+      "rpIdHashBase64": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2M",
+      "rpIdHashExpected": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763",
+      "rpIdHashExpectedBase64": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2M"
+     },
+     "publicKey": "pAEBAycgByFYIJ1PHfbOooLh4HmWznMXBmDXL8wHFwH6c53d5AflpYio",
+     "publicKeyAlgorithm": -8,
+     "publicKeyType": 1,
+     "relyingParty": {
+      "aaguid": {
+       "guid": "00000000-0000-0000-0000-000000000000",
+       "raw": "00000000000000000000000000000000"
+      },
+      "attestationFmt": "none",
+      "authenticatorDataHash": "cef7dc8444a9e2de035e18646287f45a37f707ae8bfaa5f2a2b20f8bf76a61fb",
+      "createdAt": "2026-09-21T14:13:20+00:00",
+      "credentialId": "2667911c562bdd86448fb03f60f5f8044cd4f8c366fc1d2089877ccebdce4e93",
+      "credentialIdBase64": "JmeRHFYr3YZEj7A/YPX4BEzU+MNm/B0giYd8zr3OTpM=",
+      "credentialIdBase64Url": "JmeRHFYr3YZEj7A_YPX4BEzU-MNm_B0giYd8zr3OTpM",
+      "device": {
+       "name": "Unknown device",
+       "type": "unknown"
+      },
+      "largeBlob": false,
+      "publicKeyAlgorithm": -8,
+      "rpIdHash": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763",
+      "rpIdHashBase64": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2M",
+      "rpIdHashExpected": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763",
+      "rpIdHashExpectedBase64": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2M",
+      "rpIdHashMatch": true,
+      "userHandle": {
+       "base64": "dXNlci1oYW5kbGU=",
+       "base64url": "dXNlci1oYW5kbGU",
+       "hex": "757365722d68616e646c65"
+      }
+     },
+     "signCount": 0,
+     "storageId": "JmeRHFYr3YZEj7A_YPX4BEzU::1a0c4506c00::0e255bcbc78d4075969cd005466c3675",
+     "type": "advanced",
+     "userHandle": "dXNlci1oYW5kbGU",
+     "userHandleBase64": "dXNlci1oYW5kbGU=",
+     "userHandleBase64Url": "dXNlci1oYW5kbGU",
+     "userHandleHex": "757365722d68616e646c65",
+     "userName": "user@example.com"
+    }
+   },
+   "stored": [
+    {
+     "file": "artifacts/y7a22hDGMJbVWvLaQpWMyAJpVpRrBM03YqbmmYSx30o/b75e630a2c85ee08981dc07081af4a398d70192358eb95c9520bce04a73b7b29.json",
+     "sha256": "f5bce0ec5ce4f79e210e5213538b38c56fb3055e0972d30954b9776d8dbb8efb",
+     "content": {
+      "storageId": "JmeRHFYr3YZEj7A_YPX4BEzU::1a0c4506c00::0e255bcbc78d4075969cd005466c3675",
+      "createdAt": 1790000000.0,
+      "updatedAt": 1790000000.0,
+      "payload": {
+       "schemaVersion": 1,
+       "storedCredential": {
+        "type": "advanced",
+        "userName": "user@example.com",
+        "displayName": "A. User",
+        "largeBlob": false,
+        "credentialId": "JmeRHFYr3YZEj7A_YPX4BEzU-MNm_B0giYd8zr3OTpM",
+        "credentialIdBase64Url": "JmeRHFYr3YZEj7A_YPX4BEzU-MNm_B0giYd8zr3OTpM",
+        "credentialIdHex": "2667911c562bdd86448fb03f60f5f8044cd4f8c366fc1d2089877ccebdce4e93",
+        "aaguid": "AAAAAAAAAAAAAAAAAAAAAA",
+        "aaguidHex": "00000000000000000000000000000000",
+        "aaguidGuid": "00000000-0000-0000-0000-000000000000",
+        "publicKeyAlgorithm": -8,
+        "publicKey": "pAEBAycgByFYIJ1PHfbOooLh4HmWznMXBmDXL8wHFwH6c53d5AflpYio",
+        "publicKeyType": 1,
+        "signCount": 0,
+        "createdAt": 1790000000.0,
+        "clientExtensionOutputs": {},
+        "attestationFormat": "none",
+        "authenticatorData": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d976345000000000000000000000000000000000000000000202667911c562bdd86448fb03f60f5f8044cd4f8c366fc1d2089877ccebdce4e93a40101032720072158209d4f1df6cea282e1e07996ce73170660d72fcc071701fa739ddde407e5a588a8",
+        "authenticatorDataHash": "cef7dc8444a9e2de035e18646287f45a37f707ae8bfaa5f2a2b20f8bf76a61fb",
+        "clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIiwiY2hhbGxlbmdlIjoiTVRFeE1URXhNVEV4TVRFeE1URXhNVEV4TVRFeE1URXhNVEV4TVRFeE1URSIsIm9yaWdpbiI6Imh0dHA6Ly9sb2NhbGhvc3QiLCJjcm9zc09yaWdpbiI6ZmFsc2V9",
+        "relyingParty": {
+         "aaguid": {
+          "raw": "00000000000000000000000000000000",
+          "guid": "00000000-0000-0000-0000-000000000000"
+         },
+         "attestationFmt": "none",
+         "createdAt": "2026-09-21T14:13:20+00:00",
+         "credentialId": "2667911c562bdd86448fb03f60f5f8044cd4f8c366fc1d2089877ccebdce4e93",
+         "credentialIdBase64": "JmeRHFYr3YZEj7A/YPX4BEzU+MNm/B0giYd8zr3OTpM=",
+         "credentialIdBase64Url": "JmeRHFYr3YZEj7A_YPX4BEzU-MNm_B0giYd8zr3OTpM",
+         "rpIdHash": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763",
+         "rpIdHashBase64": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2M",
+         "rpIdHashExpected": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763",
+         "rpIdHashExpectedBase64": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2M",
+         "rpIdHashMatch": true,
+         "authenticatorDataHash": "cef7dc8444a9e2de035e18646287f45a37f707ae8bfaa5f2a2b20f8bf76a61fb",
+         "device": {
+          "name": "Unknown device",
+          "type": "unknown"
+         },
+         "largeBlob": false,
+         "publicKeyAlgorithm": -8,
+         "registrationData": {
+          "authenticatorData": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d976345000000000000000000000000000000000000000000202667911c562bdd86448fb03f60f5f8044cd4f8c366fc1d2089877ccebdce4e93a40101032720072158209d4f1df6cea282e1e07996ce73170660d72fcc071701fa739ddde407e5a588a8",
+          "authenticatorDataHash": "cef7dc8444a9e2de035e18646287f45a37f707ae8bfaa5f2a2b20f8bf76a61fb",
+          "clientExtensionResults": {},
+          "flags": {
+           "UP": true,
+           "UV": true,
+           "BE": false,
+           "BS": false,
+           "AT": true,
+           "ED": false
+          },
+          "signatureCounter": 0,
+          "attestationChecks": {
+           "attestation_format": "none",
+           "signature_valid": null,
+           "root_valid": null,
+           "rp_id_hash_valid": true,
+           "aaguid_match": null,
+           "client_data": {
+            "type": "webauthn.create",
+            "expected_type": "webauthn.create",
+            "type_valid": true,
+            "challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
+            "expected_challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
+            "challenge_matches": true,
+            "origin": "http://localhost",
+            "expected_origin": "http://localhost",
+            "origin_valid": true,
+            "cross_origin": false,
+            "cross_origin_ok": true
+           },
+           "authenticator_data": {
+            "user_present": true,
+            "user_verified": true,
+            "user_verification_required": false,
+            "user_verification_satisfied": true,
+            "attested_credential_data": true,
+            "counter": 0,
+            "credential_id_length": 32,
+            "credential_aaguid": "00000000000000000000000000000000",
+            "algorithm": -8,
+            "algorithm_allowed": true,
+            "cose_key_valid": false
+           },
+           "metadata": {
+            "available": false,
+            "description": null,
+            "aaguid": null,
+            "algorithm_supported": null,
+            "root_certificates_present": false,
+            "latest_status": null,
+            "certification_level": null
+           },
+           "hash_binding": {
+            "client_data_hash": "doGvfm6hPFgAmYfVFqA7PvgOTa9BLrwnQEFa2ZYkK1c",
+            "verification_data": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAAAAAAAAAAAAAAAAAAAAAAAAICZnkRxWK92GRI-wP2D1-ARM1PjDZvwdIImHfM69zk6TpAEBAycgByFYIJ1PHfbOooLh4HmWznMXBmDXL8wHFwH6c53d5AflpYiodoGvfm6hPFgAmYfVFqA7PvgOTa9BLrwnQEFa2ZYkK1c"
+           },
+           "errors": [
+            "cose_key_invalid: crv 7 is not Ed25519 (6), the curve of COSE algorithm -8"
+           ],
+           "warnings": []
+          },
+          "attestationSummary": {
+           "signatureValid": null,
+           "rootValid": null,
+           "rpIdHashValid": true,
+           "aaguidMatch": null,
+           "errors": [
+            "cose_key_invalid: crv 7 is not Ed25519 (6), the curve of COSE algorithm -8"
+           ],
+           "verified": false,
+           "metadata": {
+            "available": false,
+            "description": null,
+            "aaguid": null,
+            "algorithm_supported": null,
+            "root_certificates_present": false,
+            "latest_status": null,
+            "certification_level": null
+           }
+          }
+         },
+         "userHandle": {
+          "base64": "dXNlci1oYW5kbGU=",
+          "base64url": "dXNlci1oYW5kbGU",
+          "hex": "757365722d68616e646c65"
+         }
+        },
+        "properties": {
+         "excludeCredentialsSentCount": 0,
+         "excludeCredentialsUsed": false,
+         "credentialIdLength": 32,
+         "fakeCredentialIdLengthRequested": null,
+         "hintsSent": [],
+         "resolvedAuthenticatorAttachments": [],
+         "authenticatorAttachment": null,
+         "largeBlobRequested": {},
+         "largeBlobClientOutput": {},
+         "residentKeyRequested": null,
+         "residentKeyRequired": false,
+         "attestationSignatureValid": null,
+         "attestationRootValid": null,
+         "attestationRpIdHashValid": true,
+         "attestationAaguidMatch": null,
+         "attestationChecks": {
+          "attestation_format": "none",
+          "signature_valid": null,
+          "root_valid": null,
+          "rp_id_hash_valid": true,
+          "aaguid_match": null,
+          "client_data": {
+           "type": "webauthn.create",
+           "expected_type": "webauthn.create",
+           "type_valid": true,
+           "challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
+           "expected_challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
+           "challenge_matches": true,
+           "origin": "http://localhost",
+           "expected_origin": "http://localhost",
+           "origin_valid": true,
+           "cross_origin": false,
+           "cross_origin_ok": true
+          },
+          "authenticator_data": {
+           "user_present": true,
+           "user_verified": true,
+           "user_verification_required": false,
+           "user_verification_satisfied": true,
+           "attested_credential_data": true,
+           "counter": 0,
+           "credential_id_length": 32,
+           "credential_aaguid": "00000000000000000000000000000000",
+           "algorithm": -8,
+           "algorithm_allowed": true,
+           "cose_key_valid": false
+          },
+          "metadata": {
+           "available": false,
+           "description": null,
+           "aaguid": null,
+           "algorithm_supported": null,
+           "root_certificates_present": false,
+           "latest_status": null,
+           "certification_level": null
+          },
+          "hash_binding": {
+           "client_data_hash": "doGvfm6hPFgAmYfVFqA7PvgOTa9BLrwnQEFa2ZYkK1c",
+           "verification_data": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAAAAAAAAAAAAAAAAAAAAAAAAICZnkRxWK92GRI-wP2D1-ARM1PjDZvwdIImHfM69zk6TpAEBAycgByFYIJ1PHfbOooLh4HmWznMXBmDXL8wHFwH6c53d5AflpYiodoGvfm6hPFgAmYfVFqA7PvgOTa9BLrwnQEFa2ZYkK1c"
+          },
+          "errors": [
+           "cose_key_invalid: crv 7 is not Ed25519 (6), the curve of COSE algorithm -8"
+          ],
+          "warnings": []
+         },
+         "attestationSummary": {
+          "signatureValid": null,
+          "rootValid": null,
+          "rpIdHashValid": true,
+          "aaguidMatch": null,
+          "errors": [
+           "cose_key_invalid: crv 7 is not Ed25519 (6), the curve of COSE algorithm -8"
+          ],
+          "verified": false,
+          "metadata": {
+           "available": false,
+           "description": null,
+           "aaguid": null,
+           "algorithm_supported": null,
+           "root_certificates_present": false,
+           "latest_status": null,
+           "certification_level": null
+          }
+         },
+         "aaguid": "00000000000000000000000000000000",
+         "aaguidHex": "00000000000000000000000000000000",
+         "aaguidGuid": "00000000-0000-0000-0000-000000000000",
+         "rpIdHash": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763",
+         "rpIdHashBase64": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2M",
+         "rpIdHashExpected": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763",
+         "rpIdHashExpectedBase64": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2M",
+         "residentKey": null,
+         "authenticatorDataHash": "cef7dc8444a9e2de035e18646287f45a37f707ae8bfaa5f2a2b20f8bf76a61fb"
+        },
+        "registrationResponse": {
+         "clientExtensionResults": {},
+         "id": "JmeRHFYr3YZEj7A_YPX4BEzU-MNm_B0giYd8zr3OTpM",
+         "rawId": "JmeRHFYr3YZEj7A_YPX4BEzU-MNm_B0giYd8zr3OTpM",
+         "response": {
+          "attestationObject": "o2NmbXRkbm9uZWdhdHRTdG10oGhhdXRoRGF0YViBSZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAAAAAAAAAAAAAAAAAAAAAAAAICZnkRxWK92GRI-wP2D1-ARM1PjDZvwdIImHfM69zk6TpAEBAycgByFYIJ1PHfbOooLh4HmWznMXBmDXL8wHFwH6c53d5AflpYio",
+          "clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIiwiY2hhbGxlbmdlIjoiTVRFeE1URXhNVEV4TVRFeE1URXhNVEV4TVRFeE1URXhNVEV4TVRFeE1URSIsIm9yaWdpbiI6Imh0dHA6Ly9sb2NhbGhvc3QiLCJjcm9zc09yaWdpbiI6ZmFsc2V9"
+         },
+         "type": "public-key"
+        },
+        "userHandle": "dXNlci1oYW5kbGU",
+        "userHandleBase64": "dXNlci1oYW5kbGU=",
+        "userHandleBase64Url": "dXNlci1oYW5kbGU",
+        "userHandleHex": "757365722d68616e646c65"
+       }
+      }
+     }
+    }
+   ],
+   "deviceLogEvents": [
+    {
+     "timestamp": "<datetime scrubbed>",
+     "rp_id": "localhost",
+     "aaguid": {
+      "$bytes": "00000000000000000000000000000000"
+     },
+     "device_name_mds": null,
+     "attestation_object": {
+      "$bytes": "a363666d74646e6f6e656761747453746d74a0686175746844617461588149960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d976345000000000000000000000000000000000000000000202667911c562bdd86448fb03f60f5f8044cd4f8c366fc1d2089877ccebdce4e93a40101032720072158209d4f1df6cea282e1e07996ce73170660d72fcc071701fa739ddde407e5a588a8"
+     },
+     "signature_valid": null,
+     "root_valid": null,
+     "rp_id_hash_valid": null,
+     "aaguid_match": null
+    }
+   ]
+  },
+  {
+   "request": "POST /api/advanced/register/begin",
+   "status": 200,
+   "headers": [
+    [
+     "Content-Type",
+     "application/json"
+    ],
+    [
+     "Content-Length",
+     "448"
+    ],
+    [
+     "X-Content-Type-Options",
+     "nosniff"
+    ],
+    [
+     "X-Frame-Options",
+     "DENY"
+    ],
+    [
+     "Referrer-Policy",
+     "no-referrer"
+    ],
+    [
+     "Content-Security-Policy",
+     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; require-trusted-types-for 'script'; trusted-types nextjs nextjs#bundler; report-uri /api/csp-report; report-to csp"
+    ],
+    [
+     "Reporting-Endpoints",
+     "csp=\"/api/csp-report\""
+    ],
+    [
+     "Permissions-Policy",
+     "accelerometer=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-create=(self), publickey-credentials-get=(self), screen-wake-lock=(), usb=(), xr-spatial-tracking=()"
+    ],
+    [
+     "Vary",
+     "Cookie"
+    ]
+   ],
+   "cookies": [
+    {
+     "name": "session",
+     "attributes": [
+      "HttpOnly",
+      "Path=/",
+      "SameSite=Lax"
+     ],
+     "contents": {
+      "advanced_original_request": {
+       "publicKey": {
+        "challenge": {
+         "$base64url": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE"
+        },
+        "pubKeyCredParams": [
+         {
+          "alg": -8,
+          "type": "public-key"
+         }
+        ]
+       }
+      },
+      "advanced_register_allowed_attachments": [],
+      "advanced_rp": {
+       "id": "localhost",
+       "name": "FIDO2/WebAuthn PQC Developer Tools"
+      },
+      "advanced_state": {
+       "challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
+       "issued_at": 1790000000.0,
+       "user_verification": "preferred"
+      }
+     }
+    }
+   ],
+   "bodySha256": "02447fd59ccee623868fa06decd2271093e32d3ed1fc0e9cea3cd3d7635ea153",
+   "body": {
+    "publicKey": {
+     "attestation": "none",
+     "authenticatorSelection": {
+      "requireResidentKey": false,
+      "residentKey": "preferred",
+      "userVerification": "preferred"
+     },
+     "challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
+     "excludeCredentials": [],
+     "pubKeyCredParams": [
+      {
+       "alg": -8,
+       "type": "public-key"
+      }
+     ],
+     "rp": {
+      "id": "localhost",
+      "name": "FIDO2/WebAuthn PQC Developer Tools"
+     },
+     "timeout": 90000,
+     "user": {
+      "displayName": "A. User",
+      "id": "dXNlci1oYW5kbGU",
+      "name": "user@example.com"
+     }
+    }
+   }
+  },
+  {
+   "request": "POST /api/advanced/register/complete",
+   "status": 200,
+   "headers": [
+    [
+     "Content-Type",
+     "application/json"
+    ],
+    [
+     "Content-Length",
+     "8621"
+    ],
+    [
+     "X-Content-Type-Options",
+     "nosniff"
+    ],
+    [
+     "X-Frame-Options",
+     "DENY"
+    ],
+    [
+     "Referrer-Policy",
+     "no-referrer"
+    ],
+    [
+     "Content-Security-Policy",
+     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; require-trusted-types-for 'script'; trusted-types nextjs nextjs#bundler; report-uri /api/csp-report; report-to csp"
+    ],
+    [
+     "Reporting-Endpoints",
+     "csp=\"/api/csp-report\""
+    ],
+    [
+     "Permissions-Policy",
+     "accelerometer=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-create=(self), publickey-credentials-get=(self), screen-wake-lock=(), usb=(), xr-spatial-tracking=()"
+    ],
+    [
+     "Vary",
+     "Cookie"
+    ]
+   ],
+   "cookies": [
+    {
+     "name": "session",
+     "attributes": [
+      "Max-Age=0",
+      "HttpOnly",
+      "Path=/",
+      "SameSite=Lax"
+     ],
+     "contents": null
+    }
+   ],
+   "bodySha256": "585b68060464e4eef212f049b7592bbda77cf4c19ad9a7feb5e554cbece2b2b3",
+   "body": {
+    "actualResidentKey": null,
+    "algo": "EdDSA",
+    "algorithmsUsed": [
+     -8
+    ],
+    "attestationAaguidMatch": null,
+    "attestationChecks": {
+     "aaguid_match": null,
+     "attestation_format": "none",
+     "authenticator_data": {
+      "algorithm": -8,
+      "algorithm_allowed": true,
+      "attested_credential_data": true,
+      "cose_key_valid": true,
+      "counter": 0,
+      "credential_aaguid": "00000000000000000000000000000000",
+      "credential_id_length": 32,
+      "user_present": true,
+      "user_verification_required": false,
+      "user_verification_satisfied": true,
+      "user_verified": true
+     },
+     "client_data": {
+      "challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
+      "challenge_matches": true,
+      "cross_origin": false,
+      "cross_origin_ok": true,
+      "expected_challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
+      "expected_origin": "http://localhost",
+      "expected_type": "webauthn.create",
+      "origin": "http://localhost",
+      "origin_valid": true,
+      "type": "webauthn.create",
+      "type_valid": true
+     },
+     "errors": [],
+     "hash_binding": {
+      "client_data_hash": "doGvfm6hPFgAmYfVFqA7PvgOTa9BLrwnQEFa2ZYkK1c",
+      "verification_data": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAAAAAAAAAAAAAAAAAAAAAAAAIEvIVH1Oku_Qfx42HezSK3WXYR4slufhftZ8OiXoMCampAEBAycgBiFYIDo-u8dt8yOrP_2zowSxCg7Kju3QJEg0C5_VUXceI6IrdoGvfm6hPFgAmYfVFqA7PvgOTa9BLrwnQEFa2ZYkK1c"
+     },
+     "metadata": {
+      "aaguid": null,
+      "algorithm_supported": null,
+      "available": false,
+      "certification_level": null,
+      "description": null,
+      "latest_status": null,
+      "root_certificates_present": false
+     },
+     "root_valid": null,
+     "rp_id_hash_valid": true,
+     "signature_valid": null,
+     "warnings": []
+    },
+    "attestationErrors": [],
+    "attestationFormat": "none",
+    "attestationRootValid": null,
+    "attestationRpIdHashValid": true,
+    "attestationSignatureValid": null,
+    "attestationSummary": {
+     "aaguidMatch": null,
+     "errors": [],
+     "metadata": {
+      "aaguid": null,
+      "algorithm_supported": null,
+      "available": false,
+      "certification_level": null,
+      "description": null,
+      "latest_status": null,
+      "root_certificates_present": false
+     },
+     "rootValid": null,
+     "rpIdHashValid": true,
+     "signatureValid": null,
+     "verified": true
+    },
+    "attestationVerified": true,
+    "challengeSource": "server-session",
+    "challengeStatus": "replayed",
+    "credProtectUsed": "none",
+    "enforceCredProtectUsed": false,
+    "excludeCredentialsUsed": false,
+    "hintsUsed": [],
+    "relyingParty": {
+     "aaguid": {
+      "guid": "00000000-0000-0000-0000-000000000000",
+      "raw": "00000000000000000000000000000000"
+     },
+     "attestationFmt": "none",
+     "authenticatorDataHash": "4eadb2a56a82c2b6b92292f1fbd559d9f7fab32388a1ea9c54da9e0b8fb9451d",
+     "createdAt": "2026-09-21T14:13:20+00:00",
+     "credentialId": "4bc8547d4e92efd07f1e361decd22b7597611e2c96e7e17ed67c3a25e83026a6",
+     "credentialIdBase64": "S8hUfU6S79B/HjYd7NIrdZdhHiyW5+F+1nw6JegwJqY=",
+     "credentialIdBase64Url": "S8hUfU6S79B_HjYd7NIrdZdhHiyW5-F-1nw6JegwJqY",
+     "device": {
+      "name": "Unknown device",
+      "type": "unknown"
+     },
+     "largeBlob": false,
+     "publicKeyAlgorithm": -8,
+     "registrationData": {
+      "attestationChecks": {
+       "aaguid_match": null,
+       "attestation_format": "none",
+       "authenticator_data": {
+        "algorithm": -8,
+        "algorithm_allowed": true,
+        "attested_credential_data": true,
+        "cose_key_valid": true,
+        "counter": 0,
+        "credential_aaguid": "00000000000000000000000000000000",
+        "credential_id_length": 32,
+        "user_present": true,
+        "user_verification_required": false,
+        "user_verification_satisfied": true,
+        "user_verified": true
+       },
+       "client_data": {
+        "challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
+        "challenge_matches": true,
+        "cross_origin": false,
+        "cross_origin_ok": true,
+        "expected_challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
+        "expected_origin": "http://localhost",
+        "expected_type": "webauthn.create",
+        "origin": "http://localhost",
+        "origin_valid": true,
+        "type": "webauthn.create",
+        "type_valid": true
+       },
+       "errors": [],
+       "hash_binding": {
+        "client_data_hash": "doGvfm6hPFgAmYfVFqA7PvgOTa9BLrwnQEFa2ZYkK1c",
+        "verification_data": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAAAAAAAAAAAAAAAAAAAAAAAAIEvIVH1Oku_Qfx42HezSK3WXYR4slufhftZ8OiXoMCampAEBAycgBiFYIDo-u8dt8yOrP_2zowSxCg7Kju3QJEg0C5_VUXceI6IrdoGvfm6hPFgAmYfVFqA7PvgOTa9BLrwnQEFa2ZYkK1c"
+       },
+       "metadata": {
+        "aaguid": null,
+        "algorithm_supported": null,
+        "available": false,
+        "certification_level": null,
+        "description": null,
+        "latest_status": null,
+        "root_certificates_present": false
+       },
+       "root_valid": null,
+       "rp_id_hash_valid": true,
+       "signature_valid": null,
+       "warnings": []
+      },
+      "attestationSummary": {
+       "aaguidMatch": null,
+       "errors": [],
+       "metadata": {
+        "aaguid": null,
+        "algorithm_supported": null,
+        "available": false,
+        "certification_level": null,
+        "description": null,
+        "latest_status": null,
+        "root_certificates_present": false
+       },
+       "rootValid": null,
+       "rpIdHashValid": true,
+       "signatureValid": null,
+       "verified": true
+      },
+      "authenticatorData": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d976345000000000000000000000000000000000000000000204bc8547d4e92efd07f1e361decd22b7597611e2c96e7e17ed67c3a25e83026a6a40101032720062158203a3ebbc76df323ab3ffdb3a304b10a0eca8eedd02448340b9fd551771e23a22b",
+      "authenticatorDataHash": "4eadb2a56a82c2b6b92292f1fbd559d9f7fab32388a1ea9c54da9e0b8fb9451d",
+      "clientExtensionResults": {},
+      "flags": {
+       "AT": true,
+       "BE": false,
+       "BS": false,
+       "ED": false,
+       "UP": true,
+       "UV": true
+      },
+      "signatureCounter": 0
+     },
+     "rpIdHash": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763",
+     "rpIdHashBase64": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2M",
+     "rpIdHashExpected": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763",
+     "rpIdHashExpectedBase64": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2M",
+     "rpIdHashMatch": true,
+     "userHandle": {
+      "base64": "dXNlci1oYW5kbGU=",
+      "base64url": "dXNlci1oYW5kbGU",
+      "hex": "757365722d68616e646c65"
+     }
+    },
+    "status": "OK",
+    "storedCredential": {
+     "aaguid": "AAAAAAAAAAAAAAAAAAAAAA",
+     "aaguidGuid": "00000000-0000-0000-0000-000000000000",
+     "aaguidHex": "00000000000000000000000000000000",
+     "artifactVersion": 1,
+     "attestationFormat": "none",
+     "clientExtensionOutputs": {},
+     "createdAt": 1790000000.0,
+     "credentialId": "S8hUfU6S79B_HjYd7NIrdZdhHiyW5-F-1nw6JegwJqY",
+     "credentialIdBase64Url": "S8hUfU6S79B_HjYd7NIrdZdhHiyW5-F-1nw6JegwJqY",
+     "credentialIdHex": "4bc8547d4e92efd07f1e361decd22b7597611e2c96e7e17ed67c3a25e83026a6",
+     "displayName": "A. User",
+     "hasServerArtifact": true,
+     "largeBlob": false,
+     "localStorageId": "S8hUfU6S79B_HjYd7NIrdZdh::1a0c4506c00::5de2b3b7fa71431faec2dbfdf16652f7",
+     "properties": {
+      "aaguid": "00000000000000000000000000000000",
+      "aaguidGuid": "00000000-0000-0000-0000-000000000000",
+      "aaguidHex": "00000000000000000000000000000000",
+      "attestationAaguidMatch": null,
+      "attestationRootValid": null,
+      "attestationRpIdHashValid": true,
+      "attestationSignatureValid": null,
+      "attestationSummary": {
+       "aaguidMatch": null,
+       "errors": [],
+       "metadata": {
+        "aaguid": null,
+        "algorithm_supported": null,
+        "available": false,
+        "certification_level": null,
+        "description": null,
+        "latest_status": null,
+        "root_certificates_present": false
+       },
+       "rootValid": null,
+       "rpIdHashValid": true,
+       "signatureValid": null,
+       "verified": true
+      },
+      "authenticatorAttachment": null,
+      "authenticatorDataHash": "4eadb2a56a82c2b6b92292f1fbd559d9f7fab32388a1ea9c54da9e0b8fb9451d",
+      "credentialIdLength": 32,
+      "excludeCredentialsSentCount": 0,
+      "excludeCredentialsUsed": false,
+      "fakeCredentialIdLengthRequested": null,
+      "hintsSent": [],
+      "largeBlobClientOutput": {},
+      "largeBlobRequested": {},
+      "residentKey": null,
+      "residentKeyRequested": null,
+      "residentKeyRequired": false,
+      "resolvedAuthenticatorAttachments": [],
+      "rpIdHash": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763",
+      "rpIdHashBase64": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2M",
+      "rpIdHashExpected": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763",
+      "rpIdHashExpectedBase64": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2M"
+     },
+     "publicKey": "pAEBAycgBiFYIDo-u8dt8yOrP_2zowSxCg7Kju3QJEg0C5_VUXceI6Ir",
+     "publicKeyAlgorithm": -8,
+     "publicKeyType": 1,
+     "relyingParty": {
+      "aaguid": {
+       "guid": "00000000-0000-0000-0000-000000000000",
+       "raw": "00000000000000000000000000000000"
+      },
+      "attestationFmt": "none",
+      "authenticatorDataHash": "4eadb2a56a82c2b6b92292f1fbd559d9f7fab32388a1ea9c54da9e0b8fb9451d",
+      "createdAt": "2026-09-21T14:13:20+00:00",
+      "credentialId": "4bc8547d4e92efd07f1e361decd22b7597611e2c96e7e17ed67c3a25e83026a6",
+      "credentialIdBase64": "S8hUfU6S79B/HjYd7NIrdZdhHiyW5+F+1nw6JegwJqY=",
+      "credentialIdBase64Url": "S8hUfU6S79B_HjYd7NIrdZdhHiyW5-F-1nw6JegwJqY",
+      "device": {
+       "name": "Unknown device",
+       "type": "unknown"
+      },
+      "largeBlob": false,
+      "publicKeyAlgorithm": -8,
+      "rpIdHash": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763",
+      "rpIdHashBase64": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2M",
+      "rpIdHashExpected": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763",
+      "rpIdHashExpectedBase64": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2M",
+      "rpIdHashMatch": true,
+      "userHandle": {
+       "base64": "dXNlci1oYW5kbGU=",
+       "base64url": "dXNlci1oYW5kbGU",
+       "hex": "757365722d68616e646c65"
+      }
+     },
+     "signCount": 0,
+     "storageId": "S8hUfU6S79B_HjYd7NIrdZdh::1a0c4506c00::5de2b3b7fa71431faec2dbfdf16652f7",
+     "type": "advanced",
+     "userHandle": "dXNlci1oYW5kbGU",
+     "userHandleBase64": "dXNlci1oYW5kbGU=",
+     "userHandleBase64Url": "dXNlci1oYW5kbGU",
+     "userHandleHex": "757365722d68616e646c65",
+     "userName": "user@example.com"
+    }
+   },
+   "stored": [
+    {
+     "file": "artifacts/y7a22hDGMJbVWvLaQpWMyAJpVpRrBM03YqbmmYSx30o/94b041202bd4418f3b34c74e47069905cd5a6ed995e34409ef9ac2aa2f159a5a.json",
+     "sha256": "e45c1c3e5ca5d0485a119648722e7a29594adc3fe1def52afd47c477ff525925",
+     "content": {
+      "storageId": "S8hUfU6S79B_HjYd7NIrdZdh::1a0c4506c00::5de2b3b7fa71431faec2dbfdf16652f7",
+      "createdAt": 1790000000.0,
+      "updatedAt": 1790000000.0,
+      "payload": {
+       "schemaVersion": 1,
+       "storedCredential": {
+        "type": "advanced",
+        "userName": "user@example.com",
+        "displayName": "A. User",
+        "largeBlob": false,
+        "credentialId": "S8hUfU6S79B_HjYd7NIrdZdhHiyW5-F-1nw6JegwJqY",
+        "credentialIdBase64Url": "S8hUfU6S79B_HjYd7NIrdZdhHiyW5-F-1nw6JegwJqY",
+        "credentialIdHex": "4bc8547d4e92efd07f1e361decd22b7597611e2c96e7e17ed67c3a25e83026a6",
+        "aaguid": "AAAAAAAAAAAAAAAAAAAAAA",
+        "aaguidHex": "00000000000000000000000000000000",
+        "aaguidGuid": "00000000-0000-0000-0000-000000000000",
+        "publicKeyAlgorithm": -8,
+        "publicKey": "pAEBAycgBiFYIDo-u8dt8yOrP_2zowSxCg7Kju3QJEg0C5_VUXceI6Ir",
+        "publicKeyType": 1,
+        "signCount": 0,
+        "createdAt": 1790000000.0,
+        "clientExtensionOutputs": {},
+        "attestationFormat": "none",
+        "authenticatorData": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d976345000000000000000000000000000000000000000000204bc8547d4e92efd07f1e361decd22b7597611e2c96e7e17ed67c3a25e83026a6a40101032720062158203a3ebbc76df323ab3ffdb3a304b10a0eca8eedd02448340b9fd551771e23a22b",
+        "authenticatorDataHash": "4eadb2a56a82c2b6b92292f1fbd559d9f7fab32388a1ea9c54da9e0b8fb9451d",
+        "clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIiwiY2hhbGxlbmdlIjoiTVRFeE1URXhNVEV4TVRFeE1URXhNVEV4TVRFeE1URXhNVEV4TVRFeE1URSIsIm9yaWdpbiI6Imh0dHA6Ly9sb2NhbGhvc3QiLCJjcm9zc09yaWdpbiI6ZmFsc2V9",
+        "relyingParty": {
+         "aaguid": {
+          "raw": "00000000000000000000000000000000",
+          "guid": "00000000-0000-0000-0000-000000000000"
+         },
+         "attestationFmt": "none",
+         "createdAt": "2026-09-21T14:13:20+00:00",
+         "credentialId": "4bc8547d4e92efd07f1e361decd22b7597611e2c96e7e17ed67c3a25e83026a6",
+         "credentialIdBase64": "S8hUfU6S79B/HjYd7NIrdZdhHiyW5+F+1nw6JegwJqY=",
+         "credentialIdBase64Url": "S8hUfU6S79B_HjYd7NIrdZdhHiyW5-F-1nw6JegwJqY",
+         "rpIdHash": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763",
+         "rpIdHashBase64": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2M",
+         "rpIdHashExpected": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763",
+         "rpIdHashExpectedBase64": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2M",
+         "rpIdHashMatch": true,
+         "authenticatorDataHash": "4eadb2a56a82c2b6b92292f1fbd559d9f7fab32388a1ea9c54da9e0b8fb9451d",
+         "device": {
+          "name": "Unknown device",
+          "type": "unknown"
+         },
+         "largeBlob": false,
+         "publicKeyAlgorithm": -8,
+         "registrationData": {
+          "authenticatorData": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d976345000000000000000000000000000000000000000000204bc8547d4e92efd07f1e361decd22b7597611e2c96e7e17ed67c3a25e83026a6a40101032720062158203a3ebbc76df323ab3ffdb3a304b10a0eca8eedd02448340b9fd551771e23a22b",
+          "authenticatorDataHash": "4eadb2a56a82c2b6b92292f1fbd559d9f7fab32388a1ea9c54da9e0b8fb9451d",
+          "clientExtensionResults": {},
+          "flags": {
+           "UP": true,
+           "UV": true,
+           "BE": false,
+           "BS": false,
+           "AT": true,
+           "ED": false
+          },
+          "signatureCounter": 0,
+          "attestationChecks": {
+           "attestation_format": "none",
+           "signature_valid": null,
+           "root_valid": null,
+           "rp_id_hash_valid": true,
+           "aaguid_match": null,
+           "client_data": {
+            "type": "webauthn.create",
+            "expected_type": "webauthn.create",
+            "type_valid": true,
+            "challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
+            "expected_challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
+            "challenge_matches": true,
+            "origin": "http://localhost",
+            "expected_origin": "http://localhost",
+            "origin_valid": true,
+            "cross_origin": false,
+            "cross_origin_ok": true
+           },
+           "authenticator_data": {
+            "user_present": true,
+            "user_verified": true,
+            "user_verification_required": false,
+            "user_verification_satisfied": true,
+            "attested_credential_data": true,
+            "counter": 0,
+            "credential_id_length": 32,
+            "credential_aaguid": "00000000000000000000000000000000",
+            "algorithm": -8,
+            "algorithm_allowed": true,
+            "cose_key_valid": true
+           },
+           "metadata": {
+            "available": false,
+            "description": null,
+            "aaguid": null,
+            "algorithm_supported": null,
+            "root_certificates_present": false,
+            "latest_status": null,
+            "certification_level": null
+           },
+           "hash_binding": {
+            "client_data_hash": "doGvfm6hPFgAmYfVFqA7PvgOTa9BLrwnQEFa2ZYkK1c",
+            "verification_data": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAAAAAAAAAAAAAAAAAAAAAAAAIEvIVH1Oku_Qfx42HezSK3WXYR4slufhftZ8OiXoMCampAEBAycgBiFYIDo-u8dt8yOrP_2zowSxCg7Kju3QJEg0C5_VUXceI6IrdoGvfm6hPFgAmYfVFqA7PvgOTa9BLrwnQEFa2ZYkK1c"
+           },
+           "errors": [],
+           "warnings": []
+          },
+          "attestationSummary": {
+           "signatureValid": null,
+           "rootValid": null,
+           "rpIdHashValid": true,
+           "aaguidMatch": null,
+           "errors": [],
+           "verified": true,
+           "metadata": {
+            "available": false,
+            "description": null,
+            "aaguid": null,
+            "algorithm_supported": null,
+            "root_certificates_present": false,
+            "latest_status": null,
+            "certification_level": null
+           }
+          }
+         },
+         "userHandle": {
+          "base64": "dXNlci1oYW5kbGU=",
+          "base64url": "dXNlci1oYW5kbGU",
+          "hex": "757365722d68616e646c65"
+         }
+        },
+        "properties": {
+         "excludeCredentialsSentCount": 0,
+         "excludeCredentialsUsed": false,
+         "credentialIdLength": 32,
+         "fakeCredentialIdLengthRequested": null,
+         "hintsSent": [],
+         "resolvedAuthenticatorAttachments": [],
+         "authenticatorAttachment": null,
+         "largeBlobRequested": {},
+         "largeBlobClientOutput": {},
+         "residentKeyRequested": null,
+         "residentKeyRequired": false,
+         "attestationSignatureValid": null,
+         "attestationRootValid": null,
+         "attestationRpIdHashValid": true,
+         "attestationAaguidMatch": null,
+         "attestationChecks": {
+          "attestation_format": "none",
+          "signature_valid": null,
+          "root_valid": null,
+          "rp_id_hash_valid": true,
+          "aaguid_match": null,
+          "client_data": {
+           "type": "webauthn.create",
+           "expected_type": "webauthn.create",
+           "type_valid": true,
+           "challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
+           "expected_challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
+           "challenge_matches": true,
+           "origin": "http://localhost",
+           "expected_origin": "http://localhost",
+           "origin_valid": true,
+           "cross_origin": false,
+           "cross_origin_ok": true
+          },
+          "authenticator_data": {
+           "user_present": true,
+           "user_verified": true,
+           "user_verification_required": false,
+           "user_verification_satisfied": true,
+           "attested_credential_data": true,
+           "counter": 0,
+           "credential_id_length": 32,
+           "credential_aaguid": "00000000000000000000000000000000",
+           "algorithm": -8,
+           "algorithm_allowed": true,
+           "cose_key_valid": true
+          },
+          "metadata": {
+           "available": false,
+           "description": null,
+           "aaguid": null,
+           "algorithm_supported": null,
+           "root_certificates_present": false,
+           "latest_status": null,
+           "certification_level": null
+          },
+          "hash_binding": {
+           "client_data_hash": "doGvfm6hPFgAmYfVFqA7PvgOTa9BLrwnQEFa2ZYkK1c",
+           "verification_data": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAAAAAAAAAAAAAAAAAAAAAAAAIEvIVH1Oku_Qfx42HezSK3WXYR4slufhftZ8OiXoMCampAEBAycgBiFYIDo-u8dt8yOrP_2zowSxCg7Kju3QJEg0C5_VUXceI6IrdoGvfm6hPFgAmYfVFqA7PvgOTa9BLrwnQEFa2ZYkK1c"
+          },
+          "errors": [],
+          "warnings": []
+         },
+         "attestationSummary": {
+          "signatureValid": null,
+          "rootValid": null,
+          "rpIdHashValid": true,
+          "aaguidMatch": null,
+          "errors": [],
+          "verified": true,
+          "metadata": {
+           "available": false,
+           "description": null,
+           "aaguid": null,
+           "algorithm_supported": null,
+           "root_certificates_present": false,
+           "latest_status": null,
+           "certification_level": null
+          }
+         },
+         "aaguid": "00000000000000000000000000000000",
+         "aaguidHex": "00000000000000000000000000000000",
+         "aaguidGuid": "00000000-0000-0000-0000-000000000000",
+         "rpIdHash": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763",
+         "rpIdHashBase64": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2M",
+         "rpIdHashExpected": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763",
+         "rpIdHashExpectedBase64": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2M",
+         "residentKey": null,
+         "authenticatorDataHash": "4eadb2a56a82c2b6b92292f1fbd559d9f7fab32388a1ea9c54da9e0b8fb9451d"
+        },
+        "registrationResponse": {
+         "clientExtensionResults": {},
+         "id": "S8hUfU6S79B_HjYd7NIrdZdhHiyW5-F-1nw6JegwJqY",
+         "rawId": "S8hUfU6S79B_HjYd7NIrdZdhHiyW5-F-1nw6JegwJqY",
+         "response": {
+          "attestationObject": "o2NmbXRkbm9uZWdhdHRTdG10oGhhdXRoRGF0YViBSZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAAAAAAAAAAAAAAAAAAAAAAAAIEvIVH1Oku_Qfx42HezSK3WXYR4slufhftZ8OiXoMCampAEBAycgBiFYIDo-u8dt8yOrP_2zowSxCg7Kju3QJEg0C5_VUXceI6Ir",
+          "clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIiwiY2hhbGxlbmdlIjoiTVRFeE1URXhNVEV4TVRFeE1URXhNVEV4TVRFeE1URXhNVEV4TVRFeE1URSIsIm9yaWdpbiI6Imh0dHA6Ly9sb2NhbGhvc3QiLCJjcm9zc09yaWdpbiI6ZmFsc2V9"
+         },
+         "type": "public-key"
+        },
+        "userHandle": "dXNlci1oYW5kbGU",
+        "userHandleBase64": "dXNlci1oYW5kbGU=",
+        "userHandleBase64Url": "dXNlci1oYW5kbGU",
+        "userHandleHex": "757365722d68616e646c65"
+       }
+      }
+     }
+    }
+   ],
+   "deviceLogEvents": [
+    {
+     "timestamp": "<datetime scrubbed>",
+     "rp_id": "localhost",
+     "aaguid": {
+      "$bytes": "00000000000000000000000000000000"
+     },
+     "device_name_mds": null,
+     "attestation_object": {
+      "$bytes": "a363666d74646e6f6e656761747453746d74a0686175746844617461588149960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d976345000000000000000000000000000000000000000000204bc8547d4e92efd07f1e361decd22b7597611e2c96e7e17ed67c3a25e83026a6a40101032720062158203a3ebbc76df323ab3ffdb3a304b10a0eca8eedd02448340b9fd551771e23a22b"
+     },
+     "signature_valid": null,
+     "root_valid": null,
+     "rp_id_hash_valid": null,
+     "aaguid_match": null
+    }
+   ]
+  }
+ ]
+}

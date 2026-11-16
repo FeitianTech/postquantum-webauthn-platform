@@ -32,6 +32,7 @@ INTEGRITY_ERRORS = frozenset(
         "attested_credential_data_missing",
         "algorithm_not_allowed",
         "cose_key_error",
+        "cose_key_invalid",
         "unsupported_attestation",
         "attestation_invalid",
         "attestation_error",
@@ -57,6 +58,12 @@ def unsafe_status(status: str) -> str:
     """The finding of an MDS status that says the authenticator is not to be trusted (``UNSAFE_STATUSES``)."""
 
     return f"metadata_status_unsafe: {status}"
+
+
+def invalid_cose_key(reason: str) -> str:
+    """The finding of a credential key that reads but cannot be used for its algorithm, and why (``public_key_checks``)."""
+
+    return f"cose_key_invalid: {reason}"
 
 
 def with_reason(code: str, exc: BaseException) -> str:

@@ -9,7 +9,7 @@ from fido2.cose import CoseKey
 from fido2.webauthn import AuthenticatorData, CollectedClientData
 
 from ... import encoding
-from . import error_codes, request_expectations
+from . import error_codes, public_key_checks, request_expectations
 
 
 def populate_client_data_results(
@@ -78,7 +78,8 @@ def populate_rp_id_hash_result(
 
 
 def _credential_facts(results: dict[str, Any], credential_data: Any) -> dict[str, Any]:
-    """The credential id length, COSE algorithm and AAGUID; a COSE key that will not parse is an error."""
+    """The credential id length, COSE algorithm and AAGUID; a COSE key that will not parse, or
+    cannot be used for its algorithm (``public_key_checks``), is an error."""
 
     credential_id_length: int | None = None
     credential_aaguid: str | None = None
@@ -98,13 +99,13 @@ def _credential_facts(results: dict[str, Any], credential_data: Any) -> dict[str
             cose_map = {}
 
         try:
-            if cose_map:
-                algorithm = cose_map.get(3)
-                CoseKey.parse(cose_map)
-            else:
-                algorithm = credential_data.public_key.get(3)
-                CoseKey.parse(dict(credential_data.public_key))
-            cose_key_valid = True
+            if not cose_map:
+                cose_map = dict(credential_data.public_key)
+            algorithm = cose_map.get(3)
+            CoseKey.parse(cose_map)
+            key_errors = public_key_checks.key_findings(cose_map)
+            results["errors"].extend(key_errors)
+            cose_key_valid = not key_errors
         except Exception as exc:
             if algorithm is None:
                 try:

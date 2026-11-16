@@ -18,7 +18,16 @@ from server.app.webauthn.attestation import error_codes
 
 _REPO = Path(__file__).resolve().parents[3]
 _ATTESTATION = _REPO / "server" / "app" / "webauthn" / "attestation"
-_CHECK_MODULES = ("checks", "response_checks", "statement_checks", "classical", "evaluation", "metadata_checks", "error_codes")
+_CHECK_MODULES = (
+    "checks",
+    "response_checks",
+    "public_key_checks",
+    "statement_checks",
+    "classical",
+    "evaluation",
+    "metadata_checks",
+    "error_codes",
+)
 _CODES = json.loads((_REPO / "tests" / "fixtures" / "attestation-finding-codes.json").read_text(encoding="utf-8"))["codes"]
 
 

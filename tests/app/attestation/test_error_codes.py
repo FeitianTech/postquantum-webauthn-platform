@@ -54,6 +54,7 @@ def test_the_simple_tab_refuses_on_these_errors_alone():
         "attested_credential_data_missing",
         "algorithm_not_allowed",
         "cose_key_error",
+        "cose_key_invalid",
         "unsupported_attestation",
         "attestation_invalid",
         "attestation_error",

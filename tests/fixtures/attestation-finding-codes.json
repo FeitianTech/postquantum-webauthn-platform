@@ -16,6 +16,7 @@
     "challenge_mismatch",
     "client_data_type_invalid",
     "cose_key_error",
+    "cose_key_invalid",
     "cross_origin_not_allowed",
     "metadata_entry_missing",
     "metadata_entry_revoked",
