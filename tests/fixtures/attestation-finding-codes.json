@@ -28,6 +28,7 @@
     "registration_parse_error",
     "registration_response_invalid",
     "rp_id_hash_mismatch",
+    "rsa_modulus_too_short",
     "trust_path_missing",
     "unsupported_attestation",
     "user_presence_missing",

@@ -66,6 +66,12 @@ def invalid_cose_key(reason: str) -> str:
     return f"cose_key_invalid: {reason}"
 
 
+def short_rsa_modulus(bits: int) -> str:
+    """The warning of an RSA credential key whose modulus is under 2048 bits, with its size (``public_key_checks``)."""
+
+    return f"rsa_modulus_too_short: {bits} bits"
+
+
 def with_reason(code: str, exc: BaseException) -> str:
     """``code``, followed by ``exc``'s message when it has one."""
 

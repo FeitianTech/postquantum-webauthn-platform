@@ -896,6 +896,8 @@ def _(r: Recorder) -> None:
     off_curve = m.Authenticator("simple-key-off-curve")
     _simple_register(r, client, off_curve, cose_key_bytes=_changed_key(off_curve, {-2: b"\x01" * 32, -3: b"\x02" * 32}))
     _simple_register(r, client, m.Authenticator("simple-key-on-curve"))
+    short = m.Authenticator("simple-key-rsa-short", key_type="rs256")
+    _simple_register(r, client, short, cose_key_bytes=_changed_key(short, {-1: (1 << 1023 | 1).to_bytes(128, "big")}))
 
 
 @scenario("advanced-register-cose-key")
@@ -905,3 +907,8 @@ def _(r: Recorder) -> None:
     eddsa = _options(pubKeyCredParams=[{"type": "public-key", "alg": -8}])
     _advanced_register(r, client, wrong_curve, options=eddsa, cose_key_bytes=_changed_key(wrong_curve, {-1: 7}))
     _advanced_register(r, client, m.Authenticator("adv-key-ed25519", key_type="ed25519"), options=eddsa)
+    short = m.Authenticator("adv-key-rsa-short", key_type="rs256")
+    rs256 = _options(pubKeyCredParams=[{"type": "public-key", "alg": -257}])
+    _advanced_register(
+        r, client, short, options=rs256, cose_key_bytes=_changed_key(short, {-1: (1 << 1023 | 1).to_bytes(128, "big")})
+    )

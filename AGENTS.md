@@ -385,7 +385,8 @@ its logic out here first.
   `response_checks.py`, `statement_checks.py` and `metadata_checks.py`; `public_key_checks.py`,
   whether the credential's COSE key can be used: its key type and curve its algorithm's (L3
   section 5.8.5: EdDSA on Ed25519 alone), and a key `cryptography` loads (an EC2 point on its
-  curve, an OKP or ML-DSA key of its length), else `cose_key_invalid` and why; trust, the root
+  curve, an OKP or ML-DSA key of its length), else `cose_key_invalid` and why, and an RSA
+  modulus under 2048 bits the warning `rsa_modulus_too_short`; trust, the root
   evaluation for every algorithm, ML-DSA included, certificate serialisation; `chain.py` verifies certificate chains with
   `verify_directly_issued_by` (RSA-PSS, EdDSA and ML-DSA too, which fido2's `verify_x509_chain`
   does not); `evaluation.py` checks an attestation against the MDS metadata step by step;

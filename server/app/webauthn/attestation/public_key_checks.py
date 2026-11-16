@@ -2,7 +2,8 @@
 curve is the one its algorithm names (WebAuthn L3 section 5.8.5), and it loads into a key
 ``cryptography`` can verify with -- an EC2 point on its curve, an OKP or ML-DSA key of its
 length, an RSA key whose numbers are one. A key that cannot be used is ``cose_key_invalid``
-with why; one that does not read at all is ``response_checks``' ``cose_key_error``.
+with why; one that does not read at all is ``response_checks``' ``cose_key_error``. An RSA
+key whose modulus is under 2048 bits can be used, and is a warning.
 """
 from __future__ import annotations
 
@@ -38,6 +39,8 @@ _OKP_CURVES: dict[int, tuple[int, str, Any]] = {
 }
 
 _RSA_ALGORITHMS = frozenset({-257, -258, -259, -37, -38, -39, -65535})
+# Below this an RSA key is a warning (NIST SP 800-131A).
+MIN_RSA_MODULUS_BITS = 2048
 
 _MLDSA_KEYS: dict[int, Any] = {
     -48: mldsa.MLDSA44PublicKey,
@@ -142,8 +145,15 @@ def key_problem(cose_key: Mapping[Any, Any]) -> str | None:
     return check(alg, cose_key)
 
 
-def key_findings(cose_key: Mapping[Any, Any]) -> list[str]:
-    """The errors of a credential's COSE key: ``cose_key_invalid`` and why, or none."""
+def key_findings(cose_key: Mapping[Any, Any]) -> tuple[list[str], list[str]]:
+    """The errors and warnings of a credential's COSE key: ``cose_key_invalid`` and why, or
+    the warning of a usable RSA key whose modulus is under ``MIN_RSA_MODULUS_BITS``."""
 
     problem = key_problem(cose_key)
-    return [] if problem is None else [error_codes.invalid_cose_key(problem)]
+    if problem is not None:
+        return [error_codes.invalid_cose_key(problem)], []
+    if cose_key.get(3) in _RSA_ALGORITHMS:
+        bits = int.from_bytes(cose_key[-1], "big").bit_length()
+        if bits < MIN_RSA_MODULUS_BITS:
+            return [], [error_codes.short_rsa_modulus(bits)]
+    return [], []

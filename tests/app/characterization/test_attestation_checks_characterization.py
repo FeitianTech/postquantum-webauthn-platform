@@ -86,6 +86,7 @@ def _cases():
         "cose-key-mldsa-short": (changed({-1: b"\x01" * 1311}, mldsa), state, None),
         "cose-key-rsa-valid": (build(rs256), state, None),
         "cose-key-rsa-unloadable": (changed({-2: b"\x02"}, rs256), state, None),
+        "cose-key-rsa-short": (changed({-1: (1 << 1023 | 1).to_bytes(128, "big")}, rs256), state, None),
         "options-challenge-base64url": (build(), None, {"challenge": {"$base64url": b64u(CHALLENGE)}}),
         "options-challenge-base64": (build(), None, {"challenge": {"$base64": __import__("base64").b64encode(CHALLENGE).decode()}}),
         "options-challenge-hex": (build(), None, {"challenge": {"$hex": CHALLENGE.hex()}}),

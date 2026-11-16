@@ -48,7 +48,7 @@ def test_credential_facts_report_a_public_key_that_does_not_parse(public_key, al
 
 
 def test_credential_facts_report_a_key_that_reads_but_cannot_be_used():
-    results = {"errors": []}
+    results = {"errors": [], "warnings": []}
     off_curve = {**stand_ins.ES256_KEY, -2: b"\x01" * 32, -3: b"\x02" * 32}
 
     facts = response_checks._credential_facts(results, stand_ins.CredentialData(public_key=off_curve))
@@ -58,8 +58,18 @@ def test_credential_facts_report_a_key_that_reads_but_cannot_be_used():
 
 
 def test_credential_facts_find_a_key_on_its_curve_valid():
-    results = {"errors": []}
+    results = {"errors": [], "warnings": []}
 
     facts = response_checks._credential_facts(results, stand_ins.CredentialData())
 
     assert (facts["algorithm"], facts["cose_key_valid"], results["errors"]) == (-7, True, [])
+
+
+def test_credential_facts_warn_of_a_short_rsa_key_and_find_it_valid():
+    results = {"errors": [], "warnings": []}
+    short = {1: 3, 3: -257, -1: (1 << 1023 | 1).to_bytes(128, "big"), -2: b"\x01\x00\x01"}
+
+    facts = response_checks._credential_facts(results, stand_ins.CredentialData(public_key=short))
+
+    assert (facts["cose_key_valid"], results["errors"]) == (True, [])
+    assert results["warnings"] == ["rsa_modulus_too_short: 1024 bits"]

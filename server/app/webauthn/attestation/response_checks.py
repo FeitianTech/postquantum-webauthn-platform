@@ -79,7 +79,8 @@ def populate_rp_id_hash_result(
 
 def _credential_facts(results: dict[str, Any], credential_data: Any) -> dict[str, Any]:
     """The credential id length, COSE algorithm and AAGUID; a COSE key that will not parse, or
-    cannot be used for its algorithm (``public_key_checks``), is an error."""
+    cannot be used for its algorithm (``public_key_checks``), is an error, and an RSA key
+    under 2048 bits a warning."""
 
     credential_id_length: int | None = None
     credential_aaguid: str | None = None
@@ -103,8 +104,9 @@ def _credential_facts(results: dict[str, Any], credential_data: Any) -> dict[str
                 cose_map = dict(credential_data.public_key)
             algorithm = cose_map.get(3)
             CoseKey.parse(cose_map)
-            key_errors = public_key_checks.key_findings(cose_map)
+            key_errors, key_warnings = public_key_checks.key_findings(cose_map)
             results["errors"].extend(key_errors)
+            results["warnings"].extend(key_warnings)
             cose_key_valid = not key_errors
         except Exception as exc:
             if algorithm is None:

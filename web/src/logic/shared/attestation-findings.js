@@ -64,6 +64,10 @@ export const FINDING_SENTENCES = Object.freeze({
         en: 'The credential\'s public key cannot be used for its algorithm',
         zh: '凭据的公钥无法用于其算法',
     },
+    rsa_modulus_too_short: {
+        en: 'The credential\'s RSA key is shorter than 2048 bits',
+        zh: '凭据的 RSA 密钥短于 2048 位',
+    },
     unsupported_attestation: {
         en: 'This server does not verify this attestation format',
         zh: '本服务器不验证此证明格式',

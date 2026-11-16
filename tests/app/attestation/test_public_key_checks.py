@@ -37,7 +37,7 @@ def _mldsa(alg: int, private_key) -> dict:
 )
 def test_a_key_of_each_algorithm_that_loads_can_be_used(cose_key):
     assert public_key_checks.key_problem(cose_key) is None
-    assert public_key_checks.key_findings(cose_key) == []
+    assert public_key_checks.key_findings(cose_key) == ([], [])
 
 
 @pytest.mark.parametrize(
@@ -72,4 +72,13 @@ def test_a_key_of_each_algorithm_that_loads_can_be_used(cose_key):
 )
 def test_a_key_that_cannot_be_used_says_why(cose_key, problem):
     assert public_key_checks.key_problem(cose_key) == problem
-    assert public_key_checks.key_findings(cose_key) == [f"cose_key_invalid: {problem}"]
+    assert public_key_checks.key_findings(cose_key) == ([f"cose_key_invalid: {problem}"], [])
+
+
+def test_an_rsa_key_under_2048_bits_can_be_used_and_is_a_warning():
+    short = RS256.from_cryptography_key(rsa.generate_private_key(65537, 1024).public_key())
+    odd_size = {**_RSA, -1: (int.from_bytes(_RSA[-1], "big") >> 1).to_bytes(256, "big")}
+
+    assert public_key_checks.key_findings(short) == ([], ["rsa_modulus_too_short: 1024 bits"])
+    assert public_key_checks.key_findings({**short, 3: -37}) == ([], ["rsa_modulus_too_short: 1024 bits"])
+    assert public_key_checks.key_findings(odd_size) == ([], ["rsa_modulus_too_short: 2047 bits"])
