@@ -1,6 +1,7 @@
 // A saved credential's fields as the pages compare them: its credential ID and
-// user handle in hex, its authenticator attachment, and the AAGUID its
-// authenticator data holds. DOM-free.
+// user handle in hex, its authenticator attachment, the AAGUID its
+// authenticator data holds, and the backup eligibility (BE) its registration had.
+// DOM-free.
 import { base64ToHex, base64UrlToHex } from '../shared/bytes.js';
 
 // A stored byte value as lower-case hex: hex text as it is, else base64url text
@@ -161,4 +162,17 @@ export function deriveAaguidFromCredentialData(cred) {
     }
 
     return '';
+}
+
+/**
+ * The BE flag its registration's authenticator data had, as a record keeps it: the
+ * hex of that data, a Simple record's own or an Advanced record's in its registration
+ * snapshot; undefined when it keeps none. The flags are the 33rd byte, BE its 0x08 bit.
+ * @param {Record<string, any> | null | undefined} credential
+ * @returns {boolean | undefined}
+ */
+export function registeredBackupEligible(credential) {
+    const hex = credential?.authenticatorDataHex ?? credential?.registrationDetailSnapshot?.state?.authenticatorDataHex;
+    const flags = typeof hex === 'string' ? hex.slice(64, 66) : '';
+    return /^[0-9a-f]{2}$/i.test(flags) ? (Number.parseInt(flags, 16) & 0x08) !== 0 : undefined;
 }

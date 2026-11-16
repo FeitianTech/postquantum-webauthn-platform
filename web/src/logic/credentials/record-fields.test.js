@@ -9,6 +9,7 @@ import {
   getStoredCredentialAttachment,
   normalizeAttachmentValue,
   normalizeToHex,
+  registeredBackupEligible,
 } from './record-fields.js';
 import { goldenAnswers } from '@/test/logic/simple/ceremony-answers.js';
 import { migrateStoredRecord } from './storage/local/record-migration.js';
@@ -150,5 +151,32 @@ describe("stored credentials: base64", () => {
     expect(getCredentialIdHex({ credentialId: simple.credentialId })).toBe(SIMPLE_RECORD.credentialIdHex);
     expect(getCredentialIdHex({ credentialId: advanced.credentialId })).toBe(ADVANCED_RECORD.credentialIdHex);
     expect(getCredentialUserHandleHex({ userHandle: advanced.userHandle })).toBe(ADVANCED_RECORD.userHandleHex);
+  });
+});
+
+describe('the backup eligibility a registration had', () => {
+  // authenticator data: the RP ID hash, then its flags.
+  const flagged = (flags) => `${'00'.repeat(32)}${flags}${'00'.repeat(4)}`;
+
+  it('is the BE flag of the authenticator data a Simple record keeps', () => {
+    expect(registeredBackupEligible(ES256)).toBe(false);
+    expect(registeredBackupEligible(storedCredential('simple-register-backup-flags'))).toBe(true);
+    expect(registeredBackupEligible({ authenticatorDataHex: flagged('5D') })).toBe(true);
+  });
+
+  it('is read from an Advanced record\'s registration snapshot', () => {
+    const snapshot = (flags) => ({ registrationDetailSnapshot: { state: { authenticatorDataHex: flagged(flags) } } });
+
+    expect(registeredBackupEligible(snapshot('49'))).toBe(true);
+    expect(registeredBackupEligible(snapshot('41'))).toBe(false);
+  });
+
+  it('is unknown when the record keeps no authenticator data whose flags read', () => {
+    expect(registeredBackupEligible(undefined)).toBeUndefined();
+    expect(registeredBackupEligible({})).toBeUndefined();
+    expect(registeredBackupEligible({ registrationDetailSnapshot: {} })).toBeUndefined();
+    expect(registeredBackupEligible({ authenticatorDataHex: '00'.repeat(32) })).toBeUndefined();
+    expect(registeredBackupEligible({ authenticatorDataHex: flagged('zz') })).toBeUndefined();
+    expect(registeredBackupEligible({ authenticatorDataHex: 12 })).toBeUndefined();
   });
 });

@@ -9,6 +9,7 @@ import {
 } from './partition-core.js';
 import { readUnifiedCredentialRecords } from './storage-core.js';
 import { prepareAdvancedCredentialForStorage } from './advanced-storage-shaping.js';
+import { registeredBackupEligible } from '../../record-fields.js';
 
 /**
  * A Simple username as the server reads it (routes/simple/account.py): trimmed as
@@ -180,6 +181,8 @@ export function prepareCredentialsForServer(credentials) {
                 publicKey,
                 signCount: Number.isFinite(item.signCount) ? item.signCount : 0,
                 algorithm,
+                // What the server compares the assertion's BE with (assertion_checks).
+                backupEligible: registeredBackupEligible(item),
             };
         })
         .filter(item => item.credentialId && item.publicKey);

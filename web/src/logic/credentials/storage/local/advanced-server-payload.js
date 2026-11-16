@@ -2,6 +2,7 @@ import {
     ensureBase64Url,
     normaliseAdvancedCredentialId,
 } from './id-utils.js';
+import { getCredentialUserHandleHex, registeredBackupEligible } from '../../record-fields.js';
 import { reportedResidentKey } from '../../resident-key.js';
 
 // The algorithm a saved record names: the server writes it twice, and in the COSE key.
@@ -68,6 +69,9 @@ export function prepareAdvancedCredentialsForServerFromSource(source) {
                 authenticatorAttachment: attachment || null,
                 // Null when the browser did not say: the server then refuses no assertion for it.
                 resident: reportedResidentKey(item),
+                // What the server compares the assertion's BE and userHandle with (assertion_checks).
+                backupEligible: registeredBackupEligible(item),
+                userHandleHex: getCredentialUserHandleHex(item) || null,
             };
 
             if (!uniqueById.has(credentialId)) {

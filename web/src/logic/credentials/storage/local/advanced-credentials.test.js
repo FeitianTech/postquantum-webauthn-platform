@@ -287,6 +287,7 @@ describe("stored credentials: advanced", () => {
             algorithm: undefined,
             authenticatorAttachment: 'platform',
             resident: true,
+            userHandleHex: null,
           },
         ]);
     expect(updateAdvancedCredentialSignCount('adv-1', undefined, saved.storageId)).toBe(true);
@@ -377,6 +378,7 @@ describe("stored credentials: advanced", () => {
         algorithm: -8,
         authenticatorAttachment: 'cross-platform',
         resident: null,
+        userHandleHex: null,
       },
       {
         credentialId: 'advanced-signed-in',
@@ -386,6 +388,7 @@ describe("stored credentials: advanced", () => {
         algorithm: -7,
         authenticatorAttachment: null,
         resident: false,
+        userHandleHex: null,
       },
     ]);
   });

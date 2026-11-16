@@ -210,7 +210,10 @@ its logic out here first.
   request (`request.js`: defaults, build, read back, the form's rules), its validation and
   its ceremony (`ceremony.js`), with Allow Credentials' choices and extension availability
   under `authentication/` (an authentication offers and sends every saved credential, the
-  Simple tab's too: `prepareAdvancedCredentialsForServer`), and the form's algorithms under
+  Simple tab's too: `prepareAdvancedCredentialsForServer`, each with its user handle in hex,
+  `userHandleHex`, and like the Simple tab's the BE its registration had, `backupEligible`:
+  `credentials/record-fields.js`' `registeredBackupEligible`, from the authenticator data's hex
+  a Simple record keeps, an Advanced record's in its snapshot), and the form's algorithms under
   `registration/` (`algorithm-options.js`: the preferred ones first, in the servers' order,
   ticked by default),
   and what an MDS statement says it can take (`statement-settings.js`: getInfo's algorithms,

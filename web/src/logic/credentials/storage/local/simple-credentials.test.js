@@ -251,13 +251,14 @@ describe('credentials prepared for the server', () => {
     expect(prepareCredentialsForServer(undefined)).toEqual([]);
   });
 
-  it('carry the algorithm the record names as its publicKeyAlgorithm', () => {
+  it('carry the algorithm the record names as its publicKeyAlgorithm, and the BE its registration had', () => {
     expect(prepareCredentialsForServer([ES256])).toEqual([{
       credentialId: ES256_ID,
       aaguid: ES256.aaguid,
       publicKey: ES256.publicKey,
       signCount: ES256.signCount,
       algorithm: ES256.publicKeyAlgorithm,
+      backupEligible: false,
     }]);
   });
 });

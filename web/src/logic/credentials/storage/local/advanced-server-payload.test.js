@@ -74,6 +74,17 @@ describe('the advanced credentials sent to the server', () => {
     expect([reported.resident, unsaid.resident]).toEqual([true, null]);
   });
 
+  it('send the user handle the record keeps, in hex, and the BE its registration had', () => {
+    const snapshot = { state: { authenticatorDataHex: `${'00'.repeat(32)}49${'00'.repeat(4)}` } };
+    const [prepared] = prepareAdvancedCredentialsForServerFromSource([
+      credential({ userHandle: 'QUJD', registrationDetailSnapshot: snapshot }),
+    ]);
+    const [bare] = prepareAdvancedCredentialsForServerFromSource([credential()]);
+
+    expect([prepared.userHandleHex, prepared.backupEligible]).toEqual(['414243', true]);
+    expect([bare.userHandleHex, bare.backupEligible]).toEqual([null, undefined]);
+  });
+
   it('keep the copy with the higher sign count when an id repeats', () => {
     const prepared = prepareAdvancedCredentialsForServerFromSource([
       credential({ signCount: 5, authenticatorAttachment: 'platform' }),
@@ -125,6 +136,7 @@ describe("stored credentials: advanced", () => {
             algorithm: undefined,
             authenticatorAttachment: 'cross-platform',
             resident: null,
+            userHandleHex: null,
           },
         ]);
   });
