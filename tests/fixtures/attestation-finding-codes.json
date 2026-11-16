@@ -21,6 +21,7 @@
     "metadata_lookup_failed",
     "metadata_not_available",
     "metadata_not_fido_trusted",
+    "metadata_status_unsafe",
     "origin_mismatch",
     "registration_parse_error",
     "registration_response_invalid",

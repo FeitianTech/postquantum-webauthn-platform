@@ -9,12 +9,15 @@ The Advanced tab completes either way and reports every one as an error.
 """
 from __future__ import annotations
 
+import json
 import uuid
 
 from cryptography.hazmat.primitives.asymmetric import ec
 
+from server.app.mds import verifier as mds_verifier
 from tests.app.characterization import material
 from tests.app.entry_app import entry_app
+from tests.app.metadata import mds_fixture
 
 from .ceremony_helpers import (
     ORIGIN,
@@ -277,3 +280,62 @@ def test_an_algorithm_the_metadata_does_not_list_is_an_advanced_error(advanced_s
     assert payload["attestationErrors"] == ["algorithm_not_in_metadata"]
     assert payload["attestationVerified"] is False
     assert payload["attestationSummary"]["metadata"]["algorithm_supported"] is False
+
+
+# --------------------------------------------------------------------------
+# An MDS status that says the authenticator is not to be trusted.
+# --------------------------------------------------------------------------
+
+
+def _verifier_where_l1_says(status):
+    """The fixture snapshot's verifier, its L1 entry's latest report saying ``status``."""
+
+    payload = json.loads((mds_fixture.SNAPSHOT_DIR / "fido-mds3.verified.json").read_text(encoding="utf-8"))
+    l1 = str(uuid.UUID(bytes=ES256_AND_EDDSA_AAGUID))
+    entries = [
+        {**raw, "statusReports": [*raw["statusReports"], {"status": status, "effectiveDate": "2026-10-01"}]}
+        if raw.get("aaguid") == l1
+        else raw
+        for raw in payload["entries"]
+    ]
+    return mds_verifier.IndexedVerifier(mds_verifier.PackagedEntries(entries))
+
+
+L1_CERTIFICATION = "FIDO Certified L1 • Fixture Security Key • (FIDO20020260901001)"
+
+
+def test_an_unsafe_mds_status_is_a_simple_warning_and_the_record_keeps_the_status(simple_storage, monkeypatch):
+    monkeypatch.setattr(mds_verifier, "get_mds_verifier", lambda: _verifier_where_l1_says("USER_VERIFICATION_BYPASS"))
+
+    response = complete_simple_registration(entry_app().test_client(), Authenticator(aaguid=ES256_AND_EDDSA_AAGUID))
+
+    assert response.status_code == 200, response.get_json()
+    body = response.get_json()
+    checks = body["relyingParty"]["registrationData"]["attestationChecks"]
+    assert checks["errors"] == []
+    assert checks["warnings"] == ["metadata_status_unsafe: USER_VERIFICATION_BYPASS"]
+    kept = body["storedCredential"]["properties"]["attestationSummary"]["metadata"]
+    assert (kept["latest_status"], kept["certification_level"]) == ("USER Verification Bypass", L1_CERTIFICATION)
+
+
+def test_an_unsafe_mds_status_is_an_advanced_error_and_the_record_keeps_the_status(advanced_storage, monkeypatch):
+    monkeypatch.setattr(mds_verifier, "get_mds_verifier", lambda: _verifier_where_l1_says("ATTESTATION_KEY_COMPROMISE"))
+    authenticator = Authenticator(aaguid=ES256_AND_EDDSA_AAGUID)
+    client = entry_app().test_client()
+
+    begin = client.post("/api/advanced/register/begin", json={"publicKey": advanced_public_key_options(challenge=b"\x54" * 32)})
+    server_challenge = unb64u(begin.get_json()["publicKey"]["challenge"])
+    complete = client.post(
+        "/api/advanced/register/complete",
+        json={
+            "publicKey": advanced_public_key_options(challenge=server_challenge),
+            "__credential_response": registration_payload(authenticator, challenge=server_challenge),
+        },
+        headers={"Origin": ORIGIN},
+    )
+
+    assert complete.status_code == 200, complete.get_json()
+    payload = complete.get_json()
+    assert payload["attestationErrors"] == ["metadata_status_unsafe: ATTESTATION_KEY_COMPROMISE"]
+    kept = payload["storedCredential"]["properties"]["attestationSummary"]["metadata"]
+    assert (kept["latest_status"], kept["certification_level"]) == ("Attestation KEY Compromise", L1_CERTIFICATION)

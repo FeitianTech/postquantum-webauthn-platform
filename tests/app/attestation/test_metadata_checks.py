@@ -114,3 +114,42 @@ def test_without_an_entry_or_its_status_reports_nothing_is_said_of_its_status():
 
     assert (without["available"], without["latest_status"], without["certification_level"]) == (False, None, None)
     assert (unreported["available"], unreported["latest_status"], unreported["certification_level"]) == (True, None, None)
+
+
+def _reported(*statuses):
+    """An entry whose status reports say ``statuses``, each a day later than the one before."""
+
+    entry = _entry({})
+    entry.status_reports = [{"status": status, "effectiveDate": f"2026-01-{day:02d}"} for day, status in enumerate(statuses, 1)]
+    return entry
+
+
+@pytest.mark.parametrize(
+    "status",
+    ["USER_VERIFICATION_BYPASS", "ATTESTATION_KEY_COMPROMISE", "USER_KEY_REMOTE_COMPROMISE", "USER_KEY_PHYSICAL_COMPROMISE"],
+)
+def test_a_latest_status_that_says_the_authenticator_is_not_to_be_trusted_is_a_finding(status):
+    results = _finalized(_reported("FIDO_CERTIFIED_L1", status))
+
+    assert results["errors"] == [f"metadata_status_unsafe: {status}"]
+    assert results["metadata"]["certification_level"] == "FIDO Certified L1"
+
+
+@pytest.mark.parametrize(
+    "statuses",
+    [
+        ("NOT_FIDO_CERTIFIED",),
+        ("SELF_ASSERTION_SUBMITTED",),
+        ("FIDO_CERTIFIED_L2", "UPDATE_AVAILABLE"),
+        ("FIDO_CERTIFIED_L3PLUS",),
+        # A compromise an update since has dealt with is no longer the latest.
+        ("USER_VERIFICATION_BYPASS", "UPDATE_AVAILABLE"),
+    ],
+)
+def test_the_other_statuses_and_the_certification_levels_are_shown_not_findings(statuses):
+    results = _finalized(_reported(*statuses))
+
+    assert results["errors"] == []
+    assert results["metadata"]["latest_status"] == statement_fields.latest_status(
+        [{"status": status, "effectiveDate": "2026-01-01"} for status in statuses[-1:]]
+    )

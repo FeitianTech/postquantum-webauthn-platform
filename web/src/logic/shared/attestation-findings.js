@@ -124,6 +124,10 @@ export const FINDING_SENTENCES = Object.freeze({
         en: 'The credential\'s algorithm is not among those the authenticator\'s metadata lists',
         zh: '凭据的算法不在该认证器元数据所列的算法之中',
     },
+    metadata_status_unsafe: {
+        en: 'FIDO\'s metadata says this authenticator is not to be trusted',
+        zh: 'FIDO 元数据表明不应信任该认证器',
+    },
 });
 
 const SEVERITY_LABELS = { error: 'Error', warning: 'Warning' };

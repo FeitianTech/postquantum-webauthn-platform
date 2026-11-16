@@ -53,6 +53,15 @@ describe('a finding', () => {
     );
   });
 
+  it('gives an MDS status that says the authenticator is not to be trusted after its sentence', () => {
+    expect(describeFinding('metadata_status_unsafe: USER_VERIFICATION_BYPASS', 'warning')).toMatchObject({
+      code: 'metadata_status_unsafe',
+      known: true,
+      en: 'FIDO\'s metadata says this authenticator is not to be trusted: USER_VERIFICATION_BYPASS',
+      zh: 'FIDO 元数据表明不应信任该认证器: USER_VERIFICATION_BYPASS',
+    });
+  });
+
   it('gives no reason where none follows the code', () => {
     expect(describeFinding('  trust_path_missing:  ', 'warning')).toMatchObject({
       code: 'trust_path_missing',

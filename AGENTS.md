@@ -388,7 +388,10 @@ its logic out here first.
   code, `tests/fixtures/attestation-finding-codes.json` lists them for the page's sentences too;
   a reason after `: ` only when the exception has one, so none is empty) and
   `INTEGRITY_ERRORS`, the ones that say the ceremony did not hold, on which alone the Simple
-  tab refuses; `constants.py`'s `UNREADABLE_EXTENSIONS`, what cryptography raises reading a
+  tab refuses, and `UNSAFE_STATUSES`, the MDS statuses (a compromise, a user verification
+  bypass) that are a finding, `metadata_status_unsafe: <STATUS>`, when the matched entry's latest
+  report says one (`metadata_checks.py`, which also gives both tabs' answers the entry's latest
+  status and certification as the explorer reads them); `constants.py`'s `UNREADABLE_EXTENSIONS`, what cryptography raises reading a
   loaded certificate's extensions, caught wherever they are read, and the limits both x5c
   readers, `certificates.py` and
   `trust.py`, apply: a certificate of at most 64 KiB, a chain's first 10 entries; an x5c entry

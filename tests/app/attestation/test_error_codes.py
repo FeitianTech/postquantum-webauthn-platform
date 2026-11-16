@@ -75,10 +75,21 @@ def test_the_simple_tab_refuses_on_these_errors_alone():
         "metadata_not_fido_trusted",
         "attestation_root_not_trusted",
         "algorithm_not_in_metadata",
+        "metadata_status_unsafe: USER_VERIFICATION_BYPASS",
     ],
 )
 def test_what_an_attestation_proves_about_the_authenticator_is_no_integrity_error(finding):
     assert error_codes.error_code(finding) not in error_codes.INTEGRITY_ERRORS
+
+
+def test_an_mds_status_that_says_the_authenticator_is_not_to_be_trusted_is_a_finding_with_its_status():
+    assert error_codes.UNSAFE_STATUSES == {
+        "USER_VERIFICATION_BYPASS",
+        "ATTESTATION_KEY_COMPROMISE",
+        "USER_KEY_REMOTE_COMPROMISE",
+        "USER_KEY_PHYSICAL_COMPROMISE",
+    }
+    assert error_codes.unsafe_status("USER_KEY_REMOTE_COMPROMISE") == "metadata_status_unsafe: USER_KEY_REMOTE_COMPROMISE"
 
 
 def test_a_finding_with_a_reason_has_the_code_before_it():

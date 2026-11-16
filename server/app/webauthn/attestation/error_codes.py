@@ -40,6 +40,25 @@ INTEGRITY_ERRORS = frozenset(
 )
 
 
+# The MDS statuses that say the authenticator is not to be trusted: each is a
+# finding, with the status as its reason (``unsafe_status``). The other statuses
+# and the certification levels are shown with the registration, not reported.
+UNSAFE_STATUSES = frozenset(
+    {
+        "USER_VERIFICATION_BYPASS",
+        "ATTESTATION_KEY_COMPROMISE",
+        "USER_KEY_REMOTE_COMPROMISE",
+        "USER_KEY_PHYSICAL_COMPROMISE",
+    }
+)
+
+
+def unsafe_status(status: str) -> str:
+    """The finding of an MDS status that says the authenticator is not to be trusted (``UNSAFE_STATUSES``)."""
+
+    return f"metadata_status_unsafe: {status}"
+
+
 def with_reason(code: str, exc: BaseException) -> str:
     """``code``, followed by ``exc``'s message when it has one."""
 

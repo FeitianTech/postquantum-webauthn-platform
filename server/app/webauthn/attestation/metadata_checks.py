@@ -9,6 +9,7 @@ from fido2.webauthn import Aaguid
 from ... import json_values
 from ...mds import statement_fields
 from ...mds import verifier as mds_verifier
+from . import error_codes
 
 
 def _metadata_entry_by_aaguid(verifier: Any, credential_aaguid_bytes: bytes) -> Any:
@@ -92,11 +93,16 @@ def _metadata_entry_facts(metadata_entry: Any, algorithm: Any) -> dict[str, Any]
     }
 
 
-def _status_facts(metadata_entry: Any) -> dict[str, str | None]:
-    """What an entry's status reports say, as the MDS explorer reads them: its latest
-    status and its highest certification, each None without one."""
+def _status_reports(metadata_entry: Any) -> list[Any]:
+    """An entry's status reports as JSON, which the MDS explorer's readers take."""
 
-    reports = json_values.make_json_safe(list(getattr(metadata_entry, "status_reports", None) or []))
+    return json_values.make_json_safe(list(getattr(metadata_entry, "status_reports", None) or []))
+
+
+def _status_facts(reports: list[Any]) -> dict[str, str | None]:
+    """What status reports say, as the MDS explorer reads them: the latest status and
+    the highest certification, each None without one."""
+
     return {
         "latest_status": statement_fields.latest_status(reports) or None,
         "certification_level": statement_fields.certification_level(reports) or None,
@@ -129,10 +135,14 @@ def finalize_metadata_results(
         "certification_level": None,
     }
     if metadata_entry is not None:
+        reports = _status_reports(metadata_entry)
         facts = {
             **_metadata_entry_facts(metadata_entry, results["authenticator_data"].get("algorithm")),
-            **_status_facts(metadata_entry),
+            **_status_facts(reports),
         }
+        latest = statement_fields.latest_status_code(reports)
+        if latest in error_codes.UNSAFE_STATUSES:
+            results["errors"].append(error_codes.unsafe_status(latest))
 
     credential_aaguid_value = credential_aaguid_bytes if credential_aaguid_bytes else None
     certificate_aaguid_value = certificate_aaguid_bytes if certificate_aaguid_bytes else None
