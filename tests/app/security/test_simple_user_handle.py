@@ -6,6 +6,10 @@ the username (``routes/simple/account.py``), with the username as ``name`` and
 ``displayName``; its complete stores that id as the credential's user handle: in the
 answer, the relying party's view and the server's record. Records stored before,
 whose handle is the username's bytes, are read by their credential ID as ever.
+
+A sign-in's userHandle, when it carries one, must be the one the account's record keeps
+(WebAuthn L3 section 7.2 step 6), or the sign-in is refused; with no record, or one
+stored before accounts had handles, none is compared.
 """
 from __future__ import annotations
 
@@ -18,6 +22,7 @@ from .ceremony_helpers import (
     SIMPLE_EMAIL,
     Authenticator,
     authenticate_simple,
+    b64u,
     register_simple,
     registration_payload,
     unb64u,
@@ -98,3 +103,73 @@ def test_a_credential_stored_with_the_username_as_its_user_handle_still_authenti
 
     assert response.status_code == 200, response.get_json()
     assert response.get_json()["signCount"] == 2
+
+
+def _stored_user_handle(client) -> bytes:
+    [record] = storage_credentials.readkey(SIMPLE_EMAIL, session_id=visitor_namespace.of(client))
+    return record["user_handle"]
+
+
+def _rewrite_records(client, change) -> None:
+    namespace = visitor_namespace.of(client)
+    records, version = storage_credentials.read_for_update(SIMPLE_EMAIL, session_id=namespace)
+    assert storage_credentials.save_if_unchanged(SIMPLE_EMAIL, change(records), version, session_id=namespace)
+
+
+def test_a_sign_in_whose_user_handle_is_the_accounts_is_accepted_and_says_so(credential_store):
+    client = entry_app().test_client()
+    authenticator = Authenticator()
+    register_simple(client, authenticator, counter=1)
+
+    matched = authenticate_simple(client, authenticator, counter=2, user_handle=_stored_user_handle(client))
+    absent = authenticate_simple(client, authenticator, counter=3)
+
+    assert (matched.status_code, matched.get_json()["userHandleStatus"]) == (200, "match")
+    assert (absent.status_code, absent.get_json()["userHandleStatus"]) == (200, "absent")
+
+
+def test_a_sign_in_whose_user_handle_is_another_accounts_is_refused_before_its_counter_is_kept(credential_store):
+    client = entry_app().test_client()
+    authenticator = Authenticator()
+    register_simple(client, authenticator, counter=1)
+
+    refused = authenticate_simple(client, authenticator, counter=5, user_handle=b"\x22" * 32)
+    accepted = authenticate_simple(client, authenticator, counter=2)
+
+    assert refused.status_code == 400
+    assert refused.get_json() == {
+        "error": "The user handle the authenticator returned is not this account's, so authentication was rejected.",
+        "failedCredentialId": b64u(authenticator.credential_id),
+        "assertionErrors": ["user_handle_mismatch"],
+        "userHandleStatus": "mismatch",
+    }
+    assert (accepted.status_code, accepted.get_json()["signCountStatus"]) == (200, "ok")
+
+
+def test_a_credential_stored_with_the_username_as_its_user_handle_compares_none(credential_store):
+    client = entry_app().test_client()
+    authenticator = Authenticator()
+    register_simple(client, authenticator, counter=1)
+
+    def _as_stored_before(records):
+        records[0]["user_handle"] = SIMPLE_EMAIL.encode()
+        return records
+
+    _rewrite_records(client, _as_stored_before)
+    # What such a registration gave its authenticator.
+    response = authenticate_simple(client, authenticator, counter=2, user_handle=b"user_id")
+
+    assert response.status_code == 200, response.get_json()
+    assert response.get_json()["userHandleStatus"] == "not-compared"
+
+
+def test_without_the_servers_record_no_user_handle_is_compared(credential_store):
+    client = entry_app().test_client()
+    authenticator = Authenticator()
+    register_simple(client, authenticator, counter=1)
+    _rewrite_records(client, lambda records: [])
+
+    response = authenticate_simple(client, authenticator, counter=2, user_handle=b"\x22" * 32)
+
+    assert response.status_code == 200, response.get_json()
+    assert response.get_json()["userHandleStatus"] == "not-compared"

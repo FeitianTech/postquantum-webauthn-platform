@@ -1,0 +1,1429 @@
+{
+ "scenario": "simple-authenticate-user-handle",
+ "requests": [
+  {
+   "request": "POST /api/register/begin?email=user@example.com",
+   "status": 200,
+   "headers": [
+    [
+     "Content-Type",
+     "application/json"
+    ],
+    [
+     "Content-Length",
+     "719"
+    ],
+    [
+     "X-Content-Type-Options",
+     "nosniff"
+    ],
+    [
+     "X-Frame-Options",
+     "DENY"
+    ],
+    [
+     "Referrer-Policy",
+     "no-referrer"
+    ],
+    [
+     "Content-Security-Policy",
+     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; require-trusted-types-for 'script'; trusted-types nextjs nextjs#bundler; report-uri /api/csp-report; report-to csp"
+    ],
+    [
+     "Reporting-Endpoints",
+     "csp=\"/api/csp-report\""
+    ],
+    [
+     "Permissions-Policy",
+     "accelerometer=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-create=(self), publickey-credentials-get=(self), screen-wake-lock=(), usb=(), xr-spatial-tracking=()"
+    ],
+    [
+     "Vary",
+     "Cookie"
+    ]
+   ],
+   "cookies": [
+    {
+     "name": "fido.mds.session",
+     "attributes": [
+      "Max-Age=31536000",
+      "HttpOnly",
+      "Path=/",
+      "SameSite=Lax"
+     ],
+     "contents": "pHF7In_W_WTmEx3V7kLIV68aquEAp1gDTTimsSRe0aQ"
+    },
+    {
+     "name": "session",
+     "attributes": [
+      "HttpOnly",
+      "Path=/",
+      "SameSite=Lax"
+     ],
+     "contents": {
+      "register_rp_id": "localhost",
+      "simple_register_excluded": 0,
+      "simple_register_public_key": {
+       "authenticatorSelection": {
+        "authenticatorAttachment": "cross-platform",
+        "requireResidentKey": false,
+        "residentKey": "discouraged",
+        "userVerification": "discouraged"
+       },
+       "challenge": "HtkjzYSUwsDBlC51l245VpAjCbcood4Bh037jsZPGeo",
+       "pubKeyCredParams": [
+        {
+         "alg": -48,
+         "type": "public-key"
+        },
+        {
+         "alg": -49,
+         "type": "public-key"
+        },
+        {
+         "alg": -50,
+         "type": "public-key"
+        },
+        {
+         "alg": -8,
+         "type": "public-key"
+        },
+        {
+         "alg": -7,
+         "type": "public-key"
+        },
+        {
+         "alg": -257,
+         "type": "public-key"
+        },
+        {
+         "alg": -35,
+         "type": "public-key"
+        }
+       ]
+      },
+      "simple_register_state": {
+       "challenge": "HtkjzYSUwsDBlC51l245VpAjCbcood4Bh037jsZPGeo",
+       "issued_at": 1790000000.0,
+       "user_verification": "discouraged"
+      },
+      "simple_register_user": {
+       "id": {
+        "$bytes": "11a0fe1d0460eceb7ccd6ac3d490806550ac1c8a2859531a1584a1d48dc65a24"
+       },
+       "name": "user@example.com"
+      }
+     }
+    }
+   ],
+   "bodySha256": "8729d1f70c68de2b6513e44c0494c252d00559a6cc9b9696e2ee71a5f886b8da",
+   "body": {
+    "publicKey": {
+     "authenticatorSelection": {
+      "authenticatorAttachment": "cross-platform",
+      "requireResidentKey": false,
+      "residentKey": "discouraged",
+      "userVerification": "discouraged"
+     },
+     "challenge": "HtkjzYSUwsDBlC51l245VpAjCbcood4Bh037jsZPGeo",
+     "excludeCredentials": [],
+     "extensions": {
+      "credProps": true
+     },
+     "pubKeyCredParams": [
+      {
+       "alg": -48,
+       "type": "public-key"
+      },
+      {
+       "alg": -49,
+       "type": "public-key"
+      },
+      {
+       "alg": -50,
+       "type": "public-key"
+      },
+      {
+       "alg": -8,
+       "type": "public-key"
+      },
+      {
+       "alg": -7,
+       "type": "public-key"
+      },
+      {
+       "alg": -257,
+       "type": "public-key"
+      },
+      {
+       "alg": -35,
+       "type": "public-key"
+      }
+     ],
+     "rp": {
+      "id": "localhost",
+      "name": "FIDO2/WebAuthn PQC Developer Tools"
+     },
+     "user": {
+      "displayName": "user@example.com",
+      "id": "EaD-HQRg7Ot8zWrD1JCAZVCsHIooWVMaFYSh1I3GWiQ",
+      "name": "user@example.com"
+     }
+    }
+   }
+  },
+  {
+   "request": "POST /api/register/complete?email=user@example.com",
+   "status": 200,
+   "headers": [
+    [
+     "Content-Type",
+     "application/json"
+    ],
+    [
+     "Content-Length",
+     "12274"
+    ],
+    [
+     "X-Content-Type-Options",
+     "nosniff"
+    ],
+    [
+     "X-Frame-Options",
+     "DENY"
+    ],
+    [
+     "Referrer-Policy",
+     "no-referrer"
+    ],
+    [
+     "Content-Security-Policy",
+     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; require-trusted-types-for 'script'; trusted-types nextjs nextjs#bundler; report-uri /api/csp-report; report-to csp"
+    ],
+    [
+     "Reporting-Endpoints",
+     "csp=\"/api/csp-report\""
+    ],
+    [
+     "Permissions-Policy",
+     "accelerometer=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-create=(self), publickey-credentials-get=(self), screen-wake-lock=(), usb=(), xr-spatial-tracking=()"
+    ],
+    [
+     "Vary",
+     "Cookie"
+    ]
+   ],
+   "cookies": [
+    {
+     "name": "session",
+     "attributes": [
+      "Max-Age=0",
+      "HttpOnly",
+      "Path=/",
+      "SameSite=Lax"
+     ],
+     "contents": null
+    }
+   ],
+   "bodySha256": "7a5b54c56899e3e249b28e52385954588ccb09f6b147c3098bd1ee4d9a0b19a2",
+   "body": {
+    "actualResidentKey": null,
+    "algo": "ES256 (ECDSA)",
+    "algorithmsUsed": [
+     -7
+    ],
+    "attestationFormat": "none",
+    "attestationSummary": {
+     "aaguidMatch": null,
+     "metadata": {
+      "aaguid": null,
+      "algorithm_supported": null,
+      "available": false,
+      "certification_level": null,
+      "description": null,
+      "latest_status": null,
+      "root_certificates_present": false
+     },
+     "rootValid": null,
+     "rpIdHashValid": true,
+     "signatureValid": null
+    },
+    "credProtectUsed": "none",
+    "enforceCredProtectUsed": false,
+    "excludeCredentialsUsed": false,
+    "hintsUsed": [],
+    "relyingParty": {
+     "aaguid": {
+      "guid": "00000000-0000-0000-0000-000000000000",
+      "raw": "00000000000000000000000000000000"
+     },
+     "attestationFmt": "none",
+     "authenticatorDataHash": "afd54b755eab63b1304d646cb55d1dc81ffb9449a32ec8fc7994c18f3dd33b8b",
+     "createdAt": "2026-09-21T14:13:20+00:00",
+     "credentialId": "7dc35552dd2af77e0e9efc0f248bc8aeeb4a9b5109e25dd210e21c6d9fb951f3",
+     "credentialIdBase64": "fcNVUt0q934OnvwPJIvIrutKm1EJ4l3SEOIcbZ+5UfM=",
+     "credentialIdBase64Url": "fcNVUt0q934OnvwPJIvIrutKm1EJ4l3SEOIcbZ-5UfM",
+     "largeBlob": false,
+     "publicKeyAlgorithm": -7,
+     "registrationData": {
+      "attestationChecks": {
+       "aaguid_match": null,
+       "attestation_format": "none",
+       "authenticator_data": {
+        "algorithm": -7,
+        "algorithm_allowed": true,
+        "attested_credential_data": true,
+        "cose_key_valid": true,
+        "counter": 1,
+        "credential_aaguid": "00000000000000000000000000000000",
+        "credential_id_length": 32,
+        "user_present": true,
+        "user_verification_required": false,
+        "user_verification_satisfied": true,
+        "user_verified": true
+       },
+       "client_data": {
+        "challenge": "HtkjzYSUwsDBlC51l245VpAjCbcood4Bh037jsZPGeo",
+        "challenge_matches": true,
+        "cross_origin": false,
+        "cross_origin_ok": true,
+        "expected_challenge": "HtkjzYSUwsDBlC51l245VpAjCbcood4Bh037jsZPGeo",
+        "expected_origin": "http://localhost",
+        "expected_type": "webauthn.create",
+        "origin": "http://localhost",
+        "origin_valid": true,
+        "type": "webauthn.create",
+        "type_valid": true
+       },
+       "errors": [],
+       "hash_binding": {
+        "client_data_hash": "ByV0aCeq5bU2xKvBONa1Kz0LQ_pmYnqxL0wr1VoHV1c",
+        "verification_data": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAQAAAAAAAAAAAAAAAAAAAAAAIH3DVVLdKvd-Dp78DySLyK7rSptRCeJd0hDiHG2fuVHzpQECAyYgASFYILjNuBTD1x9Lk-qRZ1Vy_PioA31gnKDL0_UGkTHhOTmmIlggVyxEnw_vpw_WDac-XpSYlCjhc98T2xbPAufIGqSDVsAHJXRoJ6rltTbEq8E41rUrPQtD-mZierEvTCvVWgdXVw"
+       },
+       "metadata": {
+        "aaguid": null,
+        "algorithm_supported": null,
+        "available": false,
+        "certification_level": null,
+        "description": null,
+        "latest_status": null,
+        "root_certificates_present": false
+       },
+       "root_valid": null,
+       "rp_id_hash_valid": true,
+       "signature_valid": null,
+       "warnings": []
+      },
+      "attestationSummary": {
+       "aaguidMatch": null,
+       "metadata": {
+        "aaguid": null,
+        "algorithm_supported": null,
+        "available": false,
+        "certification_level": null,
+        "description": null,
+        "latest_status": null,
+        "root_certificates_present": false
+       },
+       "rootValid": null,
+       "rpIdHashValid": true,
+       "signatureValid": null
+      },
+      "authenticatorData": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d976345000000010000000000000000000000000000000000207dc35552dd2af77e0e9efc0f248bc8aeeb4a9b5109e25dd210e21c6d9fb951f3a5010203262001215820b8cdb814c3d71f4b93ea91675572fcf8a8037d609ca0cbd3f5069131e13939a6225820572c449f0fefa70fd60da73e5e94989428e173df13db16cf02e7c81aa48356c0",
+      "authenticatorDataHash": "afd54b755eab63b1304d646cb55d1dc81ffb9449a32ec8fc7994c18f3dd33b8b",
+      "clientExtensionResults": {},
+      "flags": {
+       "AT": true,
+       "BE": false,
+       "BS": false,
+       "ED": false,
+       "UP": true,
+       "UV": true
+      },
+      "signatureCounter": 1
+     },
+     "rpIdHash": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763",
+     "rpIdHashBase64": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2M",
+     "rpIdHashExpected": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763",
+     "rpIdHashExpectedBase64": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2M",
+     "rpIdHashMatch": true,
+     "userHandle": {
+      "base64": "EaD+HQRg7Ot8zWrD1JCAZVCsHIooWVMaFYSh1I3GWiQ=",
+      "base64url": "EaD-HQRg7Ot8zWrD1JCAZVCsHIooWVMaFYSh1I3GWiQ",
+      "hex": "11a0fe1d0460eceb7ccd6ac3d490806550ac1c8a2859531a1584a1d48dc65a24"
+     }
+    },
+    "rpIdHash": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763",
+    "rpIdHashExpected": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763",
+    "rpIdHashValid": true,
+    "status": "OK",
+    "storedCredential": {
+     "aaguid": "AAAAAAAAAAAAAAAAAAAAAA",
+     "aaguidHex": "00000000000000000000000000000000",
+     "attestationFormat": "none",
+     "authenticatorAttachment": null,
+     "authenticatorData": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAQAAAAAAAAAAAAAAAAAAAAAAIH3DVVLdKvd-Dp78DySLyK7rSptRCeJd0hDiHG2fuVHzpQECAyYgASFYILjNuBTD1x9Lk-qRZ1Vy_PioA31gnKDL0_UGkTHhOTmmIlggVyxEnw_vpw_WDac-XpSYlCjhc98T2xbPAufIGqSDVsA",
+     "authenticatorDataHash": "afd54b755eab63b1304d646cb55d1dc81ffb9449a32ec8fc7994c18f3dd33b8b",
+     "authenticatorDataHex": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d976345000000010000000000000000000000000000000000207dc35552dd2af77e0e9efc0f248bc8aeeb4a9b5109e25dd210e21c6d9fb951f3a5010203262001215820b8cdb814c3d71f4b93ea91675572fcf8a8037d609ca0cbd3f5069131e13939a6225820572c449f0fefa70fd60da73e5e94989428e173df13db16cf02e7c81aa48356c0",
+     "clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIiwiY2hhbGxlbmdlIjoiSHRranpZU1V3c0RCbEM1MWwyNDVWcEFqQ2Jjb29kNEJoMDM3anNaUEdlbyIsIm9yaWdpbiI6Imh0dHA6Ly9sb2NhbGhvc3QiLCJjcm9zc09yaWdpbiI6ZmFsc2V9",
+     "clientExtensionOutputs": {},
+     "createdAt": 1790000000.0,
+     "credentialId": "fcNVUt0q934OnvwPJIvIrutKm1EJ4l3SEOIcbZ-5UfM",
+     "credentialIdBase64Url": "fcNVUt0q934OnvwPJIvIrutKm1EJ4l3SEOIcbZ-5UfM",
+     "credentialIdHex": "7dc35552dd2af77e0e9efc0f248bc8aeeb4a9b5109e25dd210e21c6d9fb951f3",
+     "displayName": "user@example.com",
+     "email": "user@example.com",
+     "properties": {
+      "aaguid": "00000000000000000000000000000000",
+      "aaguidGuid": "00000000-0000-0000-0000-000000000000",
+      "aaguidHex": "00000000000000000000000000000000",
+      "attestationAaguidMatch": null,
+      "attestationChecks": {
+       "aaguid_match": null,
+       "attestation_format": "none",
+       "authenticator_data": {
+        "algorithm": -7,
+        "algorithm_allowed": true,
+        "attested_credential_data": true,
+        "cose_key_valid": true,
+        "counter": 1,
+        "credential_aaguid": "00000000000000000000000000000000",
+        "credential_id_length": 32,
+        "user_present": true,
+        "user_verification_required": false,
+        "user_verification_satisfied": true,
+        "user_verified": true
+       },
+       "client_data": {
+        "challenge": "HtkjzYSUwsDBlC51l245VpAjCbcood4Bh037jsZPGeo",
+        "challenge_matches": true,
+        "cross_origin": false,
+        "cross_origin_ok": true,
+        "expected_challenge": "HtkjzYSUwsDBlC51l245VpAjCbcood4Bh037jsZPGeo",
+        "expected_origin": "http://localhost",
+        "expected_type": "webauthn.create",
+        "origin": "http://localhost",
+        "origin_valid": true,
+        "type": "webauthn.create",
+        "type_valid": true
+       },
+       "errors": [],
+       "hash_binding": {
+        "client_data_hash": "ByV0aCeq5bU2xKvBONa1Kz0LQ_pmYnqxL0wr1VoHV1c",
+        "verification_data": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAQAAAAAAAAAAAAAAAAAAAAAAIH3DVVLdKvd-Dp78DySLyK7rSptRCeJd0hDiHG2fuVHzpQECAyYgASFYILjNuBTD1x9Lk-qRZ1Vy_PioA31gnKDL0_UGkTHhOTmmIlggVyxEnw_vpw_WDac-XpSYlCjhc98T2xbPAufIGqSDVsAHJXRoJ6rltTbEq8E41rUrPQtD-mZierEvTCvVWgdXVw"
+       },
+       "metadata": {
+        "aaguid": null,
+        "algorithm_supported": null,
+        "available": false,
+        "certification_level": null,
+        "description": null,
+        "latest_status": null,
+        "root_certificates_present": false
+       },
+       "root_valid": null,
+       "rp_id_hash_valid": true,
+       "signature_valid": null,
+       "warnings": []
+      },
+      "attestationRootValid": null,
+      "attestationRpIdHashValid": true,
+      "attestationSignatureValid": null,
+      "attestationSummary": {
+       "aaguidMatch": null,
+       "metadata": {
+        "aaguid": null,
+        "algorithm_supported": null,
+        "available": false,
+        "certification_level": null,
+        "description": null,
+        "latest_status": null,
+        "root_certificates_present": false
+       },
+       "rootValid": null,
+       "rpIdHashValid": true,
+       "signatureValid": null
+      },
+      "authenticatorAttachment": null,
+      "authenticatorDataHash": "afd54b755eab63b1304d646cb55d1dc81ffb9449a32ec8fc7994c18f3dd33b8b",
+      "credentialIdLength": 32,
+      "excludeCredentialsSentCount": 0,
+      "excludeCredentialsUsed": false,
+      "fakeCredentialIdLengthRequested": null,
+      "hintsSent": [],
+      "largeBlobClientOutput": {},
+      "largeBlobRequested": {},
+      "residentKeyRequested": "discouraged",
+      "residentKeyRequired": false,
+      "resolvedAuthenticatorAttachments": [],
+      "rpIdHash": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763",
+      "rpIdHashBase64": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2M",
+      "rpIdHashExpected": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763",
+      "rpIdHashExpectedBase64": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2M"
+     },
+     "publicKey": "pQECAyYgASFYILjNuBTD1x9Lk-qRZ1Vy_PioA31gnKDL0_UGkTHhOTmmIlggVyxEnw_vpw_WDac-XpSYlCjhc98T2xbPAufIGqSDVsA",
+     "publicKeyAlgorithm": -7,
+     "publicKeyType": 2,
+     "registrationResponse": {
+      "clientExtensionResults": {},
+      "id": "fcNVUt0q934OnvwPJIvIrutKm1EJ4l3SEOIcbZ-5UfM",
+      "rawId": "fcNVUt0q934OnvwPJIvIrutKm1EJ4l3SEOIcbZ-5UfM",
+      "response": {
+       "attestationObject": "o2NmbXRkbm9uZWdhdHRTdG10oGhhdXRoRGF0YVikSZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAQAAAAAAAAAAAAAAAAAAAAAAIH3DVVLdKvd-Dp78DySLyK7rSptRCeJd0hDiHG2fuVHzpQECAyYgASFYILjNuBTD1x9Lk-qRZ1Vy_PioA31gnKDL0_UGkTHhOTmmIlggVyxEnw_vpw_WDac-XpSYlCjhc98T2xbPAufIGqSDVsA",
+       "clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIiwiY2hhbGxlbmdlIjoiSHRranpZU1V3c0RCbEM1MWwyNDVWcEFqQ2Jjb29kNEJoMDM3anNaUEdlbyIsIm9yaWdpbiI6Imh0dHA6Ly9sb2NhbGhvc3QiLCJjcm9zc09yaWdpbiI6ZmFsc2V9"
+      },
+      "type": "public-key"
+     },
+     "relyingParty": {
+      "aaguid": {
+       "guid": "00000000-0000-0000-0000-000000000000",
+       "raw": "00000000000000000000000000000000"
+      },
+      "attestationFmt": "none",
+      "authenticatorDataHash": "afd54b755eab63b1304d646cb55d1dc81ffb9449a32ec8fc7994c18f3dd33b8b",
+      "createdAt": "2026-09-21T14:13:20+00:00",
+      "credentialId": "7dc35552dd2af77e0e9efc0f248bc8aeeb4a9b5109e25dd210e21c6d9fb951f3",
+      "credentialIdBase64": "fcNVUt0q934OnvwPJIvIrutKm1EJ4l3SEOIcbZ+5UfM=",
+      "credentialIdBase64Url": "fcNVUt0q934OnvwPJIvIrutKm1EJ4l3SEOIcbZ-5UfM",
+      "largeBlob": false,
+      "publicKeyAlgorithm": -7,
+      "registrationData": {
+       "attestationChecks": {
+        "aaguid_match": null,
+        "attestation_format": "none",
+        "authenticator_data": {
+         "algorithm": -7,
+         "algorithm_allowed": true,
+         "attested_credential_data": true,
+         "cose_key_valid": true,
+         "counter": 1,
+         "credential_aaguid": "00000000000000000000000000000000",
+         "credential_id_length": 32,
+         "user_present": true,
+         "user_verification_required": false,
+         "user_verification_satisfied": true,
+         "user_verified": true
+        },
+        "client_data": {
+         "challenge": "HtkjzYSUwsDBlC51l245VpAjCbcood4Bh037jsZPGeo",
+         "challenge_matches": true,
+         "cross_origin": false,
+         "cross_origin_ok": true,
+         "expected_challenge": "HtkjzYSUwsDBlC51l245VpAjCbcood4Bh037jsZPGeo",
+         "expected_origin": "http://localhost",
+         "expected_type": "webauthn.create",
+         "origin": "http://localhost",
+         "origin_valid": true,
+         "type": "webauthn.create",
+         "type_valid": true
+        },
+        "errors": [],
+        "hash_binding": {
+         "client_data_hash": "ByV0aCeq5bU2xKvBONa1Kz0LQ_pmYnqxL0wr1VoHV1c",
+         "verification_data": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAQAAAAAAAAAAAAAAAAAAAAAAIH3DVVLdKvd-Dp78DySLyK7rSptRCeJd0hDiHG2fuVHzpQECAyYgASFYILjNuBTD1x9Lk-qRZ1Vy_PioA31gnKDL0_UGkTHhOTmmIlggVyxEnw_vpw_WDac-XpSYlCjhc98T2xbPAufIGqSDVsAHJXRoJ6rltTbEq8E41rUrPQtD-mZierEvTCvVWgdXVw"
+        },
+        "metadata": {
+         "aaguid": null,
+         "algorithm_supported": null,
+         "available": false,
+         "certification_level": null,
+         "description": null,
+         "latest_status": null,
+         "root_certificates_present": false
+        },
+        "root_valid": null,
+        "rp_id_hash_valid": true,
+        "signature_valid": null,
+        "warnings": []
+       },
+       "attestationSummary": {
+        "aaguidMatch": null,
+        "metadata": {
+         "aaguid": null,
+         "algorithm_supported": null,
+         "available": false,
+         "certification_level": null,
+         "description": null,
+         "latest_status": null,
+         "root_certificates_present": false
+        },
+        "rootValid": null,
+        "rpIdHashValid": true,
+        "signatureValid": null
+       },
+       "authenticatorData": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d976345000000010000000000000000000000000000000000207dc35552dd2af77e0e9efc0f248bc8aeeb4a9b5109e25dd210e21c6d9fb951f3a5010203262001215820b8cdb814c3d71f4b93ea91675572fcf8a8037d609ca0cbd3f5069131e13939a6225820572c449f0fefa70fd60da73e5e94989428e173df13db16cf02e7c81aa48356c0",
+       "authenticatorDataHash": "afd54b755eab63b1304d646cb55d1dc81ffb9449a32ec8fc7994c18f3dd33b8b",
+       "clientExtensionResults": {},
+       "flags": {
+        "AT": true,
+        "BE": false,
+        "BS": false,
+        "ED": false,
+        "UP": true,
+        "UV": true
+       },
+       "signatureCounter": 1
+      },
+      "rpIdHash": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763",
+      "rpIdHashBase64": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2M",
+      "rpIdHashExpected": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763",
+      "rpIdHashExpectedBase64": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2M",
+      "rpIdHashMatch": true,
+      "userHandle": {
+       "base64": "EaD+HQRg7Ot8zWrD1JCAZVCsHIooWVMaFYSh1I3GWiQ=",
+       "base64url": "EaD-HQRg7Ot8zWrD1JCAZVCsHIooWVMaFYSh1I3GWiQ",
+       "hex": "11a0fe1d0460eceb7ccd6ac3d490806550ac1c8a2859531a1584a1d48dc65a24"
+      }
+     },
+     "signCount": 1,
+     "type": "simple",
+     "userHandle": "EaD-HQRg7Ot8zWrD1JCAZVCsHIooWVMaFYSh1I3GWiQ",
+     "userName": "user@example.com"
+    }
+   },
+   "stored": [
+    {
+     "file": "credentials/pHF7In_W_WTmEx3V7kLIV68aquEAp1gDTTimsSRe0aQ/user@example.com_credential_data.json",
+     "sha256": "c10fd1dfec436d3206c330106f2006867700033d1d0b1a554c3782b8b6a8a227",
+     "content": {
+      "version": 1,
+      "encoding": "base64url",
+      "credentials": [
+       {
+        "credential_id": {
+         "__t": "bytes",
+         "__v": "fcNVUt0q934OnvwPJIvIrutKm1EJ4l3SEOIcbZ-5UfM"
+        },
+        "sign_count": 1,
+        "registration_time": 1790000000.0,
+        "user_handle": {
+         "__t": "bytes",
+         "__v": "EaD-HQRg7Ot8zWrD1JCAZVCsHIooWVMaFYSh1I3GWiQ"
+        }
+       }
+      ]
+     }
+    }
+   ],
+   "deviceLogEvents": [
+    {
+     "timestamp": "<datetime scrubbed>",
+     "rp_id": "localhost",
+     "aaguid": {
+      "$bytes": "00000000000000000000000000000000"
+     },
+     "device_name_mds": null,
+     "attestation_object": {
+      "$bytes": "a363666d74646e6f6e656761747453746d74a068617574684461746158a449960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d976345000000010000000000000000000000000000000000207dc35552dd2af77e0e9efc0f248bc8aeeb4a9b5109e25dd210e21c6d9fb951f3a5010203262001215820b8cdb814c3d71f4b93ea91675572fcf8a8037d609ca0cbd3f5069131e13939a6225820572c449f0fefa70fd60da73e5e94989428e173df13db16cf02e7c81aa48356c0"
+     },
+     "signature_valid": null,
+     "root_valid": null,
+     "rp_id_hash_valid": true,
+     "aaguid_match": null
+    }
+   ]
+  },
+  {
+   "request": "POST /api/authenticate/begin?email=user@example.com",
+   "status": 200,
+   "headers": [
+    [
+     "Content-Type",
+     "application/json"
+    ],
+    [
+     "Content-Length",
+     "220"
+    ],
+    [
+     "X-Content-Type-Options",
+     "nosniff"
+    ],
+    [
+     "X-Frame-Options",
+     "DENY"
+    ],
+    [
+     "Referrer-Policy",
+     "no-referrer"
+    ],
+    [
+     "Content-Security-Policy",
+     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; require-trusted-types-for 'script'; trusted-types nextjs nextjs#bundler; report-uri /api/csp-report; report-to csp"
+    ],
+    [
+     "Reporting-Endpoints",
+     "csp=\"/api/csp-report\""
+    ],
+    [
+     "Permissions-Policy",
+     "accelerometer=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-create=(self), publickey-credentials-get=(self), screen-wake-lock=(), usb=(), xr-spatial-tracking=()"
+    ],
+    [
+     "Vary",
+     "Cookie"
+    ]
+   ],
+   "cookies": [
+    {
+     "name": "session",
+     "attributes": [
+      "HttpOnly",
+      "Path=/",
+      "SameSite=Lax"
+     ],
+     "contents": {
+      "authenticate_rp_id": "localhost",
+      "simple_authenticate_state": {
+       "challenge": "9k9xmMsQ5IrCK-3achsSnn0brpMI2Te9ZuEt9dVWRUA",
+       "issued_at": 1790000000.0,
+       "user_verification": "discouraged"
+      },
+      "simple_credentials_digest": "21Lt25ET86L4J6uu_-CWb1upBrwMRfDt1vamYKGuIyc",
+      "simple_credentials_email": "user@example.com"
+     }
+    }
+   ],
+   "bodySha256": "cd6b8756d28d7accd99921f46f2592508d8719e47a97ad55d732446d7f8d3d19",
+   "body": {
+    "publicKey": {
+     "allowCredentials": [
+      {
+       "id": "fcNVUt0q934OnvwPJIvIrutKm1EJ4l3SEOIcbZ-5UfM",
+       "type": "public-key"
+      }
+     ],
+     "challenge": "9k9xmMsQ5IrCK-3achsSnn0brpMI2Te9ZuEt9dVWRUA",
+     "rpId": "localhost",
+     "userVerification": "discouraged"
+    }
+   }
+  },
+  {
+   "request": "POST /api/authenticate/complete?email=user@example.com",
+   "status": 200,
+   "headers": [
+    [
+     "Content-Type",
+     "application/json"
+    ],
+    [
+     "Content-Length",
+     "169"
+    ],
+    [
+     "X-Content-Type-Options",
+     "nosniff"
+    ],
+    [
+     "X-Frame-Options",
+     "DENY"
+    ],
+    [
+     "Referrer-Policy",
+     "no-referrer"
+    ],
+    [
+     "Content-Security-Policy",
+     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; require-trusted-types-for 'script'; trusted-types nextjs nextjs#bundler; report-uri /api/csp-report; report-to csp"
+    ],
+    [
+     "Reporting-Endpoints",
+     "csp=\"/api/csp-report\""
+    ],
+    [
+     "Permissions-Policy",
+     "accelerometer=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-create=(self), publickey-credentials-get=(self), screen-wake-lock=(), usb=(), xr-spatial-tracking=()"
+    ],
+    [
+     "Vary",
+     "Cookie"
+    ]
+   ],
+   "cookies": [
+    {
+     "name": "session",
+     "attributes": [
+      "Max-Age=0",
+      "HttpOnly",
+      "Path=/",
+      "SameSite=Lax"
+     ],
+     "contents": null
+    }
+   ],
+   "bodySha256": "40c66b2982d42baea8a4e14381a733484a08580f0b72fa2a4a6e8831032a14c9",
+   "body": {
+    "authenticatedCredentialId": "fcNVUt0q934OnvwPJIvIrutKm1EJ4l3SEOIcbZ-5UfM",
+    "hintsUsed": [],
+    "signCount": 2,
+    "signCountStatus": "ok",
+    "status": "OK",
+    "userHandleStatus": "match"
+   },
+   "stored": [
+    {
+     "file": "credentials/pHF7In_W_WTmEx3V7kLIV68aquEAp1gDTTimsSRe0aQ/user@example.com_credential_data.json",
+     "sha256": "1d9cbb4b186ea4adbe59ec9701bc3aaa0dbcb5fb41fbf9b49eaf3b65ceeb243a",
+     "content": {
+      "version": 1,
+      "encoding": "base64url",
+      "credentials": [
+       {
+        "credential_id": {
+         "__t": "bytes",
+         "__v": "fcNVUt0q934OnvwPJIvIrutKm1EJ4l3SEOIcbZ-5UfM"
+        },
+        "sign_count": 2,
+        "registration_time": 1790000000.0,
+        "user_handle": {
+         "__t": "bytes",
+         "__v": "EaD-HQRg7Ot8zWrD1JCAZVCsHIooWVMaFYSh1I3GWiQ"
+        }
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "request": "POST /api/authenticate/begin?email=user@example.com",
+   "status": 200,
+   "headers": [
+    [
+     "Content-Type",
+     "application/json"
+    ],
+    [
+     "Content-Length",
+     "220"
+    ],
+    [
+     "X-Content-Type-Options",
+     "nosniff"
+    ],
+    [
+     "X-Frame-Options",
+     "DENY"
+    ],
+    [
+     "Referrer-Policy",
+     "no-referrer"
+    ],
+    [
+     "Content-Security-Policy",
+     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; require-trusted-types-for 'script'; trusted-types nextjs nextjs#bundler; report-uri /api/csp-report; report-to csp"
+    ],
+    [
+     "Reporting-Endpoints",
+     "csp=\"/api/csp-report\""
+    ],
+    [
+     "Permissions-Policy",
+     "accelerometer=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-create=(self), publickey-credentials-get=(self), screen-wake-lock=(), usb=(), xr-spatial-tracking=()"
+    ],
+    [
+     "Vary",
+     "Cookie"
+    ]
+   ],
+   "cookies": [
+    {
+     "name": "session",
+     "attributes": [
+      "HttpOnly",
+      "Path=/",
+      "SameSite=Lax"
+     ],
+     "contents": {
+      "authenticate_rp_id": "localhost",
+      "simple_authenticate_state": {
+       "challenge": "WJsd800eI2A4-y7HWSGlhTrp_xKQj7oFtGcjkPLoDUc",
+       "issued_at": 1790000000.0,
+       "user_verification": "discouraged"
+      },
+      "simple_credentials_digest": "21Lt25ET86L4J6uu_-CWb1upBrwMRfDt1vamYKGuIyc",
+      "simple_credentials_email": "user@example.com"
+     }
+    }
+   ],
+   "bodySha256": "60cf71a8b18e5d81fae93c622698a8e2ab99d5abe52ea42862977a8909be7d53",
+   "body": {
+    "publicKey": {
+     "allowCredentials": [
+      {
+       "id": "fcNVUt0q934OnvwPJIvIrutKm1EJ4l3SEOIcbZ-5UfM",
+       "type": "public-key"
+      }
+     ],
+     "challenge": "WJsd800eI2A4-y7HWSGlhTrp_xKQj7oFtGcjkPLoDUc",
+     "rpId": "localhost",
+     "userVerification": "discouraged"
+    }
+   }
+  },
+  {
+   "request": "POST /api/authenticate/complete?email=user@example.com",
+   "status": 200,
+   "headers": [
+    [
+     "Content-Type",
+     "application/json"
+    ],
+    [
+     "Content-Length",
+     "170"
+    ],
+    [
+     "X-Content-Type-Options",
+     "nosniff"
+    ],
+    [
+     "X-Frame-Options",
+     "DENY"
+    ],
+    [
+     "Referrer-Policy",
+     "no-referrer"
+    ],
+    [
+     "Content-Security-Policy",
+     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; require-trusted-types-for 'script'; trusted-types nextjs nextjs#bundler; report-uri /api/csp-report; report-to csp"
+    ],
+    [
+     "Reporting-Endpoints",
+     "csp=\"/api/csp-report\""
+    ],
+    [
+     "Permissions-Policy",
+     "accelerometer=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-create=(self), publickey-credentials-get=(self), screen-wake-lock=(), usb=(), xr-spatial-tracking=()"
+    ],
+    [
+     "Vary",
+     "Cookie"
+    ]
+   ],
+   "cookies": [
+    {
+     "name": "session",
+     "attributes": [
+      "Max-Age=0",
+      "HttpOnly",
+      "Path=/",
+      "SameSite=Lax"
+     ],
+     "contents": null
+    }
+   ],
+   "bodySha256": "bf7abe12e53797a663635c0455d4c2f758e4c11d54cb0f76f7d155f21b9acc11",
+   "body": {
+    "authenticatedCredentialId": "fcNVUt0q934OnvwPJIvIrutKm1EJ4l3SEOIcbZ-5UfM",
+    "hintsUsed": [],
+    "signCount": 3,
+    "signCountStatus": "ok",
+    "status": "OK",
+    "userHandleStatus": "absent"
+   },
+   "stored": [
+    {
+     "file": "credentials/pHF7In_W_WTmEx3V7kLIV68aquEAp1gDTTimsSRe0aQ/user@example.com_credential_data.json",
+     "sha256": "c3983e12780a495fd04c1f9f448157415178fd777cbbbab55e4e80968a6d538b",
+     "content": {
+      "version": 1,
+      "encoding": "base64url",
+      "credentials": [
+       {
+        "credential_id": {
+         "__t": "bytes",
+         "__v": "fcNVUt0q934OnvwPJIvIrutKm1EJ4l3SEOIcbZ-5UfM"
+        },
+        "sign_count": 3,
+        "registration_time": 1790000000.0,
+        "user_handle": {
+         "__t": "bytes",
+         "__v": "EaD-HQRg7Ot8zWrD1JCAZVCsHIooWVMaFYSh1I3GWiQ"
+        }
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "request": "POST /api/authenticate/begin?email=user@example.com",
+   "status": 200,
+   "headers": [
+    [
+     "Content-Type",
+     "application/json"
+    ],
+    [
+     "Content-Length",
+     "220"
+    ],
+    [
+     "X-Content-Type-Options",
+     "nosniff"
+    ],
+    [
+     "X-Frame-Options",
+     "DENY"
+    ],
+    [
+     "Referrer-Policy",
+     "no-referrer"
+    ],
+    [
+     "Content-Security-Policy",
+     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; require-trusted-types-for 'script'; trusted-types nextjs nextjs#bundler; report-uri /api/csp-report; report-to csp"
+    ],
+    [
+     "Reporting-Endpoints",
+     "csp=\"/api/csp-report\""
+    ],
+    [
+     "Permissions-Policy",
+     "accelerometer=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-create=(self), publickey-credentials-get=(self), screen-wake-lock=(), usb=(), xr-spatial-tracking=()"
+    ],
+    [
+     "Vary",
+     "Cookie"
+    ]
+   ],
+   "cookies": [
+    {
+     "name": "session",
+     "attributes": [
+      "HttpOnly",
+      "Path=/",
+      "SameSite=Lax"
+     ],
+     "contents": {
+      "authenticate_rp_id": "localhost",
+      "simple_authenticate_state": {
+       "challenge": "E8rS8w1Tnv49lLrtuoaAr_Ez0vWTcFJj6PRS8ZIehG8",
+       "issued_at": 1790000000.0,
+       "user_verification": "discouraged"
+      },
+      "simple_credentials_digest": "21Lt25ET86L4J6uu_-CWb1upBrwMRfDt1vamYKGuIyc",
+      "simple_credentials_email": "user@example.com"
+     }
+    }
+   ],
+   "bodySha256": "e210bd4b4edd67271fcee5f2d7e04aba3fb2832e20205c57f253cc5629cd86b9",
+   "body": {
+    "publicKey": {
+     "allowCredentials": [
+      {
+       "id": "fcNVUt0q934OnvwPJIvIrutKm1EJ4l3SEOIcbZ-5UfM",
+       "type": "public-key"
+      }
+     ],
+     "challenge": "E8rS8w1Tnv49lLrtuoaAr_Ez0vWTcFJj6PRS8ZIehG8",
+     "rpId": "localhost",
+     "userVerification": "discouraged"
+    }
+   }
+  },
+  {
+   "request": "POST /api/authenticate/complete?email=user@example.com",
+   "status": 400,
+   "headers": [
+    [
+     "Content-Type",
+     "application/json"
+    ],
+    [
+     "Content-Length",
+     "250"
+    ],
+    [
+     "X-Content-Type-Options",
+     "nosniff"
+    ],
+    [
+     "X-Frame-Options",
+     "DENY"
+    ],
+    [
+     "Referrer-Policy",
+     "no-referrer"
+    ],
+    [
+     "Content-Security-Policy",
+     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; require-trusted-types-for 'script'; trusted-types nextjs nextjs#bundler; report-uri /api/csp-report; report-to csp"
+    ],
+    [
+     "Reporting-Endpoints",
+     "csp=\"/api/csp-report\""
+    ],
+    [
+     "Permissions-Policy",
+     "accelerometer=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-create=(self), publickey-credentials-get=(self), screen-wake-lock=(), usb=(), xr-spatial-tracking=()"
+    ],
+    [
+     "Vary",
+     "Cookie"
+    ]
+   ],
+   "cookies": [
+    {
+     "name": "session",
+     "attributes": [
+      "Max-Age=0",
+      "HttpOnly",
+      "Path=/",
+      "SameSite=Lax"
+     ],
+     "contents": null
+    }
+   ],
+   "bodySha256": "1cd638893b578c3e52c783a6c026c3f596b8f318488abc0f5d14a553447e6f22",
+   "body": {
+    "assertionErrors": [
+     "user_handle_mismatch"
+    ],
+    "error": "The user handle the authenticator returned is not this account's, so authentication was rejected.",
+    "failedCredentialId": "fcNVUt0q934OnvwPJIvIrutKm1EJ4l3SEOIcbZ-5UfM",
+    "userHandleStatus": "mismatch"
+   }
+  },
+  {
+   "request": "POST /api/authenticate/begin?email=user@example.com",
+   "status": 200,
+   "headers": [
+    [
+     "Content-Type",
+     "application/json"
+    ],
+    [
+     "Content-Length",
+     "220"
+    ],
+    [
+     "X-Content-Type-Options",
+     "nosniff"
+    ],
+    [
+     "X-Frame-Options",
+     "DENY"
+    ],
+    [
+     "Referrer-Policy",
+     "no-referrer"
+    ],
+    [
+     "Content-Security-Policy",
+     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; require-trusted-types-for 'script'; trusted-types nextjs nextjs#bundler; report-uri /api/csp-report; report-to csp"
+    ],
+    [
+     "Reporting-Endpoints",
+     "csp=\"/api/csp-report\""
+    ],
+    [
+     "Permissions-Policy",
+     "accelerometer=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-create=(self), publickey-credentials-get=(self), screen-wake-lock=(), usb=(), xr-spatial-tracking=()"
+    ],
+    [
+     "Vary",
+     "Cookie"
+    ]
+   ],
+   "cookies": [
+    {
+     "name": "session",
+     "attributes": [
+      "HttpOnly",
+      "Path=/",
+      "SameSite=Lax"
+     ],
+     "contents": {
+      "authenticate_rp_id": "localhost",
+      "simple_authenticate_state": {
+       "challenge": "C5rdzwlsIX4nZvqICo44iRGpvL7zXW7OhD-TDlJAjCY",
+       "issued_at": 1790000000.0,
+       "user_verification": "discouraged"
+      },
+      "simple_credentials_digest": "21Lt25ET86L4J6uu_-CWb1upBrwMRfDt1vamYKGuIyc",
+      "simple_credentials_email": "user@example.com"
+     }
+    }
+   ],
+   "bodySha256": "6b87ecaec034bf428aaf35db86643fa638b0119c4a76fdc43f67c8cce98c9647",
+   "body": {
+    "publicKey": {
+     "allowCredentials": [
+      {
+       "id": "fcNVUt0q934OnvwPJIvIrutKm1EJ4l3SEOIcbZ-5UfM",
+       "type": "public-key"
+      }
+     ],
+     "challenge": "C5rdzwlsIX4nZvqICo44iRGpvL7zXW7OhD-TDlJAjCY",
+     "rpId": "localhost",
+     "userVerification": "discouraged"
+    }
+   },
+   "stored": [
+    {
+     "file": "credentials/pHF7In_W_WTmEx3V7kLIV68aquEAp1gDTTimsSRe0aQ/user@example.com_credential_data.json",
+     "sha256": "5817a2f4877b4d62bd9d8544ec67c71ae9722bf304fe6eb32aaeb4269dcf9b1d",
+     "content": {
+      "version": 1,
+      "encoding": "base64url",
+      "credentials": [
+       {
+        "credential_id": {
+         "__t": "bytes",
+         "__v": "fcNVUt0q934OnvwPJIvIrutKm1EJ4l3SEOIcbZ-5UfM"
+        },
+        "sign_count": 3,
+        "registration_time": 1790000000.0,
+        "user_handle": {
+         "__t": "bytes",
+         "__v": "dXNlckBleGFtcGxlLmNvbQ"
+        }
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "request": "POST /api/authenticate/complete?email=user@example.com",
+   "status": 200,
+   "headers": [
+    [
+     "Content-Type",
+     "application/json"
+    ],
+    [
+     "Content-Length",
+     "176"
+    ],
+    [
+     "X-Content-Type-Options",
+     "nosniff"
+    ],
+    [
+     "X-Frame-Options",
+     "DENY"
+    ],
+    [
+     "Referrer-Policy",
+     "no-referrer"
+    ],
+    [
+     "Content-Security-Policy",
+     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; require-trusted-types-for 'script'; trusted-types nextjs nextjs#bundler; report-uri /api/csp-report; report-to csp"
+    ],
+    [
+     "Reporting-Endpoints",
+     "csp=\"/api/csp-report\""
+    ],
+    [
+     "Permissions-Policy",
+     "accelerometer=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-create=(self), publickey-credentials-get=(self), screen-wake-lock=(), usb=(), xr-spatial-tracking=()"
+    ],
+    [
+     "Vary",
+     "Cookie"
+    ]
+   ],
+   "cookies": [
+    {
+     "name": "session",
+     "attributes": [
+      "Max-Age=0",
+      "HttpOnly",
+      "Path=/",
+      "SameSite=Lax"
+     ],
+     "contents": null
+    }
+   ],
+   "bodySha256": "05ca5f35b2fbe3cb282b690aee57e7ad3e58e25fbe5668e3868d353a06d4dd1a",
+   "body": {
+    "authenticatedCredentialId": "fcNVUt0q934OnvwPJIvIrutKm1EJ4l3SEOIcbZ-5UfM",
+    "hintsUsed": [],
+    "signCount": 5,
+    "signCountStatus": "ok",
+    "status": "OK",
+    "userHandleStatus": "not-compared"
+   },
+   "stored": [
+    {
+     "file": "credentials/pHF7In_W_WTmEx3V7kLIV68aquEAp1gDTTimsSRe0aQ/user@example.com_credential_data.json",
+     "sha256": "b7f323a4155a96419c9ac02a36e1149a8c41e9bd6246cf794e0a7a6784177dea",
+     "content": {
+      "version": 1,
+      "encoding": "base64url",
+      "credentials": [
+       {
+        "credential_id": {
+         "__t": "bytes",
+         "__v": "fcNVUt0q934OnvwPJIvIrutKm1EJ4l3SEOIcbZ-5UfM"
+        },
+        "sign_count": 5,
+        "registration_time": 1790000000.0,
+        "user_handle": {
+         "__t": "bytes",
+         "__v": "dXNlckBleGFtcGxlLmNvbQ"
+        }
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "request": "POST /api/authenticate/begin?email=user@example.com",
+   "status": 200,
+   "headers": [
+    [
+     "Content-Type",
+     "application/json"
+    ],
+    [
+     "Content-Length",
+     "220"
+    ],
+    [
+     "X-Content-Type-Options",
+     "nosniff"
+    ],
+    [
+     "X-Frame-Options",
+     "DENY"
+    ],
+    [
+     "Referrer-Policy",
+     "no-referrer"
+    ],
+    [
+     "Content-Security-Policy",
+     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; require-trusted-types-for 'script'; trusted-types nextjs nextjs#bundler; report-uri /api/csp-report; report-to csp"
+    ],
+    [
+     "Reporting-Endpoints",
+     "csp=\"/api/csp-report\""
+    ],
+    [
+     "Permissions-Policy",
+     "accelerometer=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-create=(self), publickey-credentials-get=(self), screen-wake-lock=(), usb=(), xr-spatial-tracking=()"
+    ],
+    [
+     "Vary",
+     "Cookie"
+    ]
+   ],
+   "cookies": [
+    {
+     "name": "session",
+     "attributes": [
+      "HttpOnly",
+      "Path=/",
+      "SameSite=Lax"
+     ],
+     "contents": {
+      "authenticate_rp_id": "localhost",
+      "simple_authenticate_state": {
+       "challenge": "r2Ztz_4wGpiNmjeDTuluVbYbtW6DZ3eCVCIMuBlcFlA",
+       "issued_at": 1790000000.0,
+       "user_verification": "discouraged"
+      },
+      "simple_credentials_digest": "21Lt25ET86L4J6uu_-CWb1upBrwMRfDt1vamYKGuIyc",
+      "simple_credentials_email": "user@example.com"
+     }
+    }
+   ],
+   "bodySha256": "713b5257fe9c50217a2e84605d7476dcf6f4905991ff0f14928ded5e6295fa49",
+   "body": {
+    "publicKey": {
+     "allowCredentials": [
+      {
+       "id": "fcNVUt0q934OnvwPJIvIrutKm1EJ4l3SEOIcbZ-5UfM",
+       "type": "public-key"
+      }
+     ],
+     "challenge": "r2Ztz_4wGpiNmjeDTuluVbYbtW6DZ3eCVCIMuBlcFlA",
+     "rpId": "localhost",
+     "userVerification": "discouraged"
+    }
+   },
+   "stored": [
+    {
+     "file": "credentials/pHF7In_W_WTmEx3V7kLIV68aquEAp1gDTTimsSRe0aQ/user@example.com_credential_data.json",
+     "sha256": "e7b5347fb7b1290318d15c8b415356e9aa7751f140d4e5583a2ad03787e18386",
+     "content": {
+      "version": 1,
+      "encoding": "base64url",
+      "credentials": []
+     }
+    }
+   ]
+  },
+  {
+   "request": "POST /api/authenticate/complete?email=user@example.com",
+   "status": 200,
+   "headers": [
+    [
+     "Content-Type",
+     "application/json"
+    ],
+    [
+     "Content-Length",
+     "176"
+    ],
+    [
+     "X-Content-Type-Options",
+     "nosniff"
+    ],
+    [
+     "X-Frame-Options",
+     "DENY"
+    ],
+    [
+     "Referrer-Policy",
+     "no-referrer"
+    ],
+    [
+     "Content-Security-Policy",
+     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; require-trusted-types-for 'script'; trusted-types nextjs nextjs#bundler; report-uri /api/csp-report; report-to csp"
+    ],
+    [
+     "Reporting-Endpoints",
+     "csp=\"/api/csp-report\""
+    ],
+    [
+     "Permissions-Policy",
+     "accelerometer=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-create=(self), publickey-credentials-get=(self), screen-wake-lock=(), usb=(), xr-spatial-tracking=()"
+    ],
+    [
+     "Vary",
+     "Cookie"
+    ]
+   ],
+   "cookies": [
+    {
+     "name": "session",
+     "attributes": [
+      "Max-Age=0",
+      "HttpOnly",
+      "Path=/",
+      "SameSite=Lax"
+     ],
+     "contents": null
+    }
+   ],
+   "bodySha256": "c8da7f336f757a70d8fbe71b0af46988fbcf2059c25b10026b0d8bfd9a21a812",
+   "body": {
+    "authenticatedCredentialId": "fcNVUt0q934OnvwPJIvIrutKm1EJ4l3SEOIcbZ-5UfM",
+    "hintsUsed": [],
+    "signCount": 6,
+    "signCountStatus": "ok",
+    "status": "OK",
+    "userHandleStatus": "not-compared"
+   }
+  }
+ ]
+}

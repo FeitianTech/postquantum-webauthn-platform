@@ -709,7 +709,7 @@
     ],
     [
      "Content-Length",
-     "142"
+     "170"
     ],
     [
      "X-Content-Type-Options",
@@ -752,13 +752,14 @@
      "contents": null
     }
    ],
-   "bodySha256": "2d27536b27f2f03b740aef009025e519c41fec6d6e3c5661fe697ebe0ab448b3",
+   "bodySha256": "f05dd81c51a56edd55b108414382173fcdfc3b761f04e5ff9b11d694867c3da4",
    "body": {
     "authenticatedCredentialId": "G7WHrCy3kUiFV1Pc2QmTv9mSdpy6MHh9YXK30c3ngjg",
     "hintsUsed": [],
     "signCount": 2,
     "signCountStatus": "ok",
-    "status": "OK"
+    "status": "OK",
+    "userHandleStatus": "absent"
    },
    "stored": [
     {
@@ -871,7 +872,7 @@
     ],
     [
      "Content-Length",
-     "218"
+     "246"
     ],
     [
      "X-Content-Type-Options",
@@ -914,13 +915,14 @@
      "contents": null
     }
    ],
-   "bodySha256": "2e35e35689df2ec81df1d91fe952b18b8dd5e394d986a1f0dd5381716681bdbe",
+   "bodySha256": "c938aefbbcb5dee9e83652ca102cae86d29510a4055278e4ad0515045c82aa1f",
    "body": {
     "authenticatedCredentialId": "G7WHrCy3kUiFV1Pc2QmTv9mSdpy6MHh9YXK30c3ngjg",
     "hintsUsed": [],
     "signCount": 3,
     "signCountStatus": "ok",
     "status": "OK",
+    "userHandleStatus": "absent",
     "warnings": [
      "backup_eligibility_changed: set at registration, not set now"
     ]

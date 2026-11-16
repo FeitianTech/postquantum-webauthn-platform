@@ -61,3 +61,22 @@ def test_backed_up_needs_backup_eligible_and_backup_eligibility_is_the_registrat
     auth_data = AuthenticatorData.create(hashlib.sha256(b"localhost").digest(), FLAG_UP | flags, 1)
 
     assert assertion_checks.backup_findings(auth_data, registered) == (errors, warnings)
+
+
+@pytest.mark.parametrize(
+    ("returned", "expected", "status"),
+    [
+        (b"handle", b"handle", "match"),
+        (b"handle", b"another", "mismatch"),
+        (None, b"handle", "absent"),
+        (None, None, "absent"),
+        (b"handle", None, "not-compared"),
+    ],
+)
+def test_a_user_handle_is_compared_when_the_assertion_and_the_record_both_have_one(returned, expected, status):
+    assert assertion_checks.user_handle_status(returned, expected) == status
+
+
+def test_only_a_user_handle_that_is_not_the_credentials_is_a_finding():
+    assert assertion_checks.user_handle_findings("mismatch") == ["user_handle_mismatch"]
+    assert [assertion_checks.user_handle_findings(status) for status in ("match", "absent", "not-compared")] == [[], [], []]

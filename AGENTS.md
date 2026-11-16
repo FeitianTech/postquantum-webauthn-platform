@@ -351,7 +351,11 @@ its logic out here first.
   explorer's files and the verifier's index).
 - Routes: `routes/simple/` and `routes/advanced/` (begin/complete; the bodies are short
   orchestrators over modules named for their stage, `routes/simple/stored_sign_count.py` the
-  Simple tab's counter check against the stored record, and that record, `counter_record`: the
+  Simple tab's checks against the stored record: a sign-in's userHandle, when it carries one,
+  must be the account's handle the record keeps, or it is refused (`userHandleStatus`
+  `mismatch`); none is compared without a record (a swept namespace), or with one that keeps
+  the username's bytes (stored before accounts had handles of their own: their authenticators
+  were given `b"user_id"`); then its counter. That record, `counter_record`: the
   credential's ID, its counter, its registration's time and user handle, nothing else (records
   stored whole before are brought to it as their file is written); `routes/simple/deletion.py`
   the DELETE that removes a record when the page deletes its credential (compare-and-swap,
@@ -422,7 +426,9 @@ its logic out here first.
   imports it so fido2's `CoseKey` lookups find them), `webauthn/assertion_hash.py` (the Advanced
   tab's hash choice for an assertion), `webauthn/sign_count.py`, `webauthn/client_binary.py`
   (bytes a client sends, read one way for both tabs), `webauthn/assertion_checks.py` (an
-  assertion's authenticator data and userHandle, read one way for both tabs, and its backup
+  assertion's authenticator data and userHandle, read one way for both tabs; the userHandle's
+  `match`, `mismatch`, `absent` or `not-compared`, every sign-in answer's `userHandleStatus`
+  (a mismatch the integrity error `user_handle_mismatch`); and its backup
   flags: BS set without BE an integrity error, a BE that is not the one the page's record kept
   from the registration, sent with each credential as `backupEligible`, a warning, since this
   site has no backup policy), `webauthn/client_credentials.py` (a saved

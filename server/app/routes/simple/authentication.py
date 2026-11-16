@@ -1,7 +1,8 @@
 """The Simple tab's authentication: begin issues the options and keeps the ceremony's
 state in the session; complete verifies the assertion, checks its backup flags
 (``assertion_checks``: BS without BE is refused, a BE that is not the registration's is
-its warning) and its signature counter (``stored_sign_count``)."""
+its warning), then its user handle and its signature counter against the server's record
+(``stored_sign_count``)."""
 from __future__ import annotations
 
 import hashlib
@@ -254,8 +255,8 @@ def authenticate_complete():
         if authenticated_id_bytes
         else None
     )
-    # The authenticatorData the signature was just verified over.
-    auth_data = assertion_checks.assertion_parts(response_mapping).auth_data
+    # The authenticatorData the signature was just verified over, and the userHandle.
+    auth_data, user_handle = assertion_checks.assertion_parts(response_mapping)
     sign_count = auth_data.counter if auth_data is not None else None
 
     username = session.pop("simple_credentials_email", None)
@@ -282,22 +283,24 @@ def authenticate_complete():
             backup_errors,
         )
 
-    rejection, sign_count_verdict = stored_sign_count.enforce_sign_count(
+    rejection, sign_count_verdict, user_handle_status = stored_sign_count.enforce_sign_count(
         username,
         authenticated_id_bytes,
         sign_count,
         stored_sign_count.client_supplied_sign_count(session_credentials, authenticated_id_bytes),
+        user_handle,
     )
     if rejection is not None:
         return rejection
 
-    return jsonify(_authenticated_payload(authenticated_id, sign_count, sign_count_verdict, warnings))
+    return jsonify(_authenticated_payload(authenticated_id, sign_count, sign_count_verdict, user_handle_status, warnings))
 
 
 def _authenticated_payload(
-    authenticated_id: str | None, sign_count: int, sign_count_verdict: str, warnings: list[str]
+    authenticated_id: str | None, sign_count: int, sign_count_verdict: str, user_handle_status: str, warnings: list[str]
 ) -> dict[str, Any]:
-    """The answer to a verified assertion, with the counter and what the check made of it, and the warnings when there are any."""
+    """The answer to a verified assertion: the counter and what the check made of it, what the
+    user handle check found, and the warnings when there are any."""
 
     payload: dict[str, Any] = {
         "status": "OK",
@@ -305,6 +308,7 @@ def _authenticated_payload(
         "authenticatedCredentialId": authenticated_id,
         "signCount": sign_count,
         "signCountStatus": sign_count_verdict,
+        "userHandleStatus": user_handle_status,
     }
     if warnings:
         payload["warnings"] = warnings

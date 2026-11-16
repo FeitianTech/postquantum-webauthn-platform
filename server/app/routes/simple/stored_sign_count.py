@@ -1,4 +1,14 @@
-"""Signature-counter regression detection (WebAuthn L3 §7.2 step 21).
+"""The Simple tab's checks against the server's record of a credential: its user handle
+(WebAuthn L3 §7.2 step 6) and signature-counter regression (§7.2 step 21).
+
+The user handle
+---------------
+The Simple tab names the account before the ceremony, so a userHandle the assertion
+carries must be the one the account's record keeps: another refuses the sign-in. None
+is compared without a record (a namespace swept), or with a record that keeps none, or
+keeps its username's bytes: before each account had a handle of its own, registrations
+gave the authenticator ``b"user_id"`` and kept the username's bytes, which no
+authenticator was given.
 
 Where the "stored" counter comes from
 -------------------------------------
@@ -31,17 +41,20 @@ from ... import visitor_session
 from ...encoding import encode_base64url
 from ...storage import credentials
 from ...storage.common import InvalidStorageIdentifier
-from ...webauthn import client_binary
+from ...webauthn import assertion_checks, client_binary
 from ...webauthn.sign_count import SIGN_COUNT_REGRESSED, sign_count_status
 
 logger = logging.getLogger(__name__)
 
 
-def enforce_sign_count(uname: Any, credential_id: bytes, sign_count: int, client_sign_count: int | None):
-    """Check ``sign_count`` against the stored counter and store it.
+def enforce_sign_count(
+    uname: Any, credential_id: bytes, sign_count: int, client_sign_count: int | None, user_handle: bytes | None = None
+):
+    """Check the assertion's ``user_handle``, then ``sign_count`` against the stored counter, and store it.
 
-    Returns ``(rejection, status)``: the response to answer instead (or ``None``)
-    and, when the assertion is accepted, the counter status it was accepted with.
+    Returns ``(rejection, status, user_handle_status)``: the response to answer instead
+    (or ``None``), the counter status when the assertion is accepted, and what the user
+    handle check found (``assertion_checks``).
     """
 
     authenticated_id = encode_base64url(credential_id)
@@ -52,22 +65,25 @@ def enforce_sign_count(uname: Any, credential_id: bytes, sign_count: int, client
         try:
             server_records, version, metadata_session_id = load_server_records(uname)
         except StoredRecordsUnreadable as exc:
-            return _unreadable_counter_rejection(authenticated_id, exc), None
+            return _unreadable_counter_rejection(authenticated_id, exc), None, None
         record_index = find_server_record_index(server_records, credential_id)
         server_record = server_records[record_index] if record_index is not None else None
+        handle_status = assertion_checks.user_handle_status(user_handle, account_user_handle(server_record, uname))
+        if handle_status == assertion_checks.USER_HANDLE_MISMATCH:
+            return _user_handle_rejection(authenticated_id, handle_status), None, handle_status
         stored_sign_count = resolve_stored_sign_count(server_record, client_sign_count)
 
         verdict = sign_count_status(stored_sign_count, sign_count)
         if verdict == SIGN_COUNT_REGRESSED:
-            return _regressed_counter_rejection(authenticated_id, stored_sign_count, sign_count), verdict
+            return _regressed_counter_rejection(authenticated_id, stored_sign_count, sign_count), verdict, handle_status
 
         if server_record is None or record_sign_count(server_record) == sign_count:
-            return None, verdict
+            return None, verdict, handle_status
         server_record[RECORD_SIGN_COUNT_KEY] = sign_count
         try:
             saved = [as_counter_record(record) for record in server_records]
             if credentials.save_if_unchanged(uname, saved, version, session_id=metadata_session_id):
-                return None, verdict
+                return None, verdict, handle_status
         except Exception:
             logger.exception(
                 "Failed to persist signature counter for %s", authenticated_id
@@ -75,7 +91,7 @@ def enforce_sign_count(uname: Any, credential_id: bytes, sign_count: int, client
             return (
                 jsonify({"error": "Unable to persist the signature counter."}),
                 500,
-            ), None
+            ), None, None
         logger.info("Signature counter for %s changed while it was being saved; reading it again", authenticated_id)
 
     logger.warning("Rejected assertion for credential %s: its stored counter kept changing", authenticated_id)
@@ -90,7 +106,25 @@ def enforce_sign_count(uname: Any, credential_id: bytes, sign_count: int, client
             }
         ),
         409,
-    ), None
+    ), None, None
+
+
+def _user_handle_rejection(authenticated_id: str, handle_status: str):
+    logger.warning("Rejected assertion for credential %s: its user handle is not the account's", authenticated_id)
+    return (
+        jsonify(
+            {
+                "error": (
+                    "The user handle the authenticator returned is not this account's, "
+                    "so authentication was rejected."
+                ),
+                "failedCredentialId": authenticated_id,
+                "assertionErrors": assertion_checks.user_handle_findings(handle_status),
+                "userHandleStatus": handle_status,
+            }
+        ),
+        400,
+    )
 
 
 def _unreadable_counter_rejection(authenticated_id: str, exc: Exception):
@@ -168,11 +202,30 @@ def as_counter_record(record: Any) -> Any:
     credential_id = record_credential_id(record)
     if credential_id is None:
         return record
+    return counter_record(credential_id, record_sign_count(record), record.get("registration_time"), record_user_handle(record))
+
+
+def record_user_handle(record: Mapping[str, Any]) -> Any:
+    """The user handle a record keeps: its own, or (stored whole) its user information's."""
+
     user_handle = record.get("user_handle")
     user_info = record.get("user_info")
     if user_handle is None and isinstance(user_info, Mapping):
         user_handle = user_info.get("user_handle")
-    return counter_record(credential_id, record_sign_count(record), record.get("registration_time"), user_handle)
+    return user_handle
+
+
+def account_user_handle(record: Mapping[str, Any] | None, uname: Any) -> bytes | None:
+    """The user handle the account gave the authenticator, as ``record`` keeps it; None when
+    there is no record, or it keeps none, or keeps its username's bytes (records stored before
+    each account had a handle of its own: their authenticators were given ``b"user_id"``)."""
+
+    handle = record_user_handle(record) if record is not None else None
+    if not isinstance(handle, (bytes, bytearray, memoryview)):
+        return None
+    if isinstance(uname, str) and bytes(handle) == uname.encode("utf-8"):
+        return None
+    return bytes(handle)
 
 
 def record_credential_id(record: Any) -> bytes | None:

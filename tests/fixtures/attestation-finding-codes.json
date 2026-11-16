@@ -33,6 +33,7 @@
     "rsa_modulus_too_short",
     "trust_path_missing",
     "unsupported_attestation",
+    "user_handle_mismatch",
     "user_presence_missing",
     "user_verification_required_not_satisfied"
   ]

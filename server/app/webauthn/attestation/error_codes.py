@@ -39,6 +39,7 @@ INTEGRITY_ERRORS = frozenset(
         "attestation_invalid",
         "attestation_error",
         "attestation_signature_invalid",
+        "user_handle_mismatch",
     }
 )
 

@@ -60,6 +60,7 @@ def test_the_simple_tab_refuses_on_these_errors_alone():
         "attestation_invalid",
         "attestation_error",
         "attestation_signature_invalid",
+        "user_handle_mismatch",
     }
 
 

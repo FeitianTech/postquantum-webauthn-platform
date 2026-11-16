@@ -1,9 +1,12 @@
 """What an assertion says beside what its credential's registration kept (WebAuthn L3
 section 7.2), read one way for both tabs: its authenticator data and userHandle
-(``assertion_parts``), and its backup flags (``backup_findings``). What a finding does --
-refuse the sign-in, or report it -- is each tab's to say."""
+(``assertion_parts``), its backup flags (``backup_findings``), and whether its userHandle
+is the one the credential was registered with (``user_handle_status``,
+``user_handle_findings``). What a finding does -- refuse the sign-in, or report it -- is
+each tab's to say."""
 from __future__ import annotations
 
+import hmac
 from collections.abc import Mapping
 from typing import Any, NamedTuple
 
@@ -11,6 +14,13 @@ from fido2.webauthn import AuthenticatorData
 
 from . import client_binary
 from .attestation import error_codes
+
+USER_HANDLE_MATCH = "match"
+USER_HANDLE_MISMATCH = "mismatch"
+# The response carries no userHandle.
+USER_HANDLE_ABSENT = "absent"
+# The credential's record keeps no user handle to compare it with.
+USER_HANDLE_NOT_COMPARED = "not-compared"
 
 
 class AssertionParts(NamedTuple):
@@ -53,3 +63,23 @@ def backup_findings(auth_data: AuthenticatorData, registered_backup_eligible: An
     if isinstance(registered_backup_eligible, bool) and eligible != registered_backup_eligible:
         warnings.append(error_codes.changed_backup_eligibility(registered_backup_eligible))
     return errors, warnings
+
+
+def user_handle_status(returned: bytes | None, expected: bytes | None) -> str:
+    """Whether an assertion's userHandle (``returned``) is the user handle its credential was
+    registered with (``expected``; L3 section 7.2 step 6): one of the ``USER_HANDLE_`` statuses."""
+
+    if returned is None:
+        return USER_HANDLE_ABSENT
+    if expected is None:
+        return USER_HANDLE_NOT_COMPARED
+    return USER_HANDLE_MATCH if hmac.compare_digest(returned, expected) else USER_HANDLE_MISMATCH
+
+
+def user_handle_findings(status: str) -> list[str]:
+    """The error of a userHandle that is not the credential's, or none."""
+
+    errors: list[str] = []
+    if status == USER_HANDLE_MISMATCH:
+        errors.append("user_handle_mismatch")
+    return errors

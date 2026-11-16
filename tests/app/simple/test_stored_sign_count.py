@@ -67,3 +67,15 @@ def test_the_browsers_counter_is_read_only_from_an_entry_naming_the_credential()
     assert stored_sign_count.client_supplied_sign_count(
         [*entries, {"credentialId": b64u(b"this credential"), "signCount": 4}], b"this credential"
     ) == 4
+
+
+def test_the_accounts_user_handle_is_the_one_its_record_keeps_unless_that_is_its_usernames_bytes():
+    handle = b"\x11" * 32
+
+    assert stored_sign_count.account_user_handle({"user_handle": handle}, "user@example.com") == handle
+    assert stored_sign_count.account_user_handle({"user_info": {"user_handle": handle}}, "user@example.com") == handle
+    # Stored before each account had a handle: the authenticator was given b"user_id".
+    assert stored_sign_count.account_user_handle({"user_handle": b"user@example.com"}, "user@example.com") is None
+    assert stored_sign_count.account_user_handle({"user_handle": None}, "user@example.com") is None
+    assert stored_sign_count.account_user_handle({"user_handle": "not bytes"}, "user@example.com") is None
+    assert stored_sign_count.account_user_handle(None, "user@example.com") is None

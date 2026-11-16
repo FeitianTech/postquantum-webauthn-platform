@@ -15,6 +15,7 @@ from fido2 import cbor
 from server.app.routes.advanced import algorithms as advanced_algorithms
 from server.app.storage import credential_artifacts, credentials
 
+from .. import visitor_namespace
 from ..security.ceremony_helpers import (
     FLAG_BE,
     FLAG_BS,
@@ -960,3 +961,29 @@ def _(r: Recorder) -> None:
     _advanced_authenticate(r, client, authenticator, entries=entries, counter=1, extra_flags=FLAG_BE | FLAG_BS)
     _advanced_authenticate(r, client, authenticator, entries=entries, counter=2)
     _advanced_authenticate(r, client, authenticator, entries=entries, counter=3, extra_flags=FLAG_BS)
+
+
+def _rewrite_simple_records(client, change) -> None:
+    namespace = visitor_namespace.of(client)
+    records, version = credentials.read_for_update(EMAIL, session_id=namespace)
+    assert credentials.save_if_unchanged(EMAIL, change(records), version, session_id=namespace)
+
+
+def _as_stored_before_accounts_had_handles(records: list[Any]) -> list[Any]:
+    records[0]["user_handle"] = EMAIL.encode()
+    return records
+
+
+@scenario("simple-authenticate-user-handle")
+def _(r: Recorder) -> None:
+    client = r.client()
+    authenticator = m.Authenticator("simple-auth-handle")
+    registered = _simple_register(r, client, authenticator, counter=1)
+    handle = unb64u(registered.get_json()["storedCredential"]["userHandle"])
+    _simple_authenticate(r, client, authenticator, counter=2, user_handle=handle)
+    _simple_authenticate(r, client, authenticator, counter=3)
+    _simple_authenticate(r, client, authenticator, counter=4, user_handle=b"another account's handle")
+    _rewrite_simple_records(client, _as_stored_before_accounts_had_handles)
+    _simple_authenticate(r, client, authenticator, counter=5, user_handle=b"user_id")
+    _rewrite_simple_records(client, lambda records: [])
+    _simple_authenticate(r, client, authenticator, counter=6, user_handle=b"another account's handle")
