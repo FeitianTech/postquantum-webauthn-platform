@@ -143,6 +143,8 @@ def populate_authenticator_data_results(
     user_present = bool(flags & AuthenticatorData.FLAG.UP)
     user_verified = bool(flags & AuthenticatorData.FLAG.UV)
     attested_credential_included = bool(flags & AuthenticatorData.FLAG.AT)
+    backup_eligible = bool(flags & AuthenticatorData.FLAG.BE)
+    backed_up = bool(flags & AuthenticatorData.FLAG.BS)
 
     uv_required = request_expectations.resolve_uv_required(state, public_key_options)
     uv_satisfied = user_verified or not uv_required
@@ -153,6 +155,9 @@ def populate_authenticator_data_results(
         results["errors"].append("user_verification_required_not_satisfied")
     if not attested_credential_included:
         results["errors"].append("attested_credential_data_missing")
+    if backed_up and not backup_eligible:
+        # L3 section 7.1 step 17: only a credential that may be backed up can say it is.
+        results["errors"].append("backup_state_without_eligibility")
 
     allowed_algorithms = request_expectations.collect_allowed_algorithms(public_key_options)
     credential = _credential_facts(results, getattr(auth_data_obj, "credential_data", None))

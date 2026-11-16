@@ -382,7 +382,9 @@ its logic out here first.
   no snapshot file at any path); `routes/csp_report.py` (one WARNING line per
   violation, bounded); `routes/errors.py`.
 - `webauthn/attestation/` (`checks.py` runs every check in order over `request_expectations.py`,
-  `response_checks.py`, `statement_checks.py` and `metadata_checks.py`; `public_key_checks.py`,
+  `response_checks.py`, `statement_checks.py` and `metadata_checks.py`; `response_checks.py`
+  holds BS set without BE an integrity error, `backup_state_without_eligibility` (L3 section 7.1
+  step 17); `public_key_checks.py`,
   whether the credential's COSE key can be used: its key type and curve its algorithm's (L3
   section 5.8.5: EdDSA on Ed25519 alone), and a key `cryptography` loads (an EC2 point on its
   curve, an OKP or ML-DSA key of its length), else `cose_key_invalid` and why, and an RSA

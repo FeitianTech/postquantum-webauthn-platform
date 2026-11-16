@@ -1,7 +1,8 @@
 """``perform_attestation_checks`` and its metadata step report what they reported before.
 
 A table of registration responses -- valid, tampered, wrongly typed, bound to the
-wrong origin, challenge or RP, missing UP, UV or the attested credential, using a
+wrong origin, challenge or RP, missing UP, UV or the attested credential, backed up
+without being backup eligible, using a
 disallowed algorithm, a broken COSE key or one that cannot be used for its
 algorithm, a statement fido2 fails on, ML-DSA, and the captured attestation
 formats -- goes through the checks with no MDS verifier,
@@ -21,7 +22,15 @@ from server.app.mds import verifier as mds_verifier
 from server.app.webauthn.attestation import checks as attestation_checks
 from server.app.webauthn.attestation import metadata_checks
 
-from ..security.ceremony_helpers import ORIGIN, RP_ID, b64u, client_data, unb64u
+from ..security.ceremony_helpers import (
+    FLAG_BE,
+    FLAG_BS,
+    ORIGIN,
+    RP_ID,
+    b64u,
+    client_data,
+    unb64u,
+)
 from . import harness, material
 
 CHALLENGE = b"\x5a" * 32
@@ -65,6 +74,8 @@ def _cases():
         "wrong-rp": (build(rp_id="example.com"), state, ES256_ONLY),
         "up-missing": (build(user_present=False), state, ES256_ONLY),
         "no-attested-data": (build(include_credential=False), state, ES256_ONLY),
+        "backed-up-without-eligibility": (build(extra_flags=FLAG_BS), state, ES256_ONLY),
+        "backup-eligible-and-backed-up": (build(extra_flags=FLAG_BE | FLAG_BS), state, ES256_ONLY),
         "uv-required-missing": (build(user_verified=False), {**state, "user_verification": "required"}, ES256_ONLY),
         "uv-required-in-options": (
             build(user_verified=False), None,

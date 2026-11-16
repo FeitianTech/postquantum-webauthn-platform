@@ -52,6 +52,10 @@ export const FINDING_SENTENCES = Object.freeze({
         en: 'The authenticator data holds no attested credential data (AT flag not set)',
         zh: '认证器数据中没有已证明的凭据数据（AT 标志未设置）',
     },
+    backup_state_without_eligibility: {
+        en: 'The authenticator data says the credential is backed up (BS) but not backup eligible (BE)',
+        zh: '认证器数据表明凭据已备份（BS），但不具备备份资格（BE）',
+    },
     algorithm_not_allowed: {
         en: 'The credential\'s algorithm is not one the request offered (pubKeyCredParams)',
         zh: '凭据的算法不在请求提供的算法（pubKeyCredParams）之中',

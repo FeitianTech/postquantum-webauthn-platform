@@ -16,6 +16,8 @@ from server.app.routes.advanced import algorithms as advanced_algorithms
 from server.app.storage import credential_artifacts, credentials
 
 from ..security.ceremony_helpers import (
+    FLAG_BE,
+    FLAG_BS,
     ORIGIN,
     advanced_public_key_options,
     b64u,
@@ -912,3 +914,17 @@ def _(r: Recorder) -> None:
     _advanced_register(
         r, client, short, options=rs256, cose_key_bytes=_changed_key(short, {-1: (1 << 1023 | 1).to_bytes(128, "big")})
     )
+
+
+@scenario("simple-register-backup-flags")
+def _(r: Recorder) -> None:
+    client = r.client()
+    _simple_register(r, client, m.Authenticator("simple-backed-up-alone"), extra_flags=FLAG_BS)
+    _simple_register(r, client, m.Authenticator("simple-backup-eligible"), extra_flags=FLAG_BE | FLAG_BS)
+
+
+@scenario("advanced-register-backup-flags")
+def _(r: Recorder) -> None:
+    client = r.client()
+    _advanced_register(r, client, m.Authenticator("adv-backed-up-alone"), extra_flags=FLAG_BS)
+    _advanced_register(r, client, m.Authenticator("adv-backup-eligible"), extra_flags=FLAG_BE | FLAG_BS)

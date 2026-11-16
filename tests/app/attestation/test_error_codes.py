@@ -52,6 +52,7 @@ def test_the_simple_tab_refuses_on_these_errors_alone():
         "user_presence_missing",
         "user_verification_required_not_satisfied",
         "attested_credential_data_missing",
+        "backup_state_without_eligibility",
         "algorithm_not_allowed",
         "cose_key_error",
         "cose_key_invalid",

@@ -771,6 +771,104 @@
   ],
   "warnings": []
  },
+ "backed-up-without-eligibility": {
+  "attestation_format": "none",
+  "signature_valid": null,
+  "root_valid": null,
+  "rp_id_hash_valid": true,
+  "aaguid_match": null,
+  "client_data": {
+   "type": "webauthn.create",
+   "expected_type": "webauthn.create",
+   "type_valid": true,
+   "challenge": "WlpaWlpaWlpaWlpaWlpaWlpaWlpaWlpaWlpaWlpaWlo",
+   "expected_challenge": "WlpaWlpaWlpaWlpaWlpaWlpaWlpaWlpaWlpaWlpaWlo",
+   "challenge_matches": true,
+   "origin": "http://localhost",
+   "expected_origin": "http://localhost",
+   "origin_valid": true,
+   "cross_origin": false,
+   "cross_origin_ok": true
+  },
+  "authenticator_data": {
+   "user_present": true,
+   "user_verified": true,
+   "user_verification_required": false,
+   "user_verification_satisfied": true,
+   "attested_credential_data": true,
+   "counter": 0,
+   "credential_id_length": 32,
+   "credential_aaguid": "000102030405060708090a0b0c0d0e0f",
+   "algorithm": -7,
+   "algorithm_allowed": true,
+   "cose_key_valid": true
+  },
+  "metadata": {
+   "available": false,
+   "description": null,
+   "aaguid": null,
+   "algorithm_supported": null,
+   "root_certificates_present": false,
+   "latest_status": null,
+   "certification_level": null
+  },
+  "hash_binding": {
+   "client_data_hash": "5-WnJuY-04jvzBGs1znDwWWrNE8Xq0SqL5YrDBf1fc4",
+   "verification_data": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NVAAAAAAABAgMEBQYHCAkKCwwNDg8AIDJIPdOx23LT_p1zXRVUhW1lC0epx4b3A1qG5iA3HvMepQECAyYgASFYIBYI3vJ8zBN8_1BXPnaJmNa4PXp_UfAlb1HChvIyOYePIlggoCKBPpHnrHJXul_DCL_k-x5DssSXZHm3pa7Gv-8SQSvn5acm5j7TiO_MEazXOcPBZas0TxerRKovlisMF_V9zg"
+  },
+  "errors": [
+   "backup_state_without_eligibility"
+  ],
+  "warnings": []
+ },
+ "backup-eligible-and-backed-up": {
+  "attestation_format": "none",
+  "signature_valid": null,
+  "root_valid": null,
+  "rp_id_hash_valid": true,
+  "aaguid_match": null,
+  "client_data": {
+   "type": "webauthn.create",
+   "expected_type": "webauthn.create",
+   "type_valid": true,
+   "challenge": "WlpaWlpaWlpaWlpaWlpaWlpaWlpaWlpaWlpaWlpaWlo",
+   "expected_challenge": "WlpaWlpaWlpaWlpaWlpaWlpaWlpaWlpaWlpaWlpaWlo",
+   "challenge_matches": true,
+   "origin": "http://localhost",
+   "expected_origin": "http://localhost",
+   "origin_valid": true,
+   "cross_origin": false,
+   "cross_origin_ok": true
+  },
+  "authenticator_data": {
+   "user_present": true,
+   "user_verified": true,
+   "user_verification_required": false,
+   "user_verification_satisfied": true,
+   "attested_credential_data": true,
+   "counter": 0,
+   "credential_id_length": 32,
+   "credential_aaguid": "000102030405060708090a0b0c0d0e0f",
+   "algorithm": -7,
+   "algorithm_allowed": true,
+   "cose_key_valid": true
+  },
+  "metadata": {
+   "available": false,
+   "description": null,
+   "aaguid": null,
+   "algorithm_supported": null,
+   "root_certificates_present": false,
+   "latest_status": null,
+   "certification_level": null
+  },
+  "hash_binding": {
+   "client_data_hash": "5-WnJuY-04jvzBGs1znDwWWrNE8Xq0SqL5YrDBf1fc4",
+   "verification_data": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NdAAAAAAABAgMEBQYHCAkKCwwNDg8AIDJIPdOx23LT_p1zXRVUhW1lC0epx4b3A1qG5iA3HvMepQECAyYgASFYIBYI3vJ8zBN8_1BXPnaJmNa4PXp_UfAlb1HChvIyOYePIlggoCKBPpHnrHJXul_DCL_k-x5DssSXZHm3pa7Gv-8SQSvn5acm5j7TiO_MEazXOcPBZas0TxerRKovlisMF_V9zg"
+  },
+  "errors": [],
+  "warnings": []
+ },
  "uv-required-missing": {
   "attestation_format": "none",
   "signature_valid": null,

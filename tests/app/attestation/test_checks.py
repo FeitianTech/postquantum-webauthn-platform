@@ -118,6 +118,23 @@ def test_user_verification_the_ceremony_required_must_be_performed(check, state,
     assert "user_verification_required_not_satisfied" in missing["errors"]
 
 
+@pytest.mark.parametrize(
+    ("backup_flags", "errors"),
+    [
+        (0, []),
+        (int(AuthenticatorData.FLAG.BE), []),
+        (int(AuthenticatorData.FLAG.BE | AuthenticatorData.FLAG.BS), []),
+        (int(AuthenticatorData.FLAG.BS), ["backup_state_without_eligibility"]),
+    ],
+)
+def test_a_credential_backed_up_must_be_backup_eligible(check, backup_flags, errors):
+    auth_data = stand_ins.AuthData(flags=stand_ins.UP_AT | backup_flags)
+
+    result = check(state={"challenge": CHALLENGE}, attestation=stand_ins.attestation_object(auth_data=auth_data))
+
+    assert result["errors"] == errors
+
+
 def test_a_cose_key_whose_algorithm_is_not_a_number_is_not_an_allowed_algorithm(check):
     credential = stand_ins.CredentialData(public_key={**stand_ins.ES256_KEY, 3: "ES256"})
     attestation = stand_ins.attestation_object(auth_data=stand_ins.AuthData(credential_data=credential))

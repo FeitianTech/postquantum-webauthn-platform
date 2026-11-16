@@ -9,6 +9,7 @@
     "attestation_root_not_trusted",
     "attestation_signature_invalid",
     "attested_credential_data_missing",
+    "backup_state_without_eligibility",
     "certificate_chain_invalid",
     "certificate_chain_unreadable",
     "certificate_out_of_validity",
