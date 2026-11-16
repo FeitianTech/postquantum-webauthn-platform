@@ -260,10 +260,14 @@ test.describe('the Advanced tab\'s authentication, as recorded', () => {
     await advancedSection(page).getByRole('button', { name: 'Assert Credential' }).click();
     await expect(page.getByText('Advanced authentication successful!')).toBeVisible();
     const shown = await advancedSection(page).locator('[data-ceremony-result]').innerText();
+    const userHandle = await advancedSection(page).locator('[data-ceremony-result] [data-row="User handle"]').innerText();
 
     // The counter's value is the authenticator's, one more for the second authentication.
     const words = (text: string) => squeeze(text.replace(/\b\d+\b/g, '#'));
-    expect(words(shown)).toBe(words(legacy));
+    // Expected difference: the User handle row (its label, then what the server found of the
+    // assertion's userHandle against the saved credential's), which the recorded page did not report.
+    expect(words(shown)).toContain(words(`User handle ${userHandle}`));
+    expect(words(shown).replace(words(`User handle ${userHandle}`), '')).toBe(words(legacy));
     expect(legacy).toContain('Issued by this server for this ceremony.');
   });
 });

@@ -11,7 +11,7 @@ import { ADVANCED_CEREMONY_TEXT } from '../registration/ceremony.js';
 import { ensureAuthenticationHintsAllowed } from '../hints.js';
 import { prepareAdvancedCredentialsForServer } from '../../credentials/storage/local/advanced-credentials.js';
 import { UPDATE_BROWSER_TEXT } from '../../shared/native-json.js';
-import { answerResponse, credentialToJSON, installAuthenticator } from '@/test/logic/simple/ceremony-answers.js';
+import { answerResponse, credentialToJSON, goldenAnswers, installAuthenticator } from '@/test/logic/simple/ceremony-answers.js';
 import { advancedAuthentications, recordedAssertion } from '@/test/logic/advanced/advanced-answers.js';
 
 // The saved credentials this browser keeps, as the server is sent them.
@@ -135,6 +135,8 @@ describe('an authentication', () => {
         showChallenge: true,
         challengeSource: 'server-session',
         challengeStatus: 'fresh',
+        userHandleStatus: 'absent',
+        findings: { errors: [], warnings: [] },
       },
     });
     expect(ADVANCED_ASSERTION_TEXT.authenticated).toBe('Advanced authentication successful!');
@@ -179,6 +181,15 @@ describe('an authentication', () => {
     authenticatorGiving({ ...recordedAssertion(first), authenticatorAttachment: undefined });
     await authenticateAdvancedCredential(request(), formOptions());
     expect(sent(1).body.__assertion_response.authenticatorAttachment).toBeNull();
+  });
+
+  it('reports a userHandle that is not the saved credential\'s, and what else the server found, refusing nothing', async () => {
+    const mismatch = goldenAnswers('advanced-authenticate-user-handle').filter(({ request }) => request.includes('/authenticate/complete'))[1];
+    serving({ begin: first.begin, complete: mismatch });
+    const outcome = await authenticateAdvancedCredential(request(), formOptions());
+
+    expect(outcome.authenticated).toBe(true);
+    expect(outcome.result).toMatchObject({ userHandleStatus: 'mismatch', findings: { errors: ['user_handle_mismatch'], warnings: [] } });
   });
 
   it('authenticates without being told where to say its steps', async () => {

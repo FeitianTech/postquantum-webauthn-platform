@@ -231,6 +231,20 @@ describe('authenticating in the Simple tab', () => {
     });
   });
 
+  it('lists the finding the server refused a sign-in for, in words', async () => {
+    const refused = answersOf('simple-authenticate-user-handle').find(({ request, status }) => request.includes('/authenticate/complete') && status === 400)!;
+    renderTab(routes(refused), [KEPT]);
+    await useUsername('user@example.com');
+    await userEvent.click(button('Authenticate'));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('The user handle the authenticator returned is not this account\'s');
+    const result = document.querySelector<HTMLElement>('[data-ceremony-result]')!;
+    expect(
+      await within(result).findByText('The user handle the authenticator returned is not the one the credential was registered with'),
+    ).toBeVisible();
+    expect(result).toHaveAttribute('data-verdict', 'warning');
+  });
+
   it('keeps a refused signature in place, with no result to show', async () => {
     renderTab(routes(AUTHENTICATE[7]), [KEPT]);
     await useUsername('user@example.com');

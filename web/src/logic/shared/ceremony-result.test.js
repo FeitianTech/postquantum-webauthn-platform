@@ -103,6 +103,30 @@ describe('the challenge', () => {
   });
 });
 
+describe('the user handle', () => {
+  it('says what the server found of it against the saved credential\'s', () => {
+    const text = (userHandleStatus) => describeCeremonyResult({ userHandleStatus }).rows[0];
+
+    expect(text('match')).toEqual({ label: 'User handle', value: 'match', text: 'The same as the saved credential\'s.', after: null });
+    expect(text('mismatch').text).toBe('Not the saved credential\'s.');
+    expect(text('absent').text).toBe('The authenticator returned none.');
+    expect(text('not-compared').text).toBe('The saved credential keeps none to compare.');
+    expect(text('elsewhere').text).toBe('The server reported "elsewhere".');
+  });
+
+  it('is shown only when the server said, after the challenge', () => {
+    expect(describeCeremonyResult({ signCount: 2, signCountStatus: 'ok' }).rows.map((row) => row.label)).toEqual(['Signature counter']);
+    const described = describeCeremonyResult({ signCount: 2, signCountStatus: 'ok', showChallenge: true, userHandleStatus: 'absent' });
+    expect(described.rows.map((row) => row.label)).toEqual(['Signature counter', 'Challenge', 'User handle']);
+    expect(described.warning).toBe(false);
+  });
+
+  it('is a warning with the finding that it is not the saved credential\'s', () => {
+    const findings = { errors: ['user_handle_mismatch'], warnings: [] };
+    expect(describeCeremonyResult({ userHandleStatus: 'mismatch', findings }).warning).toBe(true);
+  });
+});
+
 describe('a registration\'s attestation findings', () => {
   it('are shown under the panel\'s title even without a row, an error making it a warning', () => {
     const findings = { errors: ['attestation_root_not_found'], warnings: ['metadata_not_available'] };

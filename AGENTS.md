@@ -265,10 +265,12 @@ its logic out here first.
   `FailedResponseError`): the server's `error`, the codec's `offset` and `path`, what to do for
   a 400, 409, 413 or 503. Never show a raw response body.
 - `shared/ceremony-result.js`: the result panel's signature counter and challenge sentences,
-  and a registration's attestation findings, which the panel lists (amber on an error).
-- `shared/registration-findings.js`: where a registration's attestation findings are in the
-  server's answer (`answerFindings`: `attestationErrors` and `warnings`, a refused Simple
-  registration's body too), each a code or a code and its reason after `: `.
+  the Advanced authentication's User handle row (the answer's `userHandleStatus`), and a
+  ceremony's findings, which the panel lists (amber on an error).
+- `shared/registration-findings.js`: where a ceremony's findings are in the server's answer
+  (`answerFindings`: a registration's `attestationErrors`, an authentication's
+  `assertionErrors`, and `warnings`; a refused Simple registration's or sign-in's body too),
+  each a code or a code and its reason after `: `.
 - `shared/attestation-findings.js`: the one table of the findings' sentences, code to English
   and 中文 (`FINDING_SENTENCES`, its codes held to `tests/fixtures/attestation-finding-codes.json`),
   and a finding in words (`describeFindings`): its reason after the sentence, a code the table

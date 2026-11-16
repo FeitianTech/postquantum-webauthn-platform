@@ -35,6 +35,22 @@ describe('a registration answer\'s findings', () => {
   });
 });
 
+describe('a sign-in answer\'s findings', () => {
+  const completes = (scenario) => goldenAnswers(scenario).filter(({ request }) => request.includes('/authenticate/complete'));
+
+  it('are the errors a refused Simple sign-in answered with', () => {
+    const refused = completes('simple-authenticate-user-handle').find(({ status }) => status === 400).body;
+    expect(answerFindings(refused)).toEqual({ errors: ['user_handle_mismatch'], warnings: [] });
+  });
+
+  it('are an Advanced sign-in\'s errors and warnings, as the server listed them', () => {
+    expect(answerFindings(completes('advanced-authenticate-backup-flags')[2].body)).toEqual({
+      errors: ['backup_state_without_eligibility'],
+      warnings: ['backup_eligibility_changed: set at registration, not set now'],
+    });
+  });
+});
+
 describe('a list of findings', () => {
   it('keeps the server\'s strings, trimmed, and leaves out blank ones and anything else', () => {
     expect(findingList([' metadata_entry_missing ', '', '  ', 7, null, { code: 'x' }, 'cose_key_error: 3'])).toEqual([

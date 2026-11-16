@@ -202,7 +202,7 @@ describe('authenticating with a passkey', () => {
     expect(authenticator.get.mock.calls[0][0].publicKey.challenge).toBeInstanceOf(ArrayBuffer);
     expect(outcome).toEqual({
       answer: AUTHENTICATE[3].body,
-      result: { title: 'Last authentication', signCount: 6, signCountStatus: 'ok' },
+      result: { title: 'Last authentication', signCount: 6, signCountStatus: 'ok', findings: { errors: [], warnings: [] } },
     });
     expect(onProgress.mock.calls.map(([text]) => text)).toEqual([
       'Starting authentication...',
@@ -245,7 +245,23 @@ describe('authenticating with a passkey', () => {
       title: 'Last authentication',
       signCountStatus: 'regressed',
       consequence: 'Authentication was rejected.',
+      findings: { errors: [], warnings: [] },
     });
+  });
+
+  it('gives the findings the server refused a sign-in for, and those it warned of', async () => {
+    const completes = goldenAnswers('simple-authenticate-user-handle').filter(({ request }) => request.includes('/authenticate/complete'));
+    answering(AUTHENTICATE[2], completes.find(({ status }) => status === 400));
+    const refused = await authenticateSimplePasskey('alice');
+
+    expect(refused.failure.text).toContain('The user handle the authenticator returned is not this account\'s');
+    expect(refused.result.findings).toEqual({ errors: ['user_handle_mismatch'], warnings: [] });
+
+    const warned = goldenAnswers('simple-authenticate-backup-flags').filter(({ request }) => request.includes('/authenticate/complete'))[1];
+    answering(AUTHENTICATE[2], warned);
+    const accepted = await authenticateSimplePasskey('alice');
+
+    expect(accepted.result.findings).toEqual({ errors: [], warnings: ['backup_eligibility_changed: set at registration, not set now'] });
   });
 
 });

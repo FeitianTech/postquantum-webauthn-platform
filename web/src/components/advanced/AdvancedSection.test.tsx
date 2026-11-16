@@ -347,6 +347,7 @@ describe('an authentication', () => {
         '1 Higher than the last counter the server saw for this credential, as it should be.',
       );
       expect(result()!.querySelector('[data-row="Challenge"]')).toHaveTextContent('server-session Issued by this server for this ceremony. First use.');
+      expect(result()!.querySelector('[data-row="User handle"]')).toHaveTextContent('absent The authenticator returned none.');
       expect(storedRecords()[0]).toMatchObject({ signCount: 1 });
       expect(document.querySelector('#nav-panel-simple li[data-credential-key]')).toHaveAttribute('data-flash', 'success');
       const now = screen.getByLabelText('Challenge (hex)', { selector: '#nav-panel-advanced [data-authentication-form] input' }) as HTMLInputElement;
@@ -377,6 +378,21 @@ describe('an authentication', () => {
     });
     await waitFor(() => expect(window.location.hash).toBe('#advanced'));
     await waitFor(() => expect(clientData).toHaveFocus());
+  });
+
+  it('reports a userHandle that is not the saved credential\'s, its finding in words, and does not reject the assertion', async () => {
+    const completes = goldenAnswers('advanced-authenticate-user-handle').filter((entry: { request: string }) => entry.request.includes('/authenticate/complete'));
+    const mismatch = completes[1] as Answer;
+    await onAuthentication(authenticationRoutes({ begin: recorded.first.begin, complete: mismatch }));
+
+    await userEvent.click(button('Assert Credential'));
+
+    expect(await screen.findByText('Advanced authentication successful!')).toBeInTheDocument();
+    expect(result()!.querySelector('[data-row="User handle"]')).toHaveTextContent('mismatch Not the saved credential\'s.');
+    expect(
+      await within(result()!).findByText('The user handle the authenticator returned is not the one the credential was registered with'),
+    ).toBeVisible();
+    expect(result()).toHaveAttribute('data-verdict', 'warning');
   });
 
   it('reports a counter that went backwards, and that this tab does not reject the assertion', async () => {

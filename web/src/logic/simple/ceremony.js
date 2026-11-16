@@ -221,6 +221,7 @@ export async function authenticateSimplePasskey(email, { onProgress = () => {} }
                 title: SIMPLE_CEREMONY_TEXT.lastAuthentication,
                 signCountStatus: failure.signCountStatus,
                 consequence: SIMPLE_CEREMONY_TEXT.rejected,
+                findings: answerFindings(failure.body),
             },
         };
     }
@@ -231,6 +232,7 @@ export async function authenticateSimplePasskey(email, { onProgress = () => {} }
             title: SIMPLE_CEREMONY_TEXT.lastAuthentication,
             signCount: answer.signCount,
             signCountStatus: answer.signCountStatus,
+            findings: answerFindings(answer),
         },
     };
 }

@@ -7,6 +7,7 @@
 import { prepareAdvancedCredentialsForServer } from '../../credentials/storage/local/advanced-credentials.js';
 import { getAssertion, parseRequestOptions, requireNativeJson } from '../../shared/native-json.js';
 import { FailedResponseError, readFailedResponse } from '../../shared/failed-response.js';
+import { answerFindings } from '../../shared/registration-findings.js';
 import { ADVANCED_CEREMONY_TEXT } from '../registration/ceremony.js';
 
 /** @import { CeremonyResultInput } from '../../shared/ceremony-result.js' */
@@ -182,6 +183,8 @@ export async function authenticateAdvancedCredential(text, {
                 showChallenge: true,
                 challengeSource: answer.challengeSource,
                 challengeStatus: answer.challengeStatus,
+                userHandleStatus: answer.userHandleStatus,
+                findings: answerFindings(answer),
             },
         };
     } catch (error) {

@@ -291,6 +291,22 @@ test.describe('/#advanced authentication', () => {
     await expect(page.getByRole('dialog')).toHaveCount(0);
   });
 
+  test('says the userHandle of a discoverable credential is the one the saved credential keeps', async ({ page }) => {
+    await addVirtualAuthenticator(page);
+    await openPage(page);
+    await page.locator('#advanced-ceremony-panel-registration').getByLabel('Resident Key', { exact: true }).selectOption('required');
+    await register(page);
+    await page.keyboard.press('Escape');
+    await expect(page).toHaveURL(/#advanced$/);
+    await toAuthentication(page);
+
+    await section(page).getByRole('button', { name: 'Assert Credential' }).click();
+
+    await expect(page.getByText('Advanced authentication successful!')).toBeVisible();
+    await expect(result(page).locator('[data-row="User handle"]')).toContainText('match The same as the saved credential\'s.');
+    await expect(result(page)).not.toHaveAttribute('data-verdict', 'warning');
+  });
+
   test('authenticates with a credential the Simple tab registered, and the Simple tab then signs in with it', async ({ page }) => {
     await addVirtualAuthenticator(page);
     await page.goto('/#simple');

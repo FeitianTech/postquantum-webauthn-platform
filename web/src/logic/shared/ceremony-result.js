@@ -1,8 +1,8 @@
 // What the server made of the last ceremony, as the panel under each tab's
 // buttons says it: the signature counter and its check, in the advanced tab
-// where the challenge came from, and a registration's attestation findings
-// (the list that says them loads with their sentences). DOM-free: the result
-// panel shows this model.
+// where the challenge came from and whether the userHandle was the saved
+// credential's, and a ceremony's findings (the list that says them loads with
+// their sentences). DOM-free: the result panel shows this model.
 import { hasFindings } from './registration-findings.js';
 
 /** @import { AttestationFindings } from './registration-findings.js' */
@@ -23,6 +23,14 @@ const CHALLENGE_STATUSES = {
     fresh: 'First use.',
     replayed: 'Used before: this is a replay.',
     expired: 'Expired before it was used.',
+};
+
+// server/app/webauthn/assertion_checks.py
+const USER_HANDLE_SENTENCES = {
+    match: 'The same as the saved credential\'s.',
+    mismatch: 'Not the saved credential\'s.',
+    absent: 'The authenticator returned none.',
+    'not-compared': 'The saved credential keeps none to compare.',
 };
 
 function reported(value) {
@@ -64,6 +72,13 @@ function challengeRow({ challengeSource, challengeStatus }) {
     }];
 }
 
+/** @param {CeremonyResultInput} result */
+function userHandleRow({ userHandleStatus }) {
+    return userHandleStatus
+        ? [{ label: 'User handle', value: userHandleStatus, text: known(USER_HANDLE_SENTENCES, userHandleStatus), after: null }]
+        : [];
+}
+
 // A registration this browser could not keep: the tab's own sentence for it.
 /** @param {CeremonyResultInput} result */
 function keptRow({ notKept }) {
@@ -80,6 +95,7 @@ function keptRow({ notKept }) {
  *   showChallenge?: boolean,
  *   challengeSource?: string | null,
  *   challengeStatus?: string | null,
+ *   userHandleStatus?: string | null,
  *   findings?: AttestationFindings | null,
  *   notKept?: string | null,
  * }} CeremonyResultInput
@@ -92,10 +108,11 @@ function keptRow({ notKept }) {
  * What the panel shows for a ceremony's result, or null when it has nothing to
  * say. result: title ("Last authentication"), signCount, signCountStatus,
  * consequence (appended to a regressed verdict: what the tab did about it), and
- * with showChallenge, challengeSource and challengeStatus; a registration's
+ * with showChallenge, challengeSource and challengeStatus; userHandleStatus,
+ * what the server found of an authentication's userHandle; a ceremony's
  * findings; and notKept, the tab's sentence for a registration this browser
- * could not keep. A regressed counter, a replayed challenge, an attestation
- * error or a credential not kept is a warning.
+ * could not keep. A regressed counter, a replayed challenge, a finding that is
+ * an error or a credential not kept is a warning.
  * @param {CeremonyResultInput} [result]
  * @returns {CeremonyResultView | null}
  */
@@ -103,6 +120,7 @@ export function describeCeremonyResult(result = {}) {
     const rows = [
         ...counterRow(result),
         ...(result.showChallenge ? challengeRow(result) : []),
+        ...userHandleRow(result),
         ...keptRow(result),
     ];
     const findings = result.findings && hasFindings(result.findings) ? result.findings : null;
