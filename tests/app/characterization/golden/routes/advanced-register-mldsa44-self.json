@@ -117,7 +117,7 @@
     ],
     [
      "Content-Length",
-     "16539"
+     "16779"
     ],
     [
      "X-Content-Type-Options",
@@ -170,7 +170,7 @@
      "contents": null
     }
    ],
-   "bodySha256": "63c3d5d700cad27b229d63a4851af98d1877c5a8b4a72b58ddd5092f88722daf",
+   "bodySha256": "547f1850f14b5892857ad23df0cfa3ba2205da2f1e1a9da60d06228bbd9aab65",
    "body": {
     "actualResidentKey": null,
     "algo": "ML-DSA-44 (PQC)",
@@ -218,7 +218,9 @@
       "aaguid": null,
       "algorithm_supported": null,
       "available": false,
+      "certification_level": null,
       "description": null,
+      "latest_status": null,
       "root_certificates_present": false
      },
      "root_checks": {
@@ -249,7 +251,9 @@
       "aaguid": null,
       "algorithm_supported": null,
       "available": false,
+      "certification_level": null,
       "description": null,
+      "latest_status": null,
       "root_certificates_present": false
      },
      "rootValid": null,
@@ -325,7 +329,9 @@
         "aaguid": null,
         "algorithm_supported": null,
         "available": false,
+        "certification_level": null,
         "description": null,
+        "latest_status": null,
         "root_certificates_present": false
        },
        "root_checks": {
@@ -349,7 +355,9 @@
         "aaguid": null,
         "algorithm_supported": null,
         "available": false,
+        "certification_level": null,
         "description": null,
+        "latest_status": null,
         "root_certificates_present": false
        },
        "rootValid": null,
@@ -417,7 +425,9 @@
         "aaguid": null,
         "algorithm_supported": null,
         "available": false,
+        "certification_level": null,
         "description": null,
+        "latest_status": null,
         "root_certificates_present": false
        },
        "rootValid": null,
@@ -493,7 +503,7 @@
    "stored": [
     {
      "file": "artifacts/XWFVmU1AONdCW9E3cWM9jCMZF81VuemkwNefq8ooq-o/e99af435a6dc4fa3e275214d323e67710e71dd4e7e2a245633808aec22825c57.json",
-     "sha256": "db708b67686a247fb6f192c9fc101baa3b4ecf7e744536a794767b0c25f7defc",
+     "sha256": "8c336e320dcd7915f1f9b452f0eeda84f980228850e92dd1f0b4ce91832d6da0",
      "content": {
       "storageId": "_dkm-QbvuaJiH0fmwSm-9lTe::1a0c4506c00::c7c40d41037c4e8b80396363da3cb0a5",
       "createdAt": 1790000000.0,
@@ -593,7 +603,9 @@
             "description": null,
             "aaguid": null,
             "algorithm_supported": null,
-            "root_certificates_present": false
+            "root_certificates_present": false,
+            "latest_status": null,
+            "certification_level": null
            },
            "hash_binding": {
             "client_data_hash": "doGvfm6hPFgAmYfVFqA7PvgOTa9BLrwnQEFa2ZYkK1c",
@@ -625,7 +637,9 @@
             "description": null,
             "aaguid": null,
             "algorithm_supported": null,
-            "root_certificates_present": false
+            "root_certificates_present": false,
+            "latest_status": null,
+            "certification_level": null
            },
            "warnings": [
             "metadata_not_available"
@@ -691,7 +705,9 @@
            "description": null,
            "aaguid": null,
            "algorithm_supported": null,
-           "root_certificates_present": false
+           "root_certificates_present": false,
+           "latest_status": null,
+           "certification_level": null
           },
           "hash_binding": {
            "client_data_hash": "doGvfm6hPFgAmYfVFqA7PvgOTa9BLrwnQEFa2ZYkK1c",
@@ -723,7 +739,9 @@
            "description": null,
            "aaguid": null,
            "algorithm_supported": null,
-           "root_certificates_present": false
+           "root_certificates_present": false,
+           "latest_status": null,
+           "certification_level": null
           },
           "warnings": [
            "metadata_not_available"

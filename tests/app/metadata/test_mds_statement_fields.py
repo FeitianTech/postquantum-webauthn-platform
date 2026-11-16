@@ -176,6 +176,14 @@ def test_of_reports_of_one_date_the_more_serious_status_is_the_latest_in_either_
     assert fields.latest_status(list(reversed(reports))) == latest
 
 
+def test_the_latest_status_code_is_the_latest_reports_status_as_mds_writes_it():
+    reports = [_report("FIDO_CERTIFIED_L2", "2024-01-01"), _report("user_verification_bypass", "2025-06-01")]
+
+    assert fields.latest_status_code(reports) == "USER_VERIFICATION_BYPASS"
+    assert fields.latest_status(reports) == "USER Verification Bypass"
+    assert fields.latest_status_code([]) == fields.latest_status_code("no reports") == ""
+
+
 def test_reports_alike_but_for_their_descriptor_give_one_text_in_either_order():
     first = _report("FIDO_CERTIFIED_L1", "2025-01-01", certificationDescriptor="Key A", certificateNumber="1")
     second = _report("FIDO_CERTIFIED_L1", "2025-01-01", certificationDescriptor="Key B", certificateNumber="2")

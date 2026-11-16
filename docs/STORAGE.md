@@ -74,6 +74,12 @@ answer's, which the browser keeps) holds each part once:
   fields (`web/src/logic/credentials/certificates/text.js`, equal to the server's
   summary over every certificate the characterization reads). A registration snapshot
   the page uploads keeps the certificates without their DER.
+- What FIDO's metadata said of the authenticator, beside the attestation's checks
+  (`properties.attestationSummary.metadata`, and `attestationChecks.metadata`): its
+  entry's latest status and highest certification, `latest_status` and
+  `certification_level`, as the MDS explorer writes them (`mds/statement_fields.py`),
+  each null when no entry matched. A record from an earlier release keeps neither, and
+  the page shows nothing for them.
 
 One ML-DSA-87 registration with a leaf, intermediate and root certificate stored a
 992 KB artifact and answered 568 KB (Simple: 515 KB) when each part was kept in

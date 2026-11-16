@@ -6,6 +6,8 @@ from typing import Any
 
 from fido2.webauthn import Aaguid
 
+from ... import json_values
+from ...mds import statement_fields
 from ...mds import verifier as mds_verifier
 
 
@@ -90,6 +92,17 @@ def _metadata_entry_facts(metadata_entry: Any, algorithm: Any) -> dict[str, Any]
     }
 
 
+def _status_facts(metadata_entry: Any) -> dict[str, str | None]:
+    """What an entry's status reports say, as the MDS explorer reads them: its latest
+    status and its highest certification, each None without one."""
+
+    reports = json_values.make_json_safe(list(getattr(metadata_entry, "status_reports", None) or []))
+    return {
+        "latest_status": statement_fields.latest_status(reports) or None,
+        "certification_level": statement_fields.certification_level(reports) or None,
+    }
+
+
 def finalize_metadata_results(
     results: dict[str, Any],
     *,
@@ -112,9 +125,14 @@ def finalize_metadata_results(
         "aaguid": None,
         "algorithm_supported": None,
         "root_certificates_present": False,
+        "latest_status": None,
+        "certification_level": None,
     }
     if metadata_entry is not None:
-        facts = _metadata_entry_facts(metadata_entry, results["authenticator_data"].get("algorithm"))
+        facts = {
+            **_metadata_entry_facts(metadata_entry, results["authenticator_data"].get("algorithm")),
+            **_status_facts(metadata_entry),
+        }
 
     credential_aaguid_value = credential_aaguid_bytes if credential_aaguid_bytes else None
     certificate_aaguid_value = certificate_aaguid_bytes if certificate_aaguid_bytes else None

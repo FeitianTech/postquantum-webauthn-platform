@@ -43,6 +43,12 @@ export function expectedFor(name: string): ExpectedDifference[] {
       section: 'Server-retrieved Data',
       reason: 'no separate ML-DSA signature result (pqc_signature_valid): ML-DSA attestations are verified like any other',
     },
+    {
+      only: 'shown',
+      token: /^("latest_status"|"certification_level"|null)$/,
+      section: 'Server-retrieved Data',
+      reason: 'what FIDO\'s metadata says of the authenticator (its latest status and certification), which a registration keeps since: null, as no entry matched',
+    },
     ...(name === 'mldsa65@example.com' ? MLDSA_NONE_ATTESTATION : []),
   ];
 }

@@ -182,7 +182,7 @@
     ],
     [
      "Content-Length",
-     "29378"
+     "29714"
     ],
     [
      "X-Content-Type-Options",
@@ -225,7 +225,7 @@
      "contents": null
     }
    ],
-   "bodySha256": "eb1a5fb36af29e2c729238bdf76afa061b6f6d81f32188a36bae308150e5feb3",
+   "bodySha256": "541b4f0d873d31bce73d81421a3e33388d09a47f5b93cbd4b742f3c17a930ab2",
    "body": {
     "actualResidentKey": null,
     "algo": "ML-DSA-44 (PQC)",
@@ -239,7 +239,9 @@
       "aaguid": null,
       "algorithm_supported": null,
       "available": false,
+      "certification_level": null,
       "description": null,
+      "latest_status": null,
       "root_certificates_present": false
      },
      "rootValid": null,
@@ -302,7 +304,9 @@
         "aaguid": null,
         "algorithm_supported": null,
         "available": false,
+        "certification_level": null,
         "description": null,
+        "latest_status": null,
         "root_certificates_present": false
        },
        "root_valid": null,
@@ -316,7 +320,9 @@
         "aaguid": null,
         "algorithm_supported": null,
         "available": false,
+        "certification_level": null,
         "description": null,
+        "latest_status": null,
         "root_certificates_present": false
        },
        "rootValid": null,
@@ -410,7 +416,9 @@
         "aaguid": null,
         "algorithm_supported": null,
         "available": false,
+        "certification_level": null,
         "description": null,
+        "latest_status": null,
         "root_certificates_present": false
        },
        "root_valid": null,
@@ -427,7 +435,9 @@
         "aaguid": null,
         "algorithm_supported": null,
         "available": false,
+        "certification_level": null,
         "description": null,
+        "latest_status": null,
         "root_certificates_present": false
        },
        "rootValid": null,
@@ -516,7 +526,9 @@
          "aaguid": null,
          "algorithm_supported": null,
          "available": false,
+         "certification_level": null,
          "description": null,
+         "latest_status": null,
          "root_certificates_present": false
         },
         "root_valid": null,
@@ -530,7 +542,9 @@
          "aaguid": null,
          "algorithm_supported": null,
          "available": false,
+         "certification_level": null,
          "description": null,
+         "latest_status": null,
          "root_certificates_present": false
         },
         "rootValid": null,

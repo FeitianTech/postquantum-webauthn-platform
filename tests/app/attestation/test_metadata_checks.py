@@ -5,11 +5,16 @@ metadata-finalisation golden); these are what an entry's own fields decide.
 """
 from __future__ import annotations
 
+import json
 from types import SimpleNamespace
 
 import pytest
 
+from server.app.mds import entries as mds_entries
+from server.app.mds import statement_fields
 from server.app.webauthn.attestation import metadata_checks
+
+from ..metadata import mds_fixture
 
 
 def _entry(get_info):
@@ -69,3 +74,43 @@ def test_an_entry_that_omits_the_credentials_algorithm_is_an_error_of_its_result
 
     assert results["errors"] == ["algorithm_not_in_metadata"]
     assert results["metadata"]["algorithm_supported"] is False
+
+
+def _fixture_entry(description):
+    """An entry of the fixture snapshot's verified payload, as JSON."""
+
+    payload = json.loads((mds_fixture.SNAPSHOT_DIR / "fido-mds3.verified.json").read_text(encoding="utf-8"))
+    return next(raw for raw in payload["entries"] if raw.get("metadataStatement", {}).get("description") == description)
+
+
+def _finalized(metadata_entry, aaguid=b"\x01" * 16):
+    results = {"authenticator_data": {"algorithm": -7}, "errors": [], "warnings": []}
+    metadata_checks.finalize_metadata_results(
+        results,
+        metadata_entry=metadata_entry,
+        metadata_lookup_source="aaguid" if metadata_entry is not None else None,
+        verifier=None,
+        credential_aaguid_bytes=aaguid,
+        certificate_aaguid_bytes=b"",
+        root_check_details=None,
+        root_valid=None,
+    )
+    return results
+
+
+def test_the_entrys_latest_status_and_certification_are_read_as_the_explorer_reads_them():
+    raw = _fixture_entry("Fixture Security Key L1")
+
+    metadata = _finalized(mds_entries.parse_entry(raw))["metadata"]
+
+    assert metadata["latest_status"] == statement_fields.latest_status(raw["statusReports"]) == "FIDO Certified L1"
+    assert metadata["certification_level"] == statement_fields.certification_level(raw["statusReports"])
+    assert metadata["certification_level"] == "FIDO Certified L1 • Fixture Security Key • (FIDO20020260901001)"
+
+
+def test_without_an_entry_or_its_status_reports_nothing_is_said_of_its_status():
+    without = _finalized(None, aaguid=b"")["metadata"]
+    unreported = _finalized(mds_entries.parse_entry(_fixture_entry("Fixture Key Without Status Reports")))["metadata"]
+
+    assert (without["available"], without["latest_status"], without["certification_level"]) == (False, None, None)
+    assert (unreported["available"], unreported["latest_status"], unreported["certification_level"]) == (True, None, None)

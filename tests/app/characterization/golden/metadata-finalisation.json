@@ -12,6 +12,8 @@
    "aaguid": "f8a011f3-8c0a-4d15-8006-17111f9edc7d",
    "algorithm_supported": true,
    "root_certificates_present": true,
+   "latest_status": null,
+   "certification_level": null,
    "source": "chain"
   },
   "root_checks": {
@@ -32,6 +34,8 @@
    "aaguid": "f8a011f3-8c0a-4d15-8006-17111f9edc7d",
    "algorithm_supported": true,
    "root_certificates_present": true,
+   "latest_status": null,
+   "certification_level": null,
    "source": "chain"
   },
   "root_checks": {
@@ -52,6 +56,8 @@
    "aaguid": "f8a011f3-8c0a-4d15-8006-17111f9edc7d",
    "algorithm_supported": true,
    "root_certificates_present": true,
+   "latest_status": null,
+   "certification_level": null,
    "source": "chain"
   }
  },
@@ -68,6 +74,8 @@
    "aaguid": "f8a011f3-8c0a-4d15-8006-17111f9edc7d",
    "algorithm_supported": true,
    "root_certificates_present": true,
+   "latest_status": null,
+   "certification_level": null,
    "source": "chain"
   },
   "root_checks": {
@@ -89,6 +97,8 @@
    "aaguid": "f8a011f3-8c0a-4d15-8006-17111f9edc7d",
    "algorithm_supported": false,
    "root_certificates_present": false,
+   "latest_status": null,
+   "certification_level": null,
    "source": "chain"
   },
   "root_checks": {
@@ -111,6 +121,8 @@
    "aaguid": "f8a011f3-8c0a-4d15-8006-17111f9edc7d",
    "algorithm_supported": false,
    "root_certificates_present": false,
+   "latest_status": null,
+   "certification_level": null,
    "source": "chain"
   },
   "root_checks": {
@@ -133,6 +145,8 @@
    "aaguid": "f8a011f3-8c0a-4d15-8006-17111f9edc7d",
    "algorithm_supported": false,
    "root_certificates_present": false,
+   "latest_status": null,
+   "certification_level": null,
    "source": "chain"
   }
  },
@@ -151,6 +165,8 @@
    "aaguid": "f8a011f3-8c0a-4d15-8006-17111f9edc7d",
    "algorithm_supported": false,
    "root_certificates_present": false,
+   "latest_status": null,
+   "certification_level": null,
    "source": "chain"
   },
   "root_checks": {
@@ -170,6 +186,8 @@
    "aaguid": null,
    "algorithm_supported": null,
    "root_certificates_present": true,
+   "latest_status": null,
+   "certification_level": null,
    "source": "chain"
   },
   "root_checks": {
@@ -190,6 +208,8 @@
    "aaguid": null,
    "algorithm_supported": null,
    "root_certificates_present": true,
+   "latest_status": null,
+   "certification_level": null,
    "source": "chain"
   },
   "root_checks": {
@@ -210,6 +230,8 @@
    "aaguid": null,
    "algorithm_supported": null,
    "root_certificates_present": true,
+   "latest_status": null,
+   "certification_level": null,
    "source": "chain"
   }
  },
@@ -226,6 +248,8 @@
    "aaguid": null,
    "algorithm_supported": null,
    "root_certificates_present": true,
+   "latest_status": null,
+   "certification_level": null,
    "source": "chain"
   },
   "root_checks": {
@@ -245,6 +269,8 @@
    "aaguid": null,
    "algorithm_supported": null,
    "root_certificates_present": true,
+   "latest_status": null,
+   "certification_level": null,
    "source": "chain"
   },
   "root_checks": {
@@ -265,6 +291,8 @@
    "aaguid": null,
    "algorithm_supported": null,
    "root_certificates_present": true,
+   "latest_status": null,
+   "certification_level": null,
    "source": "chain"
   },
   "root_checks": {
@@ -285,6 +313,8 @@
    "aaguid": null,
    "algorithm_supported": null,
    "root_certificates_present": true,
+   "latest_status": null,
+   "certification_level": null,
    "source": "chain"
   }
  },
@@ -301,6 +331,8 @@
    "aaguid": null,
    "algorithm_supported": null,
    "root_certificates_present": true,
+   "latest_status": null,
+   "certification_level": null,
    "source": "chain"
   },
   "root_checks": {
@@ -320,6 +352,8 @@
    "aaguid": null,
    "algorithm_supported": null,
    "root_certificates_present": false,
+   "latest_status": null,
+   "certification_level": null,
    "source": "chain"
   },
   "root_checks": {
@@ -340,6 +374,8 @@
    "aaguid": null,
    "algorithm_supported": null,
    "root_certificates_present": false,
+   "latest_status": null,
+   "certification_level": null,
    "source": "chain"
   },
   "root_checks": {
@@ -360,6 +396,8 @@
    "aaguid": null,
    "algorithm_supported": null,
    "root_certificates_present": false,
+   "latest_status": null,
+   "certification_level": null,
    "source": "chain"
   }
  },
@@ -376,6 +414,8 @@
    "aaguid": null,
    "algorithm_supported": null,
    "root_certificates_present": false,
+   "latest_status": null,
+   "certification_level": null,
    "source": "chain"
   },
   "root_checks": {
@@ -395,6 +435,8 @@
    "aaguid": "f8a011f3-8c0a-4d15-8006-17111f9edc7d",
    "algorithm_supported": true,
    "root_certificates_present": true,
+   "latest_status": null,
+   "certification_level": null,
    "source": "aaguid"
   },
   "root_checks": {
@@ -415,6 +457,8 @@
    "aaguid": "f8a011f3-8c0a-4d15-8006-17111f9edc7d",
    "algorithm_supported": true,
    "root_certificates_present": true,
+   "latest_status": null,
+   "certification_level": null,
    "source": "aaguid"
   },
   "root_checks": {
@@ -434,7 +478,9 @@
    "description": null,
    "aaguid": null,
    "algorithm_supported": null,
-   "root_certificates_present": false
+   "root_certificates_present": false,
+   "latest_status": null,
+   "certification_level": null
   }
  },
  "fallback-found/05/-": {
@@ -449,7 +495,9 @@
    "description": null,
    "aaguid": null,
    "algorithm_supported": null,
-   "root_certificates_present": false
+   "root_certificates_present": false,
+   "latest_status": null,
+   "certification_level": null
   },
   "root_checks": {
    "chain": true
@@ -467,7 +515,9 @@
    "description": null,
    "aaguid": null,
    "algorithm_supported": null,
-   "root_certificates_present": false
+   "root_certificates_present": false,
+   "latest_status": null,
+   "certification_level": null
   },
   "root_checks": {
    "chain": true
@@ -486,7 +536,9 @@
    "description": null,
    "aaguid": null,
    "algorithm_supported": null,
-   "root_certificates_present": false
+   "root_certificates_present": false,
+   "latest_status": null,
+   "certification_level": null
   },
   "root_checks": {
    "chain": true
@@ -505,7 +557,9 @@
    "description": null,
    "aaguid": null,
    "algorithm_supported": null,
-   "root_certificates_present": false
+   "root_certificates_present": false,
+   "latest_status": null,
+   "certification_level": null
   }
  },
  "fallback-missing/05/-": {
@@ -520,7 +574,9 @@
    "description": null,
    "aaguid": null,
    "algorithm_supported": null,
-   "root_certificates_present": false
+   "root_certificates_present": false,
+   "latest_status": null,
+   "certification_level": null
   },
   "root_checks": {
    "chain": true
@@ -538,7 +594,9 @@
    "description": null,
    "aaguid": null,
    "algorithm_supported": null,
-   "root_certificates_present": false
+   "root_certificates_present": false,
+   "latest_status": null,
+   "certification_level": null
   },
   "root_checks": {
    "chain": true
@@ -557,7 +615,9 @@
    "description": null,
    "aaguid": null,
    "algorithm_supported": null,
-   "root_certificates_present": false
+   "root_certificates_present": false,
+   "latest_status": null,
+   "certification_level": null
   },
   "root_checks": {
    "chain": true
@@ -576,7 +636,9 @@
    "description": null,
    "aaguid": null,
    "algorithm_supported": null,
-   "root_certificates_present": false
+   "root_certificates_present": false,
+   "latest_status": null,
+   "certification_level": null
   }
  },
  "fallback-raises/05/-": {
@@ -591,7 +653,9 @@
    "description": null,
    "aaguid": null,
    "algorithm_supported": null,
-   "root_certificates_present": false
+   "root_certificates_present": false,
+   "latest_status": null,
+   "certification_level": null
   },
   "root_checks": {
    "chain": true
@@ -610,6 +674,8 @@
    "aaguid": "f8a011f3-8c0a-4d15-8006-17111f9edc7d",
    "algorithm_supported": true,
    "root_certificates_present": true,
+   "latest_status": null,
+   "certification_level": null,
    "source": "aaguid"
   },
   "root_checks": {
@@ -630,6 +696,8 @@
    "aaguid": "f8a011f3-8c0a-4d15-8006-17111f9edc7d",
    "algorithm_supported": true,
    "root_certificates_present": true,
+   "latest_status": null,
+   "certification_level": null,
    "source": "aaguid"
   },
   "root_checks": {
@@ -649,7 +717,9 @@
    "description": null,
    "aaguid": null,
    "algorithm_supported": null,
-   "root_certificates_present": false
+   "root_certificates_present": false,
+   "latest_status": null,
+   "certification_level": null
   }
  },
  "fallback-global-verifier/05/-": {
@@ -664,7 +734,9 @@
    "description": null,
    "aaguid": null,
    "algorithm_supported": null,
-   "root_certificates_present": false
+   "root_certificates_present": false,
+   "latest_status": null,
+   "certification_level": null
   },
   "root_checks": {
    "chain": true

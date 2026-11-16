@@ -182,7 +182,7 @@
     ],
     [
      "Content-Length",
-     "11938"
+     "12274"
     ],
     [
      "X-Content-Type-Options",
@@ -225,7 +225,7 @@
      "contents": null
     }
    ],
-   "bodySha256": "8b4cc13841657a40b20b3091bd2aa10b3aa12d8a03063c1430ec1abd319b0a00",
+   "bodySha256": "28065e0d9809f5e73789186644f84f1e89f3ec5119dec055d56adb558617f2cc",
    "body": {
     "actualResidentKey": null,
     "algo": "ES256 (ECDSA)",
@@ -239,7 +239,9 @@
       "aaguid": null,
       "algorithm_supported": null,
       "available": false,
+      "certification_level": null,
       "description": null,
+      "latest_status": null,
       "root_certificates_present": false
      },
      "rootValid": null,
@@ -302,7 +304,9 @@
         "aaguid": null,
         "algorithm_supported": null,
         "available": false,
+        "certification_level": null,
         "description": null,
+        "latest_status": null,
         "root_certificates_present": false
        },
        "root_valid": null,
@@ -316,7 +320,9 @@
         "aaguid": null,
         "algorithm_supported": null,
         "available": false,
+        "certification_level": null,
         "description": null,
+        "latest_status": null,
         "root_certificates_present": false
        },
        "rootValid": null,
@@ -410,7 +416,9 @@
         "aaguid": null,
         "algorithm_supported": null,
         "available": false,
+        "certification_level": null,
         "description": null,
+        "latest_status": null,
         "root_certificates_present": false
        },
        "root_valid": null,
@@ -427,7 +435,9 @@
         "aaguid": null,
         "algorithm_supported": null,
         "available": false,
+        "certification_level": null,
         "description": null,
+        "latest_status": null,
         "root_certificates_present": false
        },
        "rootValid": null,
@@ -516,7 +526,9 @@
          "aaguid": null,
          "algorithm_supported": null,
          "available": false,
+         "certification_level": null,
          "description": null,
+         "latest_status": null,
          "root_certificates_present": false
         },
         "root_valid": null,
@@ -530,7 +542,9 @@
          "aaguid": null,
          "algorithm_supported": null,
          "available": false,
+         "certification_level": null,
          "description": null,
+         "latest_status": null,
          "root_certificates_present": false
         },
         "rootValid": null,
@@ -780,7 +794,7 @@
     ],
     [
      "Content-Length",
-     "11438"
+     "11774"
     ],
     [
      "X-Content-Type-Options",
@@ -823,7 +837,7 @@
      "contents": null
     }
    ],
-   "bodySha256": "b120ae347762176270d90361cb5e84724ec1f847e6ea99c0e67dd6f7c270dd51",
+   "bodySha256": "4a914b1789ff0aae4930c3fff0a8fde0cc5f3bbecb7e5e6dc7346b5894a8d096",
    "body": {
     "actualResidentKey": null,
     "algo": "EdDSA",
@@ -837,7 +851,9 @@
       "aaguid": null,
       "algorithm_supported": null,
       "available": false,
+      "certification_level": null,
       "description": null,
+      "latest_status": null,
       "root_certificates_present": false
      },
      "rootValid": null,
@@ -900,7 +916,9 @@
         "aaguid": null,
         "algorithm_supported": null,
         "available": false,
+        "certification_level": null,
         "description": null,
+        "latest_status": null,
         "root_certificates_present": false
        },
        "root_valid": null,
@@ -914,7 +932,9 @@
         "aaguid": null,
         "algorithm_supported": null,
         "available": false,
+        "certification_level": null,
         "description": null,
+        "latest_status": null,
         "root_certificates_present": false
        },
        "rootValid": null,
@@ -1008,7 +1028,9 @@
         "aaguid": null,
         "algorithm_supported": null,
         "available": false,
+        "certification_level": null,
         "description": null,
+        "latest_status": null,
         "root_certificates_present": false
        },
        "root_valid": null,
@@ -1025,7 +1047,9 @@
         "aaguid": null,
         "algorithm_supported": null,
         "available": false,
+        "certification_level": null,
         "description": null,
+        "latest_status": null,
         "root_certificates_present": false
        },
        "rootValid": null,
@@ -1114,7 +1138,9 @@
          "aaguid": null,
          "algorithm_supported": null,
          "available": false,
+         "certification_level": null,
          "description": null,
+         "latest_status": null,
          "root_certificates_present": false
         },
         "root_valid": null,
@@ -1128,7 +1154,9 @@
          "aaguid": null,
          "algorithm_supported": null,
          "available": false,
+         "certification_level": null,
          "description": null,
+         "latest_status": null,
          "root_certificates_present": false
         },
         "rootValid": null,
@@ -1390,7 +1418,7 @@
     ],
     [
      "Content-Length",
-     "38337"
+     "38673"
     ],
     [
      "X-Content-Type-Options",
@@ -1433,7 +1461,7 @@
      "contents": null
     }
    ],
-   "bodySha256": "13f9a5d2721951a60f6275a2d0520a0f4dee868d1d275d7e032c18af3f91d466",
+   "bodySha256": "d41b77c97e25d52142f8b2139508e2903bf0cea462ad8f63ddf91b97426eeb93",
    "body": {
     "actualResidentKey": null,
     "algo": "ML-DSA-65 (PQC)",
@@ -1447,7 +1475,9 @@
       "aaguid": null,
       "algorithm_supported": null,
       "available": false,
+      "certification_level": null,
       "description": null,
+      "latest_status": null,
       "root_certificates_present": false
      },
      "rootValid": null,
@@ -1510,7 +1540,9 @@
         "aaguid": null,
         "algorithm_supported": null,
         "available": false,
+        "certification_level": null,
         "description": null,
+        "latest_status": null,
         "root_certificates_present": false
        },
        "root_valid": null,
@@ -1524,7 +1556,9 @@
         "aaguid": null,
         "algorithm_supported": null,
         "available": false,
+        "certification_level": null,
         "description": null,
+        "latest_status": null,
         "root_certificates_present": false
        },
        "rootValid": null,
@@ -1618,7 +1652,9 @@
         "aaguid": null,
         "algorithm_supported": null,
         "available": false,
+        "certification_level": null,
         "description": null,
+        "latest_status": null,
         "root_certificates_present": false
        },
        "root_valid": null,
@@ -1635,7 +1671,9 @@
         "aaguid": null,
         "algorithm_supported": null,
         "available": false,
+        "certification_level": null,
         "description": null,
+        "latest_status": null,
         "root_certificates_present": false
        },
        "rootValid": null,
@@ -1724,7 +1762,9 @@
          "aaguid": null,
          "algorithm_supported": null,
          "available": false,
+         "certification_level": null,
          "description": null,
+         "latest_status": null,
          "root_certificates_present": false
         },
         "root_valid": null,
@@ -1738,7 +1778,9 @@
          "aaguid": null,
          "algorithm_supported": null,
          "available": false,
+         "certification_level": null,
          "description": null,
+         "latest_status": null,
          "root_certificates_present": false
         },
         "rootValid": null,
@@ -2012,7 +2054,7 @@
     ],
     [
      "Content-Length",
-     "16180"
+     "16516"
     ],
     [
      "X-Content-Type-Options",
@@ -2055,7 +2097,7 @@
      "contents": null
     }
    ],
-   "bodySha256": "a47c5ff3264003fdfd23005a6f94756cce8d2dd8245a57d0a05f11411d890684",
+   "bodySha256": "c5d866d1bc3a7dad5cb664d8c902cd0d287844e108edca3b78afbdd13c6e46f2",
    "body": {
     "actualResidentKey": true,
     "algo": "ES256 (ECDSA)",
@@ -2069,7 +2111,9 @@
       "aaguid": null,
       "algorithm_supported": null,
       "available": false,
+      "certification_level": null,
       "description": null,
+      "latest_status": null,
       "root_certificates_present": false
      },
      "rootValid": null,
@@ -2135,7 +2179,9 @@
         "aaguid": null,
         "algorithm_supported": null,
         "available": false,
+        "certification_level": null,
         "description": null,
+        "latest_status": null,
         "root_certificates_present": false
        },
        "root_checks": {
@@ -2156,7 +2202,9 @@
         "aaguid": null,
         "algorithm_supported": null,
         "available": false,
+        "certification_level": null,
         "description": null,
+        "latest_status": null,
         "root_certificates_present": false
        },
        "rootValid": null,
@@ -2346,7 +2394,9 @@
         "aaguid": null,
         "algorithm_supported": null,
         "available": false,
+        "certification_level": null,
         "description": null,
+        "latest_status": null,
         "root_certificates_present": false
        },
        "root_checks": {
@@ -2370,7 +2420,9 @@
         "aaguid": null,
         "algorithm_supported": null,
         "available": false,
+        "certification_level": null,
         "description": null,
+        "latest_status": null,
         "root_certificates_present": false
        },
        "rootValid": null,
@@ -2485,7 +2537,9 @@
          "aaguid": null,
          "algorithm_supported": null,
          "available": false,
+         "certification_level": null,
          "description": null,
+         "latest_status": null,
          "root_certificates_present": false
         },
         "root_checks": {
@@ -2506,7 +2560,9 @@
          "aaguid": null,
          "algorithm_supported": null,
          "available": false,
+         "certification_level": null,
          "description": null,
+         "latest_status": null,
          "root_certificates_present": false
         },
         "rootValid": null,

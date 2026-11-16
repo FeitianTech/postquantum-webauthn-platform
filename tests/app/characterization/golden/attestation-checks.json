@@ -36,7 +36,9 @@
    "description": null,
    "aaguid": null,
    "algorithm_supported": null,
-   "root_certificates_present": false
+   "root_certificates_present": false,
+   "latest_status": null,
+   "certification_level": null
   },
   "hash_binding": {
    "client_data_hash": "5-WnJuY-04jvzBGs1znDwWWrNE8Xq0SqL5YrDBf1fc4",
@@ -82,7 +84,9 @@
    "description": null,
    "aaguid": null,
    "algorithm_supported": null,
-   "root_certificates_present": false
+   "root_certificates_present": false,
+   "latest_status": null,
+   "certification_level": null
   },
   "hash_binding": {
    "client_data_hash": "5-WnJuY-04jvzBGs1znDwWWrNE8Xq0SqL5YrDBf1fc4",
@@ -137,7 +141,9 @@
    "description": null,
    "aaguid": null,
    "algorithm_supported": null,
-   "root_certificates_present": false
+   "root_certificates_present": false,
+   "latest_status": null,
+   "certification_level": null
   },
   "hash_binding": {
    "client_data_hash": "5-WnJuY-04jvzBGs1znDwWWrNE8Xq0SqL5YrDBf1fc4",
@@ -186,7 +192,9 @@
    "description": null,
    "aaguid": null,
    "algorithm_supported": null,
-   "root_certificates_present": false
+   "root_certificates_present": false,
+   "latest_status": null,
+   "certification_level": null
   },
   "hash_binding": {
    "client_data_hash": "5-WnJuY-04jvzBGs1znDwWWrNE8Xq0SqL5YrDBf1fc4",
@@ -239,7 +247,9 @@
    "description": null,
    "aaguid": null,
    "algorithm_supported": null,
-   "root_certificates_present": false
+   "root_certificates_present": false,
+   "latest_status": null,
+   "certification_level": null
   },
   "hash_binding": {
    "client_data_hash": "5-WnJuY-04jvzBGs1znDwWWrNE8Xq0SqL5YrDBf1fc4",
@@ -288,7 +298,9 @@
    "description": null,
    "aaguid": null,
    "algorithm_supported": null,
-   "root_certificates_present": false
+   "root_certificates_present": false,
+   "latest_status": null,
+   "certification_level": null
   },
   "hash_binding": {
    "client_data_hash": "5-WnJuY-04jvzBGs1znDwWWrNE8Xq0SqL5YrDBf1fc4",
@@ -337,7 +349,9 @@
    "description": null,
    "aaguid": null,
    "algorithm_supported": null,
-   "root_certificates_present": false
+   "root_certificates_present": false,
+   "latest_status": null,
+   "certification_level": null
   },
   "hash_binding": {
    "client_data_hash": "5-WnJuY-04jvzBGs1znDwWWrNE8Xq0SqL5YrDBf1fc4",
@@ -392,7 +406,9 @@
    "description": null,
    "aaguid": null,
    "algorithm_supported": null,
-   "root_certificates_present": false
+   "root_certificates_present": false,
+   "latest_status": null,
+   "certification_level": null
   },
   "hash_binding": {
    "client_data_hash": "5-WnJuY-04jvzBGs1znDwWWrNE8Xq0SqL5YrDBf1fc4",
@@ -441,7 +457,9 @@
    "description": null,
    "aaguid": null,
    "algorithm_supported": null,
-   "root_certificates_present": false
+   "root_certificates_present": false,
+   "latest_status": null,
+   "certification_level": null
   },
   "hash_binding": {
    "client_data_hash": "DGoNgPdjIadLAgCDiQtVKqsE21mSBG4HH-HIb3kWGJU",
@@ -489,7 +507,9 @@
    "description": null,
    "aaguid": null,
    "algorithm_supported": null,
-   "root_certificates_present": false
+   "root_certificates_present": false,
+   "latest_status": null,
+   "certification_level": null
   },
   "hash_binding": {
    "client_data_hash": "bGxkgEKPnvCzARRMZG1WZd7b-EPfW9NHprVGYKb2l2k",
@@ -537,7 +557,9 @@
    "description": null,
    "aaguid": null,
    "algorithm_supported": null,
-   "root_certificates_present": false
+   "root_certificates_present": false,
+   "latest_status": null,
+   "certification_level": null
   },
   "hash_binding": {
    "client_data_hash": "cnFqJGqT6UOc88pJHl9daf6hBl5c4hj45J9itGrGCPE",
@@ -585,7 +607,9 @@
    "description": null,
    "aaguid": null,
    "algorithm_supported": null,
-   "root_certificates_present": false
+   "root_certificates_present": false,
+   "latest_status": null,
+   "certification_level": null
   },
   "hash_binding": {
    "client_data_hash": "5-WnJuY-04jvzBGs1znDwWWrNE8Xq0SqL5YrDBf1fc4",
@@ -633,7 +657,9 @@
    "description": null,
    "aaguid": null,
    "algorithm_supported": null,
-   "root_certificates_present": false
+   "root_certificates_present": false,
+   "latest_status": null,
+   "certification_level": null
   },
   "hash_binding": {
    "client_data_hash": "5-WnJuY-04jvzBGs1znDwWWrNE8Xq0SqL5YrDBf1fc4",
@@ -681,7 +707,9 @@
    "description": null,
    "aaguid": null,
    "algorithm_supported": null,
-   "root_certificates_present": false
+   "root_certificates_present": false,
+   "latest_status": null,
+   "certification_level": null
   },
   "hash_binding": {
    "client_data_hash": "5-WnJuY-04jvzBGs1znDwWWrNE8Xq0SqL5YrDBf1fc4",
@@ -729,7 +757,9 @@
    "description": null,
    "aaguid": null,
    "algorithm_supported": null,
-   "root_certificates_present": false
+   "root_certificates_present": false,
+   "latest_status": null,
+   "certification_level": null
   },
   "hash_binding": {
    "client_data_hash": "5-WnJuY-04jvzBGs1znDwWWrNE8Xq0SqL5YrDBf1fc4",
@@ -778,7 +808,9 @@
    "description": null,
    "aaguid": null,
    "algorithm_supported": null,
-   "root_certificates_present": false
+   "root_certificates_present": false,
+   "latest_status": null,
+   "certification_level": null
   },
   "hash_binding": {
    "client_data_hash": "5-WnJuY-04jvzBGs1znDwWWrNE8Xq0SqL5YrDBf1fc4",
@@ -826,7 +858,9 @@
    "description": null,
    "aaguid": null,
    "algorithm_supported": null,
-   "root_certificates_present": false
+   "root_certificates_present": false,
+   "latest_status": null,
+   "certification_level": null
   },
   "hash_binding": {
    "client_data_hash": "5-WnJuY-04jvzBGs1znDwWWrNE8Xq0SqL5YrDBf1fc4",
@@ -874,7 +908,9 @@
    "description": null,
    "aaguid": null,
    "algorithm_supported": null,
-   "root_certificates_present": false
+   "root_certificates_present": false,
+   "latest_status": null,
+   "certification_level": null
   },
   "hash_binding": {
    "client_data_hash": "5-WnJuY-04jvzBGs1znDwWWrNE8Xq0SqL5YrDBf1fc4",
@@ -923,7 +959,9 @@
    "description": null,
    "aaguid": null,
    "algorithm_supported": null,
-   "root_certificates_present": false
+   "root_certificates_present": false,
+   "latest_status": null,
+   "certification_level": null
   },
   "hash_binding": {
    "client_data_hash": "5-WnJuY-04jvzBGs1znDwWWrNE8Xq0SqL5YrDBf1fc4",
@@ -986,7 +1024,9 @@
    "description": null,
    "aaguid": null,
    "algorithm_supported": null,
-   "root_certificates_present": false
+   "root_certificates_present": false,
+   "latest_status": null,
+   "certification_level": null
   },
   "hash_binding": {
    "client_data_hash": "5-WnJuY-04jvzBGs1znDwWWrNE8Xq0SqL5YrDBf1fc4",
@@ -1034,7 +1074,9 @@
    "description": null,
    "aaguid": null,
    "algorithm_supported": null,
-   "root_certificates_present": false
+   "root_certificates_present": false,
+   "latest_status": null,
+   "certification_level": null
   },
   "hash_binding": {
    "client_data_hash": "5-WnJuY-04jvzBGs1znDwWWrNE8Xq0SqL5YrDBf1fc4",
@@ -1080,7 +1122,9 @@
    "description": null,
    "aaguid": null,
    "algorithm_supported": null,
-   "root_certificates_present": false
+   "root_certificates_present": false,
+   "latest_status": null,
+   "certification_level": null
   },
   "hash_binding": {
    "client_data_hash": "5-WnJuY-04jvzBGs1znDwWWrNE8Xq0SqL5YrDBf1fc4",
@@ -1126,7 +1170,9 @@
    "description": null,
    "aaguid": null,
    "algorithm_supported": null,
-   "root_certificates_present": false
+   "root_certificates_present": false,
+   "latest_status": null,
+   "certification_level": null
   },
   "hash_binding": {
    "client_data_hash": "5-WnJuY-04jvzBGs1znDwWWrNE8Xq0SqL5YrDBf1fc4",
@@ -1172,7 +1218,9 @@
    "description": null,
    "aaguid": null,
    "algorithm_supported": null,
-   "root_certificates_present": false
+   "root_certificates_present": false,
+   "latest_status": null,
+   "certification_level": null
   },
   "hash_binding": {
    "client_data_hash": "5-WnJuY-04jvzBGs1znDwWWrNE8Xq0SqL5YrDBf1fc4",
@@ -1218,7 +1266,9 @@
    "description": null,
    "aaguid": null,
    "algorithm_supported": null,
-   "root_certificates_present": false
+   "root_certificates_present": false,
+   "latest_status": null,
+   "certification_level": null
   },
   "hash_binding": {
    "client_data_hash": "5-WnJuY-04jvzBGs1znDwWWrNE8Xq0SqL5YrDBf1fc4",
@@ -1264,7 +1314,9 @@
    "description": null,
    "aaguid": null,
    "algorithm_supported": null,
-   "root_certificates_present": false
+   "root_certificates_present": false,
+   "latest_status": null,
+   "certification_level": null
   },
   "hash_binding": {
    "client_data_hash": "5-WnJuY-04jvzBGs1znDwWWrNE8Xq0SqL5YrDBf1fc4",
@@ -1312,7 +1364,9 @@
    "description": null,
    "aaguid": null,
    "algorithm_supported": null,
-   "root_certificates_present": false
+   "root_certificates_present": false,
+   "latest_status": null,
+   "certification_level": null
   },
   "hash_binding": {
    "client_data_hash": "5-WnJuY-04jvzBGs1znDwWWrNE8Xq0SqL5YrDBf1fc4",
@@ -1358,7 +1412,9 @@
    "description": null,
    "aaguid": null,
    "algorithm_supported": null,
-   "root_certificates_present": false
+   "root_certificates_present": false,
+   "latest_status": null,
+   "certification_level": null
   },
   "hash_binding": {
    "client_data_hash": "5-WnJuY-04jvzBGs1znDwWWrNE8Xq0SqL5YrDBf1fc4",
@@ -1406,7 +1462,9 @@
    "description": null,
    "aaguid": null,
    "algorithm_supported": null,
-   "root_certificates_present": false
+   "root_certificates_present": false,
+   "latest_status": null,
+   "certification_level": null
   },
   "hash_binding": {
    "client_data_hash": "5-WnJuY-04jvzBGs1znDwWWrNE8Xq0SqL5YrDBf1fc4",
@@ -1485,7 +1543,9 @@
    "description": null,
    "aaguid": null,
    "algorithm_supported": null,
-   "root_certificates_present": false
+   "root_certificates_present": false,
+   "latest_status": null,
+   "certification_level": null
   },
   "hash_binding": {
    "client_data_hash": "5-WnJuY-04jvzBGs1znDwWWrNE8Xq0SqL5YrDBf1fc4",
@@ -1535,7 +1595,9 @@
    "description": null,
    "aaguid": null,
    "algorithm_supported": null,
-   "root_certificates_present": false
+   "root_certificates_present": false,
+   "latest_status": null,
+   "certification_level": null
   },
   "hash_binding": {
    "client_data_hash": "5-WnJuY-04jvzBGs1znDwWWrNE8Xq0SqL5YrDBf1fc4",
@@ -1585,7 +1647,9 @@
    "description": null,
    "aaguid": null,
    "algorithm_supported": null,
-   "root_certificates_present": false
+   "root_certificates_present": false,
+   "latest_status": null,
+   "certification_level": null
   },
   "hash_binding": {
    "client_data_hash": "5-WnJuY-04jvzBGs1znDwWWrNE8Xq0SqL5YrDBf1fc4",
@@ -1635,7 +1699,9 @@
    "description": null,
    "aaguid": null,
    "algorithm_supported": null,
-   "root_certificates_present": false
+   "root_certificates_present": false,
+   "latest_status": null,
+   "certification_level": null
   },
   "hash_binding": {
    "client_data_hash": "5-WnJuY-04jvzBGs1znDwWWrNE8Xq0SqL5YrDBf1fc4",
@@ -1685,7 +1751,9 @@
    "description": null,
    "aaguid": null,
    "algorithm_supported": null,
-   "root_certificates_present": false
+   "root_certificates_present": false,
+   "latest_status": null,
+   "certification_level": null
   },
   "hash_binding": {
    "client_data_hash": "5-WnJuY-04jvzBGs1znDwWWrNE8Xq0SqL5YrDBf1fc4",
@@ -1735,7 +1803,9 @@
    "description": null,
    "aaguid": null,
    "algorithm_supported": null,
-   "root_certificates_present": false
+   "root_certificates_present": false,
+   "latest_status": null,
+   "certification_level": null
   },
   "hash_binding": {
    "client_data_hash": "5-WnJuY-04jvzBGs1znDwWWrNE8Xq0SqL5YrDBf1fc4",
@@ -1785,7 +1855,9 @@
    "description": null,
    "aaguid": null,
    "algorithm_supported": null,
-   "root_certificates_present": false
+   "root_certificates_present": false,
+   "latest_status": null,
+   "certification_level": null
   },
   "hash_binding": {
    "client_data_hash": "5-WnJuY-04jvzBGs1znDwWWrNE8Xq0SqL5YrDBf1fc4",
@@ -1835,7 +1907,9 @@
    "description": null,
    "aaguid": null,
    "algorithm_supported": null,
-   "root_certificates_present": false
+   "root_certificates_present": false,
+   "latest_status": null,
+   "certification_level": null
   },
   "hash_binding": {
    "client_data_hash": "5-WnJuY-04jvzBGs1znDwWWrNE8Xq0SqL5YrDBf1fc4",
@@ -1883,7 +1957,9 @@
    "description": null,
    "aaguid": null,
    "algorithm_supported": null,
-   "root_certificates_present": false
+   "root_certificates_present": false,
+   "latest_status": null,
+   "certification_level": null
   },
   "hash_binding": {
    "client_data_hash": "5-WnJuY-04jvzBGs1znDwWWrNE8Xq0SqL5YrDBf1fc4",

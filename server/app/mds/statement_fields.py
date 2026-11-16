@@ -253,11 +253,17 @@ def _report_text(report: Mapping[str, Any]) -> str:
     return " • ".join(parts)
 
 
+def latest_status_code(status_reports: Any) -> str:
+    """An entry's latest status as MDS writes it ("UPDATE_AVAILABLE"); "" when no report names one."""
+
+    reports = _reports_latest_first(status_reports)
+    return _status(reports[0]) if reports else ""
+
+
 def latest_status(status_reports: Any) -> str:
     """An entry's latest status, formatted ("Update Available"); "" when no report names one."""
 
-    reports = _reports_latest_first(status_reports)
-    return format_enum(_status(reports[0])) if reports else ""
+    return format_enum(latest_status_code(status_reports))
 
 
 def _level_rank(status: str) -> tuple[int, Any] | None:

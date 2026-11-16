@@ -37,6 +37,8 @@
    "aaguid": "c0ffee00-c0ff-ee00-c0ff-ee00c0ffee00",
    "algorithm_supported": null,
    "root_certificates_present": true,
+   "latest_status": "FIDO Certified L2",
+   "certification_level": "FIDO Certified L2 \u2022 Fixture Uploaded Authenticator \u2022 (FIDO20020260910099)",
    "source": "aaguid"
   },
   "hash_binding": {
@@ -84,6 +86,8 @@
    "aaguid": "c0ffee00-c0ff-ee00-c0ff-ee00c0ffee00",
    "algorithm_supported": null,
    "root_certificates_present": true,
+   "latest_status": "FIDO Certified L2",
+   "certification_level": "FIDO Certified L2 \u2022 Fixture Uploaded Authenticator \u2022 (FIDO20020260910099)",
    "source": "aaguid"
   },
   "hash_binding": {
@@ -140,6 +144,8 @@
    "aaguid": "c0ffee00-c0ff-ee00-c0ff-ee00c0ffee00",
    "algorithm_supported": null,
    "root_certificates_present": true,
+   "latest_status": "FIDO Certified L2",
+   "certification_level": "FIDO Certified L2 \u2022 Fixture Uploaded Authenticator \u2022 (FIDO20020260910099)",
    "source": "aaguid"
   },
   "hash_binding": {
@@ -192,6 +198,8 @@
    "aaguid": "c0ffee00-c0ff-ee00-c0ff-ee00c0ffee00",
    "algorithm_supported": null,
    "root_certificates_present": true,
+   "latest_status": "FIDO Certified L2",
+   "certification_level": "FIDO Certified L2 \u2022 Fixture Uploaded Authenticator \u2022 (FIDO20020260910099)",
    "source": "aaguid"
   },
   "hash_binding": {
@@ -242,6 +250,8 @@
    "aaguid": "c0ffee00-c0ff-ee00-c0ff-ee00c0ffee00",
    "algorithm_supported": null,
    "root_certificates_present": true,
+   "latest_status": "FIDO Certified L2",
+   "certification_level": "FIDO Certified L2 \u2022 Fixture Uploaded Authenticator \u2022 (FIDO20020260910099)",
    "source": "aaguid"
   },
   "hash_binding": {
@@ -297,6 +307,8 @@
    "aaguid": "c0ffee99-c0ff-ee99-c0ff-ee99c0ffee99",
    "algorithm_supported": null,
    "root_certificates_present": true,
+   "latest_status": "FIDO Certified L2",
+   "certification_level": "FIDO Certified L2 \u2022 Fixture Uploaded Authenticator \u2022 (FIDO20020260910099)",
    "source": "aaguid"
   },
   "hash_binding": {
@@ -350,7 +362,9 @@
    "description": null,
    "aaguid": null,
    "algorithm_supported": null,
-   "root_certificates_present": false
+   "root_certificates_present": false,
+   "latest_status": null,
+   "certification_level": null
   },
   "hash_binding": {
    "client_data_hash": "PjbBlsDcXlSAj-f2E-_AWIB85EjXbryECqbdF0KjJ3o",
@@ -405,6 +419,8 @@
    "aaguid": null,
    "algorithm_supported": null,
    "root_certificates_present": true,
+   "latest_status": "FIDO Certified L2",
+   "certification_level": "FIDO Certified L2 \u2022 Fixture Uploaded Authenticator \u2022 (FIDO20020260910099)",
    "source": "chain"
   },
   "hash_binding": {
@@ -456,7 +472,9 @@
    "description": null,
    "aaguid": null,
    "algorithm_supported": null,
-   "root_certificates_present": false
+   "root_certificates_present": false,
+   "latest_status": null,
+   "certification_level": null
   },
   "hash_binding": {
    "client_data_hash": "PjbBlsDcXlSAj-f2E-_AWIB85EjXbryECqbdF0KjJ3o",
@@ -512,6 +530,8 @@
    "aaguid": "c0ffee44-c0ff-ee44-c0ff-ee44c0ffee44",
    "algorithm_supported": null,
    "root_certificates_present": true,
+   "latest_status": "FIDO Certified L2",
+   "certification_level": "FIDO Certified L2 \u2022 Fixture Uploaded Authenticator \u2022 (FIDO20020260910099)",
    "source": "aaguid"
   },
   "hash_binding": {
