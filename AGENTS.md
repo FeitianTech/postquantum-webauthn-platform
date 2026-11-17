@@ -32,7 +32,9 @@ in `server/app` (see "Backend").
   its DOM-free logic in plain JavaScript; `web/e2e` its Playwright tests.
 - `tests/`: `app/` (the Flask app, tooling guards, characterization; `python_fido2_vectors.py`
   holds the vectors taken from python-fido2's own tests), `pqc/`, `fixtures/` (the MDS fixture
-  snapshot).
+  snapshot, `mds/snapshot`, with a statement to upload beside it, and the JSON lists the tests
+  read: finding codes, registration algorithms, Simple usernames, MDS spellings, MDS roots with
+  a negative serial).
 - `tools/`: `update_mds_snapshot.py`, `build_static_assets.py` (precompresses the export at
   image build), `commit_messages.py` (the commit message check), `update_footer_year.py`,
   `subset_geist.sh` (Geist's two faces in `web/src/fonts`, with fonttools through `uvx`).
@@ -503,8 +505,8 @@ page updates the saved credentials, which both tabs show.
   `web/out` (the `export_root` fixture builds a small export).
 - `tests/conftest.py` points `FIDO_SERVER_MDS_SNAPSHOT_DIR` at an empty directory of the run's
   and turns the upstream refresh off; a test that needs a snapshot uses
-  `mds_fixture_snapshot`, a copy of `tests/fixtures/mds`, which `mds_fixture.py` builds with the
-  updater's own code (`MDS_FIXTURE_WRITE=1` rewrites it).
+  `mds_fixture_snapshot`, a copy of `tests/fixtures/mds/snapshot`, which `mds_fixture.py` builds
+  with the updater's own code (`MDS_FIXTURE_WRITE=1` rewrites it).
 - `tests/app/characterization/` records what the ceremony routes, the decoder and the
   attestation serialisers answer, byte for byte, in a pinned environment, against `golden/`.
   `CHARACTERIZATION_WRITE=1 pytest tests/app/characterization` rewrites them after an intended
