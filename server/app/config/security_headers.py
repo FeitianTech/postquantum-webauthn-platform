@@ -60,12 +60,16 @@ _DEFAULT_PERMISSIONS_POLICY = ", ".join(
     (
         "accelerometer=()",
         "autoplay=()",
+        # Bluetooth, HID, serial and USB devices from page script: none here (a
+        # security key reaches WebAuthn through the browser, not through these).
+        "bluetooth=()",
         "camera=()",
         "display-capture=()",
         "encrypted-media=()",
         "fullscreen=(self)",
         "geolocation=()",
         "gyroscope=()",
+        "hid=()",
         "magnetometer=()",
         "microphone=()",
         "midi=()",
@@ -76,6 +80,7 @@ _DEFAULT_PERMISSIONS_POLICY = ", ".join(
         "publickey-credentials-create=(self)",
         "publickey-credentials-get=(self)",
         "screen-wake-lock=()",
+        "serial=()",
         "usb=()",
         "xr-spatial-tracking=()",
     )

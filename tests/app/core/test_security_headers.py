@@ -101,6 +101,12 @@ def test_permissions_policy_scopes_webauthn_to_self(client):
     assert "geolocation=()" in policy
 
 
+def test_permissions_policy_closes_device_access_from_page_script(client):
+    policy = client.get("/").headers["Permissions-Policy"].split(", ")
+
+    assert {"bluetooth=()", "hid=()", "serial=()", "usb=()"} <= set(policy)
+
+
 def test_csp_locks_down_the_non_script_directives(client):
     csp = _parse_csp(client.get("/").headers["Content-Security-Policy"])
     assert csp["default-src"] == ["'self'"]
