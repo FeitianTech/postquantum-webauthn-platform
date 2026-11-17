@@ -1,7 +1,7 @@
 # Cloud Run service definition for pqcwebauthn (asia-northeast1).
 #
-# Apply with deploy/apply-service-config.sh, which substitutes the currently
-# deployed image for IMAGE_PLACEHOLDER. Pushes to main only update the image
+# Apply with deploy/apply-service-config.sh, which substitutes the image serving
+# the traffic for IMAGE_PLACEHOLDER. Pushes to main only update the image
 # (see cloudbuild.yaml), so settings in this file persist across deploys.
 #
 # Secrets are referenced from Secret Manager; never put secret values here.

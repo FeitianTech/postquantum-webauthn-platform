@@ -3,7 +3,7 @@
 The service runs in `feitian-project`, region `asia-northeast1`, on one vCPU, and keeps no instance warm (`minScale` 0): an idle instance costs nothing.
 
 - **Code:** every push to `main` triggers Cloud Build ([cloudbuild.yaml](../cloudbuild.yaml)), which builds the image and updates only the service's image.
-- **Settings:** concurrency, scaling, secrets and the runtime identity live in [service.yaml](service.yaml). Apply them with [apply-service-config.sh](apply-service-config.sh). The script keeps the image that is currently deployed.
+- **Settings:** concurrency, scaling, secrets and the runtime identity live in [service.yaml](service.yaml). Apply them with [apply-service-config.sh](apply-service-config.sh). The script keeps the image of the revision that serves the traffic. Its new revision takes all the traffic at once, without the deploy's checks.
 
 ## One-time setup: secrets and runtime identity
 
