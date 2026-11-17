@@ -32,8 +32,9 @@ entry answers a conditional request with 304 in either content coding.
 `server/app/mds/files.py` names the seven files once and says where they are:
 `snapshot_dir()` reads `FIDO_SERVER_MDS_SNAPSHOT_DIR` whenever a path is needed, and
 without it answers `instance/mds-snapshot` (in the image,
-`/app/instance/mds-snapshot`; `docker compose` mounts `./instance`, so a local
-container keeps its copy there). It is a leaf with no Flask import, so every reader
+`/app/instance/mds-snapshot`, which the image's unprivileged user owns; `docker compose`
+keeps `/app/instance` in its `instance` volume, so a local container keeps its copy across
+restarts). It is a leaf with no Flask import, so every reader
 and writer follows the one setting: the server's metadata loaders (`mds/cache.py`),
 the provisioning below, and `tools/update_mds_snapshot.py`.
 

@@ -70,7 +70,15 @@ RUN rm -rf /usr/local/lib/python3.12/ensurepip \
     && python /tmp/build_static_assets.py /app/web/out \
     && rm /tmp/build_static_assets.py
 
+# The server runs as an unprivileged user, uid and gid 10001. All it writes at run
+# time is under /app/instance, which that user owns: the MDS snapshot a cold start
+# provisions, and locally the session secret and the stores. The code stays root's.
+RUN groupadd --system --gid 10001 app \
+    && useradd --uid 10001 --gid app --no-create-home --home-dir /nonexistent --shell /usr/sbin/nologin app \
+    && install -d -o app -g app /app/instance
+
 WORKDIR /app
 ENV PYTHONPATH=/app
+USER 10001:10001
 
 CMD ["gunicorn", "-c", "/app/gunicorn.conf.py", "server.app.app:app"]

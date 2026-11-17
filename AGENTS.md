@@ -575,7 +575,10 @@ deliberate change (the characterization goldens show what it changes).
   hand when one fails or a change needs it.
 - The Dockerfile's first stage builds `web/` and scans the export; only `web/out` reaches the
   runtime image, at `/app/web/out`, precompressed by `tools/build_static_assets.py`. The runtime
-  stage's `apt-get upgrade` keeps fixable Debian CVEs out of the image.
+  stage's `apt-get upgrade` keeps fixable Debian CVEs out of the image. The server runs as uid and
+  gid 10001, which owns only `/app/instance`, all it writes at run time (the MDS snapshot a cold
+  start provisions; locally the session secret and the stores); gunicorn's control socket is off.
+  `docker compose` keeps `/app/instance` in a named volume, `instance`.
 
 ## The FIDO MDS snapshot
 

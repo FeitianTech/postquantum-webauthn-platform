@@ -9,5 +9,10 @@ services:
     environment:
       PORT: "8000"
     volumes:
-      - ./instance:/app/instance
+      - instance:/app/instance
     restart: unless-stopped
+
+# The container's user (uid 10001) owns /app/instance. A named volume starts as the
+# image's folder, owned by that user; a bind mount of ./instance belongs to the host's.
+volumes:
+  instance:

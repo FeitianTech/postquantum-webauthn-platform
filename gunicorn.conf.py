@@ -16,6 +16,10 @@ graceful_timeout = 8
 keepalive = 5
 loglevel = os.environ.get("GUNICORN_LOG_LEVEL", "warning")
 
+# No control socket (gunicorn 25.1+, for gunicornc), which nothing here uses: it
+# would be made under $HOME, and the image's user has none.
+control_socket_disable = True
+
 
 def post_worker_init(worker):
     from server.app.startup import start_background_warmup

@@ -83,14 +83,17 @@ http://localhost:8000
 
 The MDS explorer is empty until the container has a metadata snapshot. This
 downloads the FIDO Alliance's BLOB, verifies it against the pinned trust root and
-writes the snapshot into `./instance/mds-snapshot`, which the running server reads
-at once and keeps across restarts:
+writes the snapshot into the compose volume `instance` (the container's
+`/app/instance/mds-snapshot`), which the running server reads at once and keeps
+across restarts:
 
 ```bash
 docker compose exec webauthn python tools/update_mds_snapshot.py
 ```
 
-Run it again to take a newer BLOB. [docs/MDS_SNAPSHOT.md](docs/MDS_SNAPSHOT.md)
+Run it again to take a newer BLOB. The container runs as an unprivileged user
+that owns only that volume; a `./instance` folder an earlier compose file mounted
+is no longer read. [docs/MDS_SNAPSHOT.md](docs/MDS_SNAPSHOT.md)
 has the whole picture.
 
 ---
