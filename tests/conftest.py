@@ -37,6 +37,7 @@ for _setting, _name in (
     ("FIDO_SERVER_CREDENTIAL_DIR", "session-credentials"),
     ("FIDO_SERVER_CREDENTIAL_ARTIFACT_DIR", "credential-artifacts"),
     ("FIDO_SERVER_SESSION_METADATA_DIR", "session-metadata"),
+    ("FIDO_SERVER_GITHUB_OUTBOX_DIR", "github-outbox"),
 ):
     os.environ[_setting] = os.path.join(_STORES, _name)
 atexit.register(shutil.rmtree, _STORES, ignore_errors=True)
@@ -59,8 +60,9 @@ os.environ.setdefault("FIDO_SERVER_SECRET_KEY", "test-session-secret-0123456789a
 
 # A registration logs itself to the credential log repository on GitHub
 # (storage/github_mirror.py), with whatever GITHUB_TOKEN the shell holds. No test
-# reaches GitHub: logging is off for the run, and a test of the log turns it on
-# against its own stand-in for the API.
+# reaches GitHub: logging is off for the run, every test runs without a token
+# (_no_github_token), and a test of the log turns it on against its own stand-in
+# for the API (tests/app/storage/fake_github.py).
 os.environ["ENABLE_GITHUB_LOGGING"] = "0"
 
 # The checkout guard (tests/checkout_guard.py) fails the run if a test wrote app
@@ -109,3 +111,11 @@ def _fresh_touch_throttle(monkeypatch):
     """
 
     monkeypatch.setattr(visitor_session, "TOUCHES", visitor_session.TouchState())
+
+
+@pytest.fixture(autouse=True)
+def _no_github_token(monkeypatch):
+    """Run every test without a GitHub token: the log is off without one, and the GitHub
+    client refuses to build a request without one (github_mirror._token)."""
+
+    monkeypatch.delenv("GITHUB_TOKEN", raising=False)

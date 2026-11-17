@@ -1,0 +1,349 @@
+"""Tests for github_outbox: the credential log's queue, its bound, its lease and its flush."""
+from __future__ import annotations
+
+import fcntl
+import json
+import logging
+import os
+import threading
+import types
+
+import pytest
+
+from server.app.storage import common as storage_common
+from server.app.storage import github_outbox
+from server.app.storage.github_outbox import Delivery, OutboxEntry
+
+
+def _entry(name: str, content: bytes = b"{}") -> OutboxEntry:
+    return OutboxEntry("registration", f"logs/unknown/{name}.json", f"add: {name}.json (AAGUID=unknown)", content)
+
+
+class _Clock:
+    """The outbox's time, moved by hand."""
+
+    def __init__(self, now: float = 1_000_000.0) -> None:
+        self.now = now
+
+    def time(self) -> float:
+        return self.now
+
+
+@pytest.fixture
+def clock(monkeypatch):
+    clock = _Clock()
+    monkeypatch.setattr(github_outbox, "time", types.SimpleNamespace(time=clock.time))
+    return clock
+
+
+@pytest.fixture
+def outbox(monkeypatch, tmp_path):
+    """The local outbox in this test's directory."""
+
+    monkeypatch.setattr(storage_common, "using_gcs", lambda: False)
+    root = tmp_path / "github-outbox"
+    monkeypatch.setenv("FIDO_SERVER_GITHUB_OUTBOX_DIR", str(root))
+    return root
+
+
+class _Deliverer:
+    """A stand-in for the mirror's delivery: what it was given, and what it answers."""
+
+    def __init__(self, answers: dict[str, Delivery] | None = None) -> None:
+        self.paths: list[str] = []
+        self.answers = answers or {}
+        self.lock = threading.Lock()
+
+    def __call__(self, entry: OutboxEntry) -> Delivery:
+        with self.lock:
+            self.paths.append(entry.path)
+        return self.answers.get(entry.path, Delivery.DELIVERED)
+
+
+def _queued(root) -> list[OutboxEntry]:
+    names = sorted(name for name in os.listdir(root) if name.endswith(".entry"))
+    return [github_outbox.decode_entry((root / name).read_bytes()) for name in names]
+
+
+def test_an_entry_reads_back_as_it_was_queued():
+    entry = OutboxEntry("metadata", "metadata/ä b#1.json", "metadata: add ä b#1.json", b"line one\nline two\n\x00\xff")
+
+    data = github_outbox.encode_entry(entry)
+
+    assert data.startswith(b'{"kind":"metadata","path":"metadata/\\u00e4 b#1.json"')
+    assert github_outbox.decode_entry(data) == entry
+
+
+@pytest.mark.parametrize(
+    "data",
+    [
+        b"no header line",
+        b"not json\n{}",
+        b"[1, 2]\n{}",
+        b'{"kind": "registration", "path": "logs/x.json"}\n{}',
+        b'{"kind": "registration", "path": 3, "message": "m"}\n{}',
+        b'{"kind": "r\xc3\xa9", "path": "p", "message": "m"}\n{}',
+    ],
+)
+def test_anything_else_is_not_an_entry(data):
+    with pytest.raises(ValueError):
+        github_outbox.decode_entry(data)
+
+
+def test_queued_entries_are_delivered_oldest_first_and_removed(outbox):
+    assert github_outbox.enqueue([_entry("one"), _entry("two")]) == 2
+    assert github_outbox.enqueue([_entry("three")]) == 1
+    deliverer = _Deliverer()
+
+    run = github_outbox.flush(deliverer)
+
+    assert run == github_outbox.FlushRun(3, 0.0)
+    assert deliverer.paths == [f"logs/unknown/{name}.json" for name in ("one", "two", "three")]
+    assert _queued(outbox) == []
+
+
+def test_the_outbox_folder_is_ignored_by_git_and_holds_only_entries_and_the_lease(outbox):
+    github_outbox.enqueue([_entry("one")])
+    github_outbox.flush(_Deliverer({"logs/unknown/one.json": Delivery.UNAVAILABLE}))
+
+    names = sorted(os.listdir(outbox))
+    assert names[:2] == [".gitignore", ".lease"]
+    assert len(names) == 3 and names[2].endswith(".entry")
+    assert "*" in (outbox / ".gitignore").read_text().splitlines()
+
+
+def test_nothing_queued_writes_nothing(outbox):
+    assert github_outbox.enqueue([]) == 0
+    assert not outbox.exists()
+    assert github_outbox.flush(_Deliverer()) == github_outbox.FlushRun(0, 0.0)
+
+
+def test_a_dropped_entry_is_removed_too(outbox):
+    github_outbox.enqueue([_entry("one"), _entry("two")])
+
+    run = github_outbox.flush(_Deliverer({"logs/unknown/one.json": Delivery.DROPPED}))
+
+    assert run.handled == 2
+    assert _queued(outbox) == []
+
+
+def test_a_run_delivers_at_most_its_limit(outbox):
+    github_outbox.enqueue([_entry(f"e{index}") for index in range(5)])
+    deliverer = _Deliverer()
+
+    assert github_outbox.flush(deliverer, limit=2).handled == 2
+    assert github_outbox.flush(deliverer, limit=2).handled == 2
+    assert github_outbox.flush(deliverer, limit=2).handled == 1
+    assert deliverer.paths == [f"logs/unknown/e{index}.json" for index in range(5)]
+
+
+def test_an_entry_github_cannot_take_stays_and_every_flusher_backs_off(outbox, clock):
+    github_outbox.enqueue([_entry("one"), _entry("two")])
+    refusing = _Deliverer({"logs/unknown/one.json": Delivery.UNAVAILABLE})
+
+    run = github_outbox.flush(refusing)
+
+    assert run == github_outbox.FlushRun(0, clock.now + github_outbox.BACKOFF_SECONDS)
+    assert refusing.paths == ["logs/unknown/one.json"]
+    assert [entry.path for entry in _queued(outbox)] == ["logs/unknown/one.json", "logs/unknown/two.json"]
+
+    clock.now += github_outbox.BACKOFF_SECONDS - 1
+    waiting = _Deliverer()
+    assert github_outbox.flush(waiting) == run
+    assert waiting.paths == []
+
+    clock.now += 1
+    assert github_outbox.flush(waiting).handled == 2
+    assert _queued(outbox) == []
+
+
+def test_a_delivery_that_raises_keeps_the_entry_and_backs_off(outbox, caplog):
+    github_outbox.enqueue([_entry("one")])
+
+    def _raises(_entry):
+        raise RuntimeError("the deliverer broke")
+
+    with caplog.at_level(logging.WARNING, logger=github_outbox.__name__):
+        run = github_outbox.flush(_raises)
+
+    assert run.handled == 0 and run.not_before > 0
+    assert len(_queued(outbox)) == 1
+    assert "Could not deliver logs/unknown/one.json to the credential log; it stays queued" in caplog.text
+
+
+def test_an_entry_that_does_not_decode_is_removed_with_a_warning(outbox, caplog):
+    github_outbox.enqueue([_entry("one")])
+    outbox.joinpath("00000000T000000000000Z-0bad0bad.entry").write_bytes(b"not an entry")
+    deliverer = _Deliverer()
+
+    with caplog.at_level(logging.WARNING, logger=github_outbox.__name__):
+        assert github_outbox.flush(deliverer).handled == 1
+
+    assert deliverer.paths == ["logs/unknown/one.json"]
+    assert sorted(os.listdir(outbox)) == [".gitignore", ".lease"]
+    assert "Removed 00000000T000000000000Z-0bad0bad.entry from the credential log outbox" in caplog.text
+    assert "not an entry" not in caplog.text.replace("is not an entry this server reads", "")
+
+
+def test_an_entry_removed_meanwhile_is_skipped(outbox):
+    github_outbox.enqueue([_entry("one"), _entry("two")])
+    second = sorted(name for name in os.listdir(outbox) if name.endswith(".entry"))[1]
+    deliverer = _Deliverer()
+
+    def _removes_the_second(entry):
+        (outbox / second).unlink()
+        return deliverer(entry)
+
+    assert github_outbox.flush(_removes_the_second).handled == 1
+    assert deliverer.paths == ["logs/unknown/one.json"]
+
+
+def test_a_run_that_stalled_past_its_lease_starts_no_new_delivery(outbox, clock):
+    github_outbox.enqueue([_entry("one"), _entry("two")])
+    deliverer = _Deliverer()
+
+    def _stalls(entry):
+        clock.now += github_outbox.LEASE_SECONDS - github_outbox.LEASE_MARGIN_SECONDS + 1
+        return deliverer(entry)
+
+    assert github_outbox.flush(_stalls).handled == 1
+    assert [entry.path for entry in _queued(outbox)] == ["logs/unknown/two.json"]
+
+
+def test_a_flush_started_while_another_holds_the_lease_does_nothing(outbox):
+    github_outbox.enqueue([_entry("one"), _entry("two")])
+    inner = _Deliverer()
+    inner_runs = []
+
+    def _flushes_again(entry):
+        inner_runs.append(github_outbox.flush(inner))
+        return Delivery.DELIVERED
+
+    assert github_outbox.flush(_flushes_again).handled == 2
+    assert inner_runs == [github_outbox.FlushRun(0, 0.0)] * 2
+    assert inner.paths == []
+
+
+def test_two_flushers_at_once_deliver_each_entry_once(outbox):
+    github_outbox.enqueue([_entry(f"e{index}") for index in range(10)])
+    deliverer = _Deliverer()
+    barrier = threading.Barrier(2)
+    runs = []
+
+    def _flusher():
+        barrier.wait()
+        runs.append(github_outbox.flush(deliverer))
+
+    threads = [threading.Thread(target=_flusher) for _ in range(2)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+
+    assert sorted(deliverer.paths) == sorted(f"logs/unknown/e{index}.json" for index in range(10))
+    assert sorted(run.handled for run in runs) in ([0, 10], [10, 10]) and sum(run.handled for run in runs) == 10
+    assert _queued(outbox) == []
+
+
+def test_a_lease_held_by_a_process_blocks_the_outbox_until_the_process_stops(outbox):
+    github_outbox.enqueue([_entry("one")])
+    deliverer = _Deliverer()
+    held = open(outbox / ".lease", "a+b")
+    fcntl.flock(held.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+
+    assert github_outbox.flush(deliverer) == github_outbox.FlushRun(0, 0.0)
+    assert deliverer.paths == []
+
+    held.close()  # A stopped process's locks go with it.
+
+    assert github_outbox.flush(deliverer).handled == 1
+    assert deliverer.paths == ["logs/unknown/one.json"]
+
+
+@pytest.mark.parametrize("lease", [b"", b"not json", b"[1]", b'{"notBefore": "soon", "until": null}'])
+def test_a_lease_file_that_does_not_read_is_no_lease(outbox, lease):
+    github_outbox.enqueue([_entry("one")])
+    (outbox / ".lease").write_bytes(lease)
+
+    assert github_outbox.flush(_Deliverer()).handled == 1
+    assert json.loads((outbox / ".lease").read_bytes()) == {"until": 0.0, "notBefore": 0.0}
+
+
+def test_a_run_that_fails_still_gives_the_lease_back(outbox, monkeypatch):
+    github_outbox.enqueue([_entry("one")])
+
+    def _cannot_remove(self, name):
+        raise OSError("read-only")
+
+    monkeypatch.setattr(github_outbox._LocalOutbox, "remove", _cannot_remove)
+    with pytest.raises(OSError, match="read-only"):
+        github_outbox.flush(_Deliverer())
+    monkeypatch.undo()
+    monkeypatch.setattr(storage_common, "using_gcs", lambda: False)
+    monkeypatch.setenv("FIDO_SERVER_GITHUB_OUTBOX_DIR", str(outbox))
+
+    assert github_outbox.flush(_Deliverer()).handled == 1
+
+
+def test_past_its_count_the_outbox_drops_an_entry_with_a_warning(outbox, monkeypatch, caplog):
+    monkeypatch.setattr(github_outbox, "MAX_ENTRIES", 2)
+    github_outbox.enqueue([_entry("one")])
+
+    with caplog.at_level(logging.WARNING, logger=github_outbox.__name__):
+        assert github_outbox.enqueue([_entry("two"), _entry("three", b"secret content")]) == 1
+
+    assert [entry.path for entry in _queued(outbox)] == ["logs/unknown/one.json", "logs/unknown/two.json"]
+    assert "The credential log outbox is full (2 entries" in caplog.text
+    assert "dropped logs/unknown/three.json" in caplog.text
+    assert "secret content" not in caplog.text
+
+
+def test_past_its_bytes_the_outbox_drops_an_entry_with_a_warning(outbox, monkeypatch, caplog):
+    small = len(github_outbox.encode_entry(_entry("one")))
+    monkeypatch.setattr(github_outbox, "MAX_BYTES", 2 * small)
+
+    with caplog.at_level(logging.WARNING, logger=github_outbox.__name__):
+        assert github_outbox.enqueue([_entry("one"), _entry("big", b"x" * 100), _entry("two")]) == 2
+
+    assert [entry.path for entry in _queued(outbox)] == ["logs/unknown/one.json", "logs/unknown/two.json"]
+    assert "dropped logs/unknown/big.json" in caplog.text
+
+
+def test_an_outbox_that_cannot_be_listed_still_takes_its_entries(outbox, monkeypatch, caplog):
+    def _cannot_list(self):
+        raise OSError("listing failed")
+
+    monkeypatch.setattr(github_outbox._LocalOutbox, "held", _cannot_list)
+
+    with caplog.at_level(logging.WARNING, logger=github_outbox.__name__):
+        assert github_outbox.enqueue([_entry("one"), _entry("two")]) == 2
+
+    assert len(_queued(outbox)) == 2
+    assert "queuing 2 entries without its bound: listing failed" in caplog.text
+
+
+def test_an_entry_that_cannot_be_written_is_dropped_and_the_rest_are_queued(outbox, monkeypatch, caplog):
+    write = github_outbox._LocalOutbox.write
+    attempts = []
+
+    def _first_fails(self, entry_id, data):
+        attempts.append(entry_id)
+        if len(attempts) == 1:
+            raise OSError("disk full")
+        write(self, entry_id, data)
+
+    monkeypatch.setattr(github_outbox._LocalOutbox, "write", _first_fails)
+
+    with caplog.at_level(logging.WARNING, logger=github_outbox.__name__):
+        assert github_outbox.enqueue([_entry("one"), _entry("two")]) == 1
+
+    assert [entry.path for entry in _queued(outbox)] == ["logs/unknown/two.json"]
+    assert "Could not queue logs/unknown/one.json for the credential log: disk full" in caplog.text
+
+
+def test_the_outbox_folder_is_its_setting_else_under_the_instance(monkeypatch):
+    monkeypatch.setenv("FIDO_SERVER_GITHUB_OUTBOX_DIR", "/elsewhere/outbox")
+    assert github_outbox.outbox_dir() == "/elsewhere/outbox"
+
+    monkeypatch.delenv("FIDO_SERVER_GITHUB_OUTBOX_DIR")
+    assert github_outbox.outbox_dir().endswith(os.path.join("instance", "github-outbox"))

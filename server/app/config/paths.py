@@ -37,3 +37,7 @@ METADATA_STORE = ("FIDO_SERVER_SESSION_METADATA_DIR", "session-metadata")
 CREDENTIAL_STORE = ("FIDO_SERVER_CREDENTIAL_DIR", "session-credentials")
 ARTIFACT_STORE = ("FIDO_SERVER_CREDENTIAL_ARTIFACT_DIR", "credential-artifacts")
 LOCAL_STORES = (METADATA_STORE, CREDENTIAL_STORE, ARTIFACT_STORE)
+
+# The credential log's outbox (storage/github_outbox.py) when the stores are not on Cloud
+# Storage: no visitor's namespace, so not one of LOCAL_STORES, which the idle sweep removes.
+GITHUB_OUTBOX_STORE = ("FIDO_SERVER_GITHUB_OUTBOX_DIR", "github-outbox")
