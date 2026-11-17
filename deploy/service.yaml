@@ -2,7 +2,8 @@
 #
 # Apply with deploy/apply-service-config.sh, which substitutes the image serving
 # the traffic for IMAGE_PLACEHOLDER. Pushes to main only update the image
-# (see cloudbuild.yaml), so settings in this file persist across deploys.
+# (see cloudbuild.yaml, deploy/deploy-revision.sh), so settings in this file
+# persist across deploys.
 #
 # Secrets are referenced from Secret Manager; never put secret values here.
 apiVersion: serving.knative.dev/v1

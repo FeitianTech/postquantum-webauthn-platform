@@ -38,8 +38,8 @@ in `server/app` (see "Backend").
   `subset_geist.sh` (Geist's two faces in `web/src/fonts`, with fonttools through `uvx`).
 - `docs/`: `DESIGN.md` (the UI's design, security and serving rules), `DECODER.md`,
   `STORAGE.md`, `MDS_SNAPSHOT.md`.
-- `Dockerfile`, `cloudbuild.yaml` (the deploy gate), `deploy/` (Cloud Run service config),
-  `.github/` (workflows, the bot PR action).
+- `Dockerfile`, `cloudbuild.yaml` (the deploy gate), `deploy/` (Cloud Run service config,
+  the checked deploy), `.github/` (workflows, the bot PR action).
 - `LICENSE`: Apache 2.0, FEITIAN Technologies Co., Ltd. Third-party material keeps its own
   licence beside it: the Geist font (`web/src/fonts/OFL.txt`), python-fido2's test vectors (in
   `tests/app/python_fido2_vectors.py`).
@@ -549,7 +549,10 @@ deliberate change (the characterization goldens show what it changes).
   run does not stop Cloud Build, so `cloudbuild.yaml` runs its own gate first: `Python tests`
   (ruff, pytest with `.coveragerc`'s floor) and `Web tests` (typecheck, both vitest projects
   with coverage, build, CSP scan, size budget) in parallel, then Build, Push and Deploy (Cloud
-  Run `pqcwebauthn`). Playwright runs in GitHub CI only. Keep that gate: it is all that stands
+  Run `pqcwebauthn`, `deploy/deploy-revision.sh`: a revision with no traffic, tagged `candidate`,
+  `/health`, `/` and `/api/mds/metadata/info` checked at the tag's URL, then all the traffic to
+  it; a failure leaves the traffic where it was, and `tests/app/tooling/test_deploy_revision.py`
+  holds it to that). Playwright runs in GitHub CI only. Keep that gate: it is all that stands
   between a commit and production.
 - Workflows (`ci-*.yml` run on `pull_request` and on `push` to `main`; `ci-security.yml` also
   weekly, since advisories land without a commit): `ci-python.yml`, `ci-web.yml` (web and the

@@ -3,7 +3,10 @@
 #
 # The deploy step only changes the image. Service settings (concurrency,
 # scaling, secrets, service account) live in deploy/service.yaml and are applied
-# with deploy/apply-service-config.sh.
+# with deploy/apply-service-config.sh. It deploys the image as a revision that
+# takes no traffic, checks /health, / and /api/mds/metadata/info at its tag's URL,
+# and only then sends it all the traffic (deploy/deploy-revision.sh): whatever
+# fails leaves the traffic on the revision that had it.
 #
 # GitHub Actions and Cloud Build are independent pipelines: a red CI run does
 # not stop a trigger from firing. The test steps below (ruff, the Python suite
@@ -70,17 +73,16 @@ steps:
 
   - name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
     id: Deploy
-    entrypoint: gcloud
-    args:
-      - run
-      - services
-      - update
-      - pqcwebauthn
-      - --platform=managed
-      - --image=asia-northeast1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/postquantum-webauthn-platform/pqcwebauthn:$COMMIT_SHA
-      - --labels=managed-by=gcp-cloud-build-deploy-cloud-run,commit-sha=$COMMIT_SHA,gcb-build-id=$BUILD_ID,gcb-trigger-id=$_TRIGGER_ID
-      - --region=asia-northeast1
-      - --quiet
+    entrypoint: bash
+    args: [deploy/deploy-revision.sh]
+    # Substitutions are not environment variables: the script is given what it needs.
+    env:
+      - IMAGE=asia-northeast1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/postquantum-webauthn-platform/pqcwebauthn:$COMMIT_SHA
+      - SERVICE=pqcwebauthn
+      - REGION=asia-northeast1
+      - COMMIT_SHA=$COMMIT_SHA
+      - BUILD_ID=$BUILD_ID
+      - LABELS=managed-by=gcp-cloud-build-deploy-cloud-run,commit-sha=$COMMIT_SHA,gcb-build-id=$BUILD_ID,gcb-trigger-id=$_TRIGGER_ID
 
 images:
   - asia-northeast1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/postquantum-webauthn-platform/pqcwebauthn:$COMMIT_SHA
@@ -93,4 +95,5 @@ options:
   # label that links the Cloud Run service to its trigger; a manual build leaves it empty.
   substitutionOption: ALLOW_LOOSE
 
-timeout: 1500s
+# The gate takes about 20 minutes; the deploy's checks up to 8 more.
+timeout: 2100s

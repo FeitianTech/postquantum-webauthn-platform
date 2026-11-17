@@ -2,7 +2,12 @@
 
 The service runs in `feitian-project`, region `asia-northeast1`, on one vCPU, and keeps no instance warm (`minScale` 0): an idle instance costs nothing.
 
-- **Code:** every push to `main` triggers Cloud Build ([cloudbuild.yaml](../cloudbuild.yaml)), which builds the image and updates only the service's image.
+- **Code:** every push to `main` triggers Cloud Build ([cloudbuild.yaml](../cloudbuild.yaml)), which builds the image and updates only the service's image, through [deploy-revision.sh](deploy-revision.sh):
+  - The new revision takes no traffic at first. It is tagged `candidate` and named for the commit and the build.
+  - `/health`, `/` and `/api/mds/metadata/info` (with its `entryCount`) are checked at the tag's URL, `https://candidate---…`. Each is tried again, 15 s apart, while the revision starts and provisions its MDS snapshot, all within 8 minutes.
+  - Only then does the revision get all the traffic (`update-traffic --to-revisions`).
+  - Whatever fails leaves the traffic on the revision that had it. The failed revision keeps its tag, without traffic, until the next deploy moves the tag.
+  - The build's service account needs nothing more than the deploy did before. `services describe` and `update-traffic` need the same `run.services.get` and `run.services.update` as `services update`, and the tag's URL is public like the service's.
 - **Settings:** concurrency, scaling, secrets and the runtime identity live in [service.yaml](service.yaml). Apply them with [apply-service-config.sh](apply-service-config.sh). The script keeps the image of the revision that serves the traffic. Its new revision takes all the traffic at once, without the deploy's checks.
 
 ## One-time setup: secrets and runtime identity
