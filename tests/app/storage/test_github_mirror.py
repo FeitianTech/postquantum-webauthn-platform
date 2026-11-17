@@ -77,6 +77,40 @@ def test_api_url_uses_repo_env_override(monkeypatch):
     )
 
 
+@pytest.mark.parametrize(
+    ("name", "quoted"),
+    [
+        ("metadata (1).json", "metadata%20%281%29.json"),
+        ("a#b.json", "a%23b.json"),
+        ("a?b.json", "a%3Fb.json"),
+        ("métadonnées.json", "m%C3%A9tadonn%C3%A9es.json"),
+        ("50%.json", "50%25.json"),
+    ],
+)
+def test_api_url_quotes_a_file_name_but_keeps_the_folders(monkeypatch, name, quoted):
+    monkeypatch.delenv("GITHUB_LOG_REPO_OWNER", raising=False)
+    monkeypatch.delenv("GITHUB_LOG_REPO_NAME", raising=False)
+
+    assert github_mirror._api_url(f"contents/metadata/{name}") == (
+        f"https://api.github.com/repos/rainzhang05/CredentialLogs/contents/metadata/{quoted}"
+    )
+
+
+def test_a_quoted_url_is_one_urllib_sends(monkeypatch):
+    # Unquoted, a space is refused by urllib (InvalidURL) and "#" cuts the path short.
+    monkeypatch.setenv("GITHUB_TOKEN", "token-123")
+    sent = []
+    monkeypatch.setattr(
+        github_mirror.urllib_request,
+        "urlopen",
+        lambda request_obj, timeout=None: sent.append(request_obj.selector) or _FakeResponse(status=201),
+    )
+
+    github_mirror.github_upload_file("metadata/a b#1.json", b"{}", "metadata: add a b#1.json")
+
+    assert sent == ["/repos/rainzhang05/CredentialLogs/contents/metadata/a%20b%231.json"]
+
+
 def test_credential_log_repository_falls_back_when_env_values_are_blank(monkeypatch):
     monkeypatch.setenv("GITHUB_LOG_REPO_OWNER", "   ")
     monkeypatch.setenv("GITHUB_LOG_REPO_NAME", "")
@@ -877,6 +911,11 @@ def test_safe_metadata_repo_filename_sanitizes_traversal_and_invalid_input():
     assert github_mirror._safe_metadata_repo_filename(" /tmp/demo.json ") == "demo.json"
     assert github_mirror._safe_metadata_repo_filename("///") == "metadata.json"
     assert github_mirror._safe_metadata_repo_filename(None) == "metadata.json"
+
+
+@pytest.mark.parametrize("name", [".", "..", " .. ", "a/.."])
+def test_a_metadata_file_named_for_a_folder_is_logged_as_metadata_json(name):
+    assert github_mirror._safe_metadata_repo_filename(name) == "metadata.json"
 
 
 def test_maybe_store_uploaded_metadata_file_returns_false_when_logging_disabled(monkeypatch):

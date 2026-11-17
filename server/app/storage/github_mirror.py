@@ -20,6 +20,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
 from urllib import error as urllib_error
+from urllib import parse as urllib_parse
 from urllib import request as urllib_request
 from zoneinfo import ZoneInfo
 
@@ -91,7 +92,10 @@ def _token() -> str:
 
 
 def _api_url(path: str) -> str:
-    path = path.lstrip("/")
+    """The API URL of ``path`` in the log repository, the path quoted: a file name may hold a
+    space, ``#``, ``?`` or any other character a visitor's upload was named with."""
+
+    path = urllib_parse.quote(path.lstrip("/"), safe="/")
     owner, name = credential_log_repository()
     return f"{_API_BASE}/repos/{owner}/{name}/{path}"
 
@@ -430,7 +434,7 @@ _METADATA_REPO_FOLDER = "metadata"
 
 def _safe_metadata_repo_filename(filename: str) -> str:
     candidate = os.path.basename(filename.strip()) if isinstance(filename, str) else ""
-    if not candidate:
+    if candidate in ("", ".", ".."):
         return "metadata.json"
     return candidate
 
