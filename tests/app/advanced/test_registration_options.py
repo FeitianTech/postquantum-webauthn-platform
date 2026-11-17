@@ -50,6 +50,17 @@ def test_a_user_id_or_challenge_that_does_not_read_as_bytes_is_refused(changes, 
     assert response.get_json() == {"error": error}
 
 
+@pytest.mark.parametrize("challenge", ["00" * 15, {"$hex": ""}])
+def test_a_challenge_shorter_than_16_bytes_is_refused(challenge):
+    response = entry_app().test_client().post(
+        "/api/advanced/register/begin",
+        json={"publicKey": {**advanced_public_key_options(challenge=b"\x01" * 32), "challenge": challenge}},
+    )
+
+    assert response.status_code == 400
+    assert response.get_json() == {"error": "Invalid challenge: it must be at least 16 bytes."}
+
+
 @pytest.mark.parametrize(
     ("exclude_credentials", "error"),
     [

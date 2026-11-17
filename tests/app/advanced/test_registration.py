@@ -124,7 +124,7 @@ def _base_payload():
                 "name": "user@example.com",
                 "displayName": "User",
             },
-            "challenge": "0a0b0c0d",
+            "challenge": "0a0b0c0d" * 4,
             "pubKeyCredParams": [{"type": "public-key", "alg": -7}],
         }
     }
@@ -359,7 +359,7 @@ def test_advanced_register_begin_maps_auth_selection_exclusions_extensions_and_t
             == "required"
         )
         assert getattr(kwargs["authenticator_attachment"], "value", kwargs["authenticator_attachment"]) == "platform"
-        assert kwargs["challenge"] == bytes.fromhex("0a0b0c0d")
+        assert kwargs["challenge"] == bytes.fromhex("0a0b0c0d" * 4)
         assert kwargs["extensions"] == {
             "credProps": True,
             "minPinLength": False,

@@ -27,7 +27,7 @@ from ...webauthn.attachments import (
     resolve_effective_attachments,
 )
 from ...webauthn.attestation.aaguid import describe_cred_protect
-from . import request_members
+from . import constants, request_members
 
 
 class BeginRequest(NamedTuple):
@@ -96,6 +96,8 @@ def parse_begin_request(data: Any) -> tuple[BeginRequest | None, Any]:
             challenge_bytes = client_binary.read_request_bytes(challenge_value)
         except (ValueError, TypeError) as exc:
             return None, (jsonify({"error": client_binary.unreadable("Invalid challenge format", exc)}), 400)
+        if len(challenge_bytes) < constants.MIN_CHALLENGE_BYTES:
+            return None, (jsonify({"error": constants.SHORT_CHALLENGE}), 400)
 
     return BeginRequest(public_key, username, display_name, user_id_bytes, challenge_bytes), None
 

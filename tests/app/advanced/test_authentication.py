@@ -176,6 +176,16 @@ def test_begin_refuses_a_challenge_that_does_not_read_as_bytes():
     }
 
 
+def test_begin_refuses_a_challenge_shorter_than_16_bytes():
+    response = entry_app().test_client().post(
+        "/api/advanced/authenticate/begin",
+        json={"publicKey": {"challenge": "00" * 15}, "__storedCredentials": [Authenticator().stored_credential_entry()]},
+    )
+
+    assert response.status_code == 400
+    assert response.get_json() == {"error": "Invalid challenge: it must be at least 16 bytes."}
+
+
 def test_begin_refuses_a_public_key_that_is_no_object():
     response = entry_app().test_client().post("/api/advanced/authenticate/begin", json={"publicKey": ["challenge"]})
 
@@ -442,7 +452,7 @@ def test_advanced_authenticate_begin_uses_allow_credentials_subset_and_dedupes(m
 
     request_payload = {
         "publicKey": {
-            "challenge": "010203",
+            "challenge": "0102030405060708090a0b0c0d0e0f10",
             "allowCredentials": [
                 {"type": "public-key", "id": cred_one.hex()},
                 {"type": "public-key", "id": cred_one.hex()},
@@ -491,7 +501,7 @@ def test_advanced_authenticate_begin_falls_back_to_all_records_when_allow_creden
             "/api/advanced/authenticate/begin",
             json={
                 "publicKey": {
-                    "challenge": "010203",
+                    "challenge": "0102030405060708090a0b0c0d0e0f10",
                     "allowCredentials": [{"type": "public-key", "id": b"unknown".hex()}],
                 },
                 "__storedCredentials": [{"record": 1}],
@@ -528,7 +538,7 @@ def test_advanced_authenticate_begin_resident_mode_prefers_resident_records_and_
             "/api/advanced/authenticate/begin",
             json={
                 "publicKey": {
-                    "challenge": "010203",
+                    "challenge": "0102030405060708090a0b0c0d0e0f10",
                     "hints": ["client-device"],
                 },
                 "__storedCredentials": [{"record": 1}],
@@ -565,7 +575,7 @@ def test_advanced_authenticate_begin_propagates_algorithms_extensions_and_uv_pre
             "/api/advanced/authenticate/begin",
             json={
                 "publicKey": {
-                    "challenge": "010203",
+                    "challenge": "0102030405060708090a0b0c0d0e0f10",
                     "timeout": 15000,
                     "userVerification": "discouraged",
                     "extensions": {
@@ -583,7 +593,7 @@ def test_advanced_authenticate_begin_propagates_algorithms_extensions_and_uv_pre
         )
 
     assert response.status_code == 200
-    assert captured["challenge"] == b"\x01\x02\x03"
+    assert captured["challenge"] == bytes(range(1, 17))
     assert captured["timeout"] == 15000
     assert captured["allowed_algorithms"] == expected_algorithms
     assert captured["extensions"] == {
@@ -662,7 +672,7 @@ def test_advanced_authenticate_begin_accepts_credentials_fallback_field(monkeypa
         response = client.post(
             "/api/advanced/authenticate/begin",
             json={
-                "publicKey": {"challenge": "010203"},
+                "publicKey": {"challenge": "0102030405060708090a0b0c0d0e0f10"},
                 "credentials": [_stored_credential_entry(b"advanced-auth-credentials-field")],
             },
         )

@@ -60,6 +60,8 @@ def advanced_authenticate_begin():
             challenge_bytes = client_binary.read_request_bytes(challenge_value)
         except (ValueError, TypeError) as exc:
             return jsonify({"error": client_binary.unreadable("Invalid challenge format", exc)}), 400
+        if len(challenge_bytes) < constants.MIN_CHALLENGE_BYTES:
+            return jsonify({"error": constants.SHORT_CHALLENGE}), 400
 
     temp_server, rp_id = assertion_options.assertion_server(public_key)
     uv_req = assertion_options.user_verification_requirement(public_key)

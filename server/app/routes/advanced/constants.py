@@ -4,6 +4,11 @@ from __future__ import annotations
 # the state in the session.
 CHALLENGE_SOURCE_SERVER = "server-session"
 
+# fido2 takes a challenge a request names only when it is at least 16 bytes, as WebAuthn L3
+# section 13.4.3 advises, and raises for a shorter one: the begin refuses it first.
+MIN_CHALLENGE_BYTES = 16
+SHORT_CHALLENGE = f"Invalid challenge: it must be at least {MIN_CHALLENGE_BYTES} bytes."
+
 HEAVY_CREDENTIAL_KEYS: set[str] = {
     "attestationObject",
     "attestation_object",

@@ -156,7 +156,7 @@
   },
   {
    "request": "POST /api/advanced/authenticate/begin",
-   "status": 404,
+   "status": 400,
    "headers": [
     [
      "Content-Type",
@@ -164,7 +164,7 @@
     ],
     [
      "Content-Length",
-     "73"
+     "61"
     ],
     [
      "X-Content-Type-Options",
@@ -208,9 +208,9 @@
      }
     }
    ],
-   "bodySha256": "bf93093faabd5b73b73a793b974f3aa9fad7c6f023e085a8bbda044c92fbec0d",
+   "bodySha256": "9efaeafbf2cfd3c36ce2ef9dc9440fbd8dadca7de07437c3d362c1d58287eb3b",
    "body": {
-    "error": "No credentials detected. Please register a credential first."
+    "error": "Invalid challenge: it must be at least 16 bytes."
    }
   },
   {
