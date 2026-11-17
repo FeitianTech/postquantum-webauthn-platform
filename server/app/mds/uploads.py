@@ -121,7 +121,7 @@ def stored_json(raw_payload: Mapping[str, Any]) -> bytes:
     try:
         serialisable_payload = json.loads(json.dumps(raw_payload))
     except (TypeError, ValueError) as exc:
-        raise ValueError("Metadata JSON contains unsupported types.") from exc
+        raise entries.MetadataRefused("Metadata JSON contains unsupported types.") from exc
     return (json.dumps(serialisable_payload, indent=2, sort_keys=True) + "\n").encode("utf-8")
 
 

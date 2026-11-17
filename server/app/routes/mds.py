@@ -7,6 +7,7 @@ Every route that reads the snapshot waits for a provisioning under way
 from __future__ import annotations
 
 import json
+import logging
 from collections.abc import Mapping
 from typing import Any, NamedTuple
 
@@ -28,6 +29,12 @@ from . import assets, json_body
 
 # The HTTP rules, registered on the app by server.app.app.
 bp = Blueprint("mds", __name__)
+
+logger = logging.getLogger(__name__)
+
+# What the upload and its deletion answer when the store fails (mds/uploads.py logs why).
+_STORE_FAILED = "Failed to store uploaded metadata on the server."
+_DELETE_FAILED = "Failed to delete the uploaded metadata file."
 
 # An upload's icon (api_custom_metadata_icon): the browser keeps it, and no shared cache.
 _ICON_CACHE_CONTROL = "private, max-age=31536000, immutable"
@@ -144,14 +151,14 @@ def api_custom_metadata_icon(stored_filename: str):
 
 
 def _refuse_json_constant(constant: str) -> Any:
-    raise ValueError(f"{constant} is not JSON (RFC 8259 has no NaN or Infinity)")
+    raise mds_entries.MetadataRefused(f"{constant} is not JSON (RFC 8259 has no NaN or Infinity)")
 
 
 def _read_metadata_json(text: str) -> Any:
     # RFC 8259's JSON: the metadata is answered back, and NaN would make that answer not JSON.
     # Nested at most as deep as a JSON body (routes/json_body.py): Python's reader goes as deep as the text.
     if json_body.nested_too_deep(text.encode("utf-8")):
-        raise ValueError(f"JSON nested more than {json_body.MAX_DEPTH} deep, deeper than this server reads")
+        raise mds_entries.MetadataRefused(f"JSON nested more than {json_body.MAX_DEPTH} deep, deeper than this server reads")
     return json.loads(text, parse_constant=_refuse_json_constant)
 
 
@@ -164,7 +171,10 @@ class _UploadedFile(NamedTuple):
 
 
 def _read_uploaded_file(storage: Any) -> tuple[_UploadedFile | None, str | None]:
-    """One file of an upload, read and expanded into its entries; or the sentence that refuses it."""
+    """One file of an upload, read and expanded into its entries; or the sentence that refuses it.
+
+    A sentence is the app's own (``MetadataRefused``) or one written here: an exception's
+    own text (a reader's, fido2's) is logged at INFO, never answered."""
 
     trimmed = (storage.filename or "").strip() or "metadata.json"
     if not trimmed.lower().endswith(".json"):
@@ -173,7 +183,8 @@ def _read_uploaded_file(storage: Any) -> tuple[_UploadedFile | None, str | None]
     try:
         raw_bytes = storage.read()
     except Exception as exc:  # pylint: disable=broad-except
-        return None, f"Failed to read {trimmed}: {exc}"
+        logger.info("Could not read the uploaded file %s", trimmed, exc_info=exc)
+        return None, f"Failed to read {trimmed}."
 
     try:
         text = raw_bytes.decode("utf-8-sig")
@@ -182,7 +193,10 @@ def _read_uploaded_file(storage: Any) -> tuple[_UploadedFile | None, str | None]
 
     try:
         payload: dict[str, Any] = _read_metadata_json(text)
-    except ValueError as exc:
+    except json.JSONDecodeError as exc:
+        logger.info("The uploaded file %s is not JSON", trimmed, exc_info=exc)
+        return None, f"{trimmed} is not JSON (line {exc.lineno}, column {exc.colno})."
+    except mds_entries.MetadataRefused as exc:
         return None, f"{trimmed}: {exc}"
 
     if not isinstance(payload, dict):
@@ -190,8 +204,11 @@ def _read_uploaded_file(storage: Any) -> tuple[_UploadedFile | None, str | None]
 
     try:
         entry_payloads = mds_entries.expand_metadata_entry_payloads(payload)
-    except (TypeError, ValueError) as exc:
+    except mds_entries.MetadataRefused as exc:
         return None, f"{trimmed}: {exc}"
+    except (TypeError, ValueError) as exc:
+        logger.info("Could not read the entries of the uploaded file %s", trimmed, exc_info=exc)
+        return None, f"{trimmed}: {mds_entries.UNREADABLE_ENTRY}"
     return _UploadedFile(trimmed, raw_bytes, list(entry_payloads)), None
 
 
@@ -208,11 +225,16 @@ def _save_uploaded_file(uploaded: _UploadedFile, saved_items: list[Any], errors:
                 entry_payload,
                 original_filename=display_name,
             )
-        except ValueError as exc:
+        except mds_entries.MetadataRefused as exc:
             errors.append(f"{display_name}: {exc}")
             continue
+        except ValueError as exc:
+            logger.info("Could not save the uploaded entry %s", display_name, exc_info=exc)
+            errors.append(f"{display_name}: {mds_entries.UNREADABLE_ENTRY}")
+            continue
         except RuntimeError as exc:
-            return jsonify({"error": str(exc)}), 500
+            logger.info("Could not store the uploaded entry %s", display_name, exc_info=exc)
+            return jsonify({"error": _STORE_FAILED}), 500
 
         saved_items.append(mds_uploads.serialize_session_metadata_item(item))
     return None
@@ -267,10 +289,12 @@ def _upload_answer(saved_items: list[Any], errors: list[str]):
 def api_delete_custom_metadata(stored_filename: str):
     try:
         deleted = mds_uploads.delete_session_metadata_item(stored_filename)
-    except ValueError as exc:
-        return jsonify({"error": str(exc)}), 400
+    except ValueError as exc:  # the name, or the namespace's, refused before any store was touched
+        logger.info("Refused deleting uploaded metadata %s", stored_filename, exc_info=exc)
+        return jsonify({"error": "Invalid metadata filename."}), 400
     except RuntimeError as exc:
-        return jsonify({"error": str(exc)}), 500
+        logger.info("Could not delete uploaded metadata %s", stored_filename, exc_info=exc)
+        return jsonify({"error": _DELETE_FAILED}), 500
 
     if not deleted:
         return _no_store_json_response(
@@ -303,6 +327,7 @@ def api_decode_mds_certificate():
     try:
         details = attestation_certificates.serialize_attestation_certificate(certificate_bytes)
     except Exception as exc:  # pylint: disable=broad-except
-        return jsonify({"error": f"Unable to decode certificate: {exc}"}), 422
+        logger.info("Could not decode a certificate", exc_info=exc)
+        return jsonify({"error": "Unable to decode certificate."}), 422
 
     return jsonify({"details": details})

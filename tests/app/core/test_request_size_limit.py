@@ -136,7 +136,7 @@ def test_a_metadata_upload_over_the_general_limit_is_read(client):
     # Read: the file is not JSON.
     assert response.status_code == 400
     (error,) = response.get_json()["errors"]
-    assert error.startswith("metadata.json: Expecting value")
+    assert error.startswith("metadata.json is not JSON (line 1, column ")
 
 
 def test_a_metadata_upload_over_its_own_limit_is_refused_as_json(client):

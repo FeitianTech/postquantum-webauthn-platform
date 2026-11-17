@@ -2,11 +2,24 @@
 from __future__ import annotations
 
 import json
+import logging
 from collections.abc import Mapping
 from datetime import datetime, timezone
 from typing import Any
 
 from fido2.mds3 import MetadataBlobPayload, MetadataBlobPayloadEntry
+
+logger = logging.getLogger(__name__)
+
+# An uploaded entry fido2 cannot read as MDS3 metadata: why is logged, not answered.
+UNREADABLE_ENTRY = "It is not a FIDO metadata entry or statement this server can read."
+
+
+class MetadataRefused(ValueError):
+    """Why uploaded metadata is refused, in a sentence written to be shown: the upload
+    answers it after the file's name (``routes/mds.py``). Any other exception's text is
+    not shown."""
+
 
 # What an uploaded statement is given for a required member it lacks.
 _METADATA_STATEMENT_REQUIRED_DEFAULTS: Mapping[str, Any] = {
@@ -214,7 +227,11 @@ def build_metadata_entry_components(raw: Mapping[str, Any]) -> tuple[
     metadata_statement, legal_header = _normalise_metadata_statement(raw)
     payload["metadataStatement"] = metadata_statement
 
-    entry = parse_entry(payload)
+    try:
+        entry = parse_entry(payload)
+    except Exception as exc:  # fido2 reads each field as its type: a wrong one raises what that type raises
+        logger.info("fido2 could not read an uploaded metadata entry", exc_info=exc)
+        raise MetadataRefused(UNREADABLE_ENTRY) from exc
     payload_clone = json.loads(json.dumps(payload))
     return entry, legal_header, payload_clone
 
@@ -237,7 +254,7 @@ def expand_metadata_entry_payloads(raw: Mapping[str, Any]) -> list[Mapping[str, 
         return [raw]
 
     if not entries_value:
-        raise ValueError("Metadata JSON does not contain any entries.")
+        raise MetadataRefused("Metadata JSON does not contain any entries.")
 
     legal_header: str | None = None
     raw_legal_header = raw.get("legalHeader")
@@ -247,11 +264,11 @@ def expand_metadata_entry_payloads(raw: Mapping[str, Any]) -> list[Mapping[str, 
     expanded: list[Mapping[str, Any]] = []
     for index, entry in enumerate(entries_value):
         if not isinstance(entry, Mapping):
-            raise ValueError(f"Entry {index + 1} is not a JSON object.")
+            raise MetadataRefused(f"Entry {index + 1} is not a JSON object.")
 
         cloned = _clone_json_value(entry)
         if not isinstance(cloned, dict):
-            raise ValueError(f"Entry {index + 1} could not be cloned into a JSON object.")
+            raise MetadataRefused(f"Entry {index + 1} could not be cloned into a JSON object.")
 
         if legal_header and "legalHeader" not in cloned:
             cloned["legalHeader"] = legal_header

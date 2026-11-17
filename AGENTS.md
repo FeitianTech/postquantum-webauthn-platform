@@ -383,8 +383,13 @@ its logic out here first.
   type, 400); `routes/ceremony_session.py` (every begin: refused, the session kept as
   it was, when its cookie would pass `MAX_COOKIE_SIZE`); `routes/json_body.py` (every route's
   JSON body: an object, or read as an empty one; one nested more than 64 deep refused, 400 in JSON,
-  before it is parsed, as the CSP report and the metadata upload's files are); `routes/mds.py` (the MDS routes and
-  certificate decoding); `routes/codec.py` (`/api/codec`); `routes/web_export.py` (`/health`,
+  before it is parsed, as the CSP report and the metadata upload's files are); `routes/ceremony_errors.py`
+  (what a ceremony's complete answers when a response is refused: fido2's own findings, the challenge,
+  origin, RP ID hash, UP, UV, signature, as fido2 wrote them, else a sentence of the app's own, the
+  exception logged at INFO; no answer carries an exception's text but the codec's, written to be shown);
+  `routes/mds.py` (the MDS routes and certificate decoding; an upload's refusal names its file, with
+  `mds/entries.py`'s `MetadataRefused` sentence or a fixed one, a JSON error's line and column);
+  `routes/codec.py` (`/api/codec`); `routes/web_export.py` (`/health`,
   and the export at `/`: the site's catch-all, since Flask has no static rule; HTML `no-cache`,
   `/_next/static/` immutable with the build's `.gz`, the export's 404 page, a 404 in JSON under
   `/api/`; `send_precompressed`); `routes/assets.py` (the explorer's files under `/assets/mds/`:

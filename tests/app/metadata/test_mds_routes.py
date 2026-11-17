@@ -60,6 +60,22 @@ def test_an_upload_still_mints_the_namespace_it_is_stored_under(mds_fixture_snap
     assert len(session_metadata.list_sessions()) == 1
 
 
+def test_a_statement_fido2_cannot_read_is_refused_in_the_answer_not_a_500(mds_fixture_snapshot, client, caplog):
+    entry = minimal_entry("Unreadable")
+    entry["metadataStatement"]["aaguid"] = 5
+
+    with caplog.at_level("INFO", logger=mds_entries.__name__):
+        response = client.post(
+            "/api/mds/metadata/upload",
+            data={"files": (io.BytesIO(json.dumps(entry).encode()), "unreadable.json")},
+            content_type="multipart/form-data",
+        )
+
+    assert response.status_code == 400
+    assert response.get_json() == {"items": [], "errors": [f"unreadable.json: {mds_entries.UNREADABLE_ENTRY}"]}
+    assert [record.levelname for record in caplog.records if record.name == mds_entries.__name__] == ["INFO"]
+
+
 def test_an_upload_past_the_visitors_quota_saves_and_copies_nothing(mds_fixture_snapshot, make_app, monkeypatch):
     copied = []
     monkeypatch.setattr(github_mirror, "maybe_store_uploaded_metadata_file", lambda name, _data: copied.append(name))
@@ -295,7 +311,7 @@ def two_entry_upload(monkeypatch, visitor):
         (
             {"json": {"certificate": base64.b64encode(b"bad-cert").decode("ascii")}},
             422,
-            {"error": "Unable to decode certificate: certificate parse failed"},
+            {"error": "Unable to decode certificate."},
         ),
         (
             {"json": {"certificate": f"  {base64.b64encode(b'good-cert').decode('ascii').rstrip('=')}  \n"}},
@@ -317,7 +333,7 @@ def test_the_certificate_route_answers_each_certificate_with_its_status(fake_dec
     [
         ((), "No JSON files were provided."),
         ((_Storage("note.txt", b"{}"),), "note.txt is not a JSON file."),
-        ((_Storage("bad.json", exc=RuntimeError("disk read failed")),), "Failed to read bad.json: disk read failed"),
+        ((_Storage("bad.json", exc=RuntimeError("disk read failed")),), "Failed to read bad.json."),
         ((_Storage("utf8.json", b"\xff"),), "utf8.json is not valid UTF-8 JSON."),
         ((_Storage("array.json", b"[]"),), "array.json must contain a JSON object."),
     ],
@@ -330,31 +346,43 @@ def test_an_upload_without_a_usable_json_object_is_refused_with_the_reason(monke
     assert response.get_json() == {"items": [], "errors": [error]}
 
 
-def test_an_upload_that_is_not_json_is_refused_naming_the_file(monkeypatch, visitor):
-    response, status = _upload(monkeypatch, _Storage("syntax.json", b"{not-json"))
+def test_an_upload_that_is_not_json_is_refused_naming_the_file_and_where(monkeypatch, visitor):
+    response, status = _upload(monkeypatch, _Storage("syntax.json", b"{\n  not-json"))
 
     assert status == 400
-    assert response.get_json()["items"] == []
-    assert "syntax.json:" in response.get_json()["errors"][0]
+    assert response.get_json() == {"items": [], "errors": ["syntax.json is not JSON (line 2, column 3)."]}
 
 
-def test_an_upload_whose_entries_do_not_read_is_refused_with_the_reason(monkeypatch, visitor):
-    monkeypatch.setattr(
-        mds_entries,
-        "expand_metadata_entry_payloads",
-        lambda _payload: (_ for _ in ()).throw(ValueError("bad metadata object")),
-    )
+@pytest.mark.parametrize(
+    ("raised", "error"),
+    [
+        (mds_entries.MetadataRefused("Metadata JSON does not contain any entries."), "expand.json: Metadata JSON does not contain any entries."),
+        (ValueError("a reader's own words"), f"expand.json: {mds_entries.UNREADABLE_ENTRY}"),
+        (TypeError("a reader's own words"), f"expand.json: {mds_entries.UNREADABLE_ENTRY}"),
+    ],
+    ids=["refused", "value-error", "type-error"],
+)
+def test_an_upload_whose_entries_do_not_read_is_refused_with_its_own_sentence_only(monkeypatch, visitor, raised, error):
+    monkeypatch.setattr(mds_entries, "expand_metadata_entry_payloads", lambda _payload: (_ for _ in ()).throw(raised))
 
     response, status = _upload(monkeypatch, _Storage("expand.json", b"{}"))
 
     assert status == 400
-    assert response.get_json() == {"items": [], "errors": ["expand.json: bad metadata object"]}
+    assert response.get_json() == {"items": [], "errors": [error]}
 
 
-def test_an_upload_keeps_the_entries_it_can_save_and_names_the_others(monkeypatch, two_entry_upload):
+@pytest.mark.parametrize(
+    ("raised", "error"),
+    [
+        (mds_entries.MetadataRefused("duplicate entry"), "mixed.json (entry 1): duplicate entry"),
+        (ValueError("a store's own words"), f"mixed.json (entry 1): {mds_entries.UNREADABLE_ENTRY}"),
+    ],
+    ids=["refused", "value-error"],
+)
+def test_an_upload_keeps_the_entries_it_can_save_and_names_the_others(monkeypatch, two_entry_upload, raised, error):
     def _save_item(entry_payload, original_filename=None):
         if entry_payload.get("entry") == 1:
-            raise ValueError("duplicate entry")
+            raise raised
         return {"storedFilename": "stored-2.json", "originalFilename": original_filename}
 
     monkeypatch.setattr(mds_uploads, "save_session_metadata_item", _save_item)
@@ -364,7 +392,7 @@ def test_an_upload_keeps_the_entries_it_can_save_and_names_the_others(monkeypatc
     payload = response.get_json()
     assert status == 200
     assert payload["items"] == [{"storedFilename": "stored-2.json", "originalFilename": "mixed.json (entry 2)"}]
-    assert payload["errors"] == ["mixed.json (entry 1): duplicate entry"]
+    assert payload["errors"] == [error]
     assert payload["custom"] == {"meta": {"customEntryCount": 1}, "entries": []}
     assert "snapshot" not in payload
 
@@ -379,7 +407,7 @@ def test_an_upload_the_store_cannot_save_answers_500(monkeypatch, two_entry_uplo
     response, status = _upload(monkeypatch, _Storage("fatal.json", b"{}"))
 
     assert status == 500
-    assert response.get_json() == {"error": "persistence down"}
+    assert response.get_json() == {"error": "Failed to store uploaded metadata on the server."}
 
 
 def test_an_upload_without_a_file_name_is_named_metadata_json(monkeypatch, visitor):
@@ -402,8 +430,12 @@ def test_an_upload_without_a_file_name_is_named_metadata_json(monkeypatch, visit
 @pytest.mark.parametrize(
     ("delete", "status", "answer"),
     [
-        (lambda _name: (_ for _ in ()).throw(ValueError("invalid filename")), 400, {"error": "invalid filename"}),
-        (lambda _name: (_ for _ in ()).throw(RuntimeError("storage unavailable")), 500, {"error": "storage unavailable"}),
+        (lambda _name: (_ for _ in ()).throw(ValueError("invalid filename")), 400, {"error": "Invalid metadata filename."}),
+        (
+            lambda _name: (_ for _ in ()).throw(RuntimeError("storage unavailable")),
+            500,
+            {"error": "Failed to delete the uploaded metadata file."},
+        ),
         (lambda _name: False, 404, {"deleted": False, "message": "Metadata entry not found."}),
     ],
     ids=["invalid-name", "store-fails", "not-found"],
