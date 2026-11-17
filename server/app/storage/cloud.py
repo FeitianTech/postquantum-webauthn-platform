@@ -21,6 +21,7 @@ __all__ = [
     "list_blob_stats",
     "normalise_blob_prefix",
     "upload_bytes",
+    "upload_bytes_at_generation",
     "upload_bytes_if_generation",
 ]
 
@@ -184,6 +185,16 @@ def upload_bytes_if_generation(
     precondition and read as a lost race. A transient error raises instead.
     """
 
+    written = upload_bytes_at_generation(blob_name, data, generation=generation, content_type=content_type)
+    return written is not None
+
+
+def upload_bytes_at_generation(
+    blob_name: str, data: bytes, *, generation: int, content_type: str | None = None
+) -> int | None:
+    """``upload_bytes_if_generation``, giving the object's new generation (None when another
+    writer got there first): what a writer needs to write it again only while it is still its own."""
+
     bucket = _ensure_bucket()
     blob = bucket.blob(blob_name)
     try:
@@ -191,8 +202,9 @@ def upload_bytes_if_generation(
             data, content_type=content_type, if_generation_match=generation, retry=None
         )
     except _lazy("gcs_exceptions").PreconditionFailed:
-        return False
-    return True
+        return None
+    # The upload sets the generation from the object it wrote.
+    return int(blob.generation or 0)
 
 
 def delete_blob(blob_name: str, *, missing_ok: bool = True) -> None:

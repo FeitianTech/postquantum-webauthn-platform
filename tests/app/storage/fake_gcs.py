@@ -132,6 +132,8 @@ class Blob:
             self.bucket.objects[self.name] = (bytes(data), self.bucket.next_generation)
             self.bucket.updated[self.name] = datetime.now(timezone.utc)
             self.bucket.content_types[self.name] = content_type
+            # As the client does, from the object the upload wrote.
+            self.generation = self.bucket.next_generation
             self.bucket.next_generation += 1
 
     def delete(self, retry: object = None) -> None:

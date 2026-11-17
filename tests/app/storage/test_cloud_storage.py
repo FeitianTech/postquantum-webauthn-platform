@@ -341,3 +341,24 @@ def test_every_call_is_given_the_client_librarys_retry_within_a_bound(monkeypatc
     assert retry._predicate is storage_retry.DEFAULT_RETRY._predicate
     assert retry._timeout == 30.0
     assert cloud._retry() is retry
+
+
+def test_a_conditional_write_gives_the_generation_it_wrote(monkeypatch):
+    bucket = fake_gcs.install(monkeypatch)
+
+    first = cloud.upload_bytes_at_generation("github-outbox/lease", b"a", generation=0)
+    second = cloud.upload_bytes_at_generation("github-outbox/lease", b"b", generation=first)
+
+    assert first is not None and second is not None and second > first
+    assert bucket.objects["github-outbox/lease"] == (b"b", second)
+    assert bucket.upload_retries == [None, None]
+
+
+def test_a_conditional_write_another_writer_beat_gives_no_generation(monkeypatch):
+    bucket = fake_gcs.install(monkeypatch)
+    generation = cloud.upload_bytes_at_generation("github-outbox/lease", b"a", generation=0)
+    bucket.put("github-outbox/lease", b"theirs")
+
+    assert cloud.upload_bytes_at_generation("github-outbox/lease", b"mine", generation=generation) is None
+    assert cloud.upload_bytes_at_generation("github-outbox/lease", b"mine", generation=0) is None
+    assert bucket.objects["github-outbox/lease"][0] == b"theirs"
