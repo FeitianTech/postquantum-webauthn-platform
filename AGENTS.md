@@ -596,7 +596,7 @@ deliberate change (the characterization goldens show what it changes).
 
 ## The FIDO MDS snapshot
 
-- About 30 MB of generated files in `instance/mds-snapshot/` (in the image,
+- About 34 MB of generated files in `instance/mds-snapshot/` (in the image,
   `/app/instance/mds-snapshot`); `FIDO_SERVER_MDS_SNAPSHOT_DIR` puts it elsewhere. Not tracked in
   git and not baked into the image: `server/app/mds/provisioning.py` provides it at runtime
   (local files, then the set Cloud Storage's pointer names, then a verified upstream refresh).
@@ -608,8 +608,8 @@ deliberate change (the characterization goldens show what it changes).
   moves forward); `tools/update_mds_snapshot.py --publish` publishes a verified snapshot, and a
   running instance takes a newer set from `/api/mds/metadata/info` (`follow_newer_snapshot`).
 - Locally, run `python tools/update_mds_snapshot.py` once. Without a snapshot the list answers 404,
-  `explorer/custom` 200 with no packaged entry, and the explorer is empty: the documented fallback,
-  not a bug.
+  `explorer/custom` 200 with the session's uploads and no packaged entry, and the explorer shows
+  only those uploads, if any: the documented fallback, not a bug.
 - Never commit those files, and never write a test that reads the real snapshot directory.
   `docs/MDS_SNAPSHOT.md` has the whole picture.
 
