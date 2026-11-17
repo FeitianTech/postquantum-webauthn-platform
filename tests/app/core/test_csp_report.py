@@ -215,6 +215,16 @@ def test_a_report_nested_too_deep_is_refused_unread(client, lines, body):
     assert lines() == []
 
 
+def test_a_report_holding_nan_is_refused_as_any_request_body_is(client, lines):
+    response = post(client, b'{"csp-report": {"line-number": NaN}}')
+
+    assert response.status_code == 400
+    assert response.get_json() == {
+        "error": "The request body holds NaN, which is not JSON: RFC 8259 has no NaN or Infinity."
+    }
+    assert lines() == []
+
+
 class _Clock:
     def __init__(self):
         self.now = 1000.0

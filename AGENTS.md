@@ -382,8 +382,11 @@ its logic out here first.
   `advanced_auth_rp`); `routes/advanced/request_members.py` names the member of the wrong JSON
   type, 400); `routes/ceremony_session.py` (every begin: refused, the session kept as
   it was, when its cookie would pass `MAX_COOKIE_SIZE`); `routes/json_body.py` (every route's
-  JSON body: an object, or read as an empty one; one nested more than 64 deep refused, 400 in JSON,
-  before it is parsed, as the CSP report and the metadata upload's files are); `routes/ceremony_errors.py`
+  JSON body: an object, or read as an empty one, malformed JSON too; RFC 8259's JSON only, so `NaN`,
+  `Infinity`, `-Infinity` and a number no double holds are refused, 400 in JSON, the CSP report's
+  too, never through `request.get_json`, whose reader takes them; one nested more than 64 deep
+  refused, 400 in JSON, before it is parsed, as the CSP report and the metadata upload's files are);
+  `routes/ceremony_errors.py`
   (what a ceremony's complete answers when a response is refused: fido2's own findings, the challenge,
   origin, RP ID hash, UP, UV, signature, as fido2 wrote them, else a sentence of the app's own, the
   exception logged at INFO; no answer carries an exception's text but the codec's, written to be shown);

@@ -84,6 +84,11 @@ def json_nested_too_deep(exc: json_body.NestedTooDeep):
     return jsonify({"error": f"The request body is JSON nested more than {json_body.MAX_DEPTH} deep, deeper than this server reads."}), 400
 
 
+def json_not_strict(exc: json_body.NotStrictJson):
+    logger.warning("Refused a JSON body holding %s in %s %s", exc.text, request.method, request.path)
+    return jsonify({"error": exc.sentence}), 400
+
+
 def _under_api(path: str) -> bool:
     return path == "/api" or path.startswith("/api/")
 
@@ -125,5 +130,6 @@ def init_app(app) -> None:
     app.register_error_handler(StorageQuotaExceeded, storage_quota_exceeded)
     app.register_error_handler(RequestEntityTooLarge, request_entity_too_large)
     app.register_error_handler(json_body.NestedTooDeep, json_nested_too_deep)
+    app.register_error_handler(json_body.NotStrictJson, json_not_strict)
     # Looked up by status first: the handlers above keep their own answers.
     app.register_error_handler(HTTPException, api_http_error)

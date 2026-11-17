@@ -12,8 +12,6 @@ violations of one request are logged; the rest count as dropped.
 """
 from __future__ import annotations
 
-import json
-
 from flask import Blueprint, current_app, jsonify, request
 
 from ..csp_reports import ViolationLog, violations_from
@@ -55,7 +53,7 @@ def csp_report():
     if json_body.nested_too_deep(body):
         raise json_body.NestedTooDeep()
     try:
-        payload = json.loads(body)
+        payload = json_body.loads(body)
     except ValueError:
         return jsonify({"error": "The report is not JSON."}), 400
     violations = violations_from(payload)

@@ -173,6 +173,48 @@ def test_every_route_refuses_a_json_body_nested_too_deep_with_a_400_in_json(app,
     }
 
 
+@pytest.mark.parametrize("constant", ["NaN", "Infinity", "-Infinity"])
+def test_every_route_refuses_nan_and_infinity_with_a_400_in_json(app, make_app, constant, monkeypatch, tmp_path):
+    for name in ("CREDENTIAL", "CREDENTIAL_ARTIFACT", "SESSION_METADATA"):
+        monkeypatch.setenv(f"FIDO_SERVER_{name}_DIR", str(tmp_path / name.lower()))
+    client = make_app().test_client()
+    body = '{"publicKey": {"extensions": {"x": [1, %s]}}, "payload": "a"}' % constant
+
+    # The Simple begins read the body once the username is one they take.
+    answers = {
+        (method, path): client.open(f"{path}?email=user@example.org", method=method, data=body, content_type="application/json")
+        for method, path in _json_routes(app)
+    }
+
+    sentence = f"The request body holds {constant}, which is not JSON: RFC 8259 has no NaN or Infinity."
+    assert len(answers) > 10
+    assert {route: (response.status_code, response.get_json()) for route, response in answers.items()} == {
+        route: (400, {"error": sentence}) for route in answers
+    }
+
+
+@pytest.mark.parametrize(
+    ("data", "body"),
+    [
+        (b'{"a": "NaN", "b": "Infinity"}', {"a": "NaN", "b": "Infinity"}),
+        (b'{"a": 1e308, "b": -1e-400}', {"a": 1e308, "b": -0.0}),
+        (b"{not json", {}),
+    ],
+    ids=["the words in strings", "numbers a double holds", "malformed"],
+)
+def test_strings_and_finite_numbers_are_read_and_malformed_json_as_no_members(app, data, body):
+    with app.test_request_context("/api/codec", method="POST", data=data, content_type="application/json"):
+        assert json_body.json_object() == body
+
+
+@pytest.mark.parametrize("number", ["1e400", "-1.5e999"])
+def test_a_number_too_large_for_a_double_is_refused_not_read_as_infinity(client, number):
+    response = client.post("/api/codec", data='{"payload": %s}' % number, content_type="application/json")
+
+    assert response.status_code == 400
+    assert response.get_json() == {"error": f"The request body holds {number}, a number too large to read."}
+
+
 def test_a_route_refuses_a_string_no_quote_closes_at_its_size_limit_in_well_under_a_second(make_app, monkeypatch, tmp_path):
     for name in ("CREDENTIAL", "CREDENTIAL_ARTIFACT", "SESSION_METADATA"):
         monkeypatch.setenv(f"FIDO_SERVER_{name}_DIR", str(tmp_path / name.lower()))
