@@ -1,10 +1,10 @@
 """The GitHub mirror: registrations and uploaded metadata, copied to the credential log repository.
 
 ``record_registration_event`` queues one JSON file per registration, for
-``logs/<aaguid>/``, in the outbox (``github_outbox``), which a worker delivers; and
-``maybe_store_uploaded_metadata_file`` copies a visitor's uploaded metadata under
-``metadata/`` unless an identical file is there, never replacing a file: one whose name is
-taken goes beside it under its content's hash. The mirror is on only with a
+``logs/<aaguid>/``, and ``queue_uploaded_metadata_files`` a visitor's uploaded metadata, for
+``metadata/``, in the outbox (``github_outbox``); a worker delivers them (``deliver``). A
+metadata file is not copied when an identical file is there, and none is replaced: one whose
+name is taken goes beside it under its content's hash. The mirror is on only with a
 ``GITHUB_TOKEN``, and ``ENABLE_GITHUB_LOGGING=0`` turns it off.
 """
 from __future__ import annotations
@@ -17,7 +17,7 @@ import posixpath
 import secrets
 import threading
 import time
-from collections.abc import Mapping, MutableMapping
+from collections.abc import Mapping, MutableMapping, Sequence
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from http import client as http_client
@@ -47,7 +47,7 @@ __all__ = [
     "github_upload_file",
     "init_app",
     "is_logging_enabled",
-    "maybe_store_uploaded_metadata_file",
+    "queue_uploaded_metadata_files",
     "random_shortid",
     "record_registration_event",
     "registration_event",
@@ -466,12 +466,20 @@ def _metadata_entry(filename: str, content: bytes) -> OutboxEntry:
     return OutboxEntry("metadata", f"{_METADATA_REPO_FOLDER}/{name}", f"metadata: add {name}", content)
 
 
-def maybe_store_uploaded_metadata_file(filename: str, content: bytes) -> bool:
-    """Copy ``content`` to the log repository's metadata folder now; whether it is there."""
+def queue_uploaded_metadata_files(files: Sequence[tuple[str, bytes]]) -> None:
+    """Queue uploaded metadata files, each whole and by its name, for the log repository's
+    ``metadata/`` folder.
 
-    if not content or not is_logging_enabled():
-        return False
-    return deliver(_metadata_entry(filename, content)) is Delivery.DELIVERED
+    The upload route calls it once some entry of each file was saved. The files wait in the
+    outbox and a worker delivers them (``github_outbox``): the upload's answer never waits for
+    GitHub. Never raises.
+    """
+
+    if not is_logging_enabled():
+        return
+    entries = [_metadata_entry(name, content) for name, content in files if content]
+    if entries and github_outbox.enqueue(entries):
+        _start_flush(kick=True)
 
 
 @dataclass

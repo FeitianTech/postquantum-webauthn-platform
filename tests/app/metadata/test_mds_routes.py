@@ -21,6 +21,7 @@ from server.app.webauthn.attestation import certificates as attestation_certific
 from tests.app.core.codec_examples import PLAIN_TEXT
 from tests.app.entry_app import entry_app
 from tests.app.metadata.upload_entries import minimal_entry
+from tests.app.storage import fake_github
 
 
 @pytest.fixture(autouse=True)
@@ -78,7 +79,9 @@ def test_a_statement_fido2_cannot_read_is_refused_in_the_answer_not_a_500(mds_fi
 
 def test_an_upload_past_the_visitors_quota_saves_and_copies_nothing(mds_fixture_snapshot, make_app, monkeypatch):
     copied = []
-    monkeypatch.setattr(github_mirror, "maybe_store_uploaded_metadata_file", lambda name, _data: copied.append(name))
+    monkeypatch.setattr(
+        github_mirror, "queue_uploaded_metadata_files", lambda files: copied.extend(name for name, _data in files)
+    )
     client = make_app({request_limits.STORED_METADATA_ENTRIES_KEY: 2}).test_client()
     two = {"entries": [minimal_entry("One"), minimal_entry("Two")]}
 
@@ -297,7 +300,7 @@ def two_entry_upload(monkeypatch, visitor):
     """An upload that expands to two entries, with no GitHub copy and stand-in rows for the session."""
 
     monkeypatch.setattr(mds_entries, "expand_metadata_entry_payloads", lambda _payload: [{"entry": 1}, {"entry": 2}])
-    monkeypatch.setattr(github_mirror, "maybe_store_uploaded_metadata_file", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(github_mirror, "queue_uploaded_metadata_files", lambda _files: None)
     monkeypatch.setattr(mds_uploads, "serialize_session_metadata_item", lambda item: item)
     monkeypatch.setattr(mds_effective, "load_custom_entries", lambda: {"meta": {"customEntryCount": 1}, "entries": []})
 
@@ -412,7 +415,7 @@ def test_an_upload_the_store_cannot_save_answers_500(monkeypatch, two_entry_uplo
 
 def test_an_upload_without_a_file_name_is_named_metadata_json(monkeypatch, visitor):
     monkeypatch.setattr(mds_entries, "expand_metadata_entry_payloads", lambda payload: [payload])
-    monkeypatch.setattr(github_mirror, "maybe_store_uploaded_metadata_file", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(github_mirror, "queue_uploaded_metadata_files", lambda _files: None)
     monkeypatch.setattr(
         mds_uploads,
         "save_session_metadata_item",
@@ -447,3 +450,57 @@ def test_deleting_an_upload_answers_by_what_the_store_says(monkeypatch, visitor,
 
     assert response.status_code == status
     assert response.get_json() == answer
+
+
+def test_a_file_is_queued_for_the_device_log_only_once_one_of_its_entries_saved(monkeypatch, visitor):
+    queued = []
+    monkeypatch.setattr(github_mirror, "queue_uploaded_metadata_files", lambda files: queued.append(list(files)))
+    monkeypatch.setattr(mds_entries, "expand_metadata_entry_payloads", lambda payload: [payload])
+
+    def _save_item(entry_payload, original_filename=None):
+        if entry_payload.get("refuse"):
+            raise mds_entries.MetadataRefused("not kept")
+        return {"storedFilename": "stored.json", "originalFilename": original_filename}
+
+    monkeypatch.setattr(mds_uploads, "save_session_metadata_item", _save_item)
+    monkeypatch.setattr(mds_uploads, "serialize_session_metadata_item", lambda item: item)
+    monkeypatch.setattr(mds_effective, "load_custom_entries", lambda: {"meta": {"customEntryCount": 1}, "entries": []})
+
+    response, status = _upload(
+        monkeypatch, _Storage("refused.json", b'{"refuse": true}'), _Storage("kept.json", b'{"keep": true}')
+    )
+
+    assert status == 200, response.get_json()
+    assert queued == [[("kept.json", b'{"keep": true}')]]
+
+
+def test_an_upload_the_store_cannot_save_queues_nothing_for_the_device_log(monkeypatch, two_entry_upload):
+    queued = []
+    monkeypatch.setattr(github_mirror, "queue_uploaded_metadata_files", lambda files: queued.append(list(files)))
+    monkeypatch.setattr(
+        mds_uploads,
+        "save_session_metadata_item",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("persistence down")),
+    )
+
+    _response, status = _upload(monkeypatch, _Storage("fatal.json", b"{}"))
+
+    assert status == 500
+    assert queued == []
+
+
+def test_an_uploaded_file_reaches_the_device_log_once_saved(mds_fixture_snapshot, client, monkeypatch, tmp_path):
+    github = fake_github.install(monkeypatch)
+    monkeypatch.setenv("FIDO_SERVER_GITHUB_OUTBOX_DIR", str(tmp_path / "outbox"))
+    kept = json.dumps(minimal_entry("Kept")).encode()
+    unreadable = minimal_entry("Unreadable")
+    unreadable["metadataStatement"]["aaguid"] = 5
+
+    response = client.post(
+        "/api/mds/metadata/upload",
+        data={"files": [(io.BytesIO(kept), "kept.json"), (io.BytesIO(json.dumps(unreadable).encode()), "unreadable.json")]},
+        content_type="multipart/form-data",
+    )
+
+    assert response.status_code == 200, response.get_json()
+    assert github.files == {"metadata/kept.json": kept}

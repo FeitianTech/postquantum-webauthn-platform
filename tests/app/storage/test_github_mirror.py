@@ -493,7 +493,7 @@ def test_a_registration_without_a_token_is_not_logged_and_warns_nothing(monkeypa
 
     with caplog.at_level(logging.DEBUG):
         github_mirror.record_registration_event(_registration())
-        assert github_mirror.maybe_store_uploaded_metadata_file("demo.json", b"{}") is False
+        github_mirror.queue_uploaded_metadata_files([("demo.json", b"{}")])
 
     assert sent == []
     assert not log_outbox.exists()
@@ -651,32 +651,44 @@ def _deliver_metadata(filename, content):
     return github_mirror.deliver(github_mirror._metadata_entry(filename, content))
 
 
-def test_no_metadata_is_copied_while_the_log_is_off(monkeypatch):
+def test_uploaded_metadata_files_are_queued_then_delivered_whole(monkeypatch, log_outbox):
+    github = fake_github.install(monkeypatch)
+
+    github_mirror.queue_uploaded_metadata_files([("../one.json", b'{"entry":1}'), ("two.json", b'{"entry":2}')])
+
+    assert github.files == {"metadata/one.json": b'{"entry":1}', "metadata/two.json": b'{"entry":2}'}
+    assert [body["message"] for _path, body in github.puts] == ["metadata: add one.json", "metadata: add two.json"]
+    assert _queued_paths(log_outbox) == []
+
+
+def test_uploaded_metadata_waits_in_the_outbox_while_github_is_down(monkeypatch, log_outbox):
+    github = fake_github.install(monkeypatch)
+    github.fail.append(fake_github.http_error(502))
+
+    github_mirror.queue_uploaded_metadata_files([("one.json", b'{"entry":1}')])
+
+    assert github.files == {}
+    assert _queued_paths(log_outbox) == ["metadata/one.json"]
+
+
+def test_no_metadata_is_queued_while_the_log_is_off(monkeypatch, log_outbox):
     github = fake_github.install(monkeypatch)
     monkeypatch.setenv("ENABLE_GITHUB_LOGGING", "0")
 
-    assert github_mirror.maybe_store_uploaded_metadata_file("demo.json", b"{}") is False
+    github_mirror.queue_uploaded_metadata_files([("demo.json", b"{}")])
 
     assert github.calls == []
+    assert not log_outbox.exists()
 
 
-def test_an_empty_metadata_file_is_not_copied(monkeypatch):
+def test_an_empty_metadata_file_or_none_queues_nothing(monkeypatch, log_outbox):
     github = fake_github.install(monkeypatch)
 
-    assert github_mirror.maybe_store_uploaded_metadata_file("demo.json", b"") is False
+    github_mirror.queue_uploaded_metadata_files([("demo.json", b"")])
+    github_mirror.queue_uploaded_metadata_files([])
 
     assert github.calls == []
-
-
-def test_a_metadata_copy_says_whether_the_file_is_there(monkeypatch):
-    github = fake_github.install(monkeypatch)
-
-    assert github_mirror.maybe_store_uploaded_metadata_file("demo.json", b'{"entry":1}') is True
-    assert github_mirror.maybe_store_uploaded_metadata_file("again.json", b'{"entry":1}') is True
-    github.fail.append(fake_github.http_error(503))
-    assert github_mirror.maybe_store_uploaded_metadata_file("other.json", b'{"entry":2}') is False
-
-    assert sorted(github.files) == ["metadata/demo.json"]
+    assert not log_outbox.exists()
 
 
 def test_metadata_is_added_to_an_empty_repository(monkeypatch):

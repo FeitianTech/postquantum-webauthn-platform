@@ -122,7 +122,7 @@ def test_an_uploaded_metadata_file_with_nan_is_refused(client, monkeypatch):
     saved = []
     monkeypatch.setattr(visitor_session, "ensure_id", lambda: "session-id")
     monkeypatch.setattr(mds_entries, "expand_metadata_entry_payloads", lambda payload: [payload])
-    monkeypatch.setattr(github_mirror, "maybe_store_uploaded_metadata_file", lambda *_args, **_kwargs: False)
+    monkeypatch.setattr(github_mirror, "queue_uploaded_metadata_files", lambda _files: None)
     monkeypatch.setattr(mds_uploads, "save_session_metadata_item", lambda payload, original_filename=None: saved.append(payload))
     monkeypatch.setattr(mds_uploads, "serialize_session_metadata_item", lambda _item: {"storedFilename": "custom.json"})
 

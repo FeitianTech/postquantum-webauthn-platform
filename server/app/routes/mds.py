@@ -213,9 +213,7 @@ def _read_uploaded_file(storage: Any) -> tuple[_UploadedFile | None, str | None]
 
 
 def _save_uploaded_file(uploaded: _UploadedFile, saved_items: list[Any], errors: list[str]) -> Any | None:
-    """Copy one read file to the device log and save its entries; the 500 to answer when the store fails."""
-
-    github_mirror.maybe_store_uploaded_metadata_file(uploaded.name, uploaded.raw_bytes)
+    """Save one read file's entries; the 500 to answer when the store fails."""
 
     for index, entry_payload in enumerate(uploaded.entries, start=1):
         display_name = uploaded.name if len(uploaded.entries) == 1 else f"{uploaded.name} (entry {index})"
@@ -254,7 +252,7 @@ def api_upload_custom_metadata():
     # Every file is read before any is saved; each file's sentences stay in its place.
     read_files = [_read_uploaded_file(storage) for storage in file_entries]
     errors_by_file = [[refusal] if refusal is not None else [] for _uploaded, refusal in read_files]
-    # Past the namespace's quota nothing is saved or copied (StorageQuotaExceeded: routes/errors.py).
+    # Past the namespace's quota nothing is saved or queued (StorageQuotaExceeded: routes/errors.py).
     mds_uploads.refuse_past_quota(
         namespace,
         [entry for uploaded, _refusal in read_files if uploaded is not None for entry in uploaded.entries],
@@ -262,12 +260,19 @@ def api_upload_custom_metadata():
     )
 
     saved_items: list[Any] = []
+    logged: list[tuple[str, bytes]] = []
     for (uploaded, _refusal), file_errors in zip(read_files, errors_by_file, strict=True):
         if uploaded is not None:
+            saved_before = len(saved_items)
             failure = _save_uploaded_file(uploaded, saved_items, file_errors)
             if failure is not None:
                 return failure
+            if len(saved_items) > saved_before:
+                logged.append((uploaded.name, uploaded.raw_bytes))
 
+    # A file one of whose entries was saved is queued, whole, for the device log (never in this
+    # request's time); a file none of whose entries was saved is not.
+    github_mirror.queue_uploaded_metadata_files(logged)
     return _upload_answer(saved_items, [error for file_errors in errors_by_file for error in file_errors])
 
 

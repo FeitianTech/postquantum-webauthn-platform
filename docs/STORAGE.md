@@ -103,7 +103,7 @@ past one raises `common.StorageQuotaExceeded` before anything is written, and
 - Uploaded metadata: 2,000 entries in a namespace (each entry is a file of its own,
   with an info file beside it that is not counted), and 64 MiB of them. An upload
   whose entries would pass either is refused whole, before any file is saved or
-  copied to the device log (`mds/uploads.refuse_past_quota`).
+  queued for the credential log (`mds/uploads.refuse_past_quota`).
 - Simple credentials: 100 in one username's list. The registration's begin refuses
   a full list before the authenticator is asked, and its complete checks the list
   its compare-and-swap would replace, so that count is exact.
@@ -171,8 +171,10 @@ time, RP ID, AAGUID, MDS device name, attestation object and the four checks), a
 file whole under `metadata/`. The log is on only with a `GITHUB_TOKEN`, and
 `ENABLE_GITHUB_LOGGING=0` turns it off.
 
-No registration waits for GitHub. Once its record is saved (`record_registration_event`),
-its file is written to an **outbox** with the path it lands at, fixed then
+No request waits for GitHub. Once a registration's record is saved
+(`record_registration_event`), or once an uploaded file has an entry saved
+(`queue_uploaded_metadata_files`, from the upload route; a file none of whose entries saved is
+not copied), the file is written to an **outbox** with the path it lands at, fixed then
 (`github_outbox.enqueue`), and the request goes on: whatever fails there is a warning, never
 the visitor's error.
 
