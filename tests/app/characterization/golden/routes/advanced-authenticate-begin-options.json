@@ -26,6 +26,14 @@
      "no-referrer"
     ],
     [
+     "Cross-Origin-Opener-Policy",
+     "same-origin"
+    ],
+    [
+     "Cross-Origin-Resource-Policy",
+     "same-origin"
+    ],
+    [
      "Content-Security-Policy",
      "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; require-trusted-types-for 'script'; trusted-types nextjs nextjs#bundler; report-uri /api/csp-report; report-to csp"
     ],
@@ -102,6 +110,14 @@
     [
      "Referrer-Policy",
      "no-referrer"
+    ],
+    [
+     "Cross-Origin-Opener-Policy",
+     "same-origin"
+    ],
+    [
+     "Cross-Origin-Resource-Policy",
+     "same-origin"
     ],
     [
      "Content-Security-Policy",
@@ -184,6 +200,14 @@
     [
      "Referrer-Policy",
      "no-referrer"
+    ],
+    [
+     "Cross-Origin-Opener-Policy",
+     "same-origin"
+    ],
+    [
+     "Cross-Origin-Resource-Policy",
+     "same-origin"
     ],
     [
      "Content-Security-Policy",
@@ -269,6 +293,14 @@
      "no-referrer"
     ],
     [
+     "Cross-Origin-Opener-Policy",
+     "same-origin"
+    ],
+    [
+     "Cross-Origin-Resource-Policy",
+     "same-origin"
+    ],
+    [
      "Content-Security-Policy",
      "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; require-trusted-types-for 'script'; trusted-types nextjs nextjs#bundler; report-uri /api/csp-report; report-to csp"
     ],
@@ -336,6 +368,14 @@
     [
      "Referrer-Policy",
      "no-referrer"
+    ],
+    [
+     "Cross-Origin-Opener-Policy",
+     "same-origin"
+    ],
+    [
+     "Cross-Origin-Resource-Policy",
+     "same-origin"
     ],
     [
      "Content-Security-Policy",
@@ -414,6 +454,14 @@
      "no-referrer"
     ],
     [
+     "Cross-Origin-Opener-Policy",
+     "same-origin"
+    ],
+    [
+     "Cross-Origin-Resource-Policy",
+     "same-origin"
+    ],
+    [
      "Content-Security-Policy",
      "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; require-trusted-types-for 'script'; trusted-types nextjs nextjs#bundler; report-uri /api/csp-report; report-to csp"
     ],
@@ -484,6 +532,14 @@
     [
      "Referrer-Policy",
      "no-referrer"
+    ],
+    [
+     "Cross-Origin-Opener-Policy",
+     "same-origin"
+    ],
+    [
+     "Cross-Origin-Resource-Policy",
+     "same-origin"
     ],
     [
      "Content-Security-Policy",
@@ -570,6 +626,14 @@
      "no-referrer"
     ],
     [
+     "Cross-Origin-Opener-Policy",
+     "same-origin"
+    ],
+    [
+     "Cross-Origin-Resource-Policy",
+     "same-origin"
+    ],
+    [
      "Content-Security-Policy",
      "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; require-trusted-types-for 'script'; trusted-types nextjs nextjs#bundler; report-uri /api/csp-report; report-to csp"
     ],
@@ -648,6 +712,14 @@
      "no-referrer"
     ],
     [
+     "Cross-Origin-Opener-Policy",
+     "same-origin"
+    ],
+    [
+     "Cross-Origin-Resource-Policy",
+     "same-origin"
+    ],
+    [
      "Content-Security-Policy",
      "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; require-trusted-types-for 'script'; trusted-types nextjs nextjs#bundler; report-uri /api/csp-report; report-to csp"
     ],
@@ -724,6 +796,14 @@
     [
      "Referrer-Policy",
      "no-referrer"
+    ],
+    [
+     "Cross-Origin-Opener-Policy",
+     "same-origin"
+    ],
+    [
+     "Cross-Origin-Resource-Policy",
+     "same-origin"
     ],
     [
      "Content-Security-Policy",

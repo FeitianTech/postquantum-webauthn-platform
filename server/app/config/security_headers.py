@@ -106,6 +106,11 @@ def set_security_headers(response):
     # Belt and braces with frame-ancestors for pre-CSP2 browsers.
     headers.setdefault("X-Frame-Options", "DENY")
     headers.setdefault("Referrer-Policy", "no-referrer")
+    # A page of this site shares no browsing context group with another site's
+    # window (so no opener handle either way), and no other site may load what
+    # this one answers into its own pages.
+    headers.setdefault("Cross-Origin-Opener-Policy", "same-origin")
+    headers.setdefault("Cross-Origin-Resource-Policy", "same-origin")
 
     policy = current_app.config.get("CONTENT_SECURITY_POLICY")
     if policy:

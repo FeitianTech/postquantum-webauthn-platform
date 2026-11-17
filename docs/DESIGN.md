@@ -109,6 +109,11 @@ the page in a real browser.
   (`server/app/config/security_headers.py`); Trusted Types are enforced
   (`require-trusted-types-for 'script'`), and only Next's two policies may be made
   (`trusted-types nextjs nextjs#bundler`). Violations reach `/api/csp-report`.
+- Every answer is `Cross-Origin-Opener-Policy: same-origin` (a page shares no
+  window group with another site's, which keeps no handle on it) and
+  `Cross-Origin-Resource-Policy: same-origin` (no other site loads what this one
+  answers). The page keeps no handle on a window it opens (the GitHub link is
+  `noopener`) and loads nothing from another origin, so neither changes what it does.
 - So in `web/src` (`tests/app/tooling/test_web_source_rules.py` holds it): no `style`
   prop (the export would render a style attribute; set `element.style` through a ref),
   no `<style>` or `<script>` element, no `next/script`, no `next/link` (links are plain

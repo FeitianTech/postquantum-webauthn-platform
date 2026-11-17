@@ -26,6 +26,14 @@
      "no-referrer"
     ],
     [
+     "Cross-Origin-Opener-Policy",
+     "same-origin"
+    ],
+    [
+     "Cross-Origin-Resource-Policy",
+     "same-origin"
+    ],
+    [
      "Content-Security-Policy",
      "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; require-trusted-types-for 'script'; trusted-types nextjs nextjs#bundler; report-uri /api/csp-report; report-to csp"
     ],
@@ -71,6 +79,14 @@
     [
      "Referrer-Policy",
      "no-referrer"
+    ],
+    [
+     "Cross-Origin-Opener-Policy",
+     "same-origin"
+    ],
+    [
+     "Cross-Origin-Resource-Policy",
+     "same-origin"
     ],
     [
      "Content-Security-Policy",
@@ -120,6 +136,14 @@
      "no-referrer"
     ],
     [
+     "Cross-Origin-Opener-Policy",
+     "same-origin"
+    ],
+    [
+     "Cross-Origin-Resource-Policy",
+     "same-origin"
+    ],
+    [
      "Content-Security-Policy",
      "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; require-trusted-types-for 'script'; trusted-types nextjs nextjs#bundler; report-uri /api/csp-report; report-to csp"
     ],
@@ -165,6 +189,14 @@
     [
      "Referrer-Policy",
      "no-referrer"
+    ],
+    [
+     "Cross-Origin-Opener-Policy",
+     "same-origin"
+    ],
+    [
+     "Cross-Origin-Resource-Policy",
+     "same-origin"
     ],
     [
      "Content-Security-Policy",
@@ -223,6 +255,14 @@
     [
      "Referrer-Policy",
      "no-referrer"
+    ],
+    [
+     "Cross-Origin-Opener-Policy",
+     "same-origin"
+    ],
+    [
+     "Cross-Origin-Resource-Policy",
+     "same-origin"
     ],
     [
      "Content-Security-Policy",
@@ -329,6 +369,14 @@
     [
      "Referrer-Policy",
      "no-referrer"
+    ],
+    [
+     "Cross-Origin-Opener-Policy",
+     "same-origin"
+    ],
+    [
+     "Cross-Origin-Resource-Policy",
+     "same-origin"
     ],
     [
      "Content-Security-Policy",
@@ -942,6 +990,14 @@
      "no-referrer"
     ],
     [
+     "Cross-Origin-Opener-Policy",
+     "same-origin"
+    ],
+    [
+     "Cross-Origin-Resource-Policy",
+     "same-origin"
+    ],
+    [
      "Content-Security-Policy",
      "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; require-trusted-types-for 'script'; trusted-types nextjs nextjs#bundler; report-uri /api/csp-report; report-to csp"
     ],
@@ -1553,170 +1609,12 @@
      "no-referrer"
     ],
     [
-     "Content-Security-Policy",
-     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; require-trusted-types-for 'script'; trusted-types nextjs nextjs#bundler; report-uri /api/csp-report; report-to csp"
+     "Cross-Origin-Opener-Policy",
+     "same-origin"
     ],
     [
-     "Reporting-Endpoints",
-     "csp=\"/api/csp-report\""
-    ],
-    [
-     "Permissions-Policy",
-     "accelerometer=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-create=(self), publickey-credentials-get=(self), screen-wake-lock=(), usb=(), xr-spatial-tracking=()"
-    ],
-    [
-     "Vary",
-     "Cookie"
-    ]
-   ],
-   "cookies": [
-    {
-     "name": "session",
-     "attributes": [
-      "HttpOnly",
-      "Path=/",
-      "SameSite=Lax"
-     ],
-     "contents": {
-      "advanced_original_request": {
-       "publicKey": {
-        "challenge": {
-         "$base64url": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE"
-        },
-        "pubKeyCredParams": [
-         {
-          "alg": -7,
-          "type": "public-key"
-         }
-        ]
-       }
-      },
-      "advanced_register_allowed_attachments": [],
-      "advanced_rp": {
-       "id": "localhost",
-       "name": "FIDO2/WebAuthn PQC Developer Tools"
-      },
-      "advanced_state": {
-       "challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
-       "issued_at": 1790000000.0,
-       "user_verification": "preferred"
-      }
-     }
-    }
-   ],
-   "bodySha256": "1f58a6d263cf763775f234e5c2d26bbdc2851ffc1601713c9b67ba6283b6186a",
-   "body": {
-    "publicKey": {
-     "attestation": "none",
-     "authenticatorSelection": {
-      "requireResidentKey": false,
-      "residentKey": "preferred",
-      "userVerification": "preferred"
-     },
-     "challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
-     "excludeCredentials": [],
-     "pubKeyCredParams": [
-      {
-       "alg": -7,
-       "type": "public-key"
-      }
-     ],
-     "rp": {
-      "id": "localhost",
-      "name": "FIDO2/WebAuthn PQC Developer Tools"
-     },
-     "timeout": 90000,
-     "user": {
-      "displayName": "A. User",
-      "id": "dXNlci1oYW5kbGU",
-      "name": "user@example.com"
-     }
-    }
-   }
-  },
-  {
-   "request": "POST /api/advanced/register/complete",
-   "status": 400,
-   "headers": [
-    [
-     "Content-Type",
-     "application/json"
-    ],
-    [
-     "Content-Length",
-     "115"
-    ],
-    [
-     "X-Content-Type-Options",
-     "nosniff"
-    ],
-    [
-     "X-Frame-Options",
-     "DENY"
-    ],
-    [
-     "Referrer-Policy",
-     "no-referrer"
-    ],
-    [
-     "Content-Security-Policy",
-     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; require-trusted-types-for 'script'; trusted-types nextjs nextjs#bundler; report-uri /api/csp-report; report-to csp"
-    ],
-    [
-     "Reporting-Endpoints",
-     "csp=\"/api/csp-report\""
-    ],
-    [
-     "Permissions-Policy",
-     "accelerometer=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-create=(self), publickey-credentials-get=(self), screen-wake-lock=(), usb=(), xr-spatial-tracking=()"
-    ],
-    [
-     "Vary",
-     "Cookie"
-    ]
-   ],
-   "cookies": [
-    {
-     "name": "session",
-     "attributes": [
-      "Max-Age=0",
-      "HttpOnly",
-      "Path=/",
-      "SameSite=Lax"
-     ],
-     "contents": null
-    }
-   ],
-   "bodySha256": "87d71ac36605b9c235c3201df4f6d9050d8b88656ed41249286db3644160db77",
-   "body": {
-    "challengeSource": "server-session",
-    "challengeStatus": "replayed",
-    "error": "Invalid origin in CollectedClientData."
-   }
-  },
-  {
-   "request": "POST /api/advanced/register/begin",
-   "status": 200,
-   "headers": [
-    [
-     "Content-Type",
-     "application/json"
-    ],
-    [
-     "Content-Length",
-     "448"
-    ],
-    [
-     "X-Content-Type-Options",
-     "nosniff"
-    ],
-    [
-     "X-Frame-Options",
-     "DENY"
-    ],
-    [
-     "Referrer-Policy",
-     "no-referrer"
+     "Cross-Origin-Resource-Policy",
+     "same-origin"
     ],
     [
      "Content-Security-Policy",
@@ -1825,6 +1723,14 @@
      "no-referrer"
     ],
     [
+     "Cross-Origin-Opener-Policy",
+     "same-origin"
+    ],
+    [
+     "Cross-Origin-Resource-Policy",
+     "same-origin"
+    ],
+    [
      "Content-Security-Policy",
      "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; require-trusted-types-for 'script'; trusted-types nextjs nextjs#bundler; report-uri /api/csp-report; report-to csp"
     ],
@@ -1883,6 +1789,196 @@
     [
      "Referrer-Policy",
      "no-referrer"
+    ],
+    [
+     "Cross-Origin-Opener-Policy",
+     "same-origin"
+    ],
+    [
+     "Cross-Origin-Resource-Policy",
+     "same-origin"
+    ],
+    [
+     "Content-Security-Policy",
+     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; require-trusted-types-for 'script'; trusted-types nextjs nextjs#bundler; report-uri /api/csp-report; report-to csp"
+    ],
+    [
+     "Reporting-Endpoints",
+     "csp=\"/api/csp-report\""
+    ],
+    [
+     "Permissions-Policy",
+     "accelerometer=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-create=(self), publickey-credentials-get=(self), screen-wake-lock=(), usb=(), xr-spatial-tracking=()"
+    ],
+    [
+     "Vary",
+     "Cookie"
+    ]
+   ],
+   "cookies": [
+    {
+     "name": "session",
+     "attributes": [
+      "HttpOnly",
+      "Path=/",
+      "SameSite=Lax"
+     ],
+     "contents": {
+      "advanced_original_request": {
+       "publicKey": {
+        "challenge": {
+         "$base64url": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE"
+        },
+        "pubKeyCredParams": [
+         {
+          "alg": -7,
+          "type": "public-key"
+         }
+        ]
+       }
+      },
+      "advanced_register_allowed_attachments": [],
+      "advanced_rp": {
+       "id": "localhost",
+       "name": "FIDO2/WebAuthn PQC Developer Tools"
+      },
+      "advanced_state": {
+       "challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
+       "issued_at": 1790000000.0,
+       "user_verification": "preferred"
+      }
+     }
+    }
+   ],
+   "bodySha256": "1f58a6d263cf763775f234e5c2d26bbdc2851ffc1601713c9b67ba6283b6186a",
+   "body": {
+    "publicKey": {
+     "attestation": "none",
+     "authenticatorSelection": {
+      "requireResidentKey": false,
+      "residentKey": "preferred",
+      "userVerification": "preferred"
+     },
+     "challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
+     "excludeCredentials": [],
+     "pubKeyCredParams": [
+      {
+       "alg": -7,
+       "type": "public-key"
+      }
+     ],
+     "rp": {
+      "id": "localhost",
+      "name": "FIDO2/WebAuthn PQC Developer Tools"
+     },
+     "timeout": 90000,
+     "user": {
+      "displayName": "A. User",
+      "id": "dXNlci1oYW5kbGU",
+      "name": "user@example.com"
+     }
+    }
+   }
+  },
+  {
+   "request": "POST /api/advanced/register/complete",
+   "status": 400,
+   "headers": [
+    [
+     "Content-Type",
+     "application/json"
+    ],
+    [
+     "Content-Length",
+     "115"
+    ],
+    [
+     "X-Content-Type-Options",
+     "nosniff"
+    ],
+    [
+     "X-Frame-Options",
+     "DENY"
+    ],
+    [
+     "Referrer-Policy",
+     "no-referrer"
+    ],
+    [
+     "Cross-Origin-Opener-Policy",
+     "same-origin"
+    ],
+    [
+     "Cross-Origin-Resource-Policy",
+     "same-origin"
+    ],
+    [
+     "Content-Security-Policy",
+     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; require-trusted-types-for 'script'; trusted-types nextjs nextjs#bundler; report-uri /api/csp-report; report-to csp"
+    ],
+    [
+     "Reporting-Endpoints",
+     "csp=\"/api/csp-report\""
+    ],
+    [
+     "Permissions-Policy",
+     "accelerometer=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-create=(self), publickey-credentials-get=(self), screen-wake-lock=(), usb=(), xr-spatial-tracking=()"
+    ],
+    [
+     "Vary",
+     "Cookie"
+    ]
+   ],
+   "cookies": [
+    {
+     "name": "session",
+     "attributes": [
+      "Max-Age=0",
+      "HttpOnly",
+      "Path=/",
+      "SameSite=Lax"
+     ],
+     "contents": null
+    }
+   ],
+   "bodySha256": "87d71ac36605b9c235c3201df4f6d9050d8b88656ed41249286db3644160db77",
+   "body": {
+    "challengeSource": "server-session",
+    "challengeStatus": "replayed",
+    "error": "Invalid origin in CollectedClientData."
+   }
+  },
+  {
+   "request": "POST /api/advanced/register/begin",
+   "status": 200,
+   "headers": [
+    [
+     "Content-Type",
+     "application/json"
+    ],
+    [
+     "Content-Length",
+     "448"
+    ],
+    [
+     "X-Content-Type-Options",
+     "nosniff"
+    ],
+    [
+     "X-Frame-Options",
+     "DENY"
+    ],
+    [
+     "Referrer-Policy",
+     "no-referrer"
+    ],
+    [
+     "Cross-Origin-Opener-Policy",
+     "same-origin"
+    ],
+    [
+     "Cross-Origin-Resource-Policy",
+     "same-origin"
     ],
     [
      "Content-Security-Policy",
@@ -1991,6 +2087,14 @@
      "no-referrer"
     ],
     [
+     "Cross-Origin-Opener-Policy",
+     "same-origin"
+    ],
+    [
+     "Cross-Origin-Resource-Policy",
+     "same-origin"
+    ],
+    [
      "Content-Security-Policy",
      "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; require-trusted-types-for 'script'; trusted-types nextjs nextjs#bundler; report-uri /api/csp-report; report-to csp"
     ],
@@ -2049,6 +2153,14 @@
     [
      "Referrer-Policy",
      "no-referrer"
+    ],
+    [
+     "Cross-Origin-Opener-Policy",
+     "same-origin"
+    ],
+    [
+     "Cross-Origin-Resource-Policy",
+     "same-origin"
     ],
     [
      "Content-Security-Policy",
@@ -2155,6 +2267,14 @@
     [
      "Referrer-Policy",
      "no-referrer"
+    ],
+    [
+     "Cross-Origin-Opener-Policy",
+     "same-origin"
+    ],
+    [
+     "Cross-Origin-Resource-Policy",
+     "same-origin"
     ],
     [
      "Content-Security-Policy",

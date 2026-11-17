@@ -33,6 +33,8 @@ EXPECTED_HEADERS = (
     "X-Content-Type-Options",
     "Referrer-Policy",
     "Permissions-Policy",
+    "Cross-Origin-Opener-Policy",
+    "Cross-Origin-Resource-Policy",
 )
 
 
@@ -79,6 +81,14 @@ def test_content_type_and_referrer_policies(client):
     response = client.get("/")
     assert response.headers["X-Content-Type-Options"] == "nosniff"
     assert response.headers["Referrer-Policy"] == "no-referrer"
+
+
+@pytest.mark.parametrize("path", ["/", "/health", "/api/mds/metadata/info", "/api/nothing-here"])
+def test_no_other_site_may_open_a_handle_on_a_page_or_load_an_answer(client, path):
+    headers = client.get(path).headers
+
+    assert headers["Cross-Origin-Opener-Policy"] == "same-origin"
+    assert headers["Cross-Origin-Resource-Policy"] == "same-origin"
 
 
 def test_permissions_policy_scopes_webauthn_to_self(client):

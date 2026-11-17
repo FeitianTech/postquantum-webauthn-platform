@@ -304,7 +304,8 @@ its logic out here first.
   (`SESSION_REFRESH_EACH_REQUEST` off), so nothing landing after a ceremony's begin can undo it;
   and `cookie_size`), `security_headers.py` (the strict CSP, Trusted Types enforced for Next's
   two policies, reporting to `/api/csp-report`; `FIDO_SERVER_CONTENT_SECURITY_POLICY` replaces
-  it), `origins.py`, `attestation_trust.py`, `relying_party.py` (the default RP name is the
+  it; Cross-Origin-Opener-Policy and Cross-Origin-Resource-Policy `same-origin`),
+  `origins.py`, `attestation_trust.py`, `relying_party.py` (the default RP name is the
   site's, `APP_TITLE`; an RP ID a request names is used as named, and with an origin allowlist
   only when an allowed origin can use it, `requested_rp_id_refusal`), `paths.py` (the project and instance roots; `store_dir`: every local
   store under `instance/`, its setting read when used; `LOCAL_STORES`, the three stores' settings
