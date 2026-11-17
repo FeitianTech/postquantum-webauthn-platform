@@ -8,7 +8,7 @@
   deploy is seen at once.
 - An unknown path answers 404 with the export's own ``404.html``; with no
   export at all, Werkzeug's plain 404. A path under ``/api/`` that no route
-  holds answers the plain 404, as an API should.
+  holds answers 404 in JSON, as an API should (``routes/errors.py``).
 - ``/health`` answers ``ok``, the liveness probe Cloud Run and the image check use.
 
 The page rule is the site's catch-all, as Flask's own static rule was before it

@@ -3,9 +3,9 @@
 // The server answers errors as JSON: {"error": "..."} plus, depending on the
 // route, failedCredentialId, signCountStatus, challengeSource and
 // challengeStatus, or (the codec) the offset and path where the input stops
-// being well-formed. A few answers are not JSON (Werkzeug's HTML for abort(),
-// a proxy's error page); those are described by their status instead of shown
-// as markup. Where the server's message does not already say what to do, a
+// being well-formed, under /api/ for every error (routes/errors.py). An answer
+// that is not JSON (a proxy's error page) is described by its status instead of
+// shown as markup. Where the server's message does not already say what to do, a
 // sentence for the status is added.
 
 const MAX_PLAIN_TEXT = 300;
@@ -99,9 +99,8 @@ function adviceFor(status, message, { body, hasServerMessage }) {
         return '';
     }
     if (status === 400) {
-        // A 400 about the ceremony's state, or one the server answered without a
-        // message of its own (the simple flow's abort(400) when its session holds
-        // no ceremony), is answered by starting over.
+        // A 400 about the ceremony's state, or one that came without a message of
+        // its own (a proxy's page), is answered by starting over.
         const aboutState = CEREMONY_STATE.test(message)
             || ['expired', 'replayed'].includes(/** @type {string} */ (stringField(body, 'challengeStatus')));
         return aboutState || !hasServerMessage ? START_AGAIN : '';

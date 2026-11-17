@@ -132,12 +132,12 @@ def test_an_unknown_path_answers_the_export_404_page(site, url):
 
 
 @pytest.mark.parametrize("url", ["/api", "/api/", "/api/nothing-here", "/api/mds/nothing-here"])
-def test_an_unknown_api_path_answers_a_plain_404(site, url):
+def test_an_unknown_api_path_answers_404_in_json_not_the_export_page(site, url):
     response = site.get(url)
 
     assert response.status_code == 404
     assert response.data != NOT_FOUND
-    assert b"<title>404 Not Found</title>" in response.data
+    assert response.get_json() == {"error": "There is nothing at this address."}
 
 
 def test_a_404_is_never_a_304_or_a_range(site):
@@ -199,7 +199,8 @@ def test_head_answers_without_a_body(site):
 def test_a_method_the_site_does_not_take_is_refused_as_before(site):
     assert site.post("/").status_code == 405
     assert site.post("/index.html").status_code == 405
-    assert site.post("/api/nothing-here").status_code == 405
+    # No API route holds it: not the page's 405 (routes/errors.py).
+    assert site.post("/api/nothing-here").status_code == 404
 
 
 def test_every_other_rule_still_answers_for_itself(site):

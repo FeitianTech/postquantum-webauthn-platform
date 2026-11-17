@@ -386,12 +386,14 @@ its logic out here first.
   before it is parsed, as the CSP report and the metadata upload's files are); `routes/mds.py` (the MDS routes and
   certificate decoding); `routes/codec.py` (`/api/codec`); `routes/web_export.py` (`/health`,
   and the export at `/`: the site's catch-all, since Flask has no static rule; HTML `no-cache`,
-  `/_next/static/` immutable with the build's `.gz`, the export's 404 page, a plain 404 under
+  `/_next/static/` immutable with the build's `.gz`, the export's 404 page, a 404 in JSON under
   `/api/`; `send_precompressed`); `routes/assets.py` (the explorer's files under `/assets/mds/`:
   the list at one URL revalidated by its ETag, the icons by digest, each entry's detail at
   `?v=<version>` (other versions revalidate by a weak ETag, including gzip);
   no snapshot file at any path); `routes/csp_report.py` (one WARNING line per
-  violation, bounded); `routes/errors.py`.
+  violation, bounded); `routes/errors.py` (every HTTP error under `/api/` answered in JSON,
+  `{"error": sentence}`: a path no API route holds 404 whatever the method, a method a route
+  does not take 405 with `Allow`, an unhandled exception's 500; pages keep their HTML).
 - `webauthn/attestation/` (`checks.py` runs every check in order over `request_expectations.py`,
   `response_checks.py`, `statement_checks.py` and `metadata_checks.py`; `response_checks.py`
   holds BS set without BE an integrity error, `backup_state_without_eligibility` (L3 section 7.1

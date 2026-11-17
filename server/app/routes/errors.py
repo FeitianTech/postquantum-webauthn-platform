@@ -1,10 +1,24 @@
-"""Answers for errors any route can raise."""
+"""Answers for errors any route can raise.
+
+Under ``/api/`` every HTTP error is answered in JSON, ``{"error": sentence}``, the
+status kept: ``abort()``, a path no route holds, a method a route does not take, and
+(where exceptions are not propagated, as in production) an unhandled exception's 500.
+The site's GET catch-all holds every path, so it is set aside: a path under ``/api/``
+no API route holds answers 404 whatever the method, and one a route holds for other
+methods answers 405 naming them (a GET of ``/api/codec`` too). Pages keep Werkzeug's
+answers and the export's 404 page.
+"""
 from __future__ import annotations
 
 import logging
 
-from flask import jsonify, request
-from werkzeug.exceptions import RequestEntityTooLarge
+from flask import current_app, jsonify, request
+from werkzeug.exceptions import (
+    HTTPException,
+    MethodNotAllowed,
+    NotFound,
+    RequestEntityTooLarge,
+)
 
 from ..storage.common import (
     InvalidStorageIdentifier,
@@ -14,6 +28,17 @@ from ..storage.common import (
 from . import json_body
 
 logger = logging.getLogger(__name__)
+
+# What an API client is told for an HTTP error no route answered itself.
+_API_SENTENCES = {
+    400: "The server could not read this request.",
+    404: "There is nothing at this address.",
+    405: "This address does not take this method.",
+    500: "The server failed while handling this request.",
+}
+# The site's catch-all (routes/web_export.py): GET only, for pages, and every path.
+_SITE_ENDPOINT = "web_export.page"
+_METHODS = ("GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
 
 
 def invalid_storage_identifier(exc: InvalidStorageIdentifier):
@@ -59,9 +84,46 @@ def json_nested_too_deep(exc: json_body.NestedTooDeep):
     return jsonify({"error": f"The request body is JSON nested more than {json_body.MAX_DEPTH} deep, deeper than this server reads."}), 400
 
 
+def _under_api(path: str) -> bool:
+    return path == "/api" or path.startswith("/api/")
+
+
+def _api_methods() -> set[str]:
+    """The methods a route other than the site's catch-all takes at the request's path."""
+
+    adapter = current_app.create_url_adapter(request)
+    methods: set[str] = set()
+    for method in _METHODS:
+        try:
+            endpoint, _arguments = adapter.match(method=method)
+        except HTTPException:
+            continue
+        if endpoint != _SITE_ENDPOINT:
+            methods.add(method)
+    return methods
+
+
+def api_http_error(exc: HTTPException):
+    # Pages, and an answer an exception already carries, are left as they are.
+    if not _under_api(request.path) or exc.response is not None or exc.code is None:
+        return exc
+    # A 404 or 405 an API route did not give itself: the catch-all's, or the router's.
+    if isinstance(exc, (NotFound, MethodNotAllowed)) and request.method not in (methods := _api_methods()):
+        exc = MethodNotAllowed(sorted(methods)) if methods else NotFound()
+    response = jsonify({"error": _API_SENTENCES.get(exc.code) or f"The server refused this request ({exc.code} {exc.name})."})
+    response.status_code = exc.code
+    # Its own headers too (a 405's Allow), but its HTML's Content-Type.
+    for name, value in exc.get_headers():
+        if name.lower() != "content-type":
+            response.headers[name] = value
+    return response
+
+
 def init_app(app) -> None:
     app.register_error_handler(InvalidStorageIdentifier, invalid_storage_identifier)
     app.register_error_handler(StorageReadError, storage_read_error)
     app.register_error_handler(StorageQuotaExceeded, storage_quota_exceeded)
     app.register_error_handler(RequestEntityTooLarge, request_entity_too_large)
     app.register_error_handler(json_body.NestedTooDeep, json_nested_too_deep)
+    # Looked up by status first: the handlers above keep their own answers.
+    app.register_error_handler(HTTPException, api_http_error)
