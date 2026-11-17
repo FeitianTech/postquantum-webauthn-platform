@@ -5,6 +5,7 @@ Text is read as JSON (``credential_json``), as PEM (``pem``), or as bytes
 """
 from __future__ import annotations
 
+import math
 from typing import Any
 
 from ...encoding import try_decode_base64, try_decode_base64url
@@ -44,8 +45,8 @@ def decode_payload_text(
     CBOR is parsed strictly. ``lenient`` asks for a best-effort parse of CBOR
     that is not well-formed; the response then says so (``decodeMode``) and
     lists each item it kept partially or stepped over. JSON is RFC 8259's: text
-    holding NaN or Infinity is refused with its offset, unless ``lenient`` (see
-    ``json_input``).
+    holding NaN or Infinity, or a number beyond the range of a double, is refused
+    with its offset, unless ``lenient`` (see ``json_input``).
 
     Text that is both hexadecimal and a JSON number is read by the precedence
     in ``ambiguous_input``, and the response names the reading not taken.
@@ -63,11 +64,7 @@ def _decode(value: str, lenient: bool) -> dict[str, Any]:
     if not trimmed:
         raise ValueError("Decoder input is empty.")
 
-    # Offsets count from the input as sent, blank space before it included.
-    parsed_json, json_findings = json_input.read_or_none(trimmed, lenient=lenient, base=len(value) - len(value.lstrip()))
-    ambiguity = ambiguous_input.check(trimmed, parsed_json)
-    if ambiguity is not None and ambiguity["readAs"] == "hex":
-        parsed_json, json_findings = json_input.NOT_JSON, []
+    parsed_json, json_findings, ambiguity = _read_json(value, trimmed, lenient)
     if parsed_json is not json_input.NOT_JSON:
         result, taken = credential_json.decode_json_object(parsed_json, raw_text=trimmed, lenient=lenient), "json"
     elif pem.looks_like_pem(trimmed):
@@ -89,6 +86,33 @@ def _decode(value: str, lenient: bool) -> dict[str, Any]:
     # JSON is read leniently too, not only CBOR: the answer says how it was read.
     result.setdefault("decodeMode", "lenient" if lenient else "strict")
     return answer._prepare_decoder_response(result)
+
+
+def _read_json(value: str, trimmed: str, lenient: bool) -> tuple[Any, list[dict[str, Any]], dict[str, Any] | None]:
+    """``trimmed`` read as JSON and its findings (``NOT_JSON`` when it is not, or is read as
+    hexadecimal), and the ``ambiguous_input`` finding when it is hexadecimal digits too.
+
+    Digits that are a number beyond a double's range (``994e21...``) are a number JSON
+    refuses strictly and reads leniently as written: the precedence still decides
+    whether they are hexadecimal, as for any other number.
+    """
+
+    # Offsets count from the input as sent, blank space before it included.
+    base = len(value) - len(value.lstrip())
+    try:
+        parsed, findings = json_input.read_or_none(trimmed, lenient=lenient, base=base)
+    except json_input.JsonRangeError as refused:
+        ambiguity = ambiguous_input.check(trimmed, math.inf) if refused.path == "$" else None
+        if ambiguity is None or ambiguity["readAs"] != "hex":
+            raise
+        return json_input.NOT_JSON, [], ambiguity
+    whole_number_out_of_range = any(
+        finding["code"] == "json-number-out-of-range" and finding["path"] == "$" for finding in findings
+    )
+    ambiguity = ambiguous_input.check(trimmed, math.inf if whole_number_out_of_range else parsed)
+    if ambiguity is not None and ambiguity["readAs"] == "hex":
+        return json_input.NOT_JSON, [], ambiguity
+    return parsed, findings, ambiguity
 
 
 def _other_text_readings(text: str, taken: str) -> list[dict[str, Any]]:

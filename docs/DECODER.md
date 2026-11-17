@@ -121,12 +121,13 @@ findings add `source`).
 
 `malformed` lists the messages of the findings that the input is not well-formed
 (RFC 8949 appendix F, trailing bytes included) or not in CTAP2 canonical form, and
-of the other findings of category `malformed` (a JSON `NaN` or infinity read
-leniently, a nested part that does not parse: `parse-error`, `tpm-structure`): the
-categories `skipped`, `malformed`, `trailing` and `canonical` in
-`decode/findings.py`. Notes about how the input was read or shown
-(`ambiguous-input`, `json-key-collision`, `duplicate-json-key`, `ctap-prefix-not-read`,
-`ctap-non-integer-key`, a CTAP limit) are in `findings` only.
+of the other findings of category `malformed` (a JSON `NaN`, infinity or number
+beyond a double's range read leniently, a nested part that does not parse:
+`parse-error`, `tpm-structure`): the categories `skipped`, `malformed`, `trailing`
+and `canonical` in `decode/findings.py`. Notes about how the input was read or shown
+(`ambiguous-input`, `json-key-collision`, `duplicate-json-key`,
+`ctap-prefix-not-read`, `ctap-non-integer-key`, a CTAP limit) are in `findings`
+only.
 
 ## Map keys
 
@@ -173,6 +174,16 @@ the metadata upload refuses it. No answer may hold a bare `NaN`: Flask's JSON
 provider would write it, and the answer would not be JSON.
 `tests/app/core/test_codec_answers_are_json.py` parses every decoder and encoder
 answer over the corpus with a reader that refuses them.
+
+A number beyond the range of a double (`1e400`) is JSON, but Python's reader makes
+it an infinity (RFC 8259 section 6 lets a reader limit the range it takes). Read
+strictly, it is refused with a 422 naming the offset and path of the first
+(`json_input.JsonRangeError`), and a nested field holding one is that field's
+`parse-error` finding; read leniently, each is a `json-number-out-of-range` finding
+(category `malformed`) and is shown as written, `{"diagnostic": "1e400"}`. The
+encoder refuses it. Hexadecimal digits that are also such a number go by the text's
+precedence (`decode/ambiguous_input.py`): `19e400` is the bytes 19 e4 00, one CBOR
+item, and `99e999`, whose bytes are no item, the number.
 
 Nor may an answer hold a value only Flask's provider can write. A value JSON has
 no spelling for (`undefined`, a simple value, a NaN or an infinity) is

@@ -94,9 +94,13 @@ def test_every_answer_about_another_input_in_the_repository_is_json(codec, name,
         "[Infinity, -Infinity]",
         '{"credential": {"x": -Infinity}}',
         "NaN",
+        "[1e400]",
+        '{"credential": {"x": -2.5e999}}',
+        "19e400",
+        "99e999",
     ],
 )
-def test_every_answer_about_json_holding_nan_or_infinity_is_json(codec, text):
+def test_every_answer_about_json_holding_nan_infinity_or_a_number_beyond_a_double_is_json(codec, text):
     for lenient in (False, True):
         status, body = codec(payload=text, lenient=lenient)
         if status == 200:

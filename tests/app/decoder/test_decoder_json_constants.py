@@ -2,8 +2,10 @@
 
 Read strictly, such text is refused with the offset and path of the first; read
 leniently, each is a finding and is shown as the decoder shows a CBOR NaN,
-``{"diagnostic": "NaN"}``. The encoder refuses it, pointing at EDN. Every answer
-is read here as the browser's ``response.json()`` reads it: strictly.
+``{"diagnostic": "NaN"}``. The encoder refuses it, pointing at EDN. A number
+beyond the range of a double (``1e400``), which Python's reader makes an
+infinity, is refused or read the same way, shown as written. Every answer is
+read here as the browser's ``response.json()`` reads it: strictly.
 """
 from __future__ import annotations
 
@@ -146,3 +148,94 @@ def test_the_bytes_of_nan_read_leniently_are_json_text_with_its_nan_noted(client
 
     assert result["type"] == "JSON"
     assert [finding["code"] for finding in result["findings"]] == ["json-nan-or-infinity"]
+
+
+_OUT_OF_RANGE = '{"a": [1.5, 1e400], "b": -2E+999}'
+_OUT_OF_RANGE_REFUSED = (
+    "Number out of range at offset {offset} ({path}): 1e400 is beyond the range of a double. The decoder "
+    "reads it, as written, when asked to read leniently."
+)
+
+
+def test_decoding_json_with_a_number_beyond_a_double_is_refused_with_its_offset_and_path(client):
+    status, body = _codec(client, payload="  " + _OUT_OF_RANGE)
+
+    assert status == 422
+    assert body == {
+        "error": _OUT_OF_RANGE_REFUSED.format(offset=14, path='${"a"}[1]'),
+        "offset": 14,
+        "path": '${"a"}[1]',
+    }
+
+
+def test_decoding_json_with_a_number_beyond_a_double_leniently_shows_it_as_written(client):
+    status, body = _codec(client, payload=_OUT_OF_RANGE, lenient=True)
+
+    assert status == 200
+    assert body["data"]["json"] == {"a": [1.5, {"diagnostic": "1e400"}], "b": {"diagnostic": "-2E+999"}}
+    assert [(finding["code"], finding["offset"], finding["path"]) for finding in body["findings"]] == [
+        ("json-number-out-of-range", 12, '${"a"}[1]'),
+        ("json-number-out-of-range", 25, '${"b"}'),
+    ]
+    assert len(body["malformed"]) == 2
+
+
+def test_a_long_number_beyond_a_double_is_cut_short_in_its_sentence(client):
+    number = "1" + "0" * 400 + ".5"
+    status, body = _codec(client, payload=f"[{number}]")
+
+    assert status == 422
+    assert body["error"].startswith(f"Number out of range at offset 1 ($[0]): {number[:29]}... is beyond")
+
+
+def test_json_bytes_with_a_number_beyond_a_double_count_the_offset_in_bytes(client):
+    status, body = _codec(client, payload='{"é": 1e400}'.encode().hex())
+
+    assert status == 422
+    assert (body["offset"], body["path"]) == (7, '${"é"}')
+
+
+@pytest.mark.parametrize("target", ["CBOR", "JSON", "COSE"])
+def test_encoding_json_with_a_number_beyond_a_double_is_refused(client, target):
+    status, body = _codec(client, payload='{"1": 2, "-1": 1e400}', mode="encode", format=target)
+
+    assert status == 422
+    assert body["error"].startswith('Number out of range at offset 15 (${"-1"}): 1e400 is beyond the range')
+
+
+def test_client_data_with_a_number_beyond_a_double_in_a_credential_does_not_decode(client):
+    client_data = b'{"type": "webauthn.get", "challenge": "AAAA", "origin": "https://x", "n": 1e400}'
+    status, body = _codec(client, payload=_credential(client_data))
+
+    assert status == 200
+    (finding,) = body["findings"]
+    assert (finding["code"], finding["offset"], finding["path"], finding["source"]) == (
+        "parse-error", 74, '${"n"}', "response.clientDataJSON"
+    )
+
+
+def test_hexadecimal_digits_that_are_also_a_number_beyond_a_double_are_hexadecimal_when_one_item(client):
+    # 19 e4 00 is the integer 58368; "19e400" is also 19 times ten to the 400th.
+    status, body = _codec(client, payload="19e400")
+
+    assert status == 200
+    assert body["data"]["decodedValue"] == 58368
+    (finding,) = body["findings"]
+    assert (finding["code"], finding["readAs"], finding["alsoValidAs"]) == ("ambiguous-input", "hex", "json")
+
+
+def test_hexadecimal_digits_that_are_no_item_are_the_number_beyond_a_double(client):
+    # 0x99 announces an array of 0xe999 items the input does not have: the digits are the number.
+    status, body = _codec(client, payload="99e999")
+
+    assert status == 422
+    assert (body["offset"], body["path"]) == (0, "$")
+
+    status, body = _codec(client, payload="99e999", lenient=True)
+
+    assert status == 200
+    assert body["data"]["json"] == {"diagnostic": "99e999"}
+    assert [(finding["code"], finding.get("readAs")) for finding in body["findings"]] == [
+        ("ambiguous-input", "json"),
+        ("json-number-out-of-range", None),
+    ]

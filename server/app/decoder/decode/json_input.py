@@ -15,6 +15,13 @@ each is a ``json-nan-or-infinity`` finding with its offset and path, and is
 shown as the decoder shows such a CBOR float, ``{"diagnostic": "NaN"}`` -- never
 as a bare ``NaN``, which would make the decoder's own answer not JSON.
 
+A number beyond the range of a double (``1e400``) is JSON, but Python's reader
+makes it an infinity, which the answer would then hold bare (RFC 8259 section 6
+lets a reader limit the range it takes). Read strictly, it raises
+``JsonRangeError``, a ``JsonConstantError``, with the offset and path of the
+first; read leniently, it is a ``json-number-out-of-range`` finding and is shown
+as written, ``{"diagnostic": "1e400"}``.
+
 Every value counts against the request's item budget (``item_budget``), named
 by its path and no offset, as a finding is. ``json.loads`` has read the whole
 text by then: the request's size limit bounds what that costs.
@@ -28,6 +35,7 @@ reads as deep as the text goes until Python's stack runs out, so both that and
 from __future__ import annotations
 
 import json
+import math
 import re
 from collections.abc import Callable
 from typing import Any
@@ -46,6 +54,22 @@ class _Constant(str):
     """``NaN``, ``Infinity`` or ``-Infinity`` where the text held it: not JSON."""
 
 
+class _OutOfRange(_Constant):
+    """A number beyond the range of a double, as the text wrote it (``1e400``)."""
+
+
+def _number(text: str) -> float | _OutOfRange:
+    # json.loads's parse_float: a number with a fraction or an exponent (an integer is
+    # Python's int, never out of range).
+    number = float(text)
+    return number if math.isfinite(number) else _OutOfRange(text)
+
+
+def _spelled(text: str) -> str:
+    # A number's text in a sentence: a long one is cut short.
+    return text if len(text) <= 32 else f"{text[:29]}..."
+
+
 class JsonConstantError(ValueError):
     """Text Python's JSON reader accepts only by its extension: ``NaN``, ``Infinity``, ``-Infinity``."""
 
@@ -55,6 +79,19 @@ class JsonConstantError(ValueError):
         super().__init__(
             f"Not JSON at offset {offset} ({path}): {self.reason}. The decoder reads it when asked to read "
             "leniently; EDN writes it (NaN, Infinity, -Infinity)."
+        )
+
+
+class JsonRangeError(JsonConstantError):
+    """A number beyond the range of a double (``1e400``): JSON, but no double holds it."""
+
+    def __init__(self, number: str, path: str, offset: int) -> None:
+        self.offset, self.path = offset, path
+        self.reason = f"{_spelled(number)} is beyond the range of a double"
+        ValueError.__init__(
+            self,
+            f"Number out of range at offset {offset} ({path}): {self.reason}. The decoder reads it, "
+            "as written, when asked to read leniently.",
         )
 
 
@@ -96,7 +133,7 @@ def _read(text: str, lenient: bool, position: Callable[[int], int]) -> tuple[Any
     findings: list[dict[str, Any]] = []
     constants: list[tuple[str, str]] = []
     try:
-        parsed = json.loads(text, object_pairs_hook=_Members, parse_constant=_Constant)
+        parsed = json.loads(text, object_pairs_hook=_Members, parse_constant=_Constant, parse_float=_number)
         value = _resolve(parsed, "$", findings, constants=constants, budget=item_budget.current())
     except (_TooDeep, RecursionError):
         too_deep = _first_too_deep(text)
@@ -105,7 +142,8 @@ def _read(text: str, lenient: bool, position: Callable[[int], int]) -> tuple[Any
         raise JsonDepthError(too_deep[0], position(too_deep[1])) from None
     located = [(name, path, position(offset)) for (name, path), offset in zip(constants, _constant_offsets(text))]
     if located and not lenient:
-        raise JsonConstantError(*located[0])
+        name, path, offset = located[0]
+        raise (JsonRangeError if isinstance(name, _OutOfRange) else JsonConstantError)(name, path, offset)
     findings.extend(_constant_finding(name, path, offset) for name, path, offset in located)
     return value, findings
 
@@ -128,8 +166,12 @@ def read_or_none(
         return NOT_JSON, []
 
 
+_NUMBER = re.compile(r"-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?")
+
+
 def _constant_offsets(text: str) -> list[int]:
-    """Where each NaN, Infinity and -Infinity starts in ``text``, which JSON reads: outside its strings."""
+    """Where each NaN, Infinity, -Infinity and number beyond a double's range starts in ``text``, which
+    JSON reads: outside its strings."""
 
     offsets: list[int] = []
     index = 0
@@ -143,11 +185,28 @@ def _constant_offsets(text: str) -> list[int]:
             offsets.append(index)
             index += len(next(word for word in ("NaN", "Infinity", "-Infinity") if text.startswith(word, index)))
             continue
+        elif number := _NUMBER.match(text, index):
+            # A whole number, read at once: its digits are no number of their own.
+            if isinstance(_number(number.group()), _OutOfRange):
+                offsets.append(index)
+            index = number.end()
+            continue
         index += 1
     return offsets
 
 
 def _constant_finding(name: str, path: str, offset: int) -> dict[str, Any]:
+    if isinstance(name, _OutOfRange):
+        return {
+            "code": "json-number-out-of-range",
+            "category": "malformed",  # no double holds it, read leniently
+            "offset": offset,
+            "path": path,
+            "message": (
+                f"{_spelled(name)} at offset {offset} is beyond the range of a double; read leniently, "
+                'it is shown as written, as {"diagnostic": text}'
+            ),
+        }
     return {
         "code": "json-nan-or-infinity",
         "category": "malformed",  # not JSON (RFC 8259), read leniently
@@ -172,7 +231,8 @@ def _resolve(
 ) -> Any:
     """``value`` as ``json.loads`` gives it; ``dropped``: it is inside a value the result drops.
 
-    Each NaN or Infinity is noted in ``constants`` with its path, in the order of the text.
+    Each NaN, Infinity or number beyond a double's range is noted in ``constants`` with its
+    path, in the order of the text.
     """
 
     if depth > _MAX_DEPTH:
@@ -180,7 +240,7 @@ def _resolve(
     if budget is not None:
         budget.charge(None, path)
     if isinstance(value, _Constant):
-        constants.append((str(value), path))
+        constants.append((value, path))
         return {"diagnostic": str(value)}
     if isinstance(value, _Members):
         # The later value wins: the last occurrence of each key is the one kept.
