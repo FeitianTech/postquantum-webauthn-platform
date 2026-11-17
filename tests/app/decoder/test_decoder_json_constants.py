@@ -120,7 +120,14 @@ def test_client_data_with_nan_in_a_credential_is_read_leniently_and_said_so(clie
     assert body["data"]["clientDataJSON"]["origin"] == "https://x"
 
 
-def test_an_uploaded_metadata_file_with_nan_is_refused(client, monkeypatch):
+@pytest.mark.parametrize(
+    ("value", "sentence"),
+    [
+        (b"NaN", "NaN is not JSON (RFC 8259 has no NaN or Infinity)"),
+        (b"-1.5e400", "-1.5e400 is beyond the range of a double"),
+    ],
+)
+def test_an_uploaded_metadata_file_with_nan_or_a_number_beyond_a_double_is_refused(client, monkeypatch, value, sentence):
     saved = []
     monkeypatch.setattr(visitor_session, "ensure_id", lambda: "session-id")
     monkeypatch.setattr(mds_entries, "expand_metadata_entry_payloads", lambda payload: [payload])
@@ -130,15 +137,12 @@ def test_an_uploaded_metadata_file_with_nan_is_refused(client, monkeypatch):
 
     response = client.post(
         "/api/mds/metadata/upload",
-        data={"files": (io.BytesIO(b'{"metadataStatement": {"n": NaN}}'), "custom.json")},
+        data={"files": (io.BytesIO(b'{"metadataStatement": {"n": ' + value + b"}}"), "custom.json")},
         content_type="multipart/form-data",
     )
 
     assert response.status_code == 400
-    assert _strict(response.get_data(as_text=True)) == {
-        "items": [],
-        "errors": ["custom.json: NaN is not JSON (RFC 8259 has no NaN or Infinity)"],
-    }
+    assert _strict(response.get_data(as_text=True)) == {"items": [], "errors": [f"custom.json: {sentence}"]}
     assert saved == []
 
 

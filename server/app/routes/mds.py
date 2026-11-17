@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import logging
+import math
 from collections.abc import Mapping
 from typing import Any, NamedTuple
 
@@ -154,12 +155,20 @@ def _refuse_json_constant(constant: str) -> Any:
     raise mds_entries.MetadataRefused(f"{constant} is not JSON (RFC 8259 has no NaN or Infinity)")
 
 
+def _finite_number(text: str) -> float:
+    number = float(text)
+    if not math.isfinite(number):
+        raise mds_entries.MetadataRefused(f"{text[:32]} is beyond the range of a double")
+    return number
+
+
 def _read_metadata_json(text: str) -> Any:
-    # RFC 8259's JSON: the metadata is answered back, and NaN would make that answer not JSON.
+    # RFC 8259's JSON: the metadata is answered back, and NaN, or a number beyond a double's
+    # range, which Python's reader makes an infinity, would make that answer not JSON.
     # Nested at most as deep as a JSON body (routes/json_body.py): Python's reader goes as deep as the text.
     if json_body.nested_too_deep(text.encode("utf-8")):
         raise mds_entries.MetadataRefused(f"JSON nested more than {json_body.MAX_DEPTH} deep, deeper than this server reads")
-    return json.loads(text, parse_constant=_refuse_json_constant)
+    return json.loads(text, parse_constant=_refuse_json_constant, parse_float=_finite_number)
 
 
 class _UploadedFile(NamedTuple):

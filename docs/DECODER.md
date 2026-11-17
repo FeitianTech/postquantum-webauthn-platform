@@ -181,9 +181,9 @@ strictly, it is refused with a 422 naming the offset and path of the first
 (`json_input.JsonRangeError`), and a nested field holding one is that field's
 `parse-error` finding; read leniently, each is a `json-number-out-of-range` finding
 (category `malformed`) and is shown as written, `{"diagnostic": "1e400"}`. The
-encoder refuses it. Hexadecimal digits that are also such a number go by the text's
-precedence (`decode/ambiguous_input.py`): `19e400` is the bytes 19 e4 00, one CBOR
-item, and `99e999`, whose bytes are no item, the number.
+encoder and the metadata upload refuse it. Hexadecimal digits that are also such a
+number go by the text's precedence (`decode/ambiguous_input.py`): `19e400` is the
+bytes 19 e4 00, one CBOR item, and `99e999`, whose bytes are no item, the number.
 
 Nor may an answer hold a value only Flask's provider can write. A value JSON has
 no spelling for (`undefined`, a simple value, a NaN or an infinity) is
