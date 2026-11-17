@@ -79,10 +79,12 @@ the CSP and the source rules.
 - `src/lib/`: `sections.ts` (`SECTIONS`, `NAV_ID`, `APP_TITLE`, which is also the relying
   party's name; `routeFromHash` / `hashPath`), `useSection.ts` (the section in the hash with
   `replaceState`; what is open inside one as segments after it, e.g.
-  `#mds/<entryId>/certificate/<n>`; `open` pushes so Back closes one level, `close`, `replace`,
-  `closeAll` go back as many levels as the page opened: the pushed state's `pqcOpened`, which
-  counts across sections, so `closeAll` takes at most the levels its caller opened (the
-  details dialog passes its own); `go(section, path, handoff)` opens another section, pushing,
+  `#mds/<entryId>/certificate/<n>`; `open` pushes so Back closes one level; `close` goes back
+  one (or, when nothing was pushed, replaces the hash with the parent's); `replace` rewrites the
+  hash in place; `closeAll` goes back as many levels as the page opened: the pushed state's
+  `pqcOpened`, which counts across sections, so `closeAll` takes at most the levels its caller
+  opened (the details dialog passes its own); `useSectionNavigation()` gives a section
+  `GoToSection(section, path, handoff)`, which opens another section, pushing,
   and gives it `route.handoff` until the next move (what the URL does not carry, so a payload
   is never in a link or the history), and Back to the entry it left gives the focus back to
   the control that left, when the page still holds it (an MDS entry, remounted, focuses its
