@@ -102,8 +102,10 @@ needs `--condition=None` to remove an unconditional one.
 
 Everything the server reads from its environment (`server/app`, `gunicorn.conf.py`).
 `deploy/service.yaml` sets the ones production needs. A boolean takes `1`/`true`/`yes`/`on`
-or `0`/`false`/`no`/`off` (`server/app/env_flags.py`); any other value is ignored with a
-warning. "On Cloud Run" means `K_SERVICE` is set, which Cloud Run does.
+or `0`/`false`/`no`/`off`, and an empty value is off (`server/app/env_flags.py`); any other
+value is ignored with a warning. "On Cloud Run" means `K_SERVICE` is set, which Cloud Run
+does. The Dockerfile reads none: the image sets `PYTHONPATH=/app`, `PYTHONDONTWRITEBYTECODE`
+and `PYTHONUNBUFFERED` for itself, and `docker-compose.yml` sets `PORT` to `8000`.
 
 | Variable | Default | What it does |
 | --- | --- | --- |
@@ -125,6 +127,8 @@ warning. "On Cloud Run" means `K_SERVICE` is set, which Cloud Run does.
 | `FIDO_SERVER_CONTENT_SECURITY_POLICY` | the strict policy | Replaces the enforced Content-Security-Policy (`server/app/config/security_headers.py`) |
 | `FIDO_SERVER_MAX_REQUEST_BYTES` | 8 MiB | The largest request body; larger answers 413 |
 | `FIDO_SERVER_MAX_METADATA_UPLOAD_BYTES` | 16 MiB | The largest metadata upload |
+| `FIDO_SERVER_MAX_CODEC_REQUEST_BYTES` | 1 MiB | The largest `/api/codec` request; larger answers 413 |
+| `FIDO_SERVER_MAX_CODEC_ITEMS` | `20000` | The most items `/api/codec` reads for one request (`server/app/decoder/item_budget.py`); past it the input is refused, 422 |
 | `FIDO_SERVER_MAX_REGISTRATION_RESPONSE_BYTES` | 256 KiB | The largest credential response a registration completes with (a Simple complete's whole body, an Advanced complete's `__credential_response`); larger answers 413 |
 | `FIDO_SERVER_MAX_STORED_ARTIFACTS` | `1000` | The most credential artifacts one visitor's namespace keeps; a new one past it answers 409 |
 | `FIDO_SERVER_MAX_STORED_ARTIFACT_BYTES` | 256 MiB | The most bytes of them; a write past it answers 413 |
