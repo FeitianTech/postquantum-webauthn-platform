@@ -13,12 +13,14 @@ import hashlib
 import json
 import logging
 import os
+import posixpath
 import secrets
 import threading
 import time
 from collections.abc import Mapping, MutableMapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
+from http import client as http_client
 from typing import Any
 from urllib import error as urllib_error
 from urllib import parse as urllib_parse
@@ -31,11 +33,13 @@ from .. import aaguid, encoding
 from ..encoding import encode_base64, encode_base64url
 from ..env_flags import parse_env_flag
 from ..json_values import make_json_safe
+from .github_outbox import Delivery, OutboxEntry
 
 __all__ = [
     "GitHubUnavailable",
     "RegistrationEvent",
     "credential_log_repository",
+    "deliver",
     "git_blob_sha",
     "github_metadata_blobs",
     "github_upload_file",
@@ -81,11 +85,16 @@ def credential_log_repository() -> tuple[str, str]:
     return owner, name
 
 
+class GitHubUnavailable(RuntimeError):
+    """GitHub cannot take a delivery now: its answer is not what the mirror reads, or there is no
+    token to write with. The entry waits in the outbox."""
+
+
 def _token() -> str:
     token = os.environ.get("GITHUB_TOKEN")
     if not token:
         owner, name = credential_log_repository()
-        raise RuntimeError(
+        raise GitHubUnavailable(
             f"GITHUB_TOKEN environment variable is required for credential logging to {owner}/{name}"
         )
     return token
@@ -186,10 +195,6 @@ def github_upload_file(path: str, data: bytes, message: str) -> None:
 
     url = _api_url(f"contents/{path}")
     _request("PUT", url, body)
-
-
-class GitHubUnavailable(RuntimeError):
-    """GitHub answered with something other than what the mirror reads."""
 
 
 def _says_sha_was_not_supplied(exc: urllib_error.HTTPError) -> bool:
@@ -507,35 +512,109 @@ def _safe_metadata_repo_filename(filename: str) -> str:
     return candidate
 
 
+def _metadata_entry(filename: str, content: bytes) -> OutboxEntry:
+    """An uploaded metadata file as the outbox keeps it: at ``metadata/<its name>``."""
+
+    name = _safe_metadata_repo_filename(filename)
+    return OutboxEntry("metadata", f"{_METADATA_REPO_FOLDER}/{name}", f"metadata: add {name}", content)
+
+
 def maybe_store_uploaded_metadata_file(filename: str, content: bytes) -> bool:
-    """Upload ``content`` to the credential log repository metadata folder."""
+    """Copy ``content`` to the log repository's metadata folder now; whether it is there."""
 
     if not content or not is_logging_enabled():
         return False
+    return deliver(_metadata_entry(filename, content)) is Delivery.DELIVERED
 
-    safe_name = _safe_metadata_repo_filename(filename)
 
-    try:
-        existing = github_metadata_blobs()
-    except Exception as exc:
-        logger.warning("Unable to read the metadata folder of the log repository: %s", exc)
-        return False
+@dataclass
+class RecentMetadata:
+    """The metadata this process delivered lately, by blob SHA: a tree read just after a delivery
+    may not show it yet, and the same content queued under another name is not copied twice."""
 
-    blob_sha = git_blob_sha(content)
-    same = next((name for name, sha in existing.items() if sha == blob_sha), None)
-    if same is not None:
+    delivered: dict[str, float] = field(default_factory=dict)
+    lock: threading.Lock = field(default_factory=threading.Lock)
+
+
+RECENT_METADATA = RecentMetadata()
+_RECENT_SECONDS = 600.0
+
+
+def _delivered_lately(blob_sha: str) -> bool:
+    now = time.time()
+    with RECENT_METADATA.lock:
+        RECENT_METADATA.delivered = {
+            sha: when for sha, when in RECENT_METADATA.delivered.items() if 0 <= now - when < _RECENT_SECONDS
+        }
+        return blob_sha in RECENT_METADATA.delivered
+
+
+def _deliver_metadata(entry: OutboxEntry) -> Delivery:
+    """An uploaded metadata file, unless its content is in the folder already under any name;
+    at its queued path, or beside a file of other content there under its hashed name."""
+
+    name = posixpath.basename(entry.path)
+    blob_sha = git_blob_sha(entry.content)
+    existing = github_metadata_blobs()
+    same = next((there for there, sha in existing.items() if sha == blob_sha), None)
+    if same is not None or _delivered_lately(blob_sha):
         logger.info(
             "Skipping upload of metadata file %s; identical content already present as %s.",
-            safe_name,
-            same,
+            name,
+            same or "a file delivered lately",
         )
-        return False
+        return Delivery.DELIVERED
+    try:
+        _create_metadata_file(name, entry.content, blob_sha, name_taken=name in existing)
+    except _PathTaken as exc:
+        logger.warning("Dropped metadata file %s: %s", name, exc)
+        return Delivery.DROPPED
+    with RECENT_METADATA.lock:
+        RECENT_METADATA.delivered[blob_sha] = time.time()
+    logger.info("Delivered %s to the credential log", entry.path)
+    return Delivery.DELIVERED
+
+
+def _deliver_log(entry: OutboxEntry) -> Delivery:
+    """A registration's log entry, at its path: found there already, it was delivered before."""
+
+    there = _create_file(entry.path, entry.content, entry.message)
+    if there is not None and there not in ("", git_blob_sha(entry.content)):
+        logger.warning("Dropped %s: the log repository holds another file at its path", entry.path)
+        return Delivery.DROPPED
+    logger.info("Delivered %s to the credential log", entry.path)
+    return Delivery.DELIVERED
+
+
+# GitHub's answers that say it cannot take a file now: the token, its scope or the repository
+# (401, 403, 404), a timeout, a commit racing another (409), its rate limits; and every 5xx.
+_UNAVAILABLE_STATUSES = frozenset({401, 403, 404, 408, 409, 429})
+
+
+def deliver(entry: OutboxEntry) -> Delivery:
+    """Copy one queued entry to its path in the log repository (``github_outbox.flush`` calls it).
+
+    DELIVERED when it is there, put now or found from an earlier delivery; UNAVAILABLE when
+    GitHub, the network or the token cannot take it now (it stays queued); DROPPED when GitHub
+    refuses it for good, or it cannot be read. Never raises.
+    """
 
     try:
-        return _create_metadata_file(safe_name, content, blob_sha, name_taken=safe_name in existing)
-    except Exception as exc:
-        logger.warning("Failed to upload metadata file %s: %s", safe_name, exc)
-        return False
+        if entry.kind == "metadata":
+            return _deliver_metadata(entry)
+        return _deliver_log(entry)
+    except urllib_error.HTTPError as exc:
+        if exc.code in _UNAVAILABLE_STATUSES or exc.code >= 500:
+            logger.warning("GitHub could not take %s now (HTTP %s); it stays queued", entry.path, exc.code)
+            return Delivery.UNAVAILABLE
+        logger.warning("GitHub refused %s (HTTP %s): dropped", entry.path, exc.code)
+        return Delivery.DROPPED
+    except (GitHubUnavailable, OSError, http_client.HTTPException) as exc:
+        logger.warning("GitHub could not take %s now; it stays queued: %s", entry.path, exc)
+        return Delivery.UNAVAILABLE
+    except Exception:
+        logger.warning("Dropped %s from the credential log: it could not be delivered", entry.path, exc_info=True)
+        return Delivery.DROPPED
 
 
 def _hashed_metadata_path(name: str, blob_sha: str) -> str:
@@ -565,4 +644,8 @@ def _create_metadata_file(name: str, content: bytes, blob_sha: str, *, name_take
         return True
     if there in ("", blob_sha):
         return False
-    raise RuntimeError(f"another file is at {hashed}")
+    raise _PathTaken(f"another file is at {hashed}")
+
+
+class _PathTaken(Exception):
+    """Another file holds the only path left for a metadata file: it is dropped."""

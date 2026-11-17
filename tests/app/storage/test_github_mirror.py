@@ -1,9 +1,11 @@
 """Tests for github_mirror: the GitHub client, the registration log and the metadata copy."""
 
 import base64
+import http.client
 import io
 import json
 import logging
+import types
 import uuid
 from datetime import datetime, timezone
 from urllib.error import HTTPError, URLError
@@ -13,6 +15,7 @@ import pytest
 
 from server.app.storage import github_mirror
 from server.app.storage.github_mirror import is_logging_enabled
+from server.app.storage.github_outbox import Delivery, OutboxEntry
 from tests.app.storage import fake_github
 
 
@@ -831,6 +834,10 @@ def test_a_metadata_file_named_for_a_folder_is_logged_as_metadata_json(name):
     assert github_mirror._safe_metadata_repo_filename(name) == "metadata.json"
 
 
+def _deliver_metadata(filename, content):
+    return github_mirror.deliver(github_mirror._metadata_entry(filename, content))
+
+
 def test_no_metadata_is_copied_while_the_log_is_off(monkeypatch):
     github = fake_github.install(monkeypatch)
     monkeypatch.setenv("ENABLE_GITHUB_LOGGING", "0")
@@ -840,10 +847,29 @@ def test_no_metadata_is_copied_while_the_log_is_off(monkeypatch):
     assert github.calls == []
 
 
+def test_an_empty_metadata_file_is_not_copied(monkeypatch):
+    github = fake_github.install(monkeypatch)
+
+    assert github_mirror.maybe_store_uploaded_metadata_file("demo.json", b"") is False
+
+    assert github.calls == []
+
+
+def test_a_metadata_copy_says_whether_the_file_is_there(monkeypatch):
+    github = fake_github.install(monkeypatch)
+
+    assert github_mirror.maybe_store_uploaded_metadata_file("demo.json", b'{"entry":1}') is True
+    assert github_mirror.maybe_store_uploaded_metadata_file("again.json", b'{"entry":1}') is True
+    github.fail.append(fake_github.http_error(503))
+    assert github_mirror.maybe_store_uploaded_metadata_file("other.json", b'{"entry":2}') is False
+
+    assert sorted(github.files) == ["metadata/demo.json"]
+
+
 def test_metadata_is_added_to_an_empty_repository(monkeypatch):
     github = fake_github.install(monkeypatch)
 
-    assert github_mirror.maybe_store_uploaded_metadata_file("../../../custom.json", b'{"entry":3}') is True
+    assert _deliver_metadata("../../../custom.json", b'{"entry":3}') is Delivery.DELIVERED
 
     assert github.files == {"metadata/custom.json": b'{"entry":3}'}
     [(path, body)] = github.puts
@@ -855,7 +881,7 @@ def test_metadata_is_added_to_a_repository_without_a_metadata_folder(monkeypatch
     github = fake_github.install(monkeypatch)
     github.files["logs/unknown/one.json"] = b"{}"
 
-    assert github_mirror.maybe_store_uploaded_metadata_file("demo.json", b'{"entry":1}') is True
+    assert _deliver_metadata("demo.json", b'{"entry":1}') is Delivery.DELIVERED
 
     assert github.files["metadata/demo.json"] == b'{"entry":1}'
 
@@ -865,7 +891,7 @@ def test_metadata_already_there_under_another_name_is_not_copied_again(monkeypat
     github.files["metadata/existing.json"] = b'{"entry":1}'
 
     with caplog.at_level(logging.INFO, logger=github_mirror.__name__):
-        assert github_mirror.maybe_store_uploaded_metadata_file("demo.json", b'{"entry":1}') is False
+        assert _deliver_metadata("demo.json", b'{"entry":1}') is Delivery.DELIVERED
 
     assert github.puts == []
     assert "identical content already present as existing.json" in caplog.text
@@ -876,7 +902,7 @@ def test_metadata_already_there_is_found_past_the_contents_api_s_1000_entries(mo
     for index in range(1_500):
         github.files[f"metadata/file-{index:04d}.json"] = f'{{"entry":{index}}}'.encode()
 
-    assert github_mirror.maybe_store_uploaded_metadata_file("again.json", b'{"entry":1400}') is False
+    assert _deliver_metadata("again.json", b'{"entry":1400}') is Delivery.DELIVERED
 
     assert github.puts == []
     assert ("GET", "git/trees/tree-metadata") in github.calls
@@ -887,7 +913,7 @@ def test_metadata_in_a_folder_inside_metadata_is_not_the_folder_s_own(monkeypatc
     github = fake_github.install(monkeypatch)
     github.files["metadata/archive/old.json"] = b'{"entry":1}'
 
-    assert github_mirror.maybe_store_uploaded_metadata_file("demo.json", b'{"entry":1}') is True
+    assert _deliver_metadata("demo.json", b'{"entry":1}') is Delivery.DELIVERED
 
     assert github.files["metadata/demo.json"] == b'{"entry":1}'
 
@@ -898,7 +924,7 @@ def test_metadata_with_a_taken_name_is_added_beside_it_under_its_hash(monkeypatc
     content_sha = github_mirror.git_blob_sha(b'{"entry":2}')
     hashed = f"metadata/demo-{content_sha[:12]}.json"
 
-    assert github_mirror.maybe_store_uploaded_metadata_file(" demo.json ", b'{"entry":2}') is True
+    assert _deliver_metadata(" demo.json ", b'{"entry":2}') is Delivery.DELIVERED
 
     assert github.files == {"metadata/demo.json": b'{"entry":1}', hashed: b'{"entry":2}'}
     [(_path, body)] = github.puts
@@ -929,7 +955,7 @@ def test_a_name_taken_after_the_tree_was_read_sends_the_file_to_its_hashed_name(
     _after_the_tree_read(monkeypatch, github, {"metadata/demo.json": b'{"entry":1}'})
     hashed = github_mirror._hashed_metadata_path("demo.json", github_mirror.git_blob_sha(b'{"entry":2}'))
 
-    assert github_mirror.maybe_store_uploaded_metadata_file("demo.json", b'{"entry":2}') is True
+    assert _deliver_metadata("demo.json", b'{"entry":2}') is Delivery.DELIVERED
 
     assert github.files["metadata/demo.json"] == b'{"entry":1}'
     assert github.files[hashed] == b'{"entry":2}'
@@ -940,7 +966,7 @@ def test_a_copy_that_landed_after_the_tree_was_read_is_not_made_twice(monkeypatc
     github.files["metadata/other.json"] = b"{}"
     _after_the_tree_read(monkeypatch, github, {"metadata/demo.json": b'{"entry":1}'})
 
-    assert github_mirror.maybe_store_uploaded_metadata_file("demo.json", b'{"entry":1}') is False
+    assert _deliver_metadata("demo.json", b'{"entry":1}') is Delivery.DELIVERED
 
     assert sorted(github.files) == ["metadata/demo.json", "metadata/other.json"]
 
@@ -952,10 +978,11 @@ def test_a_taken_name_github_does_not_show_yet_adds_nothing(monkeypatch, caplog)
     github.unseen.add("metadata/demo.json")
 
     with caplog.at_level(logging.WARNING, logger=github_mirror.__name__):
-        assert github_mirror.maybe_store_uploaded_metadata_file("demo.json", b'{"entry":2}') is False
+        assert _deliver_metadata("demo.json", b'{"entry":2}') is Delivery.UNAVAILABLE
 
     assert sorted(github.files) == ["metadata/demo.json", "metadata/other.json"]
     assert "does not show yet" in caplog.text
+    assert "it stays queued" in caplog.text
 
 
 def test_a_hashed_name_holding_the_same_content_adds_nothing(monkeypatch):
@@ -964,7 +991,7 @@ def test_a_hashed_name_holding_the_same_content_adds_nothing(monkeypatch):
     hashed = github_mirror._hashed_metadata_path("demo.json", github_mirror.git_blob_sha(b'{"entry":2}'))
     _after_the_tree_read(monkeypatch, github, {hashed: b'{"entry":2}'})
 
-    assert github_mirror.maybe_store_uploaded_metadata_file("demo.json", b'{"entry":2}') is False
+    assert _deliver_metadata("demo.json", b'{"entry":2}') is Delivery.DELIVERED
 
     assert github.puts == []
 
@@ -976,7 +1003,7 @@ def test_a_hashed_name_holding_other_content_is_left_alone(monkeypatch, caplog):
     _after_the_tree_read(monkeypatch, github, {hashed: b"something else"})
 
     with caplog.at_level(logging.WARNING, logger=github_mirror.__name__):
-        assert github_mirror.maybe_store_uploaded_metadata_file("demo.json", b'{"entry":2}') is False
+        assert _deliver_metadata("demo.json", b'{"entry":2}') is Delivery.DROPPED
 
     assert github.files[hashed] == b"something else"
     assert f"another file is at {hashed}" in caplog.text
@@ -994,9 +1021,9 @@ def test_a_422_that_is_not_about_a_file_there_is_a_refusal(monkeypatch, caplog):
     monkeypatch.setattr(github_mirror, "_request", _refuse_puts)
 
     with caplog.at_level(logging.WARNING, logger=github_mirror.__name__):
-        assert github_mirror.maybe_store_uploaded_metadata_file("demo.json", b"{}") is False
+        assert _deliver_metadata("demo.json", b"{}") is Delivery.DROPPED
 
-    assert "Failed to upload metadata file demo.json" in caplog.text
+    assert "GitHub refused metadata/demo.json (HTTP 422): dropped" in caplog.text
     assert ("GET", "contents/metadata/demo.json") not in github.calls
 
 
@@ -1023,7 +1050,7 @@ def test_a_tree_github_cuts_short_is_logged_and_read(monkeypatch, caplog):
     monkeypatch.setattr(github, "_tree", _truncated)
 
     with caplog.at_level(logging.INFO, logger=github_mirror.__name__):
-        assert github_mirror.maybe_store_uploaded_metadata_file("demo.json", b'{"entry":1}') is False
+        assert _deliver_metadata("demo.json", b'{"entry":1}') is Delivery.DELIVERED
 
     assert "listed the log repository's metadata folder in part" in caplog.text
 
@@ -1052,10 +1079,10 @@ def test_an_answer_the_mirror_does_not_read_copies_nothing(monkeypatch, caplog, 
     monkeypatch.setattr(github_mirror, "_request", _request)
 
     with caplog.at_level(logging.WARNING, logger=github_mirror.__name__):
-        assert github_mirror.maybe_store_uploaded_metadata_file("demo.json", b"{}") is False
+        assert _deliver_metadata("demo.json", b"{}") is Delivery.UNAVAILABLE
 
     assert puts == []
-    assert "Unable to read the metadata folder of the log repository" in caplog.text
+    assert "GitHub could not take metadata/demo.json now; it stays queued" in caplog.text
 
 
 def test_items_of_a_tree_that_are_not_files_are_left_out(monkeypatch):
@@ -1074,10 +1101,10 @@ def test_github_failing_to_list_copies_nothing(monkeypatch, caplog):
     github.fail.append(fake_github.http_error(503))
 
     with caplog.at_level(logging.WARNING, logger=github_mirror.__name__):
-        assert github_mirror.maybe_store_uploaded_metadata_file("demo.json", b"{}") is False
+        assert _deliver_metadata("demo.json", b"{}") is Delivery.UNAVAILABLE
 
     assert github.puts == []
-    assert "Unable to read the metadata folder" in caplog.text
+    assert "GitHub could not take metadata/demo.json now (HTTP 503); it stays queued" in caplog.text
 
 
 def test_a_root_listing_github_refuses_is_not_an_empty_repository(monkeypatch):
@@ -1100,6 +1127,116 @@ def test_github_failing_to_take_the_file_is_logged(monkeypatch, caplog):
     monkeypatch.setattr(github_mirror, "_request", _refuse_puts)
 
     with caplog.at_level(logging.WARNING, logger=github_mirror.__name__):
-        assert github_mirror.maybe_store_uploaded_metadata_file("demo.json", b"{}") is False
+        assert _deliver_metadata("demo.json", b"{}") is Delivery.UNAVAILABLE
 
-    assert "Failed to upload metadata file demo.json" in caplog.text
+    assert "GitHub could not take metadata/demo.json now (HTTP 500); it stays queued" in caplog.text
+
+
+def test_the_same_content_delivered_lately_under_another_name_is_not_copied_twice(monkeypatch):
+    github = fake_github.install(monkeypatch)
+    clock = types.SimpleNamespace(now=1_000.0)
+    monkeypatch.setattr(github_mirror, "time", types.SimpleNamespace(time=lambda: clock.now, sleep=lambda _s: None))
+
+    assert _deliver_metadata("first.json", b'{"entry":1}') is Delivery.DELIVERED
+    del github.files["metadata/first.json"]  # A tree read just after a delivery may not show it yet.
+
+    assert _deliver_metadata("second.json", b'{"entry":1}') is Delivery.DELIVERED
+    assert sorted(github.files) == []
+
+    clock.now += 601
+    assert _deliver_metadata("second.json", b'{"entry":1}') is Delivery.DELIVERED
+    assert sorted(github.files) == ["metadata/second.json"]
+
+
+def _log_entry(content: bytes = b'{"rp_id": "example.com"}') -> OutboxEntry:
+    return OutboxEntry(
+        "registration", "logs/unknown/20260403T010203Z_abc123.json", "add: 20260403T010203Z_abc123.json (AAGUID=unknown)", content
+    )
+
+
+def test_a_log_entry_is_delivered_to_its_path(monkeypatch, caplog):
+    github = fake_github.install(monkeypatch)
+
+    with caplog.at_level(logging.INFO, logger=github_mirror.__name__):
+        assert github_mirror.deliver(_log_entry()) is Delivery.DELIVERED
+
+    assert github.files == {"logs/unknown/20260403T010203Z_abc123.json": b'{"rp_id": "example.com"}'}
+    [(_path, body)] = github.puts
+    assert body["message"] == "add: 20260403T010203Z_abc123.json (AAGUID=unknown)"
+    assert "Delivered logs/unknown/20260403T010203Z_abc123.json to the credential log" in caplog.text
+
+
+def test_a_log_entry_delivered_again_finds_its_file_and_makes_no_second(monkeypatch):
+    github = fake_github.install(monkeypatch)
+    assert github_mirror.deliver(_log_entry()) is Delivery.DELIVERED
+
+    assert github_mirror.deliver(_log_entry()) is Delivery.DELIVERED
+
+    assert list(github.files) == ["logs/unknown/20260403T010203Z_abc123.json"]
+    assert len(github.puts) == 1
+
+
+def test_a_log_entry_whose_file_github_does_not_show_yet_counts_as_there(monkeypatch):
+    github = fake_github.install(monkeypatch)
+    assert github_mirror.deliver(_log_entry()) is Delivery.DELIVERED
+    github.unseen.add("logs/unknown/20260403T010203Z_abc123.json")
+
+    assert github_mirror.deliver(_log_entry()) is Delivery.DELIVERED
+
+    assert len(github.puts) == 1
+
+
+def test_a_log_entry_whose_path_holds_another_file_is_dropped(monkeypatch, caplog):
+    github = fake_github.install(monkeypatch)
+    github.files["logs/unknown/20260403T010203Z_abc123.json"] = b"another registration"
+
+    with caplog.at_level(logging.WARNING, logger=github_mirror.__name__):
+        assert github_mirror.deliver(_log_entry()) is Delivery.DROPPED
+
+    assert github.files["logs/unknown/20260403T010203Z_abc123.json"] == b"another registration"
+    assert "the log repository holds another file at its path" in caplog.text
+
+
+@pytest.mark.parametrize(
+    ("error", "delivery"),
+    [
+        (fake_github.http_error(401), Delivery.UNAVAILABLE),
+        (fake_github.http_error(403, "API rate limit exceeded"), Delivery.UNAVAILABLE),
+        (fake_github.http_error(404), Delivery.UNAVAILABLE),
+        (fake_github.http_error(408), Delivery.UNAVAILABLE),
+        (fake_github.http_error(409, "is at abc but expected def"), Delivery.UNAVAILABLE),
+        (fake_github.http_error(429), Delivery.UNAVAILABLE),
+        (fake_github.http_error(500), Delivery.UNAVAILABLE),
+        (fake_github.http_error(502), Delivery.UNAVAILABLE),
+        (fake_github.http_error(503), Delivery.UNAVAILABLE),
+        (fake_github.http_error(400), Delivery.DROPPED),
+        (fake_github.http_error(410), Delivery.DROPPED),
+        (fake_github.http_error(413), Delivery.DROPPED),
+        (fake_github.http_error(422, "Invalid request. content is not valid Base64"), Delivery.DROPPED),
+        (URLError("network down"), Delivery.UNAVAILABLE),
+        (URLError(TimeoutError("timed out")), Delivery.UNAVAILABLE),
+        (TimeoutError("timed out"), Delivery.UNAVAILABLE),
+        (ConnectionResetError("reset"), Delivery.UNAVAILABLE),
+        (http.client.IncompleteRead(b""), Delivery.UNAVAILABLE),
+        (github_mirror.GitHubUnavailable("not JSON"), Delivery.UNAVAILABLE),
+        (ValueError("a bug"), Delivery.DROPPED),
+    ],
+)
+def test_what_github_answers_decides_whether_an_entry_waits_or_is_dropped(monkeypatch, caplog, error, delivery):
+    github = fake_github.install(monkeypatch)
+    github.fail.append(error)
+
+    with caplog.at_level(logging.WARNING, logger=github_mirror.__name__):
+        assert github_mirror.deliver(_log_entry()) is delivery
+
+    assert github.files == {}
+    assert ("stays queued" in caplog.text) is (delivery is Delivery.UNAVAILABLE)
+
+
+def test_an_entry_waits_while_there_is_no_token(monkeypatch):
+    monkeypatch.delenv("GITHUB_TOKEN", raising=False)
+    monkeypatch.setattr(
+        github_mirror.urllib_request, "urlopen", lambda *_args, **_kwargs: pytest.fail("a request without a token was sent")
+    )
+
+    assert github_mirror.deliver(_log_entry()) is Delivery.UNAVAILABLE

@@ -7,6 +7,7 @@ import pytest
 
 from server.app import challenge_registry, visitor_session
 from server.app.mds import listed_uploads
+from server.app.storage import github_mirror
 
 # Hypothesis writes under <cwd>/.hypothesis whatever its database setting -- a
 # cache of each local module's constants, the Unicode character map -- so its
@@ -61,7 +62,7 @@ os.environ.setdefault("FIDO_SERVER_SECRET_KEY", "test-session-secret-0123456789a
 # A registration logs itself to the credential log repository on GitHub
 # (storage/github_mirror.py), with whatever GITHUB_TOKEN the shell holds. No test
 # reaches GitHub: logging is off for the run, every test runs without a token
-# (_no_github_token), and a test of the log turns it on against its own stand-in
+# (_isolated_github_log), and a test of the log turns it on against its own stand-in
 # for the API (tests/app/storage/fake_github.py).
 os.environ["ENABLE_GITHUB_LOGGING"] = "0"
 
@@ -114,8 +115,10 @@ def _fresh_touch_throttle(monkeypatch):
 
 
 @pytest.fixture(autouse=True)
-def _no_github_token(monkeypatch):
+def _isolated_github_log(monkeypatch):
     """Run every test without a GitHub token: the log is off without one, and the GitHub
-    client refuses to build a request without one (github_mirror._token)."""
+    client refuses to build a request without one (github_mirror._token). And give every
+    test its own memory of the metadata delivered lately, which is process-global."""
 
     monkeypatch.delenv("GITHUB_TOKEN", raising=False)
+    monkeypatch.setattr(github_mirror, "RECENT_METADATA", github_mirror.RecentMetadata())
