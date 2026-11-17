@@ -136,6 +136,23 @@ has the whole picture.
 
 ---
 
+## Documentation
+
+* [deploy/README.md](deploy/README.md): the Cloud Run service, how a push to
+  `main` is checked and deployed, and
+  [every setting the server reads](deploy/README.md#environment-variables), with its
+  default.
+* [docs/DESIGN.md](docs/DESIGN.md): the UI's design, security and serving rules.
+* [docs/STORAGE.md](docs/STORAGE.md): what the server keeps for a visitor, its
+  limits, how long it keeps it, and the credential log.
+* [docs/DECODER.md](docs/DECODER.md): the Codec's decoder and encoder.
+* [docs/MDS_SNAPSHOT.md](docs/MDS_SNAPSHOT.md): the FIDO MDS snapshot: where it
+  comes from, how it is verified, published and served.
+* [AGENTS.md](AGENTS.md): for development: the code's map, running the server and
+  the UI without Docker, the tests and the rules every change keeps.
+
+---
+
 ## License
 
 Copyright 2025-2026 FEITIAN Technologies Co., Ltd., under the [Apache License 2.0](LICENSE).
