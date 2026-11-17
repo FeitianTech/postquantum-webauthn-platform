@@ -223,7 +223,7 @@
     ],
     [
      "Content-Length",
-     "63"
+     "91"
     ],
     [
      "X-Content-Type-Options",
@@ -267,9 +267,9 @@
      }
     }
    ],
-   "bodySha256": "7f70aa8e5aacd142a9e1621aa76850f73b584972b054ca08dcb6cb2bb8bccc36",
+   "bodySha256": "a9ce3ae80e64419bc44f0c01afda37ca1a3c4679f05a32dba7db2e1ea171a700",
    "body": {
-    "error": "Invalid challenge format: input is not hexadecimal"
+    "error": "Invalid challenge format: not hex text or a $hex, $base64 or $base64url value."
    }
   },
   {

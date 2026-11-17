@@ -110,7 +110,9 @@ def test_begin_refuses_an_extension_value_it_cannot_read():
     response = _begin({"extensions": {"prf": {"eval": {"first": "not hex"}}}})
 
     assert response.status_code == 400
-    assert response.get_json() == {"error": "Invalid extension value: input is not hexadecimal"}
+    assert response.get_json() == {
+        "error": "Invalid extension value: not hex text or a $hex, $base64 or $base64url value."
+    }
 
 
 def _base_payload():

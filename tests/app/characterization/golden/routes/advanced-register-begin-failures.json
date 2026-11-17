@@ -293,7 +293,7 @@
     ],
     [
      "Content-Length",
-     "61"
+     "89"
     ],
     [
      "X-Content-Type-Options",
@@ -325,9 +325,9 @@
     ]
    ],
    "cookies": [],
-   "bodySha256": "3501ed8e7e7e24e4210a607fb585a6f88887fe441925ba263285059b08476258",
+   "bodySha256": "970b81a5b73dd51c9710ad42feb7e07aac7ec2be8b68c4bd20281f6eeecfeda5",
    "body": {
-    "error": "Invalid user ID format: input is not hexadecimal"
+    "error": "Invalid user ID format: not hex text or a $hex, $base64 or $base64url value."
    }
   },
   {
@@ -446,7 +446,7 @@
     ],
     [
      "Content-Length",
-     "63"
+     "91"
     ],
     [
      "X-Content-Type-Options",
@@ -478,9 +478,9 @@
     ]
    ],
    "cookies": [],
-   "bodySha256": "7f70aa8e5aacd142a9e1621aa76850f73b584972b054ca08dcb6cb2bb8bccc36",
+   "bodySha256": "a9ce3ae80e64419bc44f0c01afda37ca1a3c4679f05a32dba7db2e1ea171a700",
    "body": {
-    "error": "Invalid challenge format: input is not hexadecimal"
+    "error": "Invalid challenge format: not hex text or a $hex, $base64 or $base64url value."
    }
   },
   {

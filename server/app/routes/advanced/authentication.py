@@ -59,7 +59,7 @@ def advanced_authenticate_begin():
         try:
             challenge_bytes = client_binary.read_request_bytes(challenge_value)
         except (ValueError, TypeError) as exc:
-            return jsonify({"error": f"Invalid challenge format: {exc}"}), 400
+            return jsonify({"error": client_binary.unreadable("Invalid challenge format", exc)}), 400
 
     temp_server, rp_id = assertion_options.assertion_server(public_key)
     uv_req = assertion_options.user_verification_requirement(public_key)
@@ -87,7 +87,7 @@ def advanced_authenticate_begin():
     try:
         processed_extensions = assertion_options.process_assertion_extensions(public_key.get("extensions", {}))
     except ValueError as exc:
-        return jsonify({"error": f"Invalid extension value: {exc}"}), 400
+        return jsonify({"error": client_binary.unreadable("Invalid extension value", exc)}), 400
 
     credentials_argument: list[Any] | None = credentials_for_begin if credentials_for_begin else None
     options, state = temp_server.authenticate_begin(

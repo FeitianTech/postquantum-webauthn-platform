@@ -11,10 +11,16 @@ bytes are refused when they read as anything else (``read_request_bytes``).
 """
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable, Iterable, Mapping
 from typing import Any
 
 from .. import encoding
+
+logger = logging.getLogger(__name__)
+
+# What a request field that must be bytes is told when it is not: the spellings it takes.
+NOT_BYTES = "not hex text or a $hex, $base64 or $base64url value"
 
 # The wrappers the Advanced editor writes, each with the one alphabet it holds.
 _WRAPPERS: tuple[tuple[str, str, Callable[[str], bytes]], ...] = (
@@ -167,5 +173,14 @@ def read_request_bytes(value: Any) -> bytes:
 
     decoded = read_request_field(value)
     if not isinstance(decoded, bytes):
-        raise ValueError("not hex text or a $hex, $base64 or $base64url value")
+        raise ValueError(NOT_BYTES)
     return decoded
+
+
+def unreadable(what: str, exc: Exception) -> str:
+    """The answer for a request field that did not read as bytes: ``what``, then the spellings
+    a field takes. Never ``exc``'s own text (a decoder's words, or a Python type's name): that
+    is logged at INFO."""
+
+    logger.info("%s: %s", what, exc, exc_info=exc)
+    return f"{what}: {NOT_BYTES}."

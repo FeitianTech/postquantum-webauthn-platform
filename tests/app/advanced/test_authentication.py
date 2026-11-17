@@ -159,7 +159,9 @@ def test_begin_refuses_an_extension_value_it_cannot_read():
     )
 
     assert response.status_code == 400
-    assert response.get_json() == {"error": "Invalid extension value: input is not hexadecimal"}
+    assert response.get_json() == {
+        "error": "Invalid extension value: not hex text or a $hex, $base64 or $base64url value."
+    }
 
 
 def test_begin_refuses_a_challenge_that_does_not_read_as_bytes():
@@ -170,7 +172,7 @@ def test_begin_refuses_a_challenge_that_does_not_read_as_bytes():
 
     assert response.status_code == 400
     assert response.get_json() == {
-        "error": "Invalid challenge format: not hex text or a $hex, $base64 or $base64url value"
+        "error": "Invalid challenge format: not hex text or a $hex, $base64 or $base64url value."
     }
 
 

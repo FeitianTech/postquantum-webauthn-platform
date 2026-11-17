@@ -85,7 +85,7 @@ def parse_begin_request(data: Any) -> tuple[BeginRequest | None, Any]:
         try:
             user_id_bytes = client_binary.read_request_bytes(user_id_value)
         except (ValueError, TypeError) as exc:
-            return None, (jsonify({"error": f"Invalid user ID format: {exc}"}), 400)
+            return None, (jsonify({"error": client_binary.unreadable("Invalid user ID format", exc)}), 400)
     else:
         user_id_bytes = username.encode("utf-8")
 
@@ -95,7 +95,7 @@ def parse_begin_request(data: Any) -> tuple[BeginRequest | None, Any]:
         try:
             challenge_bytes = client_binary.read_request_bytes(challenge_value)
         except (ValueError, TypeError) as exc:
-            return None, (jsonify({"error": f"Invalid challenge format: {exc}"}), 400)
+            return None, (jsonify({"error": client_binary.unreadable("Invalid challenge format", exc)}), 400)
 
     return BeginRequest(public_key, username, display_name, user_id_bytes, challenge_bytes), None
 
@@ -182,7 +182,9 @@ def build_exclude_list(public_key: Mapping[str, Any]) -> list[Any]:
                 try:
                     cred_id = client_binary.read_request_bytes(exclude_cred.get("id", ""))
                 except (ValueError, TypeError) as exc:
-                    raise ValueError(f"Invalid excludeCredentials[{index}].id format: {exc}") from exc
+                    raise ValueError(
+                        client_binary.unreadable(f"Invalid excludeCredentials[{index}].id format", exc)
+                    ) from exc
                 if cred_id:
                     exclude_list.append(
                         PublicKeyCredentialDescriptor(

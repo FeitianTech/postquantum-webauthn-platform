@@ -120,6 +120,18 @@ def test_a_request_field_that_must_be_bytes_reads_hex_and_wrappers():
     assert client_binary.read_request_bytes({"$base64": "YWI="}) == b"ab"
 
 
+def test_an_unreadable_field_is_answered_with_the_spellings_it_takes_and_its_reason_logged(caplog):
+    with pytest.raises(encoding.EncodingError) as raised:
+        client_binary.read_request_bytes("zz")
+
+    with caplog.at_level("INFO", logger=client_binary.__name__):
+        sentence = client_binary.unreadable("Invalid challenge format", raised.value)
+
+    assert sentence == "Invalid challenge format: not hex text or a $hex, $base64 or $base64url value."
+    assert str(raised.value) not in sentence
+    assert [(record.levelname, record.exc_info[1]) for record in caplog.records] == [("INFO", raised.value)]
+
+
 def test_decode_client_binary_accepts_base64url_mapping_key():
     raw = b"\x00\x01\x02\xfa"
     decoded = client_binary.read({"$base64url": b64u(raw)}, wrappers=True)

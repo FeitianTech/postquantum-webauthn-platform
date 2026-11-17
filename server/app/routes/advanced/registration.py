@@ -12,6 +12,7 @@ from ...challenge_registry import consume_ceremony_state, stamp_ceremony_state
 from ...config import request_limits
 from ...mds import provisioning as mds_provisioning
 from ...storage import credential_artifacts
+from ...webauthn import client_binary
 from ...webauthn.attachments import request_hints
 from ...webauthn.attestation import request_expectations
 from .. import ceremony_session, json_body
@@ -207,7 +208,7 @@ def advanced_register_begin():
     try:
         processed_extensions = registration_options.build_processed_extensions(public_key)
     except ValueError as exc:
-        return jsonify({"error": f"Invalid extension value: {exc}"}), 400
+        return jsonify({"error": client_binary.unreadable("Invalid extension value", exc)}), 400
 
     options, state = temp_server.register_begin(
         user_entity,

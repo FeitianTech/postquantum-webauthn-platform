@@ -35,9 +35,9 @@ def test_a_request_that_is_no_object_is_refused(body, error):
 @pytest.mark.parametrize(
     ("changes", "error"),
     [
-        ({"user": {"id": 5, "name": "alice"}}, "Invalid user ID format: not hex text or a $hex, $base64 or $base64url value"),
-        ({"challenge": 5}, "Invalid challenge format: not hex text or a $hex, $base64 or $base64url value"),
-        ({"challenge": {"value": "00"}}, "Invalid challenge format: not hex text or a $hex, $base64 or $base64url value"),
+        ({"user": {"id": 5, "name": "alice"}}, "Invalid user ID format: not hex text or a $hex, $base64 or $base64url value."),
+        ({"challenge": 5}, "Invalid challenge format: not hex text or a $hex, $base64 or $base64url value."),
+        ({"challenge": {"value": "00"}}, "Invalid challenge format: not hex text or a $hex, $base64 or $base64url value."),
     ],
 )
 def test_a_user_id_or_challenge_that_does_not_read_as_bytes_is_refused(changes, error):
@@ -53,14 +53,14 @@ def test_a_user_id_or_challenge_that_does_not_read_as_bytes_is_refused(changes, 
 @pytest.mark.parametrize(
     ("exclude_credentials", "error"),
     [
-        ([{"type": "public-key", "id": "%%%"}], "Invalid excludeCredentials[0].id format: input is not hexadecimal"),
+        ([{"type": "public-key", "id": "%%%"}], "Invalid excludeCredentials[0].id format: not hex text or a $hex, $base64 or $base64url value."),
         (
             [{"type": "public-key", "id": "0102"}, {"type": "public-key", "id": {"$base64url": "%%"}}],
-            "Invalid excludeCredentials[1].id format: input is not base64url",
+            "Invalid excludeCredentials[1].id format: not hex text or a $hex, $base64 or $base64url value.",
         ),
         (
             [{"type": "public-key", "id": 5}],
-            "Invalid excludeCredentials[0].id format: not hex text or a $hex, $base64 or $base64url value",
+            "Invalid excludeCredentials[0].id format: not hex text or a $hex, $base64 or $base64url value.",
         ),
     ],
 )
