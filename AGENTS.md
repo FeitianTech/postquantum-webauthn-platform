@@ -336,11 +336,11 @@ its logic out here first.
   the explorer shows them, MDS values as words with a fixed list of acronyms in capitals,
   `tests/fixtures/mds-enum-spellings.json`, which the page's static filter options are held to;
   `certificates.py`, what their roots say), `entries.py`,
-  `snapshot.py` (a snapshot's seven files, from its BLOB, payload and cache state) and `sets.py`
+  `snapshot.py` (a snapshot's seven files, from its BLOB, payload and cache state),
+  `explorer_files.py` (what browsers load, derived from the full explorer snapshot: the list,
+  the icons, each entry's detail; kept per snapshot by `cache.load_explorer_files`) and `sets.py`
   (the snapshot in Cloud Storage) without Flask. The runtime: `provisioning.py` (local files,
   Cloud Storage, upstream), `cache.py` (the loaders and their one `SnapshotCache`),
-  `explorer_files.py` (what browsers load, derived from the full explorer snapshot: the list,
-  the icons, each entry's detail; kept per snapshot by `cache.load_explorer_files`),
   `uploads.py` (a visitor's uploaded metadata), `listed_uploads.py` (each upload's explorer row
   and Manage Metadata item, worked out once and kept in memory by namespace, name and version,
   within a budget: a listing reads only what was written since), `effective.py` (a visitor's
