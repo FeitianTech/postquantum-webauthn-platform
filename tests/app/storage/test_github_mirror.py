@@ -356,46 +356,22 @@ def test_github_upload_json_builds_add_message_and_base64_content(monkeypatch):
     assert "sha" not in captured["body"]
 
 
-def test_github_upload_file_passes_message_content_and_optional_sha(monkeypatch):
+def test_github_upload_file_creates_the_file_and_never_names_a_sha(monkeypatch):
     captured = {}
 
     def _fake_request(method, url, body=None):
         captured["method"] = method
         captured["url"] = url
         captured["body"] = body
-        return 200, b"{}"
+        return 201, b"{}"
 
     monkeypatch.setattr(github_mirror, "_request", _fake_request)
 
-    github_mirror.github_upload_file(
-        "logs/test.bin",
-        b"\x00\x01\x02",
-        "binary upload",
-        sha="sha-123",
-    )
+    github_mirror.github_upload_file("logs/test.bin", b"\x00\x01\x02", "binary upload")
 
     assert captured["method"] == "PUT"
     assert "contents/logs/test.bin" in captured["url"]
-    assert captured["body"]["message"] == "binary upload"
-    assert captured["body"]["sha"] == "sha-123"
-    assert base64.b64decode(captured["body"]["content"]) == b"\x00\x01\x02"
-
-
-def test_github_upload_file_omits_sha_when_not_provided(monkeypatch):
-    captured = {}
-
-    def _fake_request(method, url, body=None):
-        captured["method"] = method
-        captured["url"] = url
-        captured["body"] = body
-        return 200, b"{}"
-
-    monkeypatch.setattr(github_mirror, "_request", _fake_request)
-
-    github_mirror.github_upload_file("logs/test.bin", b"\x00", "binary upload")
-
-    assert captured["method"] == "PUT"
-    assert "sha" not in captured["body"]
+    assert captured["body"] == {"message": "binary upload", "content": base64.b64encode(b"\x00\x01\x02").decode()}
 
 
 def test_git_blob_sha_matches_git_blob_spec():
@@ -916,16 +892,123 @@ def test_metadata_in_a_folder_inside_metadata_is_not_the_folder_s_own(monkeypatc
     assert github.files["metadata/demo.json"] == b'{"entry":1}'
 
 
-def test_metadata_with_a_taken_name_replaces_the_file_there(monkeypatch):
+def test_metadata_with_a_taken_name_is_added_beside_it_under_its_hash(monkeypatch):
     github = fake_github.install(monkeypatch)
     github.files["metadata/demo.json"] = b'{"entry":1}'
+    content_sha = github_mirror.git_blob_sha(b'{"entry":2}')
+    hashed = f"metadata/demo-{content_sha[:12]}.json"
 
     assert github_mirror.maybe_store_uploaded_metadata_file(" demo.json ", b'{"entry":2}') is True
 
-    assert github.files["metadata/demo.json"] == b'{"entry":2}'
+    assert github.files == {"metadata/demo.json": b'{"entry":1}', hashed: b'{"entry":2}'}
     [(_path, body)] = github.puts
-    assert body["message"] == "metadata: update demo.json"
-    assert body["sha"] == github_mirror.git_blob_sha(b'{"entry":1}')
+    assert body["message"] == f"metadata: add {hashed.removeprefix('metadata/')}"
+    assert "sha" not in body
+
+
+def test_a_hashed_name_keeps_a_name_without_an_extension():
+    assert github_mirror._hashed_metadata_path("statement", "0123456789abcdef") == "metadata/statement-0123456789ab"
+
+
+def _after_the_tree_read(monkeypatch, github, files):
+    """Have ``files`` appear once the metadata folder's tree has been read, as another copy landing then would."""
+
+    answer = github._tree
+
+    def _tree(folder):
+        result = answer(folder)
+        github.files.update(files)
+        return result
+
+    monkeypatch.setattr(github, "_tree", _tree)
+
+
+def test_a_name_taken_after_the_tree_was_read_sends_the_file_to_its_hashed_name(monkeypatch):
+    github = fake_github.install(monkeypatch)
+    github.files["metadata/other.json"] = b"{}"
+    _after_the_tree_read(monkeypatch, github, {"metadata/demo.json": b'{"entry":1}'})
+    hashed = github_mirror._hashed_metadata_path("demo.json", github_mirror.git_blob_sha(b'{"entry":2}'))
+
+    assert github_mirror.maybe_store_uploaded_metadata_file("demo.json", b'{"entry":2}') is True
+
+    assert github.files["metadata/demo.json"] == b'{"entry":1}'
+    assert github.files[hashed] == b'{"entry":2}'
+
+
+def test_a_copy_that_landed_after_the_tree_was_read_is_not_made_twice(monkeypatch):
+    github = fake_github.install(monkeypatch)
+    github.files["metadata/other.json"] = b"{}"
+    _after_the_tree_read(monkeypatch, github, {"metadata/demo.json": b'{"entry":1}'})
+
+    assert github_mirror.maybe_store_uploaded_metadata_file("demo.json", b'{"entry":1}') is False
+
+    assert sorted(github.files) == ["metadata/demo.json", "metadata/other.json"]
+
+
+def test_a_taken_name_github_does_not_show_yet_adds_nothing(monkeypatch, caplog):
+    github = fake_github.install(monkeypatch)
+    github.files["metadata/other.json"] = b"{}"
+    _after_the_tree_read(monkeypatch, github, {"metadata/demo.json": b'{"entry":1}'})
+    github.unseen.add("metadata/demo.json")
+
+    with caplog.at_level(logging.WARNING, logger=github_mirror.__name__):
+        assert github_mirror.maybe_store_uploaded_metadata_file("demo.json", b'{"entry":2}') is False
+
+    assert sorted(github.files) == ["metadata/demo.json", "metadata/other.json"]
+    assert "does not show yet" in caplog.text
+
+
+def test_a_hashed_name_holding_the_same_content_adds_nothing(monkeypatch):
+    github = fake_github.install(monkeypatch)
+    github.files["metadata/demo.json"] = b'{"entry":1}'
+    hashed = github_mirror._hashed_metadata_path("demo.json", github_mirror.git_blob_sha(b'{"entry":2}'))
+    _after_the_tree_read(monkeypatch, github, {hashed: b'{"entry":2}'})
+
+    assert github_mirror.maybe_store_uploaded_metadata_file("demo.json", b'{"entry":2}') is False
+
+    assert github.puts == []
+
+
+def test_a_hashed_name_holding_other_content_is_left_alone(monkeypatch, caplog):
+    github = fake_github.install(monkeypatch)
+    github.files["metadata/demo.json"] = b'{"entry":1}'
+    hashed = github_mirror._hashed_metadata_path("demo.json", github_mirror.git_blob_sha(b'{"entry":2}'))
+    _after_the_tree_read(monkeypatch, github, {hashed: b"something else"})
+
+    with caplog.at_level(logging.WARNING, logger=github_mirror.__name__):
+        assert github_mirror.maybe_store_uploaded_metadata_file("demo.json", b'{"entry":2}') is False
+
+    assert github.files[hashed] == b"something else"
+    assert f"another file is at {hashed}" in caplog.text
+
+
+def test_a_422_that_is_not_about_a_file_there_is_a_refusal(monkeypatch, caplog):
+    github = fake_github.install(monkeypatch)
+    real = github.request
+
+    def _refuse_puts(method, url, body=None):
+        if method == "PUT":
+            raise fake_github.http_error(422, "Invalid request. path is not valid")
+        return real(method, url, body)
+
+    monkeypatch.setattr(github_mirror, "_request", _refuse_puts)
+
+    with caplog.at_level(logging.WARNING, logger=github_mirror.__name__):
+        assert github_mirror.maybe_store_uploaded_metadata_file("demo.json", b"{}") is False
+
+    assert "Failed to upload metadata file demo.json" in caplog.text
+    assert ("GET", "contents/metadata/demo.json") not in github.calls
+
+
+@pytest.mark.parametrize("body", [None, b"not json", b"[]", b'{"message": 3}', b'{"message": "no file"}'])
+def test_a_422_says_a_file_is_there_only_when_its_message_names_the_sha(body):
+    error = HTTPError("https://api.github.com/", 422, "Unprocessable", None, io.BytesIO(body) if body else None)
+
+    assert github_mirror._says_sha_was_not_supplied(error) is False
+
+
+def test_a_422_naming_the_sha_says_a_file_is_there():
+    assert github_mirror._says_sha_was_not_supplied(fake_github.http_error(422, fake_github.SHA_NOT_SUPPLIED)) is True
 
 
 def test_a_tree_github_cuts_short_is_logged_and_read(monkeypatch, caplog):

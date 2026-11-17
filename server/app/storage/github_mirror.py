@@ -3,7 +3,8 @@
 ``record_registration_event`` writes one JSON file per registration under
 ``logs/<aaguid>/`` (on Cloud Run inline, otherwise on a thread), and
 ``maybe_store_uploaded_metadata_file`` copies a visitor's uploaded metadata under
-``metadata/`` unless an identical file is there. The mirror is on only with a
+``metadata/`` unless an identical file is there, never replacing a file: one whose name is
+taken goes beside it under its content's hash. The mirror is on only with a
 ``GITHUB_TOKEN``, and ``ENABLE_GITHUB_LOGGING=0`` turns it off.
 """
 from __future__ import annotations
@@ -174,15 +175,14 @@ def github_upload_json(path: str, obj: dict[str, Any]) -> None:
     _request("PUT", url, body)
 
 
-def github_upload_file(path: str, data: bytes, message: str, sha: str | None = None) -> None:
-    """Create or replace a file at ``path`` with ``data`` in the log repository."""
+def github_upload_file(path: str, data: bytes, message: str) -> None:
+    """Create a file at ``path`` with ``data`` in the log repository. It names no SHA, so GitHub
+    refuses it (422) when a file is there: the mirror never replaces one."""
 
     body: dict[str, Any] = {
         "message": message,
         "content": _encode_content(data),
     }
-    if sha:
-        body["sha"] = sha
 
     url = _api_url(f"contents/{path}")
     _request("PUT", url, body)
@@ -190,6 +190,36 @@ def github_upload_file(path: str, data: bytes, message: str, sha: str | None = N
 
 class GitHubUnavailable(RuntimeError):
     """GitHub answered with something other than what the mirror reads."""
+
+
+def _says_sha_was_not_supplied(exc: urllib_error.HTTPError) -> bool:
+    """Whether GitHub's 422 says a file is at the path already: its message names the "sha" a
+    replacement must give."""
+
+    try:
+        answer = json.loads(exc.read().decode("utf-8"))
+    except (ValueError, OSError):
+        return False
+    message = answer.get("message") if isinstance(answer, Mapping) else None
+    return isinstance(message, str) and '"sha"' in message
+
+
+def _create_file(path: str, content: bytes, message: str) -> str | None:
+    """Create ``path`` in the log repository with ``content``, never replacing a file.
+
+    None when it was created. When GitHub says a file is there already, the blob SHA a read
+    shows at ``path``, or "" while the read does not find it yet. Any other refusal raises.
+    """
+
+    try:
+        github_upload_file(path, content, message)
+        return None
+    except urllib_error.HTTPError as exc:
+        if exc.code != 422 or not _says_sha_was_not_supplied(exc):
+            raise
+    item = _get_json(f"contents/{path}", missing={})
+    sha = item.get("sha") if isinstance(item, Mapping) else None
+    return sha if isinstance(sha, str) else ""
 
 
 def _get_json(path: str, *, missing: Any = None) -> Any:
@@ -501,14 +531,38 @@ def maybe_store_uploaded_metadata_file(filename: str, content: bytes) -> bool:
         )
         return False
 
-    existing_sha_for_name = existing.get(safe_name)
-    remote_path = f"{_METADATA_REPO_FOLDER}/{safe_name}"
-    action = "update" if existing_sha_for_name else "add"
-    message = f"metadata: {action} {safe_name}"
-
     try:
-        github_upload_file(remote_path, content, message, sha=existing_sha_for_name)
-        return True
+        return _create_metadata_file(safe_name, content, blob_sha, name_taken=safe_name in existing)
     except Exception as exc:
         logger.warning("Failed to upload metadata file %s: %s", safe_name, exc)
         return False
+
+
+def _hashed_metadata_path(name: str, blob_sha: str) -> str:
+    """Where a metadata file goes when its name holds other content: the name with the start of
+    its content's blob SHA, so the same content always lands at the same path."""
+
+    stem, extension = os.path.splitext(name)
+    return f"{_METADATA_REPO_FOLDER}/{stem}-{blob_sha[:12]}{extension}"
+
+
+def _create_metadata_file(name: str, content: bytes, blob_sha: str, *, name_taken: bool) -> bool:
+    """Add a metadata file, never replacing one: at ``metadata/<name>``, or, when that name holds
+    other content, at its hashed name. True when it was added, False when its content was found
+    at the path already (an earlier copy landed); raises when neither path can take it."""
+
+    if not name_taken:
+        there = _create_file(f"{_METADATA_REPO_FOLDER}/{name}", content, f"metadata: add {name}")
+        if there is None:
+            return True
+        if there == blob_sha:
+            return False
+        if not there:
+            raise GitHubUnavailable(f"GitHub has a file at metadata/{name} that it does not show yet")
+    hashed = _hashed_metadata_path(name, blob_sha)
+    there = _create_file(hashed, content, f"metadata: add {os.path.basename(hashed)}")
+    if there is None:
+        return True
+    if there in ("", blob_sha):
+        return False
+    raise RuntimeError(f"another file is at {hashed}")
