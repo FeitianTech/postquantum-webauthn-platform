@@ -19,6 +19,8 @@ _FLAGS = ("FIDO_SERVER_GCS_ENABLED", "ENABLE_GITHUB_LOGGING", "GITHUB_LOG_ASYNC"
 def _fresh(monkeypatch):
     monkeypatch.setattr(env_flags, "_warned", set())
     monkeypatch.delenv("K_SERVICE", raising=False)
+    # The credential log is on only with a token; with one, its flag decides.
+    monkeypatch.setenv("GITHUB_TOKEN", "token-123")
     for name in _FLAGS:
         monkeypatch.delenv(name, raising=False)
 

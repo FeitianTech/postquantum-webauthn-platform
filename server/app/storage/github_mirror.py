@@ -3,8 +3,8 @@
 ``record_registration_event`` writes one JSON file per registration under
 ``logs/<aaguid>/`` (on Cloud Run inline, otherwise on a thread), and
 ``maybe_store_uploaded_metadata_file`` copies a visitor's uploaded metadata under
-``metadata/`` unless an identical file is there. Nothing is sent without
-``GITHUB_TOKEN``, and ``ENABLE_GITHUB_LOGGING=0`` turns the mirror off.
+``metadata/`` unless an identical file is there. The mirror is on only with a
+``GITHUB_TOKEN``, and ``ENABLE_GITHUB_LOGGING=0`` turns it off.
 """
 from __future__ import annotations
 
@@ -56,15 +56,13 @@ _DEFAULT_REPO_NAME = "CredentialLogs"
 
 
 def is_logging_enabled() -> bool:
-    """Return ``True`` when GitHub logging should be active."""
+    """Whether the credential log is on: only with a ``GITHUB_TOKEN`` to write with, and
+    ``ENABLE_GITHUB_LOGGING=0`` turns it off. Without a token nothing is logged, and nothing
+    warns that it was not."""
 
-    explicit = parse_env_flag("ENABLE_GITHUB_LOGGING")
-    if explicit is not None:
-        return explicit
-
-    # On by default, on Cloud Run and locally alike; ENABLE_GITHUB_LOGGING=false
-    # turns it off.
-    return True
+    if parse_env_flag("ENABLE_GITHUB_LOGGING") is False:
+        return False
+    return bool(os.environ.get("GITHUB_TOKEN", "").strip())
 
 
 def credential_log_repository() -> tuple[str, str]:

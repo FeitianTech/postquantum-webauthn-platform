@@ -33,29 +33,39 @@ class _FakeResponse:
         return False
 
 
-def test_is_logging_enabled_default(monkeypatch):
-    """Test that logging is enabled by default when no env vars are set."""
+def test_the_log_is_off_without_a_token(monkeypatch):
     monkeypatch.delenv("ENABLE_GITHUB_LOGGING", raising=False)
+    monkeypatch.delenv("GITHUB_TOKEN", raising=False)
+    assert is_logging_enabled() is False
+
+
+@pytest.mark.parametrize("token", ["", "   "])
+def test_a_blank_token_is_no_token(monkeypatch, token):
+    monkeypatch.delenv("ENABLE_GITHUB_LOGGING", raising=False)
+    monkeypatch.setenv("GITHUB_TOKEN", token)
+    assert is_logging_enabled() is False
+
+
+def test_the_log_is_on_with_a_token(monkeypatch):
+    monkeypatch.delenv("ENABLE_GITHUB_LOGGING", raising=False)
+    monkeypatch.setenv("GITHUB_TOKEN", "token-123")
     assert is_logging_enabled() is True
 
 
-def test_is_logging_enabled_explicit_true(monkeypatch):
-    """Test that logging is enabled when ENABLE_GITHUB_LOGGING is truthy."""
-    for value in ("1", "true", "yes", "on", "True", "YES", "ON"):
-        monkeypatch.setenv("ENABLE_GITHUB_LOGGING", value)
-        assert is_logging_enabled() is True, f"Expected True for value '{value}'"
+@pytest.mark.parametrize("value", ["1", "true", "yes", "on", "True", "YES", "ON"])
+def test_enable_github_logging_does_not_turn_the_log_on_without_a_token(monkeypatch, value):
+    monkeypatch.setenv("ENABLE_GITHUB_LOGGING", value)
+    monkeypatch.delenv("GITHUB_TOKEN", raising=False)
+    assert is_logging_enabled() is False
+
+    monkeypatch.setenv("GITHUB_TOKEN", "token-123")
+    assert is_logging_enabled() is True
 
 
-def test_is_logging_enabled_explicit_false(monkeypatch):
-    """Test that logging is disabled when ENABLE_GITHUB_LOGGING is falsy."""
-    for value in ("0", "false", "no", "off", "False", "NO", "OFF"):
-        monkeypatch.setenv("ENABLE_GITHUB_LOGGING", value)
-        assert is_logging_enabled() is False, f"Expected False for value '{value}'"
-
-
-def test_is_logging_enabled_empty_string(monkeypatch):
-    """Test that logging is disabled when ENABLE_GITHUB_LOGGING is an empty string."""
-    monkeypatch.setenv("ENABLE_GITHUB_LOGGING", "")
+@pytest.mark.parametrize("value", ["0", "false", "no", "off", "False", "NO", "OFF", ""])
+def test_enable_github_logging_turns_the_log_off_with_a_token(monkeypatch, value):
+    monkeypatch.setenv("ENABLE_GITHUB_LOGGING", value)
+    monkeypatch.setenv("GITHUB_TOKEN", "token-123")
     assert is_logging_enabled() is False
 
 
@@ -474,6 +484,7 @@ def test_record_registration_event_uploads_json(monkeypatch, caplog):
         uploads.append((path, payload, kwargs))
 
     monkeypatch.setenv("ENABLE_GITHUB_LOGGING", "1")
+    monkeypatch.setenv("GITHUB_TOKEN", "token-123")
     monkeypatch.setattr(github_mirror, "github_upload_json", fake_upload)
     monkeypatch.setattr(github_mirror.threading, "Thread", ImmediateThread)
     monkeypatch.setattr(github_mirror, "random_shortid", lambda length=8: "abcdef12")
@@ -529,6 +540,7 @@ def test_record_registration_event_creates_unique_files(monkeypatch, caplog):
     short_ids = iter(["firstid", "secondid"])
 
     monkeypatch.setenv("ENABLE_GITHUB_LOGGING", "1")
+    monkeypatch.setenv("GITHUB_TOKEN", "token-123")
     monkeypatch.setattr(github_mirror, "github_upload_json", fake_upload)
     monkeypatch.setattr(github_mirror.threading, "Thread", ImmediateThread)
     monkeypatch.setattr(github_mirror, "random_shortid", lambda length=8: next(short_ids))
@@ -574,6 +586,29 @@ def test_the_test_run_never_logs_to_github():
     assert is_logging_enabled() is False
 
 
+def test_a_registration_without_a_token_is_not_logged_and_warns_nothing(monkeypatch, caplog):
+    monkeypatch.delenv("ENABLE_GITHUB_LOGGING", raising=False)
+    monkeypatch.delenv("GITHUB_TOKEN", raising=False)
+    monkeypatch.setattr(github_mirror.threading, "Thread", ImmediateThread)
+    sent = []
+    monkeypatch.setattr(github_mirror, "_request", lambda *args, **kwargs: sent.append(args))
+
+    with caplog.at_level(logging.DEBUG, logger=github_mirror.__name__):
+        github_mirror.record_registration_event(
+            github_mirror.RegistrationEvent(
+                timestamp=datetime(2025, 10, 23, 9, 41, 10, tzinfo=timezone.utc),
+                rp_id="example.com",
+                aaguid=None,
+                device_name_mds=None,
+                attestation_object=cbor2.dumps({}),
+            )
+        )
+        assert github_mirror.maybe_store_uploaded_metadata_file("demo.json", b"{}") is False
+
+    assert sent == []
+    assert [record for record in caplog.records if record.levelno >= logging.WARNING] == []
+
+
 def test_record_registration_event_disabled(monkeypatch):
     monkeypatch.setenv("ENABLE_GITHUB_LOGGING", "0")
 
@@ -604,6 +639,7 @@ def test_record_registration_event_uploads_inline_on_cloud_run(monkeypatch, capl
         raise AssertionError("Threaded upload should not be used on Cloud Run by default")
 
     monkeypatch.setenv("ENABLE_GITHUB_LOGGING", "1")
+    monkeypatch.setenv("GITHUB_TOKEN", "token-123")
     monkeypatch.setenv("K_SERVICE", "pqc-webauthn")
     monkeypatch.delenv("GITHUB_LOG_ASYNC", raising=False)
     monkeypatch.setattr(github_mirror, "github_upload_json", fake_upload)
@@ -789,6 +825,7 @@ def test_record_registration_event_honors_async_false_override(monkeypatch):
         raise AssertionError("Thread should not be used when GITHUB_LOG_ASYNC=0")
 
     monkeypatch.setenv("ENABLE_GITHUB_LOGGING", "1")
+    monkeypatch.setenv("GITHUB_TOKEN", "token-123")
     monkeypatch.setenv("GITHUB_LOG_ASYNC", "0")
     monkeypatch.delenv("K_SERVICE", raising=False)
     monkeypatch.setattr(github_mirror, "github_upload_json", fake_upload)
@@ -823,6 +860,7 @@ def test_record_registration_event_honors_async_true_override_on_cloud_run(monke
             self._target(*self._args, **self._kwargs)
 
     monkeypatch.setenv("ENABLE_GITHUB_LOGGING", "1")
+    monkeypatch.setenv("GITHUB_TOKEN", "token-123")
     monkeypatch.setenv("K_SERVICE", "service-name")
     monkeypatch.setenv("GITHUB_LOG_ASYNC", "true")
     monkeypatch.setattr(github_mirror.threading, "Thread", _CapturingThread)
@@ -871,6 +909,7 @@ def _store_metadata_against_listing(monkeypatch, listing, filename, content):
 
     uploads = []
     monkeypatch.setenv("ENABLE_GITHUB_LOGGING", "true")
+    monkeypatch.setenv("GITHUB_TOKEN", "token-123")
     monkeypatch.setattr(github_mirror, "github_list_directory", lambda _folder: listing)
     monkeypatch.setattr(
         github_mirror,

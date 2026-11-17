@@ -143,8 +143,8 @@ warning. "On Cloud Run" means `K_SERVICE` is set, which Cloud Run does.
 | `FIDO_SERVER_MDS_POINTER_CHECK_SECONDS` | `900` | How often a running instance looks for a newer snapshot set |
 | `FIDO_SERVER_BACKGROUND_WARMUP` | on on Cloud Run | Provision the snapshot and fill the caches when a worker starts |
 | `FIDO_SERVER_WEB_EXPORT_ROOT` | `web/out` (`/app/web/out` in the image) | The UI's static export, served at `/` |
-| `ENABLE_GITHUB_LOGGING` | on | Log each registration to the credential log repository |
-| `GITHUB_TOKEN` | none | The token the log writes with; without it each upload fails with a warning, and the registration goes on |
+| `ENABLE_GITHUB_LOGGING` | on when `GITHUB_TOKEN` is set | Log each registration and uploaded metadata file to the credential log repository; `0` turns it off |
+| `GITHUB_TOKEN` | none | The token the log writes with; without it nothing is logged |
 | `GITHUB_LOG_REPO_OWNER`, `GITHUB_LOG_REPO_NAME` | `rainzhang05`, `CredentialLogs` | The credential log repository |
 | `GITHUB_HTTP_TIMEOUT_SECONDS` | `4` | Each GitHub request's timeout |
 | `GITHUB_LOG_ASYNC` | off on Cloud Run, else on | Upload the log entry on a background thread |
