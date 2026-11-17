@@ -18,7 +18,9 @@ CTAP 2.2 section 12 and WebAuthn L3 section 10) and `data.attestationStatementDe
 `tpm_structures.py`, `android_key.py`, `safetynet.py`, `apple_anonymous.py`), and
 `data.getInfoDecoded` (`decode/get_info.py`, what an authenticatorGetInfo
 response's members mean, CTAP 2.2 section 6.4). It shows, it does not verify:
-every attestation view says so and lists what it did not check.
+the view of every format WebAuthn L3 section 8 defines says so (`verification`)
+and lists what it did not check (`notChecked`); a format it does not define is
+shown as sent (`known: false`).
 Extensions, each extension's value and a credential public key are read as a
 map only when the CBOR item is one (or, in a PublicKeyCredential, the JSON
 value is an object): a tag is read as the mapping `{"tag", "value"}`, so the
@@ -118,7 +120,9 @@ carry the input offset and path (`${2}<credentialPublicKey>{1}`; a nested field'
 findings add `source`).
 
 `malformed` lists the messages of the findings that the input is not well-formed
-(RFC 8949 appendix F, trailing bytes included) or not in CTAP2 canonical form: the
+(RFC 8949 appendix F, trailing bytes included) or not in CTAP2 canonical form, and
+of the other findings of category `malformed` (a JSON `NaN` or infinity read
+leniently, a nested part that does not parse: `parse-error`, `tpm-structure`): the
 categories `skipped`, `malformed`, `trailing` and `canonical` in
 `decode/findings.py`. Notes about how the input was read or shown
 (`ambiguous-input`, `json-key-collision`, `duplicate-json-key`, `ctap-prefix-not-read`,
@@ -127,8 +131,9 @@ categories `skipped`, `malformed`, `trailing` and `canonical` in
 ## Map keys
 
 Map keys become JSON keys only through `values.json_keys`: keys that would share a
-spelling (1 and "1", h'01' and "01") are each spelled with their type, and
-`decode/key_collisions.py` reports the map as `json-key-collision`.
+spelling (1 and "1", h'01' and "01") are spelled with their type, but for an
+integer, which keeps its number, and `decode/key_collisions.py` reports the map as
+`json-key-collision`.
 
 Map keys are equal by RFC 8949 section 5.6.1 (`decode/key_equivalence.py`): 1.0 at
 any width is one key, -0.0 and 0.0 are one key, a chunked string equals the same
@@ -192,8 +197,15 @@ goes until Python's stack runs out; that too is refused at the first value past
 `/api/codec` reads a body of at most 1 MiB (`config/request_limits.py`,
 `FIDO_SERVER_MAX_CODEC_REQUEST_BYTES`), set on the request before anything reads
 it; a larger one is answered 413 in JSON. Every other route takes 8 MiB, the
-metadata upload 16 MiB. The codec's largest real input, an ML-DSA-87
-attestation object with its full chain as hex, is about 60 KB.
+metadata upload 16 MiB, and a registration's credential response 256 KiB. The
+codec's largest real input, an ML-DSA-87 attestation object with its full chain
+as hex, is about 60 KB.
+
+The request's own body is read by `routes/json_body.py` before the codec sees it:
+one holding `NaN`, an infinity or a number no double holds, or nested more than 64
+deep, is answered 400 in JSON, and so is one that is not JSON, an empty `payload`,
+an encode without a `format`, or a `lenient` that is not a boolean. Only the
+`payload` text itself is the codec's to refuse, with a 422.
 
 One decode or one encode reads at most 20,000 items (`decoder/item_budget.py`,
 `FIDO_SERVER_MAX_CODEC_ITEMS`): every CBOR item `decode/cbor_parser` builds
