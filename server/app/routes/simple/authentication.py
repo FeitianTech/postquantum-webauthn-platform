@@ -23,7 +23,7 @@ from ...config import relying_party
 from ...encoding import encode_base64url
 from ...webauthn import assertion_checks, client_binary
 from ...webauthn.attestation import error_codes
-from .. import ceremony_session, json_body
+from .. import ceremony_errors, ceremony_session, json_body
 from . import account, parsing, stored_sign_count
 
 bp = Blueprint("simple_authentication", __name__)
@@ -191,7 +191,9 @@ def _verify_assertion(
                 encode_base64url(credential_id_bytes)
             )
 
-        response_payload: dict[str, Any] = {"error": str(exc)}
+        response_payload: dict[str, Any] = {
+            "error": ceremony_errors.answer_text(exc, ceremony_errors.AUTHENTICATION_FAILED)
+        }
         if failed_credential_id is not None:
             response_payload["failedCredentialId"] = failed_credential_id
 

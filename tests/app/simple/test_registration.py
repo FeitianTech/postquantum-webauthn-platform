@@ -321,7 +321,7 @@ def test_simple_register_complete_returns_400_and_cleans_state_when_verification
         )
 
         assert response.status_code == 400
-        assert response.get_json() == {"error": "register verification failed"}
+        assert response.get_json() == {"error": "The registration could not be completed."}
 
         with client.session_transaction() as session_state:
             assert "simple_register_state" not in session_state

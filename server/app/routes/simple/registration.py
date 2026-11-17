@@ -26,7 +26,7 @@ from ...webauthn.attachments import normalize_attachment
 from ...webauthn.attestation import aaguid as attestation_aaguid
 from ...webauthn.attestation import certificates as attestation_certificates
 from ...webauthn.attestation import checks, error_codes, request_expectations
-from .. import ceremony_session, json_body
+from .. import ceremony_errors, ceremony_session, json_body
 from . import (
     account,
     parsing,
@@ -137,7 +137,7 @@ def _verify_registration(
         auth_data = server.register_complete(state, response)
     except Exception as exc:
         session.pop("register_rp_id", None)
-        return None, (jsonify({"error": str(exc)}), 400)
+        return None, (jsonify({"error": ceremony_errors.answer_text(exc, ceremony_errors.REGISTRATION_FAILED)}), 400)
 
     # fido2 checked the origin against the RP ID and the allowlist. It is read from
     # clientDataJSON -- NOT from the request's own Origin header, which the caller

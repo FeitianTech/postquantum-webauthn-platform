@@ -413,7 +413,7 @@ def test_advanced_register_complete_reads_the_session_state_not_the_requests(mon
 
         assert response.status_code == 400
         assert response.get_json() == {
-            "error": "register failure",
+            "error": "The registration could not be completed.",
             "challengeSource": "server-session",
             # This hand-made state was never stamped by /begin.
             "challengeStatus": "expired",
@@ -472,7 +472,7 @@ def test_advanced_register_complete_prefers_session_attachment_scope_over_tamper
 
         assert response.status_code == 400
         assert response.get_json() == {
-            "error": "register reached",
+            "error": "The registration could not be completed.",
             "challengeSource": "server-session",
             "challengeStatus": "expired",
         }

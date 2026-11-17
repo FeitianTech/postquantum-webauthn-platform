@@ -15,7 +15,7 @@ from ...storage import credential_artifacts
 from ...webauthn import client_binary
 from ...webauthn.attachments import request_hints
 from ...webauthn.attestation import request_expectations
-from .. import ceremony_session, json_body
+from .. import ceremony_errors, ceremony_session, json_body
 from . import (
     algorithms,
     constants,
@@ -66,7 +66,8 @@ def _register_complete(data: Mapping[str, Any], session_state: Any, state_trace:
         prepared = {**prepared, **registration_inputs.attestation_inputs(response)}
         return _record_verified_registration(prepared, state_ctx, state_trace)
     except Exception as exc:
-        return jsonify({"error": str(exc), **state_trace}), 400
+        error = ceremony_errors.answer_text(exc, ceremony_errors.REGISTRATION_FAILED)
+        return jsonify({"error": error, **state_trace}), 400
 
 
 def _record_verified_registration(

@@ -19,6 +19,7 @@ from ...config import relying_party
 from ...encoding import encode_base64url
 from ...webauthn import assertion_checks, assertion_hash, client_binary, pqc
 from ...webauthn.sign_count import sign_count_status
+from .. import ceremony_errors
 from . import algorithms
 
 logger = logging.getLogger(__name__)
@@ -63,6 +64,7 @@ def _verification_failure(exc: Exception, response: Any, lookup: Mapping[bytes, 
     response_mapping = response if isinstance(response, Mapping) else {}
     credential_id = client_binary.extract_assertion_credential_id(response_mapping)
     record = lookup.get(credential_id) if credential_id else None
+    reason = ceremony_errors.answer_text(exc, ceremony_errors.AUTHENTICATION_FAILED)
 
     # Read the algorithm from the credential's own COSE key, not from
     # the client-supplied "algorithm" field next to it.
@@ -92,7 +94,7 @@ def _verification_failure(exc: Exception, response: Any, lookup: Mapping[bytes, 
             "algorithmDescription": pqc.describe_algorithm(credential_alg),
             "challengeSource": trace["challengeSource"],
             "challengeStatus": trace["challengeStatus"],
-            "verificationError": str(exc),
+            "verificationError": reason,
         }
         if failed_credential_id is not None:
             unsupported_payload["failedCredentialId"] = failed_credential_id
@@ -102,7 +104,7 @@ def _verification_failure(exc: Exception, response: Any, lookup: Mapping[bytes, 
         "status": "VERIFICATION_FAILED",
         "verified": False,
         "signatureVerified": False,
-        "error": str(exc),
+        "error": reason,
         "challengeSource": trace["challengeSource"],
         "challengeStatus": trace["challengeStatus"],
     }
