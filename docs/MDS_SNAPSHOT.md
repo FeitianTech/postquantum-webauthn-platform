@@ -1,16 +1,16 @@
 # The FIDO MDS snapshot
 
 The MDS explorer is backed by a generated snapshot of the FIDO Alliance
-metadata service: seven files totalling about 30 MB, produced together by
-`tools/update_mds_snapshot.py`.
+metadata service: seven files totalling about 34 MB (no. 302, 538 entries), produced
+together by `tools/update_mds_snapshot.py`.
 
 | File | Size | Read by |
 | --- | --- | --- |
-| `blob.jwt` | 10 MB | the server's provisioning, which verifies it and derives the other files from it and the verified meta (below); the updater, to tell whether the BLOB changed |
-| `fido-mds3.verified.json` | 8.2 MB | the server, as the base metadata payload: the BLOB's payload as the BLOB has it, once verified |
-| `fido-mds3.explorer.json` | 5.5 MB | the server, for the explorer's summary: its meta, and the whole file only when that meta does not describe the verified snapshot |
-| `fido-mds3.explorer.full.json` | 7.1 MB | the server, which derives what browsers load from it (below) |
-| `*.meta.json` (three files) | ~1 KB | the freshness check and the explorer banner |
+| `blob.jwt` | 11 MB | the server's provisioning, which verifies the copy it downloads and derives the other files from it and the verified meta (below); the updater, to tell whether the BLOB changed |
+| `fido-mds3.verified.json` | 9.1 MB | the server, as the base metadata payload: the BLOB's payload as the BLOB has it, once verified |
+| `fido-mds3.explorer.json` | 6.0 MB | the server, for the explorer's summary: its meta, and the whole file only when that meta does not describe the verified snapshot |
+| `fido-mds3.explorer.full.json` | 7.8 MB | the server, which derives what browsers load from it (below) |
+| `*.meta.json` (three files) | ~1 KB | the freshness check, the serial a running instance and the updater compare, and the explorer's status line |
 
 All seven live in one directory: `instance/mds-snapshot/`, unless
 `FIDO_SERVER_MDS_SNAPSHOT_DIR` names another (see "Where the files are").
@@ -19,13 +19,10 @@ All seven live in one directory: `instance/mds-snapshot/`, unless
 ## Why they are not in git
 
 The files change whenever the FIDO Alliance publishes a new BLOB. Tracked, each
-refresh would add about 30 MB to the repository's history and invalidate an image
-layer; so they are provisioned at runtime instead (below), and each snapshot is
-served under a URL of its own.
-
-Entry details requested without the current version revalidate with a weak ETag
-of their JSON bytes. The validator survives gzip compression, so an unchanged
-entry answers a conditional request with 304 in either content coding.
+refresh would add about 34 MB to the repository's history and invalidate an image
+layer; so they are provisioned at runtime instead (below), and each snapshot's entry
+details are served under URLs of their own (the list keeps one URL, revalidated by its
+ETag).
 
 ## Where the files are
 
@@ -48,51 +45,55 @@ seven files are exactly what they were:
 
 - **The list**, `/assets/mds/fido-mds3.explorer.list.json`: every entry with what the
   table shows, filters and sorts by, without its detail or where it came from (about
-  740 KB, 67 KB gzipped, for 518 entries). One URL, `no-cache`, with an ETag naming the
+  760 KB, 70 KB gzipped, for 538 entries). One URL, `no-cache`, with an ETag naming the
   version and the encoding, so the page fetches it without asking anything first (and
   without the session's cookie) and a revisit costs a 304. The page fetches it once its
   first view is interactive, and at once when the URL opens `#mds`.
-- **The icons**, `/assets/mds/icons/<digest>.<png|svg|…>`: each distinct image once (125
-  for 518 entries), named by its SHA-256, so immutable; served with a sandboxing CSP
-  of their own. The table loads them lazily, as rows scroll into view.
+- **The icons**, `/assets/mds/icons/<digest>.<png|svg|…>`: each distinct image once (129
+  for 538 entries), named by its SHA-256 (the first 128 bits), so immutable; served
+  with a sandboxing CSP of their own. The table loads them lazily, as rows scroll into
+  view.
 - **Each entry's detail**, `/assets/mds/entries/<entryId>?v=<version>`: the entry as the
   full snapshot holds it; the entry page reads it when it opens (and falls back to
   `/api/mds/metadata/resolve`). Immutable at the version its URL names, where the
   version is the snapshot's (`explorer_files.snapshot_version`: its serial and a digest
   of its ETag and generation time) and `DERIVED_FORMAT`, which changes with what the
-  code derives. Each entry has an id of its own: of entries sharing one (two statements
-  of one AAGUID or key identifier) the last keeps it, as fido2 finds the last of them,
-  and the earlier ones are listed as `<id>~2`, `~3`… counting back.
+  code derives. Requested without the current version, a detail revalidates with a weak
+  ETag of its JSON bytes, which survives gzip, so an unchanged entry answers a
+  conditional request with 304 in either content coding. Each entry has an id of its
+  own: of entries sharing one (two statements of one AAGUID, AAID or key identifier) the
+  last keeps it, as fido2 finds the last of them, and the earlier ones are listed as
+  `<id>~2`, `~3`… counting back.
 
 The page reads the list at its one URL, served from the verified snapshot whether or not
 the full file is there, and, while the session has (or may have) uploads,
 `/api/mds/metadata/explorer/custom`: the session's own rows and the counts. It shows the
-uploads, then the packaged rows whose AAGUID no upload has: an upload hides the packaged
-entry with its AAGUID. An upload and a delete answer the session's rows as `custom`, which
-the page merges with the list it holds. An upload's row has the list's shape, so these
-answers grow by a row for each upload, never by its statement or its image: the entry
-page asks `/api/mds/metadata/resolve?entryId=` for its detail, and its icon is at
-`/api/mds/metadata/custom/<stored name>/icon`, the visitor's own, kept by the browser for
-good (an upload never changes), one URL for each image (the oldest upload's that holds
-it). An icon no file is made of stays in its row, as in the list. The server works out each
-upload's row and Manage Metadata's item once, from its statement, and keeps them in memory
-by namespace, stored name and version (`mds/listed_uploads.py`, within 8 MiB of their
-JSON): one listing of the namespace says which uploads were written since, and only those
-are read and parsed again. At the quota an answer took 4.3 s on a laptop, reading every
-upload; it takes 30 ms once an instance has listed them. A page from an earlier release
-was sent to the list only by the info answer's `snapshotUrl`, which is gone, and asked
-`/api/mds/metadata/explorer/full` for every row: that answers `410` with a sentence telling
-it to reload.
+uploads (of uploads with one AAGUID, the newest), then the packaged rows whose AAGUID no
+upload has: an upload hides the packaged entry with its AAGUID. An upload and a delete
+answer the session's rows as `custom`, which the page merges with the list it holds. An
+upload's row has the list's shape, so these answers grow by a row for each upload, never
+by its statement or its image: the entry page asks `/api/mds/metadata/resolve?entryId=`
+for its detail, and its icon is at `/api/mds/metadata/custom/<stored name>/icon`, the
+visitor's own, kept by the browser for good (an upload never changes), one URL for each
+image (the oldest upload's that holds it). An icon no file is made of stays in its row, as
+in the list. The server works out each upload's row and Manage Metadata's item once, from
+its statement, and keeps them in memory by namespace, stored name and version
+(`mds/listed_uploads.py`, within 8 MiB of their JSON): one listing of the namespace says
+which uploads were written since, and only those are read and parsed again. At the quota
+an answer took 4.3 s on a laptop, reading every upload; it takes 30 ms once an instance
+has listed them. A page from an earlier release was sent to the list only by the info
+answer's `snapshotUrl`, which is gone, and asked `/api/mds/metadata/explorer/full` for
+every row: that answers `410` with a sentence telling it to reload.
 
 No route serves a snapshot file, at `/assets/mds/` or at the site's root: the seven
 names, and the `.gz` copy earlier releases wrote beside the full one, are refused there
 (the site's root is the UI's export).
 
-The tests use it to keep off a developer's real snapshot: `tests/conftest.py` points
-every test at an empty directory of the run's, and a test that needs a snapshot
-points it at a copy of `tests/fixtures/mds/snapshot` (a small synthetic snapshot
-built by `tests/app/metadata/mds_fixture.py` with the updater's own code). The browser
-tests' Flask (`web/e2e/serve-flask.mjs`) serves such a copy too.
+The tests use `FIDO_SERVER_MDS_SNAPSHOT_DIR` to keep off a developer's real snapshot:
+`tests/conftest.py` points every test at an empty directory of the run's, and a test
+that needs a snapshot points it at a copy of `tests/fixtures/mds/snapshot` (a small
+synthetic snapshot built by `tests/app/metadata/mds_fixture.py` with the updater's own
+code). The browser tests' Flask (`web/e2e/serve-flask.mjs`) serves such a copy too.
 
 ## How the snapshot reaches the application
 
@@ -119,13 +120,15 @@ has no bound of its own: a request waits up to the service's request timeout (30
 so a cold instance's first page is not held; the explorer asks the info route, which
 waits.
 
-1. **Local files.** Anything already on disk is used unchanged. No network. The one
+1. **Local files.** When all seven files are on disk they are used unchanged. No
+   network. If one is missing, the tiers below write the whole set. The one
    exception is the explorer's full snapshot of another `derivedFormat` (its meta
    names the `explorer_files.DERIVED_FORMAT` of the code that derived it): an earlier
    release's rows would otherwise be served under this code's version, so the server
-   derives them again from the verified payload, until the updater rewrites the file.
-   What it derives keeps the snapshot's generation time, and so the version the
-   updater's file would have: every worker derives the same URLs.
+   derives them again from the verified payload, as it does for a full file whose meta
+   does not describe the verified snapshot, until the updater, or a newer set from the
+   bucket, rewrites the file. What it derives keeps the snapshot's generation time, and
+   so the version the updater's file would have: every instance derives the same URLs.
 2. **Cloud Storage.** With `FIDO_SERVER_GCS_ENABLED` set, the set the bucket's
    pointer names (below) is taken from `gs://$FIDO_SERVER_GCS_BUCKET/mds/` (the
    prefix is `FIDO_SERVER_MDS_GCS_PREFIX`, default `mds`): its BLOB and the verified
@@ -150,7 +153,7 @@ waits.
 Tier 3 is controlled by `FIDO_SERVER_MDS_FETCH_UPSTREAM`. It defaults to the
 Cloud Storage setting: **on** in a deployed service, which can repopulate its
 own bucket, and **off** locally, so a first request never silently blocks on a
-10 MB download.
+11 MB download.
 
 Whatever writes the snapshot (the Cloud Storage tier, a running instance taking a
 newer set, the updater) writes each file whole, through a temporary file renamed over
@@ -215,15 +218,17 @@ snapshot as immutable sets and a pointer:
   replaced (`previous`). It is written once its set is complete, only if it is still
   the object its writer read (its generation), and only forward: a snapshot whose
   serial is not above the pointer's is not published, so a run that finds no new
-  BLOB writes nothing and the asset URL keeps its version (one below the pointer's
-  fails the run: the FIDO Alliance's serials only go up).
+  BLOB publishes nothing and the explorer's files keep their version (one below the
+  pointer's fails the run: the FIDO Alliance's serials only go up).
 - **Two writers at once** leave one pointer: the other's conditional write fails, it
-  deletes the set it wrote, and the updater reads the pointer again (up to three
-  times) in case the winner's snapshot is older than its own.
+  deletes the set it wrote, and the updater tries again, three tries in all, in case
+  the winner's snapshot is older than its own; after a third loss it publishes nothing
+  and ends with a `::warning::` (exit 0). Tier 3's publish tries once.
 - **A failure** (the bucket unreachable, a set uploaded halfway) deletes what it
   uploaded and leaves the pointer where it was. A BLOB that fails verification, or a
-  download the FIDO Alliance refuses (429, after the updater's backoff of 10 to
-  80 s), never gets that far.
+  download the FIDO Alliance refuses (429, 500, 502, 503 or 504 after five attempts,
+  waiting 10 to 80 s between them, or what a 429's `Retry-After` asks, at most 120 s),
+  never gets that far.
 - **Pruning**: after a publish the set two back (the old pointer's `previous`) is
   deleted; the set it replaced stays, since an instance may still be reading it.
   Nothing needs to list the bucket.
@@ -253,12 +258,13 @@ updater gives it its download, `_fetch_crl`). Each certificate on the path to th
 root but the root, which is the pin, names where its issuer publishes the CRL that
 covers it: in the real chain, the signing certificate and its CA. The R3
 cross-certificate the BLOB carries past the root is not on the path, so its CRL is never
-fetched. The updater fetches each CRL there, over plain HTTP as CAs publish them (a CRL
-is signed), in at most 30 s and 16 MiB. The CRL must be the issuer's, signed with its
-key; current, its `thisUpdate` passed and its `nextUpdate` not; and complete for the
-certificate: not a delta CRL, nor one limited to some reasons, other kinds of
-certificate or another distribution point. A certificate it lists fails the run
-(`::error::`, exit 1), with nothing written or published.
+fetched. The updater fetches each CRL there, over plain HTTP as CAs publish them (HTTPS
+too, when a point names it; a CRL is signed), each read waiting at most 30 s, and at
+most 16 MiB. The CRL must be the issuer's, signed with its key; current, its
+`thisUpdate` passed and its `nextUpdate` not; and complete for the certificate: not a
+delta CRL, nor one limited to some reasons, other kinds of certificate or another
+distribution point. A certificate it lists fails the run (`::error::`, exit 1), with
+nothing written or published.
 
 The check fails closed. A certificate for which no such CRL can be had from any of its
 points (each unreachable, unreadable, out of date or not such a CRL), or which names no
