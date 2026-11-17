@@ -180,6 +180,22 @@ def test_nothing_queued_writes_nothing(outbox):
     assert github_outbox.enqueue([]) == 0
     assert outbox.is_empty()
     assert github_outbox.flush(_Deliverer()) == github_outbox.FlushRun(0, 0.0)
+    # A run with nothing to deliver lists the outbox and takes no lease.
+    assert outbox.is_empty()
+
+
+def test_a_run_with_nothing_queued_leaves_the_lease_alone(bucket_outbox):
+    github_outbox.enqueue([_entry("one")])
+    github_outbox.flush(_Deliverer())
+    bucket = bucket_outbox.bucket
+    lease = bucket.objects["github-outbox/lease"]
+    listings, downloads = len(bucket.list_calls), len(bucket.download_options)
+
+    assert github_outbox.flush(_Deliverer()) == github_outbox.FlushRun(0, 0.0)
+
+    assert bucket.objects["github-outbox/lease"] == lease
+    assert len(bucket.list_calls) == listings + 1
+    assert len(bucket.download_options) == downloads
 
 
 def test_a_dropped_entry_is_removed_too(outbox):

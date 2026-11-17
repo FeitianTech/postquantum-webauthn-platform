@@ -192,7 +192,8 @@ the visitor's error.
   (`github_mirror.init_app`), and one at once when a request has queued an entry. On Cloud Run
   a run has CPU only while some request is being served, so it goes on through the requests
   that follow; one that stalls resumes at the next, and an instance that is stopped leaves its
-  entries for the next instance's first request. A run delivers at most 20 entries.
+  entries for the next instance's first request. A run delivers at most 20 entries; one that
+  finds nothing queued stops at that listing and takes no lease.
 - **One flusher at a time.** A run holds the outbox's lease for 300 s: on Cloud Storage the
   `lease` object, written only at the generation it was read at (as the stores write), so of
   two instances taking it one wins, and one past its time is taken over; locally an `flock` on

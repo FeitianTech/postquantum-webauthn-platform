@@ -180,8 +180,10 @@ class _LocalOutbox:
         common.replace_file(os.path.join(self.root, entry_id + _LOCAL_SUFFIX), data)
 
     def names(self) -> list[str]:
-        # Listed under the lease, which made the folder.
-        return sorted(name for name in os.listdir(self.root) if name.endswith(_LOCAL_SUFFIX))
+        try:
+            return sorted(name for name in os.listdir(self.root) if name.endswith(_LOCAL_SUFFIX))
+        except FileNotFoundError:
+            return []
 
     def read(self, name: str) -> bytes | None:
         try:
@@ -364,10 +366,13 @@ def flush(deliver: Callable[[OutboxEntry], Delivery], *, limit: int = RUN_LIMIT)
     lease left. An entry delivered or dropped is removed; one that does not decode is logged by
     name and removed. When GitHub cannot take one (``deliver`` answers UNAVAILABLE, or raises),
     it stays, the run stops, and every flusher leaves the outbox for ``BACKOFF_SECONDS``.
-    Without the lease (another flusher holds it, or the outbox is backing off) a run does nothing.
+    Without the lease (another flusher holds it, or the outbox is backing off) a run does nothing,
+    and with nothing queued it does not take the lease: a listing is all it costs.
     """
 
     backend = _backend()
+    if not backend.names():
+        return FlushRun(0, 0.0)
     with backend.lease(time.time()) as lease:
         if not lease.held:
             return FlushRun(0, lease.not_before)
