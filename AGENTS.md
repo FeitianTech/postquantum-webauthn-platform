@@ -328,7 +328,9 @@ its logic out here first.
   one no current CRL can be had for, fails its run; a set taken from the bucket is not checked
   again), `files.py` (the snapshot's file names, its directory, the whole-file writer,
   Last-Modified), `build.py` (the explorer rows; `statement_fields.py`, a statement's fields as
-  the explorer shows them; `certificates.py`, what their roots say), `entries.py`,
+  the explorer shows them, MDS values as words with a fixed list of acronyms in capitals,
+  `tests/fixtures/mds-enum-spellings.json`, which the page's static filter options are held to;
+  `certificates.py`, what their roots say), `entries.py`,
   `snapshot.py` (a snapshot's seven files, from its BLOB, payload and cache state) and `sets.py`
   (the snapshot in Cloud Storage) without Flask. The runtime: `provisioning.py` (local files,
   Cloud Storage, upstream), `cache.py` (the loaders and their one `SnapshotCache`),

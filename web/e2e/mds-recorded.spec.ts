@@ -25,6 +25,16 @@ const REVOKED_KEY = 'f1d0f1d0-0000-4000-8000-000000000005';
 // The words are the server's, in both tables; what differs is listed with its reason.
 const EXPECTED: ExpectedDifference[] = [
   {
+    only: 'recorded',
+    token: /^(Nfc|Usb|Ble|Tee|Uaf|Ecdsa|Eddsa|ED25519|NOT)$/,
+    reason: 'the MDS words as now spelled: a fixed list of acronyms in capitals (NFC, USB, BLE, TEE, UAF, ECDSA), EdDSA and Ed25519 in their own case, every other word title-cased (Not)',
+  },
+  {
+    only: 'shown',
+    token: /^(NFC|USB|BLE|TEE|UAF|ECDSA|EdDSA|Ed25519|Not)$/,
+    reason: 'the MDS words as now spelled: a fixed list of acronyms in capitals (NFC, USB, BLE, TEE, UAF, ECDSA), EdDSA and Ed25519 in their own case, every other word title-cased (Not, in the Status column too)',
+  },
+  {
     only: 'shown',
     section: REVOKED_KEY,
     token: /^(FIDO|Certified|L1|Fixture|Revoked|Key|\(FIDO20020230110005\))$/,

@@ -30,9 +30,11 @@ export function normaliseEnumKey(value) {
     if (value === undefined || value === null) {
         return '';
     }
+    // A level's "+" is its "plus" (FIDO Certified L1+ is FIDO_CERTIFIED_L1PLUS), never L1.
     return String(value)
         .trim()
         .toUpperCase()
+        .replace(/\+/g, 'PLUS')
         .replace(/[^A-Z0-9]+/g, '_')
         .replace(/^_+|_+$/g, '');
 }
@@ -45,31 +47,6 @@ export function normaliseEnumKey(value) {
  */
 export function isCertifiedStatus(statusKey) {
     return statusKey === 'FIDO_CERTIFIED' || statusKey.startsWith('FIDO_CERTIFIED_');
-}
-
-export function formatEnum(value) {
-    if (!value && value !== 0) {
-        return '';
-    }
-    return String(value)
-        .split(/[_-]/)
-        .map(part => part.trim())
-        .filter(Boolean)
-        .map(part => {
-            if (/^[A-Z0-9]+$/.test(part)) {
-                if (part.length <= 4) {
-                    return part;
-                }
-                const lower = part.toLowerCase();
-                return lower.charAt(0).toUpperCase() + lower.slice(1);
-            }
-            if (/^.*\d.*$/.test(part)) {
-                return part.toUpperCase();
-            }
-            const lower = part.toLowerCase();
-            return lower.charAt(0).toUpperCase() + lower.slice(1);
-        })
-        .join(' ');
 }
 
 export function formatCertificateDateDisplay(value) {

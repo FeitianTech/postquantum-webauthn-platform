@@ -3,7 +3,6 @@ import { describe, expect, it } from 'vitest';
 import {
   formatCertificateDateDisplay,
   formatDetailValue,
-  formatEnum,
   formatSignatureHashName,
   formatUpv,
   isCertifiedStatus,
@@ -13,15 +12,15 @@ import {
 // How the explorer words MDS's values (mds/formatters.js).
 
 describe('an MDS enum', () => {
-  it('is written as words, with the acronyms MDS uses in capitals', () => {
-    expect(formatEnum('FIDO_CERTIFIED_L1')).toBe('FIDO Certified L1');
-    expect(formatEnum('uvm-passcode_internal')).toBe('Uvm Passcode Internal');
-    expect(formatEnum('ed25519_eddsa_sha512_raw')).toBe('ED25519 Eddsa SHA512 Raw');
-  });
-
   it('is compared as its key, in capitals with underscores', () => {
     expect(normaliseEnumKey('  fido certified-l1 ')).toBe('FIDO_CERTIFIED_L1');
+    expect(normaliseEnumKey('Not FIDO Certified')).toBe('NOT_FIDO_CERTIFIED');
     expect(normaliseEnumKey(null)).toBe('');
+  });
+
+  it('keeps a level\'s plus apart from the level', () => {
+    expect(normaliseEnumKey('FIDO Certified L1+')).toBe('FIDO_CERTIFIED_L1PLUS');
+    expect(normaliseEnumKey('FIDO Certified L1')).toBe('FIDO_CERTIFIED_L1');
   });
 
   it('is a certification when it is FIDO_CERTIFIED or one of its levels', () => {

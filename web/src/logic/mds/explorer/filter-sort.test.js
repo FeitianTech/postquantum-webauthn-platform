@@ -15,12 +15,12 @@ import {
   sortExplorerEntries,
 } from './filter-sort.js';
 
-const STATUS_OPTIONS = ['FIDO Certified', 'FIDO Certified L1', 'FIDO Certified L2', 'NOT FIDO Certified', 'Revoked'];
+const STATUS_OPTIONS = ['FIDO Certified', 'FIDO Certified L1', 'FIDO Certified L2', 'Not FIDO Certified', 'Revoked'];
 const OPTION_LISTS = { certification: STATUS_OPTIONS, latestStatus: STATUS_OPTIONS };
 
 const L1 = { name: 'Key L1', certification: 'FIDO Certified L1 • Key • (FIDO2)', latestStatus: 'FIDO Certified L1' };
 const L2 = { name: 'Key L2', certification: 'FIDO Certified L2', latestStatus: 'FIDO Certified L2' };
-const NOT = { name: 'Plain', certification: 'NOT FIDO Certified', latestStatus: 'NOT FIDO Certified' };
+const NOT = { name: 'Plain', certification: 'Not FIDO Certified', latestStatus: 'Not FIDO Certified' };
 const PLAIN = { name: 'Certified', certification: 'FIDO Certified • Old', latestStatus: 'FIDO Certified' };
 const ODD = { name: 'Odd', certification: 'FIDO CertifiedX', latestStatus: 'FIDO CertifiedX' };
 
@@ -145,8 +145,14 @@ describe('filters', () => {
     const match = value => [L1, L2, NOT, PLAIN, ODD].filter(entry => matchesExplorerFilters(entry, { [key]: value }, OPTION_LISTS));
     expect(match('FIDO Certified L2')).toEqual([L2]);
     expect(match('fido certified')).toEqual([L1, L2, PLAIN]);
-    expect(match('NOT FIDO Certified')).toEqual([NOT]);
+    expect(match('Not FIDO Certified')).toEqual([NOT]);
     expect(match('Revoked')).toEqual([]);
+  });
+
+  it('tells a level\'s plus from the level', () => {
+    const plus = { certification: 'FIDO Certified L1+ • Key', latestStatus: 'FIDO Certified L1+' };
+    expect(matchesExplorerFilters(plus, { latestStatus: 'FIDO Certified L1' }, OPTION_LISTS)).toBe(false);
+    expect(matchesExplorerFilters(plus, { latestStatus: 'FIDO Certified' }, OPTION_LISTS)).toBe(true);
   });
 
   it('finds other status text anywhere in the text or its key', () => {

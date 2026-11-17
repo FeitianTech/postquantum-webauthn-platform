@@ -90,10 +90,10 @@ describe('the MDS table: its columns', () => {
     expect(cells[4]).toHaveAttribute('title', entry.latestStatus);
     expect(within(cells[5]).getByText(entry.id).tagName).toBe('CODE');
     expect(cells[6]).toHaveTextContent('Fingerprint Internal, Passcode Internal, Presence Internal');
-    expect(cells[7]).toHaveTextContent('External, Wired, Nfc');
-    expect(cells[8]).toHaveTextContent('Ble, Nfc, Usb');
+    expect(cells[7]).toHaveTextContent('External, Wired, NFC');
+    expect(cells[8]).toHaveTextContent('BLE, NFC, USB');
     expect(cells[9]).toHaveTextContent('Hardware, Secure Element');
-    expect(cells[10]).toHaveTextContent('SECP256R1 Ecdsa SHA256 Raw, ED25519 Eddsa SHA512 Raw');
+    expect(cells[10]).toHaveTextContent('SECP256R1 ECDSA SHA256 Raw, Ed25519 EdDSA SHA512 Raw');
     expect(cells[11]).toHaveTextContent('RSASSA-PKCS1-v1_5_SHA256');
     expect(cells[12]).toHaveTextContent('Fixture RSA Attestation Root');
     expect(within(cells[13]).getByText('Aug 15, 2026')).toHaveAttribute('dateTime', '2026-08-15');
@@ -108,7 +108,7 @@ describe('the MDS table: its columns', () => {
     expect(within(u2f[5]).getByRole('button', { name: 'Copy key identifier' })).toBeInTheDocument();
     expect(u2f[8]).toHaveTextContent('—');
     const uaf = cellsOf(entryNamed('Fixture UAF Authenticator'));
-    expect(uaf[2]).toHaveTextContent('Uaf');
+    expect(uaf[2]).toHaveTextContent('UAF');
     expect(within(uaf[5]).getByRole('button', { name: 'Copy AAID' })).toBeInTheDocument();
     expect(within(uaf[1]).getByRole('link')).toHaveAttribute('href', '#mds/aaid:F1D0%230012');
   });

@@ -27,6 +27,16 @@ const ENTRIES = [
 
 const EXPECTED: ExpectedDifference[] = [
   {
+    only: 'recorded',
+    token: /^(Nfc|Usb|Ble|Tee|Uaf|Ecdsa|Eddsa|ED25519|NOT)$/,
+    reason: 'the MDS words as now spelled: a fixed list of acronyms in capitals (NFC, USB, BLE, TEE, UAF, ECDSA), EdDSA and Ed25519 in their own case, every other word title-cased (Not)',
+  },
+  {
+    only: 'shown',
+    token: /^(NFC|USB|BLE|TEE|UAF|ECDSA|EdDSA|Ed25519|Not)$/,
+    reason: 'the MDS words as now spelled: a fixed list of acronyms in capitals (NFC, USB, BLE, TEE, UAF, ECDSA), EdDSA and Ed25519 in their own case, every other word title-cased (Not, in the Status column too)',
+  },
+  {
     only: 'shown',
     section: 'Overview',
     token: /^(Status|FIDO|Certified|L1|L2)$/,

@@ -129,35 +129,40 @@ def lookup_keys(entry: Mapping[str, Any]) -> tuple[str, str | None]:
     return normalise_aaguid_key(entry.get("aaguid") or metadata.get("aaguid")), aaid.strip() if isinstance(aaid, str) else None
 
 
+# The words an MDS value is spelled with as written here, found by their lower-case
+# letters and digits: FIDO's acronyms and the algorithms' names, three in their own
+# mixed case. Every other word is title-cased (tests/fixtures/mds-enum-spellings.json).
+_SPELLINGS = {
+    word.lower().replace("-", ""): word
+    for word in (
+        "FIDO", "FIDO2", "U2F", "UAF", "CTAP", "CTAP1", "CTAP2",
+        "NFC", "BLE", "USB", "TPM", "TEE", "Wi-Fi",
+        "ECDSA", "EdDSA", "RSA", "RSASSA", "PSS", "EMSA", "PKCS1", "PKCSv15", "DER",
+        "SHA1", "SHA256", "SHA384", "SHA512",
+        "SECP256R1", "SECP256K1", "SECP384R1", "SECP521R1", "Ed25519", "Ed448", "SM2", "SM3",
+    )
+}
+
+
+def _spell(word: str) -> str:
+    lowered = word.lower()
+    if lowered in _SPELLINGS:
+        return _SPELLINGS[lowered]
+    # A certification level's "plus": FIDO_CERTIFIED_L1plus is L1+.
+    level = lowered[1:-len("plus")]
+    if lowered.startswith("l") and lowered.endswith("plus") and level.isascii() and level.isdecimal():
+        return f"L{level}+"
+    return lowered[:1].upper() + lowered[1:]
+
+
 def format_enum(value: Any) -> str:
+    """An MDS value as words (``fido_certified_l1plus``: "FIDO Certified L1+"), split at
+    each ``_`` and ``-``, each word spelled by ``_spell``."""
+
     if value in (None, ""):
         return ""
-
-    parts: list[str] = []
-    for raw_part in str(value).split("_"):
-        for sub_part in raw_part.split("-"):
-            text = sub_part.strip()
-            if text:
-                parts.append(text)
-
-    formatted_parts = []
-    for part in parts:
-        if part.isupper():
-            if len(part) <= 4:
-                formatted_parts.append(part)
-            else:
-                lowered = part.lower()
-                formatted_parts.append(lowered[:1].upper() + lowered[1:])
-            continue
-
-        if any(char.isdigit() for char in part):
-            formatted_parts.append(part.upper())
-            continue
-
-        lowered = part.lower()
-        formatted_parts.append(lowered[:1].upper() + lowered[1:])
-
-    return " ".join(formatted_parts)
+    words = (part.strip() for raw_part in str(value).split("_") for part in raw_part.split("-"))
+    return " ".join(_spell(word) for word in words if word)
 
 
 def format_protocol(protocol: Any) -> str:

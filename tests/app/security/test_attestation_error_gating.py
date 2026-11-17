@@ -317,7 +317,7 @@ def test_an_unsafe_mds_status_is_a_simple_warning_and_the_record_keeps_the_statu
     assert checks["errors"] == []
     assert checks["warnings"] == ["metadata_status_unsafe: USER_VERIFICATION_BYPASS"]
     kept = body["storedCredential"]["properties"]["attestationSummary"]["metadata"]
-    assert (kept["latest_status"], kept["certification_level"]) == ("USER Verification Bypass", L1_CERTIFICATION)
+    assert (kept["latest_status"], kept["certification_level"]) == ("User Verification Bypass", L1_CERTIFICATION)
 
 
 def test_an_unsafe_mds_status_is_an_advanced_error_and_the_record_keeps_the_status(advanced_storage, monkeypatch):
@@ -340,7 +340,7 @@ def test_an_unsafe_mds_status_is_an_advanced_error_and_the_record_keeps_the_stat
     payload = complete.get_json()
     assert payload["attestationErrors"] == ["metadata_status_unsafe: ATTESTATION_KEY_COMPROMISE"]
     kept = payload["storedCredential"]["properties"]["attestationSummary"]["metadata"]
-    assert (kept["latest_status"], kept["certification_level"]) == ("Attestation KEY Compromise", L1_CERTIFICATION)
+    assert (kept["latest_status"], kept["certification_level"]) == ("Attestation Key Compromise", L1_CERTIFICATION)
 
 
 def test_an_authenticator_whose_only_mds_entry_is_revoked_is_a_simple_warning_saying_so(simple_storage, mds_fixture_snapshot):

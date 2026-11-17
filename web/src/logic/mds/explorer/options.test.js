@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 import { FILTER_CONFIG } from '../constants.js';
@@ -10,43 +11,53 @@ import {
   sortFilterOptions,
   staticFilterOptions,
 } from './options.js';
+import { repoFile } from '@/test/logic/repo-file.js';
+
+// How the server spells each MDS value (tests/app/metadata/test_mds_statement_fields.py reads it too).
+const { spellings } = JSON.parse(readFileSync(repoFile('tests/fixtures/mds-enum-spellings.json'), 'utf8'));
 
 const filterConfig = (key) => FILTER_CONFIG.find((config) => config.key === key);
 
 const ENTRY = {
   protocol: 'FIDO2',
-  certification: 'FIDO Certified L3plus • Key • (FIDO3)',
+  certification: 'FIDO Certified L3+ • Key • (FIDO3)',
   latestStatus: 'Update Available',
   userVerificationList: ['Presence Internal', 'None'],
   attachmentList: ['External'],
-  transportsList: ['Usb', 'Nfc'],
+  transportsList: ['USB', 'NFC'],
   keyProtectionList: ['Hardware'],
-  algorithmsList: ['ED25519 Eddsa SHA512 Raw'],
+  algorithmsList: ['Ed25519 EdDSA SHA512 Raw'],
 };
 const BARE = { ...ENTRY, protocol: '', certification: '', latestStatus: undefined };
 
 const STATIC_CERTIFICATION = ['FIDO Certified', 'FIDO Certified L1', 'FIDO Certified L2'];
-const STATIC_STATUS = ['FIDO Certified', 'FIDO Certified L1', 'FIDO Certified L2', 'NOT FIDO Certified', 'Revoked'];
+const STATIC_STATUS = ['FIDO Certified', 'FIDO Certified L1', 'FIDO Certified L2', 'Not FIDO Certified', 'Revoked'];
 
 describe('filter options', () => {
   it('collects every value present, and the static statuses', () => {
     const sets = collectOptionSets([ENTRY, BARE]);
     expect([...sets.protocol]).toEqual(['FIDO2']);
-    expect([...sets.certification]).toEqual([...STATIC_CERTIFICATION, 'FIDO Certified L3plus']);
+    expect([...sets.certification]).toEqual([...STATIC_CERTIFICATION, 'FIDO Certified L3+']);
     expect([...sets.latestStatus]).toEqual([...STATIC_STATUS, 'Update Available']);
     expect([...sets.userVerification]).toEqual(['Presence Internal', 'None']);
     expect([...sets.attachment]).toEqual(['External']);
-    expect([...sets.transports]).toEqual(['Usb', 'Nfc']);
+    expect([...sets.transports]).toEqual(['USB', 'NFC']);
     expect([...sets.keyProtection]).toEqual(['Hardware']);
-    expect([...sets.algorithms]).toEqual(['ED25519 Eddsa SHA512 Raw']);
+    expect([...sets.algorithms]).toEqual(['Ed25519 EdDSA SHA512 Raw']);
   });
 
-  it('formats a filter static options', () => {
+  it('gives a filter its static options', () => {
     expect(staticFilterOptions(filterConfig('certification'))).toEqual(STATIC_CERTIFICATION);
     expect(staticFilterOptions(filterConfig('latestStatus'))).toEqual(STATIC_STATUS);
     expect(staticFilterOptions(filterConfig('protocol'))).toEqual([]);
     expect(staticFilterOptions(undefined)).toEqual([]);
-    expect(staticFilterOptions({ staticOptions: ['', 'REVOKED'] })).toEqual(['Revoked']);
+    expect(staticFilterOptions({ staticOptions: ['', 'Revoked'] })).toEqual(['Revoked']);
+  });
+
+  it('spells the static statuses as the server spells them', () => {
+    const statuses = ['FIDO_CERTIFIED', 'FIDO_CERTIFIED_L1', 'FIDO_CERTIFIED_L2', 'NOT_FIDO_CERTIFIED', 'REVOKED'];
+    expect(STATIC_STATUS).toEqual(statuses.map(status => spellings[status]));
+    expect(STATIC_CERTIFICATION).toEqual(statuses.slice(0, 3).map(status => spellings[status]));
   });
 
   it('merges the values with the static options, once each', () => {
@@ -56,7 +67,7 @@ describe('filter options', () => {
       'FIDO Certified',
       'FIDO Certified L1',
       'FIDO Certified L2',
-      'NOT FIDO Certified',
+      'Not FIDO Certified',
     ]);
     expect(mergeFilterOptions(new Set(['FIDO Certified L3']), filterConfig('certification'))).toEqual([
       'FIDO Certified L3',
@@ -92,7 +103,7 @@ describe('filter options', () => {
     });
     const lists = explorerFilterOptionLists([ENTRY]);
     expect(lists.userVerification).toEqual(['None', 'Presence Internal']);
-    expect(lists.certification).toContain('FIDO Certified L3plus');
+    expect(lists.certification).toContain('FIDO Certified L3+');
     expect(lists.latestStatus).toContain('Update Available');
     expect(Object.keys(lists)).toHaveLength(8);
   });

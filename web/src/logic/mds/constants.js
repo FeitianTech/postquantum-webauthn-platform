@@ -9,18 +9,19 @@ export const MISSING_METADATA_MESSAGE =
     'Packaged FIDO metadata is unavailable. Please verify the bundled snapshot is present.';
 
 // The levels the Certification filter always offers, and the statuses the
-// Status filter does.
+// Status filter does, as the server spells them (statement_fields.format_enum:
+// tests/fixtures/mds-enum-spellings.json).
 export const CERTIFICATION_OPTIONS = [
-    'FIDO_CERTIFIED',
-    'FIDO_CERTIFIED_L1',
-    'FIDO_CERTIFIED_L2',
+    'FIDO Certified',
+    'FIDO Certified L1',
+    'FIDO Certified L2',
 ];
 export const STATUS_OPTIONS = [
-    'FIDO_CERTIFIED',
-    'FIDO_CERTIFIED_L1',
-    'FIDO_CERTIFIED_L2',
-    'NOT_FIDO_CERTIFIED',
-    'REVOKED',
+    'FIDO Certified',
+    'FIDO Certified L1',
+    'FIDO Certified L2',
+    'Not FIDO Certified',
+    'Revoked',
 ];
 
 /**

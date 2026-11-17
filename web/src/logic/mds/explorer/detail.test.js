@@ -27,7 +27,7 @@ describe('the detail page: title and subtitle', () => {
       { label: 'AAGUID', value: fido2.aaguid },
       { label: '', value: 'FIDO2' },
     ]);
-    expect(formatDetailSubtitle(named('Fixture UAF Authenticator'))).toBe('ID: F1D0#0012 • Uaf');
+    expect(formatDetailSubtitle(named('Fixture UAF Authenticator'))).toBe('ID: F1D0#0012 • UAF');
     expect(formatDetailSubtitle({ aaguid: 'a', id: 'b' })).toBe('AAGUID: a • ID: b');
     expect(formatDetailSubtitle({})).toBe('');
     expect(detailSubtitleParts(null)).toEqual([]);

@@ -3,16 +3,16 @@
     {
       "aaguid": "f1d0f1d0-0000-4000-8000-000000000001",
       "algorithmInfo": "ECDSA_SHA256",
-      "algorithms": "SECP256R1 Ecdsa SHA256 Raw, ED25519 Eddsa SHA512 Raw",
+      "algorithms": "SECP256R1 ECDSA SHA256 Raw, Ed25519 EdDSA SHA512 Raw",
       "algorithmsList": [
-        "SECP256R1 Ecdsa SHA256 Raw",
-        "ED25519 Eddsa SHA512 Raw"
+        "SECP256R1 ECDSA SHA256 Raw",
+        "Ed25519 EdDSA SHA512 Raw"
       ],
-      "attachment": "External, Wired, Nfc",
+      "attachment": "External, Wired, NFC",
       "attachmentList": [
         "External",
         "Wired",
-        "Nfc"
+        "NFC"
       ],
       "attestationCertificates": [],
       "attestationKeyIdentifiers": [],
@@ -51,10 +51,10 @@
       "sourceInfo": null,
       "statusReports": [],
       "timeOfLastStatusChange": "2026-09-01",
-      "transports": "Nfc, Usb",
+      "transports": "NFC, USB",
       "transportsList": [
-        "Nfc",
-        "Usb"
+        "NFC",
+        "USB"
       ],
       "trustAnchorStatus": true,
       "userVerification": "Passcode External, Presence Internal",
@@ -66,16 +66,16 @@
     {
       "aaguid": "f1d0f1d0-0000-4000-8000-000000000002",
       "algorithmInfo": "RSASSA-PKCS1-v1_5_SHA256",
-      "algorithms": "SECP256R1 Ecdsa SHA256 Raw, ED25519 Eddsa SHA512 Raw",
+      "algorithms": "SECP256R1 ECDSA SHA256 Raw, Ed25519 EdDSA SHA512 Raw",
       "algorithmsList": [
-        "SECP256R1 Ecdsa SHA256 Raw",
-        "ED25519 Eddsa SHA512 Raw"
+        "SECP256R1 ECDSA SHA256 Raw",
+        "Ed25519 EdDSA SHA512 Raw"
       ],
-      "attachment": "External, Wired, Nfc",
+      "attachment": "External, Wired, NFC",
       "attachmentList": [
         "External",
         "Wired",
-        "Nfc"
+        "NFC"
       ],
       "attestationCertificates": [],
       "attestationKeyIdentifiers": [],
@@ -114,11 +114,11 @@
       "sourceInfo": null,
       "statusReports": [],
       "timeOfLastStatusChange": "2026-08-15",
-      "transports": "Ble, Nfc, Usb",
+      "transports": "BLE, NFC, USB",
       "transportsList": [
-        "Ble",
-        "Nfc",
-        "Usb"
+        "BLE",
+        "NFC",
+        "USB"
       ],
       "trustAnchorStatus": true,
       "userVerification": "Fingerprint Internal, Passcode Internal, Presence Internal",
@@ -131,16 +131,16 @@
     {
       "aaguid": "f1d0f1d0-0000-4000-8000-000000000003",
       "algorithmInfo": "ED25519_SHA512",
-      "algorithms": "SECP256R1 Ecdsa SHA256 Raw, ED25519 Eddsa SHA512 Raw",
+      "algorithms": "SECP256R1 ECDSA SHA256 Raw, Ed25519 EdDSA SHA512 Raw",
       "algorithmsList": [
-        "SECP256R1 Ecdsa SHA256 Raw",
-        "ED25519 Eddsa SHA512 Raw"
+        "SECP256R1 ECDSA SHA256 Raw",
+        "Ed25519 EdDSA SHA512 Raw"
       ],
-      "attachment": "External, Wired, Nfc",
+      "attachment": "External, Wired, NFC",
       "attachmentList": [
         "External",
         "Wired",
-        "Nfc"
+        "NFC"
       ],
       "attestationCertificates": [],
       "attestationKeyIdentifiers": [],
@@ -179,10 +179,10 @@
       "sourceInfo": null,
       "statusReports": [],
       "timeOfLastStatusChange": "2026-07-10",
-      "transports": "Nfc, Usb",
+      "transports": "NFC, USB",
       "transportsList": [
-        "Nfc",
-        "Usb"
+        "NFC",
+        "USB"
       ],
       "trustAnchorStatus": true,
       "userVerification": "Passcode External, Presence Internal",
@@ -194,10 +194,10 @@
     {
       "aaguid": "f1d0f1d0-0000-4000-8000-000000000004",
       "algorithmInfo": "ECDSA_SHA256",
-      "algorithms": "SECP256R1 Ecdsa SHA256 Raw, ED25519 Eddsa SHA512 Raw",
+      "algorithms": "SECP256R1 ECDSA SHA256 Raw, Ed25519 EdDSA SHA512 Raw",
       "algorithmsList": [
-        "SECP256R1 Ecdsa SHA256 Raw",
-        "ED25519 Eddsa SHA512 Raw"
+        "SECP256R1 ECDSA SHA256 Raw",
+        "Ed25519 EdDSA SHA512 Raw"
       ],
       "attachment": "Internal",
       "attachmentList": [
@@ -226,7 +226,7 @@
       "keyProtectionList": [
         "Software"
       ],
-      "latestStatus": "NOT FIDO Certified",
+      "latestStatus": "Not FIDO Certified",
       "metadataStatement": null,
       "name": "Fixture Uncertified Key",
       "protocol": "FIDO2",
@@ -254,16 +254,16 @@
     {
       "aaguid": "f1d0f1d0-0000-4000-8000-000000000005",
       "algorithmInfo": "ECDSA_SHA256",
-      "algorithms": "SECP256R1 Ecdsa SHA256 Raw, ED25519 Eddsa SHA512 Raw",
+      "algorithms": "SECP256R1 ECDSA SHA256 Raw, Ed25519 EdDSA SHA512 Raw",
       "algorithmsList": [
-        "SECP256R1 Ecdsa SHA256 Raw",
-        "ED25519 Eddsa SHA512 Raw"
+        "SECP256R1 ECDSA SHA256 Raw",
+        "Ed25519 EdDSA SHA512 Raw"
       ],
-      "attachment": "External, Wired, Nfc",
+      "attachment": "External, Wired, NFC",
       "attachmentList": [
         "External",
         "Wired",
-        "Nfc"
+        "NFC"
       ],
       "attestationCertificates": [],
       "attestationKeyIdentifiers": [],
@@ -302,10 +302,10 @@
       "sourceInfo": null,
       "statusReports": [],
       "timeOfLastStatusChange": "2026-05-20",
-      "transports": "Nfc, Usb",
+      "transports": "NFC, USB",
       "transportsList": [
-        "Nfc",
-        "Usb"
+        "NFC",
+        "USB"
       ],
       "trustAnchorStatus": true,
       "userVerification": "Passcode External, Presence Internal",
@@ -317,16 +317,16 @@
     {
       "aaguid": "f1d0f1d0-0000-4000-8000-000000000006",
       "algorithmInfo": "ED25519_SHA512",
-      "algorithms": "SECP256R1 Ecdsa SHA256 Raw, ED25519 Eddsa SHA512 Raw",
+      "algorithms": "SECP256R1 ECDSA SHA256 Raw, Ed25519 EdDSA SHA512 Raw",
       "algorithmsList": [
-        "SECP256R1 Ecdsa SHA256 Raw",
-        "ED25519 Eddsa SHA512 Raw"
+        "SECP256R1 ECDSA SHA256 Raw",
+        "Ed25519 EdDSA SHA512 Raw"
       ],
-      "attachment": "External, Wired, Nfc",
+      "attachment": "External, Wired, NFC",
       "attachmentList": [
         "External",
         "Wired",
-        "Nfc"
+        "NFC"
       ],
       "attestationCertificates": [],
       "attestationKeyIdentifiers": [],
@@ -379,10 +379,10 @@
       "sourceInfo": null,
       "statusReports": [],
       "timeOfLastStatusChange": "2026-04-02",
-      "transports": "Nfc, Usb",
+      "transports": "NFC, USB",
       "transportsList": [
-        "Nfc",
-        "Usb"
+        "NFC",
+        "USB"
       ],
       "trustAnchorStatus": true,
       "userVerification": "Passcode External, Presence Internal",
@@ -394,16 +394,16 @@
     {
       "aaguid": "f1d0f1d0-0000-4000-8000-000000000007",
       "algorithmInfo": "ECDSA_SHA256",
-      "algorithms": "SECP256R1 Ecdsa SHA256 Raw, ED25519 Eddsa SHA512 Raw",
+      "algorithms": "SECP256R1 ECDSA SHA256 Raw, Ed25519 EdDSA SHA512 Raw",
       "algorithmsList": [
-        "SECP256R1 Ecdsa SHA256 Raw",
-        "ED25519 Eddsa SHA512 Raw"
+        "SECP256R1 ECDSA SHA256 Raw",
+        "Ed25519 EdDSA SHA512 Raw"
       ],
-      "attachment": "External, Wired, Nfc",
+      "attachment": "External, Wired, NFC",
       "attachmentList": [
         "External",
         "Wired",
-        "Nfc"
+        "NFC"
       ],
       "attestationCertificates": [],
       "attestationKeyIdentifiers": [],
@@ -442,10 +442,10 @@
       "sourceInfo": null,
       "statusReports": [],
       "timeOfLastStatusChange": "2026-03-03",
-      "transports": "Nfc, Usb",
+      "transports": "NFC, USB",
       "transportsList": [
-        "Nfc",
-        "Usb"
+        "NFC",
+        "USB"
       ],
       "trustAnchorStatus": true,
       "userVerification": "Eyeprint Internal, Faceprint Internal, Fingerprint Internal, Handprint Internal, Location Internal, None, Passcode External, Passcode Internal, Pattern Internal, Presence Internal, Voiceprint Internal",
@@ -466,16 +466,16 @@
     {
       "aaguid": "f1d0f1d0-0000-4000-8000-000000000008",
       "algorithmInfo": "ECDSA_SHA256",
-      "algorithms": "SECP256R1 Ecdsa SHA256 Raw, ED25519 Eddsa SHA512 Raw",
+      "algorithms": "SECP256R1 ECDSA SHA256 Raw, Ed25519 EdDSA SHA512 Raw",
       "algorithmsList": [
-        "SECP256R1 Ecdsa SHA256 Raw",
-        "ED25519 Eddsa SHA512 Raw"
+        "SECP256R1 ECDSA SHA256 Raw",
+        "Ed25519 EdDSA SHA512 Raw"
       ],
-      "attachment": "External, Wired, Nfc",
+      "attachment": "External, Wired, NFC",
       "attachmentList": [
         "External",
         "Wired",
-        "Nfc"
+        "NFC"
       ],
       "attestationCertificates": [],
       "attestationKeyIdentifiers": [],
@@ -514,10 +514,10 @@
       "sourceInfo": null,
       "statusReports": [],
       "timeOfLastStatusChange": "2026-02-14",
-      "transports": "Nfc, Usb",
+      "transports": "NFC, USB",
       "transportsList": [
-        "Nfc",
-        "Usb"
+        "NFC",
+        "USB"
       ],
       "trustAnchorStatus": true,
       "userVerification": "Passcode External, Presence Internal",
@@ -529,16 +529,16 @@
     {
       "aaguid": "f1d0f1d0-0000-4000-8000-000000000009",
       "algorithmInfo": "ECDSA_SHA256",
-      "algorithms": "SECP256R1 Ecdsa SHA256 Raw, ED25519 Eddsa SHA512 Raw",
+      "algorithms": "SECP256R1 ECDSA SHA256 Raw, Ed25519 EdDSA SHA512 Raw",
       "algorithmsList": [
-        "SECP256R1 Ecdsa SHA256 Raw",
-        "ED25519 Eddsa SHA512 Raw"
+        "SECP256R1 ECDSA SHA256 Raw",
+        "Ed25519 EdDSA SHA512 Raw"
       ],
-      "attachment": "External, Wired, Nfc",
+      "attachment": "External, Wired, NFC",
       "attachmentList": [
         "External",
         "Wired",
-        "Nfc"
+        "NFC"
       ],
       "attestationCertificates": [],
       "attestationKeyIdentifiers": [],
@@ -564,7 +564,7 @@
         "Hardware",
         "Secure Element"
       ],
-      "latestStatus": "NOT FIDO Certified",
+      "latestStatus": "Not FIDO Certified",
       "metadataStatement": null,
       "name": "Fixture Key Without An Icon",
       "protocol": "FIDO2",
@@ -577,10 +577,10 @@
       "sourceInfo": null,
       "statusReports": [],
       "timeOfLastStatusChange": "2026-01-05",
-      "transports": "Nfc, Usb",
+      "transports": "NFC, USB",
       "transportsList": [
-        "Nfc",
-        "Usb"
+        "NFC",
+        "USB"
       ],
       "trustAnchorStatus": true,
       "userVerification": "Passcode External, Presence Internal",
@@ -592,16 +592,16 @@
     {
       "aaguid": "f1d0f1d0-0000-4000-8000-000000000010",
       "algorithmInfo": "ECDSA_SHA256",
-      "algorithms": "SECP256R1 Ecdsa SHA256 Raw, ED25519 Eddsa SHA512 Raw",
+      "algorithms": "SECP256R1 ECDSA SHA256 Raw, Ed25519 EdDSA SHA512 Raw",
       "algorithmsList": [
-        "SECP256R1 Ecdsa SHA256 Raw",
-        "ED25519 Eddsa SHA512 Raw"
+        "SECP256R1 ECDSA SHA256 Raw",
+        "Ed25519 EdDSA SHA512 Raw"
       ],
-      "attachment": "External, Wired, Nfc",
+      "attachment": "External, Wired, NFC",
       "attachmentList": [
         "External",
         "Wired",
-        "Nfc"
+        "NFC"
       ],
       "attestationCertificates": [],
       "attestationKeyIdentifiers": [],
@@ -640,10 +640,10 @@
       "sourceInfo": null,
       "statusReports": [],
       "timeOfLastStatusChange": "2025-12-12",
-      "transports": "Nfc, Usb",
+      "transports": "NFC, USB",
       "transportsList": [
-        "Nfc",
-        "Usb"
+        "NFC",
+        "USB"
       ],
       "trustAnchorStatus": true,
       "userVerification": "Passcode External, Presence Internal",
@@ -655,9 +655,9 @@
     {
       "aaguid": "",
       "algorithmInfo": "ECDSA_SHA256",
-      "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+      "algorithms": "SECP256R1 ECDSA SHA256 Raw",
       "algorithmsList": [
-        "SECP256R1 Ecdsa SHA256 Raw"
+        "SECP256R1 ECDSA SHA256 Raw"
       ],
       "attachment": "External, Wired",
       "attachmentList": [
@@ -712,9 +712,9 @@
     {
       "aaguid": "",
       "algorithmInfo": "ED25519_SHA512",
-      "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+      "algorithms": "SECP256R1 ECDSA SHA256 Raw",
       "algorithmsList": [
-        "SECP256R1 Ecdsa SHA256 Raw"
+        "SECP256R1 ECDSA SHA256 Raw"
       ],
       "attachment": "Internal",
       "attachmentList": [
@@ -739,15 +739,15 @@
       "id": "F1D0#0012",
       "index": 11,
       "isLightweightEntry": true,
-      "keyProtection": "Hardware, Tee",
+      "keyProtection": "Hardware, TEE",
       "keyProtectionList": [
         "Hardware",
-        "Tee"
+        "TEE"
       ],
       "latestStatus": "FIDO Certified L1",
       "metadataStatement": null,
       "name": "Fixture UAF Authenticator",
-      "protocol": "Uaf",
+      "protocol": "UAF",
       "rawEntry": null,
       "snapshotFetchedAt": "2026-09-20T08:00:00+00:00",
       "snapshotGeneratedAt": "2026-09-20T08:00:00+00:00",
@@ -768,15 +768,15 @@
     {
       "aaguid": "f1d0f1d0-0000-4000-8000-000000000020",
       "algorithmInfo": "ECDSA_SHA256",
-      "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+      "algorithms": "SECP256R1 ECDSA SHA256 Raw",
       "algorithmsList": [
-        "SECP256R1 Ecdsa SHA256 Raw"
+        "SECP256R1 ECDSA SHA256 Raw"
       ],
-      "attachment": "External, Wired, Nfc",
+      "attachment": "External, Wired, NFC",
       "attachmentList": [
         "External",
         "Wired",
-        "Nfc"
+        "NFC"
       ],
       "attestationCertificates": [],
       "attestationKeyIdentifiers": [],
@@ -815,10 +815,10 @@
       "sourceInfo": null,
       "statusReports": [],
       "timeOfLastStatusChange": "2025-01-01",
-      "transports": "Nfc, Usb",
+      "transports": "NFC, USB",
       "transportsList": [
-        "Nfc",
-        "Usb"
+        "NFC",
+        "USB"
       ],
       "trustAnchorStatus": true,
       "userVerification": "Presence Internal",
@@ -829,15 +829,15 @@
     {
       "aaguid": "f1d0f1d0-0000-4000-8000-000000000021",
       "algorithmInfo": "ECDSA_SHA256",
-      "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+      "algorithms": "SECP256R1 ECDSA SHA256 Raw",
       "algorithmsList": [
-        "SECP256R1 Ecdsa SHA256 Raw"
+        "SECP256R1 ECDSA SHA256 Raw"
       ],
-      "attachment": "External, Wired, Nfc",
+      "attachment": "External, Wired, NFC",
       "attachmentList": [
         "External",
         "Wired",
-        "Nfc"
+        "NFC"
       ],
       "attestationCertificates": [],
       "attestationKeyIdentifiers": [],
@@ -876,10 +876,10 @@
       "sourceInfo": null,
       "statusReports": [],
       "timeOfLastStatusChange": "2025-02-02",
-      "transports": "Nfc, Usb",
+      "transports": "NFC, USB",
       "transportsList": [
-        "Nfc",
-        "Usb"
+        "NFC",
+        "USB"
       ],
       "trustAnchorStatus": true,
       "userVerification": "Presence Internal",
@@ -890,15 +890,15 @@
     {
       "aaguid": "f1d0f1d0-0000-4000-8000-000000000022",
       "algorithmInfo": "ECDSA_SHA256",
-      "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+      "algorithms": "SECP256R1 ECDSA SHA256 Raw",
       "algorithmsList": [
-        "SECP256R1 Ecdsa SHA256 Raw"
+        "SECP256R1 ECDSA SHA256 Raw"
       ],
-      "attachment": "External, Wired, Nfc",
+      "attachment": "External, Wired, NFC",
       "attachmentList": [
         "External",
         "Wired",
-        "Nfc"
+        "NFC"
       ],
       "attestationCertificates": [],
       "attestationKeyIdentifiers": [],
@@ -937,10 +937,10 @@
       "sourceInfo": null,
       "statusReports": [],
       "timeOfLastStatusChange": "2025-03-03",
-      "transports": "Nfc, Usb",
+      "transports": "NFC, USB",
       "transportsList": [
-        "Nfc",
-        "Usb"
+        "NFC",
+        "USB"
       ],
       "trustAnchorStatus": true,
       "userVerification": "Presence Internal",
@@ -951,15 +951,15 @@
     {
       "aaguid": "f1d0f1d0-0000-4000-8000-000000000023",
       "algorithmInfo": "ECDSA_SHA256",
-      "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+      "algorithms": "SECP256R1 ECDSA SHA256 Raw",
       "algorithmsList": [
-        "SECP256R1 Ecdsa SHA256 Raw"
+        "SECP256R1 ECDSA SHA256 Raw"
       ],
-      "attachment": "External, Wired, Nfc",
+      "attachment": "External, Wired, NFC",
       "attachmentList": [
         "External",
         "Wired",
-        "Nfc"
+        "NFC"
       ],
       "attestationCertificates": [],
       "attestationKeyIdentifiers": [],
@@ -998,10 +998,10 @@
       "sourceInfo": null,
       "statusReports": [],
       "timeOfLastStatusChange": "2025-04-04",
-      "transports": "Nfc, Usb",
+      "transports": "NFC, USB",
       "transportsList": [
-        "Nfc",
-        "Usb"
+        "NFC",
+        "USB"
       ],
       "trustAnchorStatus": true,
       "userVerification": "Presence Internal",
@@ -1012,15 +1012,15 @@
     {
       "aaguid": "f1d0f1d0-0000-4000-8000-000000000024",
       "algorithmInfo": "ECDSA_SHA256",
-      "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+      "algorithms": "SECP256R1 ECDSA SHA256 Raw",
       "algorithmsList": [
-        "SECP256R1 Ecdsa SHA256 Raw"
+        "SECP256R1 ECDSA SHA256 Raw"
       ],
-      "attachment": "External, Wired, Nfc",
+      "attachment": "External, Wired, NFC",
       "attachmentList": [
         "External",
         "Wired",
-        "Nfc"
+        "NFC"
       ],
       "attestationCertificates": [],
       "attestationKeyIdentifiers": [],
@@ -1059,10 +1059,10 @@
       "sourceInfo": null,
       "statusReports": [],
       "timeOfLastStatusChange": "2025-05-05",
-      "transports": "Nfc, Usb",
+      "transports": "NFC, USB",
       "transportsList": [
-        "Nfc",
-        "Usb"
+        "NFC",
+        "USB"
       ],
       "trustAnchorStatus": true,
       "userVerification": "Presence Internal",
@@ -1073,15 +1073,15 @@
     {
       "aaguid": "f1d0f1d0-0000-4000-8000-000000000025",
       "algorithmInfo": "ECDSA_SHA256",
-      "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+      "algorithms": "SECP256R1 ECDSA SHA256 Raw",
       "algorithmsList": [
-        "SECP256R1 Ecdsa SHA256 Raw"
+        "SECP256R1 ECDSA SHA256 Raw"
       ],
-      "attachment": "External, Wired, Nfc",
+      "attachment": "External, Wired, NFC",
       "attachmentList": [
         "External",
         "Wired",
-        "Nfc"
+        "NFC"
       ],
       "attestationCertificates": [],
       "attestationKeyIdentifiers": [],
@@ -1120,10 +1120,10 @@
       "sourceInfo": null,
       "statusReports": [],
       "timeOfLastStatusChange": "2025-06-06",
-      "transports": "Nfc, Usb",
+      "transports": "NFC, USB",
       "transportsList": [
-        "Nfc",
-        "Usb"
+        "NFC",
+        "USB"
       ],
       "trustAnchorStatus": true,
       "userVerification": "Presence Internal",
@@ -1134,15 +1134,15 @@
     {
       "aaguid": "f1d0f1d0-0000-4000-8000-000000000026",
       "algorithmInfo": "ECDSA_SHA256",
-      "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+      "algorithms": "SECP256R1 ECDSA SHA256 Raw",
       "algorithmsList": [
-        "SECP256R1 Ecdsa SHA256 Raw"
+        "SECP256R1 ECDSA SHA256 Raw"
       ],
-      "attachment": "External, Wired, Nfc",
+      "attachment": "External, Wired, NFC",
       "attachmentList": [
         "External",
         "Wired",
-        "Nfc"
+        "NFC"
       ],
       "attestationCertificates": [],
       "attestationKeyIdentifiers": [],
@@ -1181,10 +1181,10 @@
       "sourceInfo": null,
       "statusReports": [],
       "timeOfLastStatusChange": "2025-07-07",
-      "transports": "Nfc, Usb",
+      "transports": "NFC, USB",
       "transportsList": [
-        "Nfc",
-        "Usb"
+        "NFC",
+        "USB"
       ],
       "trustAnchorStatus": true,
       "userVerification": "Presence Internal",
@@ -1195,15 +1195,15 @@
     {
       "aaguid": "f1d0f1d0-0000-4000-8000-000000000027",
       "algorithmInfo": "ECDSA_SHA256",
-      "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+      "algorithms": "SECP256R1 ECDSA SHA256 Raw",
       "algorithmsList": [
-        "SECP256R1 Ecdsa SHA256 Raw"
+        "SECP256R1 ECDSA SHA256 Raw"
       ],
-      "attachment": "External, Wired, Nfc",
+      "attachment": "External, Wired, NFC",
       "attachmentList": [
         "External",
         "Wired",
-        "Nfc"
+        "NFC"
       ],
       "attestationCertificates": [],
       "attestationKeyIdentifiers": [],
@@ -1242,10 +1242,10 @@
       "sourceInfo": null,
       "statusReports": [],
       "timeOfLastStatusChange": "2025-08-08",
-      "transports": "Nfc, Usb",
+      "transports": "NFC, USB",
       "transportsList": [
-        "Nfc",
-        "Usb"
+        "NFC",
+        "USB"
       ],
       "trustAnchorStatus": true,
       "userVerification": "Presence Internal",
@@ -1256,15 +1256,15 @@
     {
       "aaguid": "f1d0f1d0-0000-4000-8000-000000000028",
       "algorithmInfo": "ECDSA_SHA256",
-      "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+      "algorithms": "SECP256R1 ECDSA SHA256 Raw",
       "algorithmsList": [
-        "SECP256R1 Ecdsa SHA256 Raw"
+        "SECP256R1 ECDSA SHA256 Raw"
       ],
-      "attachment": "External, Wired, Nfc",
+      "attachment": "External, Wired, NFC",
       "attachmentList": [
         "External",
         "Wired",
-        "Nfc"
+        "NFC"
       ],
       "attestationCertificates": [],
       "attestationKeyIdentifiers": [],
@@ -1303,10 +1303,10 @@
       "sourceInfo": null,
       "statusReports": [],
       "timeOfLastStatusChange": "2025-09-09",
-      "transports": "Nfc, Usb",
+      "transports": "NFC, USB",
       "transportsList": [
-        "Nfc",
-        "Usb"
+        "NFC",
+        "USB"
       ],
       "trustAnchorStatus": true,
       "userVerification": "Presence Internal",
@@ -1317,15 +1317,15 @@
     {
       "aaguid": "f1d0f1d0-0000-4000-8000-000000000029",
       "algorithmInfo": "ECDSA_SHA256",
-      "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+      "algorithms": "SECP256R1 ECDSA SHA256 Raw",
       "algorithmsList": [
-        "SECP256R1 Ecdsa SHA256 Raw"
+        "SECP256R1 ECDSA SHA256 Raw"
       ],
-      "attachment": "External, Wired, Nfc",
+      "attachment": "External, Wired, NFC",
       "attachmentList": [
         "External",
         "Wired",
-        "Nfc"
+        "NFC"
       ],
       "attestationCertificates": [],
       "attestationKeyIdentifiers": [],
@@ -1364,10 +1364,10 @@
       "sourceInfo": null,
       "statusReports": [],
       "timeOfLastStatusChange": "2025-01-10",
-      "transports": "Nfc, Usb",
+      "transports": "NFC, USB",
       "transportsList": [
-        "Nfc",
-        "Usb"
+        "NFC",
+        "USB"
       ],
       "trustAnchorStatus": true,
       "userVerification": "Presence Internal",
@@ -1378,15 +1378,15 @@
     {
       "aaguid": "f1d0f1d0-0000-4000-8000-000000000030",
       "algorithmInfo": "ECDSA_SHA256",
-      "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+      "algorithms": "SECP256R1 ECDSA SHA256 Raw",
       "algorithmsList": [
-        "SECP256R1 Ecdsa SHA256 Raw"
+        "SECP256R1 ECDSA SHA256 Raw"
       ],
-      "attachment": "External, Wired, Nfc",
+      "attachment": "External, Wired, NFC",
       "attachmentList": [
         "External",
         "Wired",
-        "Nfc"
+        "NFC"
       ],
       "attestationCertificates": [],
       "attestationKeyIdentifiers": [],
@@ -1425,10 +1425,10 @@
       "sourceInfo": null,
       "statusReports": [],
       "timeOfLastStatusChange": "2025-02-11",
-      "transports": "Nfc, Usb",
+      "transports": "NFC, USB",
       "transportsList": [
-        "Nfc",
-        "Usb"
+        "NFC",
+        "USB"
       ],
       "trustAnchorStatus": true,
       "userVerification": "Presence Internal",
@@ -1439,15 +1439,15 @@
     {
       "aaguid": "f1d0f1d0-0000-4000-8000-000000000031",
       "algorithmInfo": "ECDSA_SHA256",
-      "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+      "algorithms": "SECP256R1 ECDSA SHA256 Raw",
       "algorithmsList": [
-        "SECP256R1 Ecdsa SHA256 Raw"
+        "SECP256R1 ECDSA SHA256 Raw"
       ],
-      "attachment": "External, Wired, Nfc",
+      "attachment": "External, Wired, NFC",
       "attachmentList": [
         "External",
         "Wired",
-        "Nfc"
+        "NFC"
       ],
       "attestationCertificates": [],
       "attestationKeyIdentifiers": [],
@@ -1486,10 +1486,10 @@
       "sourceInfo": null,
       "statusReports": [],
       "timeOfLastStatusChange": "2025-03-12",
-      "transports": "Nfc, Usb",
+      "transports": "NFC, USB",
       "transportsList": [
-        "Nfc",
-        "Usb"
+        "NFC",
+        "USB"
       ],
       "trustAnchorStatus": true,
       "userVerification": "Presence Internal",
@@ -1500,15 +1500,15 @@
     {
       "aaguid": "f1d0f1d0-0000-4000-8000-000000000032",
       "algorithmInfo": "ECDSA_SHA256",
-      "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+      "algorithms": "SECP256R1 ECDSA SHA256 Raw",
       "algorithmsList": [
-        "SECP256R1 Ecdsa SHA256 Raw"
+        "SECP256R1 ECDSA SHA256 Raw"
       ],
-      "attachment": "External, Wired, Nfc",
+      "attachment": "External, Wired, NFC",
       "attachmentList": [
         "External",
         "Wired",
-        "Nfc"
+        "NFC"
       ],
       "attestationCertificates": [],
       "attestationKeyIdentifiers": [],
@@ -1547,10 +1547,10 @@
       "sourceInfo": null,
       "statusReports": [],
       "timeOfLastStatusChange": "2025-04-13",
-      "transports": "Nfc, Usb",
+      "transports": "NFC, USB",
       "transportsList": [
-        "Nfc",
-        "Usb"
+        "NFC",
+        "USB"
       ],
       "trustAnchorStatus": true,
       "userVerification": "Presence Internal",
@@ -1561,15 +1561,15 @@
     {
       "aaguid": "f1d0f1d0-0000-4000-8000-000000000033",
       "algorithmInfo": "ECDSA_SHA256",
-      "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+      "algorithms": "SECP256R1 ECDSA SHA256 Raw",
       "algorithmsList": [
-        "SECP256R1 Ecdsa SHA256 Raw"
+        "SECP256R1 ECDSA SHA256 Raw"
       ],
-      "attachment": "External, Wired, Nfc",
+      "attachment": "External, Wired, NFC",
       "attachmentList": [
         "External",
         "Wired",
-        "Nfc"
+        "NFC"
       ],
       "attestationCertificates": [],
       "attestationKeyIdentifiers": [],
@@ -1608,10 +1608,10 @@
       "sourceInfo": null,
       "statusReports": [],
       "timeOfLastStatusChange": "2025-05-14",
-      "transports": "Nfc, Usb",
+      "transports": "NFC, USB",
       "transportsList": [
-        "Nfc",
-        "Usb"
+        "NFC",
+        "USB"
       ],
       "trustAnchorStatus": true,
       "userVerification": "Presence Internal",
@@ -1622,15 +1622,15 @@
     {
       "aaguid": "f1d0f1d0-0000-4000-8000-000000000034",
       "algorithmInfo": "ECDSA_SHA256",
-      "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+      "algorithms": "SECP256R1 ECDSA SHA256 Raw",
       "algorithmsList": [
-        "SECP256R1 Ecdsa SHA256 Raw"
+        "SECP256R1 ECDSA SHA256 Raw"
       ],
-      "attachment": "External, Wired, Nfc",
+      "attachment": "External, Wired, NFC",
       "attachmentList": [
         "External",
         "Wired",
-        "Nfc"
+        "NFC"
       ],
       "attestationCertificates": [],
       "attestationKeyIdentifiers": [],
@@ -1669,10 +1669,10 @@
       "sourceInfo": null,
       "statusReports": [],
       "timeOfLastStatusChange": "2025-06-15",
-      "transports": "Nfc, Usb",
+      "transports": "NFC, USB",
       "transportsList": [
-        "Nfc",
-        "Usb"
+        "NFC",
+        "USB"
       ],
       "trustAnchorStatus": true,
       "userVerification": "Presence Internal",
@@ -1683,15 +1683,15 @@
     {
       "aaguid": "f1d0f1d0-0000-4000-8000-000000000035",
       "algorithmInfo": "ECDSA_SHA256",
-      "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+      "algorithms": "SECP256R1 ECDSA SHA256 Raw",
       "algorithmsList": [
-        "SECP256R1 Ecdsa SHA256 Raw"
+        "SECP256R1 ECDSA SHA256 Raw"
       ],
-      "attachment": "External, Wired, Nfc",
+      "attachment": "External, Wired, NFC",
       "attachmentList": [
         "External",
         "Wired",
-        "Nfc"
+        "NFC"
       ],
       "attestationCertificates": [],
       "attestationKeyIdentifiers": [],
@@ -1730,10 +1730,10 @@
       "sourceInfo": null,
       "statusReports": [],
       "timeOfLastStatusChange": "2025-07-16",
-      "transports": "Nfc, Usb",
+      "transports": "NFC, USB",
       "transportsList": [
-        "Nfc",
-        "Usb"
+        "NFC",
+        "USB"
       ],
       "trustAnchorStatus": true,
       "userVerification": "Presence Internal",
@@ -1744,15 +1744,15 @@
     {
       "aaguid": "f1d0f1d0-0000-4000-8000-000000000036",
       "algorithmInfo": "ECDSA_SHA256",
-      "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+      "algorithms": "SECP256R1 ECDSA SHA256 Raw",
       "algorithmsList": [
-        "SECP256R1 Ecdsa SHA256 Raw"
+        "SECP256R1 ECDSA SHA256 Raw"
       ],
-      "attachment": "External, Wired, Nfc",
+      "attachment": "External, Wired, NFC",
       "attachmentList": [
         "External",
         "Wired",
-        "Nfc"
+        "NFC"
       ],
       "attestationCertificates": [],
       "attestationKeyIdentifiers": [],
@@ -1791,10 +1791,10 @@
       "sourceInfo": null,
       "statusReports": [],
       "timeOfLastStatusChange": "2025-08-17",
-      "transports": "Nfc, Usb",
+      "transports": "NFC, USB",
       "transportsList": [
-        "Nfc",
-        "Usb"
+        "NFC",
+        "USB"
       ],
       "trustAnchorStatus": true,
       "userVerification": "Presence Internal",
@@ -1805,15 +1805,15 @@
     {
       "aaguid": "f1d0f1d0-0000-4000-8000-000000000037",
       "algorithmInfo": "ECDSA_SHA256",
-      "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+      "algorithms": "SECP256R1 ECDSA SHA256 Raw",
       "algorithmsList": [
-        "SECP256R1 Ecdsa SHA256 Raw"
+        "SECP256R1 ECDSA SHA256 Raw"
       ],
-      "attachment": "External, Wired, Nfc",
+      "attachment": "External, Wired, NFC",
       "attachmentList": [
         "External",
         "Wired",
-        "Nfc"
+        "NFC"
       ],
       "attestationCertificates": [],
       "attestationKeyIdentifiers": [],
@@ -1852,10 +1852,10 @@
       "sourceInfo": null,
       "statusReports": [],
       "timeOfLastStatusChange": "2025-09-18",
-      "transports": "Nfc, Usb",
+      "transports": "NFC, USB",
       "transportsList": [
-        "Nfc",
-        "Usb"
+        "NFC",
+        "USB"
       ],
       "trustAnchorStatus": true,
       "userVerification": "Presence Internal",
@@ -1866,15 +1866,15 @@
     {
       "aaguid": "f1d0f1d0-0000-4000-8000-000000000038",
       "algorithmInfo": "ECDSA_SHA256",
-      "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+      "algorithms": "SECP256R1 ECDSA SHA256 Raw",
       "algorithmsList": [
-        "SECP256R1 Ecdsa SHA256 Raw"
+        "SECP256R1 ECDSA SHA256 Raw"
       ],
-      "attachment": "External, Wired, Nfc",
+      "attachment": "External, Wired, NFC",
       "attachmentList": [
         "External",
         "Wired",
-        "Nfc"
+        "NFC"
       ],
       "attestationCertificates": [],
       "attestationKeyIdentifiers": [],
@@ -1913,10 +1913,10 @@
       "sourceInfo": null,
       "statusReports": [],
       "timeOfLastStatusChange": "2025-01-19",
-      "transports": "Nfc, Usb",
+      "transports": "NFC, USB",
       "transportsList": [
-        "Nfc",
-        "Usb"
+        "NFC",
+        "USB"
       ],
       "trustAnchorStatus": true,
       "userVerification": "Presence Internal",
@@ -1927,15 +1927,15 @@
     {
       "aaguid": "f1d0f1d0-0000-4000-8000-000000000039",
       "algorithmInfo": "ECDSA_SHA256",
-      "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+      "algorithms": "SECP256R1 ECDSA SHA256 Raw",
       "algorithmsList": [
-        "SECP256R1 Ecdsa SHA256 Raw"
+        "SECP256R1 ECDSA SHA256 Raw"
       ],
-      "attachment": "External, Wired, Nfc",
+      "attachment": "External, Wired, NFC",
       "attachmentList": [
         "External",
         "Wired",
-        "Nfc"
+        "NFC"
       ],
       "attestationCertificates": [],
       "attestationKeyIdentifiers": [],
@@ -1974,10 +1974,10 @@
       "sourceInfo": null,
       "statusReports": [],
       "timeOfLastStatusChange": "2025-01-01",
-      "transports": "Nfc, Usb",
+      "transports": "NFC, USB",
       "transportsList": [
-        "Nfc",
-        "Usb"
+        "NFC",
+        "USB"
       ],
       "trustAnchorStatus": true,
       "userVerification": "Presence Internal",

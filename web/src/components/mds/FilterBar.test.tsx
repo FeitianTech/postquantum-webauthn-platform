@@ -102,7 +102,7 @@ describe('the MDS filters', () => {
 
   it('shows the protocol as the server spells it, and says when nothing matches', async () => {
     await renderLoaded();
-    await userEvent.type(combobox('Protocol'), 'Uaf');
+    await userEvent.type(combobox('Protocol'), 'UAF');
     await waitFor(() => expect(shownNames()).toEqual(['Fixture UAF Authenticator']));
 
     await userEvent.type(search('CN'), 'nothing like this');
@@ -141,10 +141,10 @@ describe('an MDS filter that offers a list', () => {
     await renderLoaded();
     await userEvent.click(combobox('Transports'));
     expect(combobox('Transports')).toHaveAttribute('aria-expanded', 'true');
-    expect(options()).toEqual(['Ble', 'Hybrid', 'Internal', 'Nfc', 'Usb']);
+    expect(options()).toEqual(['BLE', 'Hybrid', 'Internal', 'NFC', 'USB']);
 
     await userEvent.type(combobox('Transports'), 'n');
-    expect(options()).toEqual(['Internal', 'Nfc']);
+    expect(options()).toEqual(['Internal', 'NFC']);
     await userEvent.type(combobox('Transports'), 'zz');
     expect(within(screen.getByRole('listbox')).getByText('No matches')).toBeInTheDocument();
     expect(within(screen.getByRole('listbox')).queryAllByRole('option')).toHaveLength(0);
@@ -159,7 +159,7 @@ describe('an MDS filter that offers a list', () => {
   it('filters by the latest status, a named one exactly and FIDO Certified to every level', async () => {
     await renderLoaded();
     await userEvent.click(combobox('Status'));
-    expect(options()).toEqual(['FIDO Certified', 'FIDO Certified L1', 'FIDO Certified L2', 'NOT FIDO Certified', 'Revoked']);
+    expect(options()).toEqual(['FIDO Certified', 'FIDO Certified L1', 'FIDO Certified L2', 'Not FIDO Certified', 'Revoked']);
     await userEvent.click(screen.getByRole('option', { name: 'Revoked' }));
     await waitFor(() => expect(shownNames()).toEqual(['Fixture Revoked Key']));
 
@@ -186,7 +186,7 @@ describe('an MDS filter that offers a list', () => {
     fireEvent.keyDown(field, { key: 'ArrowUp' });
     const listbox = screen.getByRole('listbox');
     const activeText = () => document.getElementById(field.getAttribute('aria-activedescendant')!)?.textContent;
-    expect(activeText()).toBe('Tee');
+    expect(activeText()).toBe('TEE');
     fireEvent.keyDown(field, { key: 'ArrowDown' });
     expect(activeText()).toBe('Hardware');
     fireEvent.keyDown(field, { key: 'ArrowDown' });

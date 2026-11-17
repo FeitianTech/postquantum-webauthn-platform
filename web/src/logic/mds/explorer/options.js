@@ -1,6 +1,5 @@
 // The options a filter's combobox offers. No DOM.
 import { CERTIFICATION_OPTIONS, FILTER_CONFIG, STATUS_OPTIONS } from '../constants.js';
-import { formatEnum } from '../formatters.js';
 
 export const NO_MATCHING_OPTIONS = 'No matches';
 
@@ -14,8 +13,8 @@ function statusOption(text) {
 export function collectOptionSets(data) {
     const sets = {
         protocol: new Set(),
-        certification: new Set(CERTIFICATION_OPTIONS.map(option => formatEnum(option))),
-        latestStatus: new Set(STATUS_OPTIONS.map(option => formatEnum(option))),
+        certification: new Set(CERTIFICATION_OPTIONS),
+        latestStatus: new Set(STATUS_OPTIONS),
         userVerification: new Set(),
         attachment: new Set(),
         transports: new Set(),
@@ -43,12 +42,12 @@ export function collectOptionSets(data) {
     return sets;
 }
 
-// A filter's static options, as shown (formatted).
+// A filter's static options, as shown.
 export function staticFilterOptions(config) {
     if (!Array.isArray(config?.staticOptions)) {
         return [];
     }
-    return config.staticOptions.map(option => formatEnum(option)).filter(Boolean);
+    return config.staticOptions.filter(Boolean);
 }
 
 // The values offered, with the filter's static options, without duplicates.

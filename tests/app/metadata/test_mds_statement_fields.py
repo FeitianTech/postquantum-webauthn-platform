@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import json
 from datetime import date, datetime, timezone
+from pathlib import Path
 
 import pytest
 
@@ -69,7 +71,7 @@ def test_guid_formatting_and_aaguid_normalisation_edge_cases():
 
 
 def test_enum_protocol_certification_and_extraction_helpers():
-    assert fields.format_enum('fido_certified_l1') == 'Fido Certified L1'
+    assert fields.format_enum('fido_certified_l1') == 'FIDO Certified L1'
     assert fields.format_enum('') == ''
     assert fields.format_protocol('fido2') == 'FIDO2'
     assert fields.format_protocol('custom-proto') == 'Custom Proto'
@@ -89,7 +91,7 @@ def test_enum_protocol_certification_and_extraction_helpers():
     assert fields.extract_user_verification(uvd) == ['Fingerprint Internal', 'Presence Internal']
 
     metadata = {'authenticatorGetInfo': {'transports': ['usb']}, 'transports': ['nfc', 'usb']}
-    assert fields.extract_transports(metadata) == ['Nfc', 'Usb']
+    assert fields.extract_transports(metadata) == ['NFC', 'USB']
 
     assert fields.normalise_icon(None, None) == ''
 
@@ -164,9 +166,9 @@ def test_the_latest_status_is_the_newest_report_whatever_it_says_and_the_level_s
         (("FIDO_CERTIFIED_L2", "FIDO_CERTIFIED_L1PLUS"), "FIDO Certified L2"),
         (("FIDO_CERTIFIED_L3PLUS", "UPDATE_AVAILABLE"), "Update Available"),
         (("UPDATE_AVAILABLE", "REVOKED", "FIDO_CERTIFIED_L2"), "Revoked"),
-        (("USER_VERIFICATION_BYPASS", "ATTESTATION_KEY_COMPROMISE"), "Attestation KEY Compromise"),
-        (("NOT_FIDO_CERTIFIED", "SELF_ASSERTION_SUBMITTED"), "SELF Assertion Submitted"),
-        (("A_FUTURE_STATUS", "NOT_FIDO_CERTIFIED"), "NOT FIDO Certified"),
+        (("USER_VERIFICATION_BYPASS", "ATTESTATION_KEY_COMPROMISE"), "Attestation Key Compromise"),
+        (("NOT_FIDO_CERTIFIED", "SELF_ASSERTION_SUBMITTED"), "Self Assertion Submitted"),
+        (("A_FUTURE_STATUS", "NOT_FIDO_CERTIFIED"), "Not FIDO Certified"),
     ],
 )
 def test_of_reports_of_one_date_the_more_serious_status_is_the_latest_in_either_order(statuses, latest):
@@ -180,7 +182,7 @@ def test_the_latest_status_code_is_the_latest_reports_status_as_mds_writes_it():
     reports = [_report("FIDO_CERTIFIED_L2", "2024-01-01"), _report("user_verification_bypass", "2025-06-01")]
 
     assert fields.latest_status_code(reports) == "USER_VERIFICATION_BYPASS"
-    assert fields.latest_status(reports) == "USER Verification Bypass"
+    assert fields.latest_status(reports) == "User Verification Bypass"
     assert fields.latest_status_code([]) == fields.latest_status_code("no reports") == ""
 
 
@@ -238,6 +240,24 @@ def test_enum_names_replace_repeated_hyphens_with_spaces():
     assert fields.format_enum('A--B') == 'A B'
 
 
+# Shared with the page's static filter options (web/src/logic/mds/explorer/options.test.js).
+_SPELLINGS = json.loads((Path(__file__).parents[2] / "fixtures" / "mds-enum-spellings.json").read_text())["spellings"]
+
+
+@pytest.mark.parametrize(("value", "spelling"), sorted(_SPELLINGS.items()))
+def test_each_mds_value_is_spelled_as_the_shared_table_spells_it(value, spelling):
+    assert fields.format_enum(value) == spelling
+
+
+@pytest.mark.parametrize(
+    ("value", "spelling"),
+    [("FIDO_CERTIFIED_L1PLUS", "FIDO Certified L1+"), ("FIDO_CERTIFIED_L12plus", "FIDO Certified L12+"),
+     ("lplus", "Lplus"), ("l\u00b2plus", "L\u00b2plus"), ("a_future_word9", "A Future Word9")],
+)
+def test_a_level_plus_is_written_with_a_plus_and_any_other_word_title_cased(value, spelling):
+    assert fields.format_enum(value) == spelling
+
+
 @pytest.mark.parametrize(
     "icon",
     [
@@ -283,7 +303,7 @@ def test_a_statements_icon_is_read_with_its_type_under_either_name():
         ([_report("FIDO_CERTIFIED_L2", "2024-01-01"), _report("FIDO_CERTIFIED_L1", "2025-01-01")], "FIDO Certified L2"),
         ([_report("FIDO_CERTIFIED", "2025-01-01"), _report("FIDO_CERTIFIED_L1", "2025-01-01")], "FIDO Certified L1"),
         ([_report("FIDO_CERTIFIED_L3PLUS", "2025-01-01"), _report("FIDO_CERTIFIED_L4", "2020-01-01")], "FIDO Certified L4"),
-        ([_report("FIDO_CERTIFIED_L1PLUS", "2025-01-01"), _report("FIDO_CERTIFIED_L1", "2026-01-01")], "FIDO Certified L1plus"),
+        ([_report("FIDO_CERTIFIED_L1PLUS", "2025-01-01"), _report("FIDO_CERTIFIED_L1", "2026-01-01")], "FIDO Certified L1+"),
         ([_report("NOT_FIDO_CERTIFIED", "2025-01-01"), _report("SELF_ASSERTION_SUBMITTED", "2026-01-01")], ""),
         ([_report("FIDO_CERTIFIEDX", "2025-01-01")], ""),
         ([], ""),

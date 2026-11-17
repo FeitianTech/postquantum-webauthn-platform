@@ -3,7 +3,7 @@
     "meta": {
       "baseEntryCount": 32,
       "customEntryCount": 0,
-      "derivedFormat": 4,
+      "derivedFormat": 5,
       "entryCount": 32,
       "etag": "\"fixture-7\"",
       "fetchedAt": "2026-09-20T08:00:00+00:00",
@@ -20,16 +20,16 @@
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000001",
         "algorithmInfo": "ECDSA_SHA256",
-        "algorithms": "SECP256R1 Ecdsa SHA256 Raw, ED25519 Eddsa SHA512 Raw",
+        "algorithms": "SECP256R1 ECDSA SHA256 Raw, Ed25519 EdDSA SHA512 Raw",
         "algorithmsList": [
-          "SECP256R1 Ecdsa SHA256 Raw",
-          "ED25519 Eddsa SHA512 Raw"
+          "SECP256R1 ECDSA SHA256 Raw",
+          "Ed25519 EdDSA SHA512 Raw"
         ],
-        "attachment": "External, Wired, Nfc",
+        "attachment": "External, Wired, NFC",
         "attachmentList": [
           "External",
           "Wired",
-          "Nfc"
+          "NFC"
         ],
         "certificateAlgorithmInfo": "ECDSA_SHA256",
         "certificateAlgorithmInfoList": [
@@ -56,31 +56,31 @@
         "latestStatus": "FIDO Certified L1",
         "name": "Fixture Security Key L1",
         "protocol": "FIDO2",
-        "transports": "Nfc, Usb",
+        "transports": "NFC, USB",
         "transportsList": [
-          "Nfc",
-          "Usb"
+          "NFC",
+          "USB"
         ],
         "userVerification": "Passcode External, Presence Internal",
         "userVerificationList": [
           "Passcode External",
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000001?v=7.6adb59277e89.4"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000001?v=7.6adb59277e89.5"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000002",
         "algorithmInfo": "RSASSA-PKCS1-v1_5_SHA256",
-        "algorithms": "SECP256R1 Ecdsa SHA256 Raw, ED25519 Eddsa SHA512 Raw",
+        "algorithms": "SECP256R1 ECDSA SHA256 Raw, Ed25519 EdDSA SHA512 Raw",
         "algorithmsList": [
-          "SECP256R1 Ecdsa SHA256 Raw",
-          "ED25519 Eddsa SHA512 Raw"
+          "SECP256R1 ECDSA SHA256 Raw",
+          "Ed25519 EdDSA SHA512 Raw"
         ],
-        "attachment": "External, Wired, Nfc",
+        "attachment": "External, Wired, NFC",
         "attachmentList": [
           "External",
           "Wired",
-          "Nfc"
+          "NFC"
         ],
         "certificateAlgorithmInfo": "RSASSA-PKCS1-v1_5_SHA256",
         "certificateAlgorithmInfoList": [
@@ -107,11 +107,11 @@
         "latestStatus": "FIDO Certified L2",
         "name": "Fixture Security Key L2",
         "protocol": "FIDO2",
-        "transports": "Ble, Nfc, Usb",
+        "transports": "BLE, NFC, USB",
         "transportsList": [
-          "Ble",
-          "Nfc",
-          "Usb"
+          "BLE",
+          "NFC",
+          "USB"
         ],
         "userVerification": "Fingerprint Internal, Passcode Internal, Presence Internal",
         "userVerificationList": [
@@ -119,21 +119,21 @@
           "Passcode Internal",
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000002?v=7.6adb59277e89.4"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000002?v=7.6adb59277e89.5"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000003",
         "algorithmInfo": "ED25519_SHA512",
-        "algorithms": "SECP256R1 Ecdsa SHA256 Raw, ED25519 Eddsa SHA512 Raw",
+        "algorithms": "SECP256R1 ECDSA SHA256 Raw, Ed25519 EdDSA SHA512 Raw",
         "algorithmsList": [
-          "SECP256R1 Ecdsa SHA256 Raw",
-          "ED25519 Eddsa SHA512 Raw"
+          "SECP256R1 ECDSA SHA256 Raw",
+          "Ed25519 EdDSA SHA512 Raw"
         ],
-        "attachment": "External, Wired, Nfc",
+        "attachment": "External, Wired, NFC",
         "attachmentList": [
           "External",
           "Wired",
-          "Nfc"
+          "NFC"
         ],
         "certificateAlgorithmInfo": "ED25519_SHA512",
         "certificateAlgorithmInfoList": [
@@ -160,25 +160,25 @@
         "latestStatus": "FIDO Certified",
         "name": "Fixture Certified Key",
         "protocol": "FIDO2",
-        "transports": "Nfc, Usb",
+        "transports": "NFC, USB",
         "transportsList": [
-          "Nfc",
-          "Usb"
+          "NFC",
+          "USB"
         ],
         "userVerification": "Passcode External, Presence Internal",
         "userVerificationList": [
           "Passcode External",
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000003?v=7.6adb59277e89.4"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000003?v=7.6adb59277e89.5"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000004",
         "algorithmInfo": "ECDSA_SHA256",
-        "algorithms": "SECP256R1 Ecdsa SHA256 Raw, ED25519 Eddsa SHA512 Raw",
+        "algorithms": "SECP256R1 ECDSA SHA256 Raw, Ed25519 EdDSA SHA512 Raw",
         "algorithmsList": [
-          "SECP256R1 Ecdsa SHA256 Raw",
-          "ED25519 Eddsa SHA512 Raw"
+          "SECP256R1 ECDSA SHA256 Raw",
+          "Ed25519 EdDSA SHA512 Raw"
         ],
         "attachment": "Internal",
         "attachmentList": [
@@ -205,7 +205,7 @@
         "keyProtectionList": [
           "Software"
         ],
-        "latestStatus": "NOT FIDO Certified",
+        "latestStatus": "Not FIDO Certified",
         "name": "Fixture Uncertified Key",
         "protocol": "FIDO2",
         "transports": "Hybrid, Internal",
@@ -218,21 +218,21 @@
           "Passcode External",
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000004?v=7.6adb59277e89.4"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000004?v=7.6adb59277e89.5"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000005",
         "algorithmInfo": "ECDSA_SHA256",
-        "algorithms": "SECP256R1 Ecdsa SHA256 Raw, ED25519 Eddsa SHA512 Raw",
+        "algorithms": "SECP256R1 ECDSA SHA256 Raw, Ed25519 EdDSA SHA512 Raw",
         "algorithmsList": [
-          "SECP256R1 Ecdsa SHA256 Raw",
-          "ED25519 Eddsa SHA512 Raw"
+          "SECP256R1 ECDSA SHA256 Raw",
+          "Ed25519 EdDSA SHA512 Raw"
         ],
-        "attachment": "External, Wired, Nfc",
+        "attachment": "External, Wired, NFC",
         "attachmentList": [
           "External",
           "Wired",
-          "Nfc"
+          "NFC"
         ],
         "certificateAlgorithmInfo": "ECDSA_SHA256",
         "certificateAlgorithmInfoList": [
@@ -259,31 +259,31 @@
         "latestStatus": "Revoked",
         "name": "Fixture Revoked Key",
         "protocol": "FIDO2",
-        "transports": "Nfc, Usb",
+        "transports": "NFC, USB",
         "transportsList": [
-          "Nfc",
-          "Usb"
+          "NFC",
+          "USB"
         ],
         "userVerification": "Passcode External, Presence Internal",
         "userVerificationList": [
           "Passcode External",
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000005?v=7.6adb59277e89.4"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000005?v=7.6adb59277e89.5"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000006",
         "algorithmInfo": "ED25519_SHA512",
-        "algorithms": "SECP256R1 Ecdsa SHA256 Raw, ED25519 Eddsa SHA512 Raw",
+        "algorithms": "SECP256R1 ECDSA SHA256 Raw, Ed25519 EdDSA SHA512 Raw",
         "algorithmsList": [
-          "SECP256R1 Ecdsa SHA256 Raw",
-          "ED25519 Eddsa SHA512 Raw"
+          "SECP256R1 ECDSA SHA256 Raw",
+          "Ed25519 EdDSA SHA512 Raw"
         ],
-        "attachment": "External, Wired, Nfc",
+        "attachment": "External, Wired, NFC",
         "attachmentList": [
           "External",
           "Wired",
-          "Nfc"
+          "NFC"
         ],
         "certificateAlgorithmInfo": "ED25519_SHA512",
         "certificateAlgorithmInfoList": [
@@ -324,31 +324,31 @@
         "latestStatus": "FIDO Certified L1",
         "name": "Fixture Key With Many Attestation Roots",
         "protocol": "FIDO2",
-        "transports": "Nfc, Usb",
+        "transports": "NFC, USB",
         "transportsList": [
-          "Nfc",
-          "Usb"
+          "NFC",
+          "USB"
         ],
         "userVerification": "Passcode External, Presence Internal",
         "userVerificationList": [
           "Passcode External",
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000006?v=7.6adb59277e89.4"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000006?v=7.6adb59277e89.5"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000007",
         "algorithmInfo": "ECDSA_SHA256",
-        "algorithms": "SECP256R1 Ecdsa SHA256 Raw, ED25519 Eddsa SHA512 Raw",
+        "algorithms": "SECP256R1 ECDSA SHA256 Raw, Ed25519 EdDSA SHA512 Raw",
         "algorithmsList": [
-          "SECP256R1 Ecdsa SHA256 Raw",
-          "ED25519 Eddsa SHA512 Raw"
+          "SECP256R1 ECDSA SHA256 Raw",
+          "Ed25519 EdDSA SHA512 Raw"
         ],
-        "attachment": "External, Wired, Nfc",
+        "attachment": "External, Wired, NFC",
         "attachmentList": [
           "External",
           "Wired",
-          "Nfc"
+          "NFC"
         ],
         "certificateAlgorithmInfo": "ECDSA_SHA256",
         "certificateAlgorithmInfoList": [
@@ -375,10 +375,10 @@
         "latestStatus": "FIDO Certified L2",
         "name": "Fixture Key With Every User Verification Method",
         "protocol": "FIDO2",
-        "transports": "Nfc, Usb",
+        "transports": "NFC, USB",
         "transportsList": [
-          "Nfc",
-          "Usb"
+          "NFC",
+          "USB"
         ],
         "userVerification": "Eyeprint Internal, Faceprint Internal, Fingerprint Internal, Handprint Internal, Location Internal, None, Passcode External, Passcode Internal, Pattern Internal, Presence Internal, Voiceprint Internal",
         "userVerificationList": [
@@ -394,21 +394,21 @@
           "Presence Internal",
           "Voiceprint Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000007?v=7.6adb59277e89.4"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000007?v=7.6adb59277e89.5"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000008",
         "algorithmInfo": "ECDSA_SHA256",
-        "algorithms": "SECP256R1 Ecdsa SHA256 Raw, ED25519 Eddsa SHA512 Raw",
+        "algorithms": "SECP256R1 ECDSA SHA256 Raw, Ed25519 EdDSA SHA512 Raw",
         "algorithmsList": [
-          "SECP256R1 Ecdsa SHA256 Raw",
-          "ED25519 Eddsa SHA512 Raw"
+          "SECP256R1 ECDSA SHA256 Raw",
+          "Ed25519 EdDSA SHA512 Raw"
         ],
-        "attachment": "External, Wired, Nfc",
+        "attachment": "External, Wired, NFC",
         "attachmentList": [
           "External",
           "Wired",
-          "Nfc"
+          "NFC"
         ],
         "certificateAlgorithmInfo": "ECDSA_SHA256",
         "certificateAlgorithmInfoList": [
@@ -435,31 +435,31 @@
         "latestStatus": "FIDO Certified L1",
         "name": "Fixture Authenticator With A Deliberately Long Description, Written To Show How The Explorer Truncates A Name While Keeping It Visible.",
         "protocol": "FIDO2",
-        "transports": "Nfc, Usb",
+        "transports": "NFC, USB",
         "transportsList": [
-          "Nfc",
-          "Usb"
+          "NFC",
+          "USB"
         ],
         "userVerification": "Passcode External, Presence Internal",
         "userVerificationList": [
           "Passcode External",
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000008?v=7.6adb59277e89.4"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000008?v=7.6adb59277e89.5"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000009",
         "algorithmInfo": "ECDSA_SHA256",
-        "algorithms": "SECP256R1 Ecdsa SHA256 Raw, ED25519 Eddsa SHA512 Raw",
+        "algorithms": "SECP256R1 ECDSA SHA256 Raw, Ed25519 EdDSA SHA512 Raw",
         "algorithmsList": [
-          "SECP256R1 Ecdsa SHA256 Raw",
-          "ED25519 Eddsa SHA512 Raw"
+          "SECP256R1 ECDSA SHA256 Raw",
+          "Ed25519 EdDSA SHA512 Raw"
         ],
-        "attachment": "External, Wired, Nfc",
+        "attachment": "External, Wired, NFC",
         "attachmentList": [
           "External",
           "Wired",
-          "Nfc"
+          "NFC"
         ],
         "certificateAlgorithmInfo": "ECDSA_SHA256",
         "certificateAlgorithmInfoList": [
@@ -483,34 +483,34 @@
           "Hardware",
           "Secure Element"
         ],
-        "latestStatus": "NOT FIDO Certified",
+        "latestStatus": "Not FIDO Certified",
         "name": "Fixture Key Without An Icon",
         "protocol": "FIDO2",
-        "transports": "Nfc, Usb",
+        "transports": "NFC, USB",
         "transportsList": [
-          "Nfc",
-          "Usb"
+          "NFC",
+          "USB"
         ],
         "userVerification": "Passcode External, Presence Internal",
         "userVerificationList": [
           "Passcode External",
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000009?v=7.6adb59277e89.4"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000009?v=7.6adb59277e89.5"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000010",
         "algorithmInfo": "ECDSA_SHA256",
-        "algorithms": "SECP256R1 Ecdsa SHA256 Raw, ED25519 Eddsa SHA512 Raw",
+        "algorithms": "SECP256R1 ECDSA SHA256 Raw, Ed25519 EdDSA SHA512 Raw",
         "algorithmsList": [
-          "SECP256R1 Ecdsa SHA256 Raw",
-          "ED25519 Eddsa SHA512 Raw"
+          "SECP256R1 ECDSA SHA256 Raw",
+          "Ed25519 EdDSA SHA512 Raw"
         ],
-        "attachment": "External, Wired, Nfc",
+        "attachment": "External, Wired, NFC",
         "attachmentList": [
           "External",
           "Wired",
-          "Nfc"
+          "NFC"
         ],
         "certificateAlgorithmInfo": "ECDSA_SHA256",
         "certificateAlgorithmInfoList": [
@@ -537,24 +537,24 @@
         "latestStatus": "",
         "name": "Fixture Key Without Status Reports",
         "protocol": "FIDO2",
-        "transports": "Nfc, Usb",
+        "transports": "NFC, USB",
         "transportsList": [
-          "Nfc",
-          "Usb"
+          "NFC",
+          "USB"
         ],
         "userVerification": "Passcode External, Presence Internal",
         "userVerificationList": [
           "Passcode External",
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000010?v=7.6adb59277e89.4"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000010?v=7.6adb59277e89.5"
       },
       {
         "aaguid": "",
         "algorithmInfo": "ECDSA_SHA256",
-        "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+        "algorithms": "SECP256R1 ECDSA SHA256 Raw",
         "algorithmsList": [
-          "SECP256R1 Ecdsa SHA256 Raw"
+          "SECP256R1 ECDSA SHA256 Raw"
         ],
         "attachment": "External, Wired",
         "attachmentList": [
@@ -592,14 +592,14 @@
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/akid%3Af1d0000000000000000000000000000000000011?v=7.6adb59277e89.4"
+        "detailUrl": "/assets/mds/entries/akid%3Af1d0000000000000000000000000000000000011?v=7.6adb59277e89.5"
       },
       {
         "aaguid": "",
         "algorithmInfo": "ED25519_SHA512",
-        "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+        "algorithms": "SECP256R1 ECDSA SHA256 Raw",
         "algorithmsList": [
-          "SECP256R1 Ecdsa SHA256 Raw"
+          "SECP256R1 ECDSA SHA256 Raw"
         ],
         "attachment": "Internal",
         "attachmentList": [
@@ -622,34 +622,34 @@
         "id": "F1D0#0012",
         "index": 11,
         "isLightweightEntry": true,
-        "keyProtection": "Hardware, Tee",
+        "keyProtection": "Hardware, TEE",
         "keyProtectionList": [
           "Hardware",
-          "Tee"
+          "TEE"
         ],
         "latestStatus": "FIDO Certified L1",
         "name": "Fixture UAF Authenticator",
-        "protocol": "Uaf",
+        "protocol": "UAF",
         "transports": "",
         "transportsList": [],
         "userVerification": "Fingerprint Internal",
         "userVerificationList": [
           "Fingerprint Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaid%3AF1D0%230012?v=7.6adb59277e89.4"
+        "detailUrl": "/assets/mds/entries/aaid%3AF1D0%230012?v=7.6adb59277e89.5"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000020",
         "algorithmInfo": "ECDSA_SHA256",
-        "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+        "algorithms": "SECP256R1 ECDSA SHA256 Raw",
         "algorithmsList": [
-          "SECP256R1 Ecdsa SHA256 Raw"
+          "SECP256R1 ECDSA SHA256 Raw"
         ],
-        "attachment": "External, Wired, Nfc",
+        "attachment": "External, Wired, NFC",
         "attachmentList": [
           "External",
           "Wired",
-          "Nfc"
+          "NFC"
         ],
         "certificateAlgorithmInfo": "ECDSA_SHA256",
         "certificateAlgorithmInfoList": [
@@ -676,29 +676,29 @@
         "latestStatus": "FIDO Certified L1",
         "name": "Fixture Filler Key 01",
         "protocol": "FIDO2",
-        "transports": "Nfc, Usb",
+        "transports": "NFC, USB",
         "transportsList": [
-          "Nfc",
-          "Usb"
+          "NFC",
+          "USB"
         ],
         "userVerification": "Presence Internal",
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000020?v=7.6adb59277e89.4"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000020?v=7.6adb59277e89.5"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000021",
         "algorithmInfo": "ECDSA_SHA256",
-        "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+        "algorithms": "SECP256R1 ECDSA SHA256 Raw",
         "algorithmsList": [
-          "SECP256R1 Ecdsa SHA256 Raw"
+          "SECP256R1 ECDSA SHA256 Raw"
         ],
-        "attachment": "External, Wired, Nfc",
+        "attachment": "External, Wired, NFC",
         "attachmentList": [
           "External",
           "Wired",
-          "Nfc"
+          "NFC"
         ],
         "certificateAlgorithmInfo": "ECDSA_SHA256",
         "certificateAlgorithmInfoList": [
@@ -725,29 +725,29 @@
         "latestStatus": "FIDO Certified L1",
         "name": "Fixture Filler Key 02",
         "protocol": "FIDO2",
-        "transports": "Nfc, Usb",
+        "transports": "NFC, USB",
         "transportsList": [
-          "Nfc",
-          "Usb"
+          "NFC",
+          "USB"
         ],
         "userVerification": "Presence Internal",
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000021?v=7.6adb59277e89.4"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000021?v=7.6adb59277e89.5"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000022",
         "algorithmInfo": "ECDSA_SHA256",
-        "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+        "algorithms": "SECP256R1 ECDSA SHA256 Raw",
         "algorithmsList": [
-          "SECP256R1 Ecdsa SHA256 Raw"
+          "SECP256R1 ECDSA SHA256 Raw"
         ],
-        "attachment": "External, Wired, Nfc",
+        "attachment": "External, Wired, NFC",
         "attachmentList": [
           "External",
           "Wired",
-          "Nfc"
+          "NFC"
         ],
         "certificateAlgorithmInfo": "ECDSA_SHA256",
         "certificateAlgorithmInfoList": [
@@ -774,29 +774,29 @@
         "latestStatus": "FIDO Certified L1",
         "name": "Fixture Filler Key 03",
         "protocol": "FIDO2",
-        "transports": "Nfc, Usb",
+        "transports": "NFC, USB",
         "transportsList": [
-          "Nfc",
-          "Usb"
+          "NFC",
+          "USB"
         ],
         "userVerification": "Presence Internal",
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000022?v=7.6adb59277e89.4"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000022?v=7.6adb59277e89.5"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000023",
         "algorithmInfo": "ECDSA_SHA256",
-        "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+        "algorithms": "SECP256R1 ECDSA SHA256 Raw",
         "algorithmsList": [
-          "SECP256R1 Ecdsa SHA256 Raw"
+          "SECP256R1 ECDSA SHA256 Raw"
         ],
-        "attachment": "External, Wired, Nfc",
+        "attachment": "External, Wired, NFC",
         "attachmentList": [
           "External",
           "Wired",
-          "Nfc"
+          "NFC"
         ],
         "certificateAlgorithmInfo": "ECDSA_SHA256",
         "certificateAlgorithmInfoList": [
@@ -823,29 +823,29 @@
         "latestStatus": "FIDO Certified L1",
         "name": "Fixture Filler Key 04",
         "protocol": "FIDO2",
-        "transports": "Nfc, Usb",
+        "transports": "NFC, USB",
         "transportsList": [
-          "Nfc",
-          "Usb"
+          "NFC",
+          "USB"
         ],
         "userVerification": "Presence Internal",
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000023?v=7.6adb59277e89.4"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000023?v=7.6adb59277e89.5"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000024",
         "algorithmInfo": "ECDSA_SHA256",
-        "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+        "algorithms": "SECP256R1 ECDSA SHA256 Raw",
         "algorithmsList": [
-          "SECP256R1 Ecdsa SHA256 Raw"
+          "SECP256R1 ECDSA SHA256 Raw"
         ],
-        "attachment": "External, Wired, Nfc",
+        "attachment": "External, Wired, NFC",
         "attachmentList": [
           "External",
           "Wired",
-          "Nfc"
+          "NFC"
         ],
         "certificateAlgorithmInfo": "ECDSA_SHA256",
         "certificateAlgorithmInfoList": [
@@ -872,29 +872,29 @@
         "latestStatus": "FIDO Certified L1",
         "name": "Fixture Filler Key 05",
         "protocol": "FIDO2",
-        "transports": "Nfc, Usb",
+        "transports": "NFC, USB",
         "transportsList": [
-          "Nfc",
-          "Usb"
+          "NFC",
+          "USB"
         ],
         "userVerification": "Presence Internal",
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000024?v=7.6adb59277e89.4"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000024?v=7.6adb59277e89.5"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000025",
         "algorithmInfo": "ECDSA_SHA256",
-        "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+        "algorithms": "SECP256R1 ECDSA SHA256 Raw",
         "algorithmsList": [
-          "SECP256R1 Ecdsa SHA256 Raw"
+          "SECP256R1 ECDSA SHA256 Raw"
         ],
-        "attachment": "External, Wired, Nfc",
+        "attachment": "External, Wired, NFC",
         "attachmentList": [
           "External",
           "Wired",
-          "Nfc"
+          "NFC"
         ],
         "certificateAlgorithmInfo": "ECDSA_SHA256",
         "certificateAlgorithmInfoList": [
@@ -921,29 +921,29 @@
         "latestStatus": "FIDO Certified L1",
         "name": "Fixture Filler Key 06",
         "protocol": "FIDO2",
-        "transports": "Nfc, Usb",
+        "transports": "NFC, USB",
         "transportsList": [
-          "Nfc",
-          "Usb"
+          "NFC",
+          "USB"
         ],
         "userVerification": "Presence Internal",
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000025?v=7.6adb59277e89.4"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000025?v=7.6adb59277e89.5"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000026",
         "algorithmInfo": "ECDSA_SHA256",
-        "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+        "algorithms": "SECP256R1 ECDSA SHA256 Raw",
         "algorithmsList": [
-          "SECP256R1 Ecdsa SHA256 Raw"
+          "SECP256R1 ECDSA SHA256 Raw"
         ],
-        "attachment": "External, Wired, Nfc",
+        "attachment": "External, Wired, NFC",
         "attachmentList": [
           "External",
           "Wired",
-          "Nfc"
+          "NFC"
         ],
         "certificateAlgorithmInfo": "ECDSA_SHA256",
         "certificateAlgorithmInfoList": [
@@ -970,29 +970,29 @@
         "latestStatus": "FIDO Certified L1",
         "name": "Fixture Filler Key 07",
         "protocol": "FIDO2",
-        "transports": "Nfc, Usb",
+        "transports": "NFC, USB",
         "transportsList": [
-          "Nfc",
-          "Usb"
+          "NFC",
+          "USB"
         ],
         "userVerification": "Presence Internal",
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000026?v=7.6adb59277e89.4"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000026?v=7.6adb59277e89.5"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000027",
         "algorithmInfo": "ECDSA_SHA256",
-        "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+        "algorithms": "SECP256R1 ECDSA SHA256 Raw",
         "algorithmsList": [
-          "SECP256R1 Ecdsa SHA256 Raw"
+          "SECP256R1 ECDSA SHA256 Raw"
         ],
-        "attachment": "External, Wired, Nfc",
+        "attachment": "External, Wired, NFC",
         "attachmentList": [
           "External",
           "Wired",
-          "Nfc"
+          "NFC"
         ],
         "certificateAlgorithmInfo": "ECDSA_SHA256",
         "certificateAlgorithmInfoList": [
@@ -1019,29 +1019,29 @@
         "latestStatus": "FIDO Certified L1",
         "name": "Fixture Filler Key 08",
         "protocol": "FIDO2",
-        "transports": "Nfc, Usb",
+        "transports": "NFC, USB",
         "transportsList": [
-          "Nfc",
-          "Usb"
+          "NFC",
+          "USB"
         ],
         "userVerification": "Presence Internal",
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000027?v=7.6adb59277e89.4"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000027?v=7.6adb59277e89.5"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000028",
         "algorithmInfo": "ECDSA_SHA256",
-        "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+        "algorithms": "SECP256R1 ECDSA SHA256 Raw",
         "algorithmsList": [
-          "SECP256R1 Ecdsa SHA256 Raw"
+          "SECP256R1 ECDSA SHA256 Raw"
         ],
-        "attachment": "External, Wired, Nfc",
+        "attachment": "External, Wired, NFC",
         "attachmentList": [
           "External",
           "Wired",
-          "Nfc"
+          "NFC"
         ],
         "certificateAlgorithmInfo": "ECDSA_SHA256",
         "certificateAlgorithmInfoList": [
@@ -1068,29 +1068,29 @@
         "latestStatus": "FIDO Certified L1",
         "name": "Fixture Filler Key 09",
         "protocol": "FIDO2",
-        "transports": "Nfc, Usb",
+        "transports": "NFC, USB",
         "transportsList": [
-          "Nfc",
-          "Usb"
+          "NFC",
+          "USB"
         ],
         "userVerification": "Presence Internal",
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000028?v=7.6adb59277e89.4"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000028?v=7.6adb59277e89.5"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000029",
         "algorithmInfo": "ECDSA_SHA256",
-        "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+        "algorithms": "SECP256R1 ECDSA SHA256 Raw",
         "algorithmsList": [
-          "SECP256R1 Ecdsa SHA256 Raw"
+          "SECP256R1 ECDSA SHA256 Raw"
         ],
-        "attachment": "External, Wired, Nfc",
+        "attachment": "External, Wired, NFC",
         "attachmentList": [
           "External",
           "Wired",
-          "Nfc"
+          "NFC"
         ],
         "certificateAlgorithmInfo": "ECDSA_SHA256",
         "certificateAlgorithmInfoList": [
@@ -1117,29 +1117,29 @@
         "latestStatus": "FIDO Certified L1",
         "name": "Fixture Filler Key 10",
         "protocol": "FIDO2",
-        "transports": "Nfc, Usb",
+        "transports": "NFC, USB",
         "transportsList": [
-          "Nfc",
-          "Usb"
+          "NFC",
+          "USB"
         ],
         "userVerification": "Presence Internal",
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000029?v=7.6adb59277e89.4"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000029?v=7.6adb59277e89.5"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000030",
         "algorithmInfo": "ECDSA_SHA256",
-        "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+        "algorithms": "SECP256R1 ECDSA SHA256 Raw",
         "algorithmsList": [
-          "SECP256R1 Ecdsa SHA256 Raw"
+          "SECP256R1 ECDSA SHA256 Raw"
         ],
-        "attachment": "External, Wired, Nfc",
+        "attachment": "External, Wired, NFC",
         "attachmentList": [
           "External",
           "Wired",
-          "Nfc"
+          "NFC"
         ],
         "certificateAlgorithmInfo": "ECDSA_SHA256",
         "certificateAlgorithmInfoList": [
@@ -1166,29 +1166,29 @@
         "latestStatus": "FIDO Certified L1",
         "name": "Fixture Filler Key 11",
         "protocol": "FIDO2",
-        "transports": "Nfc, Usb",
+        "transports": "NFC, USB",
         "transportsList": [
-          "Nfc",
-          "Usb"
+          "NFC",
+          "USB"
         ],
         "userVerification": "Presence Internal",
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000030?v=7.6adb59277e89.4"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000030?v=7.6adb59277e89.5"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000031",
         "algorithmInfo": "ECDSA_SHA256",
-        "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+        "algorithms": "SECP256R1 ECDSA SHA256 Raw",
         "algorithmsList": [
-          "SECP256R1 Ecdsa SHA256 Raw"
+          "SECP256R1 ECDSA SHA256 Raw"
         ],
-        "attachment": "External, Wired, Nfc",
+        "attachment": "External, Wired, NFC",
         "attachmentList": [
           "External",
           "Wired",
-          "Nfc"
+          "NFC"
         ],
         "certificateAlgorithmInfo": "ECDSA_SHA256",
         "certificateAlgorithmInfoList": [
@@ -1215,29 +1215,29 @@
         "latestStatus": "FIDO Certified L1",
         "name": "Fixture Filler Key 12",
         "protocol": "FIDO2",
-        "transports": "Nfc, Usb",
+        "transports": "NFC, USB",
         "transportsList": [
-          "Nfc",
-          "Usb"
+          "NFC",
+          "USB"
         ],
         "userVerification": "Presence Internal",
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000031?v=7.6adb59277e89.4"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000031?v=7.6adb59277e89.5"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000032",
         "algorithmInfo": "ECDSA_SHA256",
-        "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+        "algorithms": "SECP256R1 ECDSA SHA256 Raw",
         "algorithmsList": [
-          "SECP256R1 Ecdsa SHA256 Raw"
+          "SECP256R1 ECDSA SHA256 Raw"
         ],
-        "attachment": "External, Wired, Nfc",
+        "attachment": "External, Wired, NFC",
         "attachmentList": [
           "External",
           "Wired",
-          "Nfc"
+          "NFC"
         ],
         "certificateAlgorithmInfo": "ECDSA_SHA256",
         "certificateAlgorithmInfoList": [
@@ -1264,29 +1264,29 @@
         "latestStatus": "FIDO Certified L1",
         "name": "Fixture Filler Key 13",
         "protocol": "FIDO2",
-        "transports": "Nfc, Usb",
+        "transports": "NFC, USB",
         "transportsList": [
-          "Nfc",
-          "Usb"
+          "NFC",
+          "USB"
         ],
         "userVerification": "Presence Internal",
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000032?v=7.6adb59277e89.4"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000032?v=7.6adb59277e89.5"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000033",
         "algorithmInfo": "ECDSA_SHA256",
-        "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+        "algorithms": "SECP256R1 ECDSA SHA256 Raw",
         "algorithmsList": [
-          "SECP256R1 Ecdsa SHA256 Raw"
+          "SECP256R1 ECDSA SHA256 Raw"
         ],
-        "attachment": "External, Wired, Nfc",
+        "attachment": "External, Wired, NFC",
         "attachmentList": [
           "External",
           "Wired",
-          "Nfc"
+          "NFC"
         ],
         "certificateAlgorithmInfo": "ECDSA_SHA256",
         "certificateAlgorithmInfoList": [
@@ -1313,29 +1313,29 @@
         "latestStatus": "FIDO Certified L1",
         "name": "Fixture Filler Key 14",
         "protocol": "FIDO2",
-        "transports": "Nfc, Usb",
+        "transports": "NFC, USB",
         "transportsList": [
-          "Nfc",
-          "Usb"
+          "NFC",
+          "USB"
         ],
         "userVerification": "Presence Internal",
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000033?v=7.6adb59277e89.4"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000033?v=7.6adb59277e89.5"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000034",
         "algorithmInfo": "ECDSA_SHA256",
-        "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+        "algorithms": "SECP256R1 ECDSA SHA256 Raw",
         "algorithmsList": [
-          "SECP256R1 Ecdsa SHA256 Raw"
+          "SECP256R1 ECDSA SHA256 Raw"
         ],
-        "attachment": "External, Wired, Nfc",
+        "attachment": "External, Wired, NFC",
         "attachmentList": [
           "External",
           "Wired",
-          "Nfc"
+          "NFC"
         ],
         "certificateAlgorithmInfo": "ECDSA_SHA256",
         "certificateAlgorithmInfoList": [
@@ -1362,29 +1362,29 @@
         "latestStatus": "FIDO Certified L1",
         "name": "Fixture Filler Key 15",
         "protocol": "FIDO2",
-        "transports": "Nfc, Usb",
+        "transports": "NFC, USB",
         "transportsList": [
-          "Nfc",
-          "Usb"
+          "NFC",
+          "USB"
         ],
         "userVerification": "Presence Internal",
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000034?v=7.6adb59277e89.4"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000034?v=7.6adb59277e89.5"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000035",
         "algorithmInfo": "ECDSA_SHA256",
-        "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+        "algorithms": "SECP256R1 ECDSA SHA256 Raw",
         "algorithmsList": [
-          "SECP256R1 Ecdsa SHA256 Raw"
+          "SECP256R1 ECDSA SHA256 Raw"
         ],
-        "attachment": "External, Wired, Nfc",
+        "attachment": "External, Wired, NFC",
         "attachmentList": [
           "External",
           "Wired",
-          "Nfc"
+          "NFC"
         ],
         "certificateAlgorithmInfo": "ECDSA_SHA256",
         "certificateAlgorithmInfoList": [
@@ -1411,29 +1411,29 @@
         "latestStatus": "FIDO Certified L1",
         "name": "Fixture Filler Key 16",
         "protocol": "FIDO2",
-        "transports": "Nfc, Usb",
+        "transports": "NFC, USB",
         "transportsList": [
-          "Nfc",
-          "Usb"
+          "NFC",
+          "USB"
         ],
         "userVerification": "Presence Internal",
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000035?v=7.6adb59277e89.4"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000035?v=7.6adb59277e89.5"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000036",
         "algorithmInfo": "ECDSA_SHA256",
-        "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+        "algorithms": "SECP256R1 ECDSA SHA256 Raw",
         "algorithmsList": [
-          "SECP256R1 Ecdsa SHA256 Raw"
+          "SECP256R1 ECDSA SHA256 Raw"
         ],
-        "attachment": "External, Wired, Nfc",
+        "attachment": "External, Wired, NFC",
         "attachmentList": [
           "External",
           "Wired",
-          "Nfc"
+          "NFC"
         ],
         "certificateAlgorithmInfo": "ECDSA_SHA256",
         "certificateAlgorithmInfoList": [
@@ -1460,29 +1460,29 @@
         "latestStatus": "FIDO Certified L1",
         "name": "Fixture Filler Key 17",
         "protocol": "FIDO2",
-        "transports": "Nfc, Usb",
+        "transports": "NFC, USB",
         "transportsList": [
-          "Nfc",
-          "Usb"
+          "NFC",
+          "USB"
         ],
         "userVerification": "Presence Internal",
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000036?v=7.6adb59277e89.4"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000036?v=7.6adb59277e89.5"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000037",
         "algorithmInfo": "ECDSA_SHA256",
-        "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+        "algorithms": "SECP256R1 ECDSA SHA256 Raw",
         "algorithmsList": [
-          "SECP256R1 Ecdsa SHA256 Raw"
+          "SECP256R1 ECDSA SHA256 Raw"
         ],
-        "attachment": "External, Wired, Nfc",
+        "attachment": "External, Wired, NFC",
         "attachmentList": [
           "External",
           "Wired",
-          "Nfc"
+          "NFC"
         ],
         "certificateAlgorithmInfo": "ECDSA_SHA256",
         "certificateAlgorithmInfoList": [
@@ -1509,29 +1509,29 @@
         "latestStatus": "FIDO Certified L1",
         "name": "Fixture Filler Key 18",
         "protocol": "FIDO2",
-        "transports": "Nfc, Usb",
+        "transports": "NFC, USB",
         "transportsList": [
-          "Nfc",
-          "Usb"
+          "NFC",
+          "USB"
         ],
         "userVerification": "Presence Internal",
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000037?v=7.6adb59277e89.4"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000037?v=7.6adb59277e89.5"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000038",
         "algorithmInfo": "ECDSA_SHA256",
-        "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+        "algorithms": "SECP256R1 ECDSA SHA256 Raw",
         "algorithmsList": [
-          "SECP256R1 Ecdsa SHA256 Raw"
+          "SECP256R1 ECDSA SHA256 Raw"
         ],
-        "attachment": "External, Wired, Nfc",
+        "attachment": "External, Wired, NFC",
         "attachmentList": [
           "External",
           "Wired",
-          "Nfc"
+          "NFC"
         ],
         "certificateAlgorithmInfo": "ECDSA_SHA256",
         "certificateAlgorithmInfoList": [
@@ -1558,29 +1558,29 @@
         "latestStatus": "FIDO Certified L1",
         "name": "Fixture Filler Key 19",
         "protocol": "FIDO2",
-        "transports": "Nfc, Usb",
+        "transports": "NFC, USB",
         "transportsList": [
-          "Nfc",
-          "Usb"
+          "NFC",
+          "USB"
         ],
         "userVerification": "Presence Internal",
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000038?v=7.6adb59277e89.4"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000038?v=7.6adb59277e89.5"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000039",
         "algorithmInfo": "ECDSA_SHA256",
-        "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+        "algorithms": "SECP256R1 ECDSA SHA256 Raw",
         "algorithmsList": [
-          "SECP256R1 Ecdsa SHA256 Raw"
+          "SECP256R1 ECDSA SHA256 Raw"
         ],
-        "attachment": "External, Wired, Nfc",
+        "attachment": "External, Wired, NFC",
         "attachmentList": [
           "External",
           "Wired",
-          "Nfc"
+          "NFC"
         ],
         "certificateAlgorithmInfo": "ECDSA_SHA256",
         "certificateAlgorithmInfoList": [
@@ -1607,16 +1607,16 @@
         "latestStatus": "FIDO Certified L1",
         "name": "Fixture Filler Key 20",
         "protocol": "FIDO2",
-        "transports": "Nfc, Usb",
+        "transports": "NFC, USB",
         "transportsList": [
-          "Nfc",
-          "Usb"
+          "NFC",
+          "USB"
         ],
         "userVerification": "Presence Internal",
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000039?v=7.6adb59277e89.4"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000039?v=7.6adb59277e89.5"
       }
     ]
   },
@@ -1624,16 +1624,16 @@
     "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000001": {
       "aaguid": "f1d0f1d0-0000-4000-8000-000000000001",
       "algorithmInfo": "ECDSA_SHA256",
-      "algorithms": "SECP256R1 Ecdsa SHA256 Raw, ED25519 Eddsa SHA512 Raw",
+      "algorithms": "SECP256R1 ECDSA SHA256 Raw, Ed25519 EdDSA SHA512 Raw",
       "algorithmsList": [
-        "SECP256R1 Ecdsa SHA256 Raw",
-        "ED25519 Eddsa SHA512 Raw"
+        "SECP256R1 ECDSA SHA256 Raw",
+        "Ed25519 EdDSA SHA512 Raw"
       ],
-      "attachment": "External, Wired, Nfc",
+      "attachment": "External, Wired, NFC",
       "attachmentList": [
         "External",
         "Wired",
-        "Nfc"
+        "NFC"
       ],
       "attestationCertificates": [
         "MIIB4zCCAYqgAwIBAgICA+kwCgYIKoZIzj0EAwIwejELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweRml4dHVyZSBGSURPMiBBdHRlc3RhdGlvbiBSb290MCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkxMjMxMDAwMDAwWjB6MQswCQYDVQQGEwJTRTEeMBwGA1UECgwVQ2hhcmFjdGVyaXphdGlvbiBUZXN0MSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMScwJQYDVQQDDB5GaXh0dXJlIEZJRE8yIEF0dGVzdGF0aW9uIFJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAS2NMN/lCK0saWxUd5rkVIh9Ei5EtvzTEgqMetNQgkB7i2AsanRtevTVihqOd38gG/a5gOefcY/oZf434apVE2nMAoGCCqGSM49BAMCA0cAMEQCIEFIIETyPMXDPFw8WCMVUmh8oqnQkDRQHfA5BEJH9pKwAiAZKb6PCP0zD0pU1RnxivYGaaBpA9k0K5qVjTw6hrSBRA=="
@@ -1807,10 +1807,10 @@
         }
       ],
       "timeOfLastStatusChange": "2026-09-01",
-      "transports": "Nfc, Usb",
+      "transports": "NFC, USB",
       "transportsList": [
-        "Nfc",
-        "Usb"
+        "NFC",
+        "USB"
       ],
       "trustAnchorStatus": true,
       "userVerification": "Passcode External, Presence Internal",
@@ -1822,16 +1822,16 @@
     "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000002": {
       "aaguid": "f1d0f1d0-0000-4000-8000-000000000002",
       "algorithmInfo": "RSASSA-PKCS1-v1_5_SHA256",
-      "algorithms": "SECP256R1 Ecdsa SHA256 Raw, ED25519 Eddsa SHA512 Raw",
+      "algorithms": "SECP256R1 ECDSA SHA256 Raw, Ed25519 EdDSA SHA512 Raw",
       "algorithmsList": [
-        "SECP256R1 Ecdsa SHA256 Raw",
-        "ED25519 Eddsa SHA512 Raw"
+        "SECP256R1 ECDSA SHA256 Raw",
+        "Ed25519 EdDSA SHA512 Raw"
       ],
-      "attachment": "External, Wired, Nfc",
+      "attachment": "External, Wired, NFC",
       "attachmentList": [
         "External",
         "Wired",
-        "Nfc"
+        "NFC"
       ],
       "attestationCertificates": [
         "MIIDbDCCAlSgAwIBAgICA+owDQYJKoZIhvcNAQELBQAweDELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjElMCMGA1UEAwwcRml4dHVyZSBSU0EgQXR0ZXN0YXRpb24gUm9vdDAgFw0yMDAxMDEwMDAwMDBaGA8yMDk5MTIzMTAwMDAwMFoweDELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjElMCMGA1UEAwwcRml4dHVyZSBSU0EgQXR0ZXN0YXRpb24gUm9vdDCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAPl5PNcWVcBz47ZYfCCq1lmjEg/sCAe4XuEliTt9Ma2B9c+suFQx9WlvMPME2PCJCSEXq+EArqyjUBt/J1v2BnTp/125l17bPFL1ng2vwnCOEhmunWxuPf0NY3PAEKiheRKU+AhGLNNvRjEXZBEWD4ArlBIuKp5HxHfhzefrqn2KlPbh3qJ3+Km9jryJ/j9HT4D5a6VUbyoUmsKfWhmOmKVIiKxxOck5BQfmp0FUxDHXo1FIGJ2OUJCgcijRRj3JvLy/fEj+aSnz+eE2+Wtt/NSIBZaUykx4AsYmaftT/9puzkoUBb8GVgRLg5rUfnxujzKJZUHYpfiFjEIBUB9fWtUCAwEAATANBgkqhkiG9w0BAQsFAAOCAQEASDZAoIR6CDoAqz8oJ5szVfqIaL+Gei3QDz58MjWrptZ0XybuJYizJjDzpFAvSSqWjmvDNn5MFTcbkdnvRXb64KFvdstyYOxXK5I6HgNCTlpSq0Z1hP1pu+BeK2JG6zs6JXuSVT4bug7TATZ4+O+2mcLaODnEMU3PrPBQAUUctYDwm94LJkSeKKxY6rIJcUh2/tix7HvJL8u26kXR3wDGlC3X9GU5QB158ESCxaIJV1U2y7QhkCXC7Sp4c1SFxtaryjBxm/uTWzKZKWzR/0ru0aUxAtagRSwNdQfWRWI4fgmouHc2nGFkUYmVuRdiKscEQN9yoXVgbCi6dGi3i2EaFQ=="
@@ -2067,11 +2067,11 @@
         }
       ],
       "timeOfLastStatusChange": "2026-08-15",
-      "transports": "Ble, Nfc, Usb",
+      "transports": "BLE, NFC, USB",
       "transportsList": [
-        "Ble",
-        "Nfc",
-        "Usb"
+        "BLE",
+        "NFC",
+        "USB"
       ],
       "trustAnchorStatus": true,
       "userVerification": "Fingerprint Internal, Passcode Internal, Presence Internal",
@@ -2084,16 +2084,16 @@
     "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000003": {
       "aaguid": "f1d0f1d0-0000-4000-8000-000000000003",
       "algorithmInfo": "ED25519_SHA512",
-      "algorithms": "SECP256R1 Ecdsa SHA256 Raw, ED25519 Eddsa SHA512 Raw",
+      "algorithms": "SECP256R1 ECDSA SHA256 Raw, Ed25519 EdDSA SHA512 Raw",
       "algorithmsList": [
-        "SECP256R1 Ecdsa SHA256 Raw",
-        "ED25519 Eddsa SHA512 Raw"
+        "SECP256R1 ECDSA SHA256 Raw",
+        "Ed25519 EdDSA SHA512 Raw"
       ],
-      "attachment": "External, Wired, Nfc",
+      "attachment": "External, Wired, NFC",
       "attachmentList": [
         "External",
         "Wired",
-        "Nfc"
+        "NFC"
       ],
       "attestationCertificates": [
         "MIIBTzCCAQGgAwIBAgICA+swBQYDK2VwMCMxITAfBgNVBAMMGENoYXJhY3Rlcml6YXRpb24gVGVzdCBDQTAgFw0yMDAxMDEwMDAwMDBaGA8yMDk5MTIzMTAwMDAwMFowfDELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEpMCcGA1UEAwwgRml4dHVyZSBFZDI1NTE5IEF0dGVzdGF0aW9uIFJvb3QwKjAFBgMrZXADIQCVOkidv4x1dS3MznN12V3JevygGSsfjkKngkWk1skn/jAFBgMrZXADQQAuMQevenOOhfniZ2CaYMt09z0m7q0nhwVLod/TJCQza2JnjdXaj66ndoGKabQTGEXlqCRU2AMnfkSKGQv4WzQH"
@@ -2221,10 +2221,10 @@
         }
       ],
       "timeOfLastStatusChange": "2026-07-10",
-      "transports": "Nfc, Usb",
+      "transports": "NFC, USB",
       "transportsList": [
-        "Nfc",
-        "Usb"
+        "NFC",
+        "USB"
       ],
       "trustAnchorStatus": true,
       "userVerification": "Passcode External, Presence Internal",
@@ -2236,10 +2236,10 @@
     "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000004": {
       "aaguid": "f1d0f1d0-0000-4000-8000-000000000004",
       "algorithmInfo": "ECDSA_SHA256",
-      "algorithms": "SECP256R1 Ecdsa SHA256 Raw, ED25519 Eddsa SHA512 Raw",
+      "algorithms": "SECP256R1 ECDSA SHA256 Raw, Ed25519 EdDSA SHA512 Raw",
       "algorithmsList": [
-        "SECP256R1 Ecdsa SHA256 Raw",
-        "ED25519 Eddsa SHA512 Raw"
+        "SECP256R1 ECDSA SHA256 Raw",
+        "Ed25519 EdDSA SHA512 Raw"
       ],
       "attachment": "Internal",
       "attachmentList": [
@@ -2271,7 +2271,7 @@
       "keyProtectionList": [
         "Software"
       ],
-      "latestStatus": "NOT FIDO Certified",
+      "latestStatus": "Not FIDO Certified",
       "metadataStatement": {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000004",
         "attachmentHint": [
@@ -2378,16 +2378,16 @@
     "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000005": {
       "aaguid": "f1d0f1d0-0000-4000-8000-000000000005",
       "algorithmInfo": "ECDSA_SHA256",
-      "algorithms": "SECP256R1 Ecdsa SHA256 Raw, ED25519 Eddsa SHA512 Raw",
+      "algorithms": "SECP256R1 ECDSA SHA256 Raw, Ed25519 EdDSA SHA512 Raw",
       "algorithmsList": [
-        "SECP256R1 Ecdsa SHA256 Raw",
-        "ED25519 Eddsa SHA512 Raw"
+        "SECP256R1 ECDSA SHA256 Raw",
+        "Ed25519 EdDSA SHA512 Raw"
       ],
-      "attachment": "External, Wired, Nfc",
+      "attachment": "External, Wired, NFC",
       "attachmentList": [
         "External",
         "Wired",
-        "Nfc"
+        "NFC"
       ],
       "attestationCertificates": [
         "MIIB4zCCAYqgAwIBAgICA+kwCgYIKoZIzj0EAwIwejELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweRml4dHVyZSBGSURPMiBBdHRlc3RhdGlvbiBSb290MCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkxMjMxMDAwMDAwWjB6MQswCQYDVQQGEwJTRTEeMBwGA1UECgwVQ2hhcmFjdGVyaXphdGlvbiBUZXN0MSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMScwJQYDVQQDDB5GaXh0dXJlIEZJRE8yIEF0dGVzdGF0aW9uIFJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAS2NMN/lCK0saWxUd5rkVIh9Ei5EtvzTEgqMetNQgkB7i2AsanRtevTVihqOd38gG/a5gOefcY/oZf434apVE2nMAoGCCqGSM49BAMCA0cAMEQCIEFIIETyPMXDPFw8WCMVUmh8oqnQkDRQHfA5BEJH9pKwAiAZKb6PCP0zD0pU1RnxivYGaaBpA9k0K5qVjTw6hrSBRA=="
@@ -2519,10 +2519,10 @@
         }
       ],
       "timeOfLastStatusChange": "2026-05-20",
-      "transports": "Nfc, Usb",
+      "transports": "NFC, USB",
       "transportsList": [
-        "Nfc",
-        "Usb"
+        "NFC",
+        "USB"
       ],
       "trustAnchorStatus": true,
       "userVerification": "Passcode External, Presence Internal",
@@ -2534,16 +2534,16 @@
     "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000006": {
       "aaguid": "f1d0f1d0-0000-4000-8000-000000000006",
       "algorithmInfo": "ED25519_SHA512",
-      "algorithms": "SECP256R1 Ecdsa SHA256 Raw, ED25519 Eddsa SHA512 Raw",
+      "algorithms": "SECP256R1 ECDSA SHA256 Raw, Ed25519 EdDSA SHA512 Raw",
       "algorithmsList": [
-        "SECP256R1 Ecdsa SHA256 Raw",
-        "ED25519 Eddsa SHA512 Raw"
+        "SECP256R1 ECDSA SHA256 Raw",
+        "Ed25519 EdDSA SHA512 Raw"
       ],
-      "attachment": "External, Wired, Nfc",
+      "attachment": "External, Wired, NFC",
       "attachmentList": [
         "External",
         "Wired",
-        "Nfc"
+        "NFC"
       ],
       "attestationCertificates": [
         "MIIBbzCCASGgAwIBAgICBE0wBQYDK2VwMCMxITAfBgNVBAMMGENoYXJhY3Rlcml6YXRpb24gVGVzdCBDQTAgFw0yMDAxMDEwMDAwMDBaGA8yMDk5MTIzMTAwMDAwMFowgZsxCzAJBgNVBAYTAlNFMR4wHAYDVQQKDBVDaGFyYWN0ZXJpemF0aW9uIFRlc3QxIjAgBgNVBAsMGUF1dGhlbnRpY2F0b3IgQXR0ZXN0YXRpb24xSDBGBgNVBAMMP0ZpeHR1cmUgQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbiBSb290IENlcnRpZmljYXRlIEF1dGhvcml0eSAwMTAqMAUGAytlcAMhALumAGmZj1K0GNPhLMxm1O5OzV3mm09dvzaPAn3UjQpPMAUGAytlcANBAEiXZ4zjGcDT+y1Hm6eHYqTbpxg7kKj1w5SugNo24P+pS+UrGRazMyWW1mJseILmawHtSDta/DqxVHBUh6yAogw=",
@@ -2699,10 +2699,10 @@
         }
       ],
       "timeOfLastStatusChange": "2026-04-02",
-      "transports": "Nfc, Usb",
+      "transports": "NFC, USB",
       "transportsList": [
-        "Nfc",
-        "Usb"
+        "NFC",
+        "USB"
       ],
       "trustAnchorStatus": true,
       "userVerification": "Passcode External, Presence Internal",
@@ -2714,16 +2714,16 @@
     "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000007": {
       "aaguid": "f1d0f1d0-0000-4000-8000-000000000007",
       "algorithmInfo": "ECDSA_SHA256",
-      "algorithms": "SECP256R1 Ecdsa SHA256 Raw, ED25519 Eddsa SHA512 Raw",
+      "algorithms": "SECP256R1 ECDSA SHA256 Raw, Ed25519 EdDSA SHA512 Raw",
       "algorithmsList": [
-        "SECP256R1 Ecdsa SHA256 Raw",
-        "ED25519 Eddsa SHA512 Raw"
+        "SECP256R1 ECDSA SHA256 Raw",
+        "Ed25519 EdDSA SHA512 Raw"
       ],
-      "attachment": "External, Wired, Nfc",
+      "attachment": "External, Wired, NFC",
       "attachmentList": [
         "External",
         "Wired",
-        "Nfc"
+        "NFC"
       ],
       "attestationCertificates": [
         "MIIB4zCCAYqgAwIBAgICA+kwCgYIKoZIzj0EAwIwejELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweRml4dHVyZSBGSURPMiBBdHRlc3RhdGlvbiBSb290MCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkxMjMxMDAwMDAwWjB6MQswCQYDVQQGEwJTRTEeMBwGA1UECgwVQ2hhcmFjdGVyaXphdGlvbiBUZXN0MSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMScwJQYDVQQDDB5GaXh0dXJlIEZJRE8yIEF0dGVzdGF0aW9uIFJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAS2NMN/lCK0saWxUd5rkVIh9Ei5EtvzTEgqMetNQgkB7i2AsanRtevTVihqOd38gG/a5gOefcY/oZf434apVE2nMAoGCCqGSM49BAMCA0cAMEQCIEFIIETyPMXDPFw8WCMVUmh8oqnQkDRQHfA5BEJH9pKwAiAZKb6PCP0zD0pU1RnxivYGaaBpA9k0K5qVjTw6hrSBRA=="
@@ -2912,10 +2912,10 @@
         }
       ],
       "timeOfLastStatusChange": "2026-03-03",
-      "transports": "Nfc, Usb",
+      "transports": "NFC, USB",
       "transportsList": [
-        "Nfc",
-        "Usb"
+        "NFC",
+        "USB"
       ],
       "trustAnchorStatus": true,
       "userVerification": "Eyeprint Internal, Faceprint Internal, Fingerprint Internal, Handprint Internal, Location Internal, None, Passcode External, Passcode Internal, Pattern Internal, Presence Internal, Voiceprint Internal",
@@ -2936,16 +2936,16 @@
     "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000008": {
       "aaguid": "f1d0f1d0-0000-4000-8000-000000000008",
       "algorithmInfo": "ECDSA_SHA256",
-      "algorithms": "SECP256R1 Ecdsa SHA256 Raw, ED25519 Eddsa SHA512 Raw",
+      "algorithms": "SECP256R1 ECDSA SHA256 Raw, Ed25519 EdDSA SHA512 Raw",
       "algorithmsList": [
-        "SECP256R1 Ecdsa SHA256 Raw",
-        "ED25519 Eddsa SHA512 Raw"
+        "SECP256R1 ECDSA SHA256 Raw",
+        "Ed25519 EdDSA SHA512 Raw"
       ],
-      "attachment": "External, Wired, Nfc",
+      "attachment": "External, Wired, NFC",
       "attachmentList": [
         "External",
         "Wired",
-        "Nfc"
+        "NFC"
       ],
       "attestationCertificates": [
         "MIIB4zCCAYqgAwIBAgICA+kwCgYIKoZIzj0EAwIwejELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweRml4dHVyZSBGSURPMiBBdHRlc3RhdGlvbiBSb290MCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkxMjMxMDAwMDAwWjB6MQswCQYDVQQGEwJTRTEeMBwGA1UECgwVQ2hhcmFjdGVyaXphdGlvbiBUZXN0MSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMScwJQYDVQQDDB5GaXh0dXJlIEZJRE8yIEF0dGVzdGF0aW9uIFJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAS2NMN/lCK0saWxUd5rkVIh9Ei5EtvzTEgqMetNQgkB7i2AsanRtevTVihqOd38gG/a5gOefcY/oZf434apVE2nMAoGCCqGSM49BAMCA0cAMEQCIEFIIETyPMXDPFw8WCMVUmh8oqnQkDRQHfA5BEJH9pKwAiAZKb6PCP0zD0pU1RnxivYGaaBpA9k0K5qVjTw6hrSBRA=="
@@ -3073,10 +3073,10 @@
         }
       ],
       "timeOfLastStatusChange": "2026-02-14",
-      "transports": "Nfc, Usb",
+      "transports": "NFC, USB",
       "transportsList": [
-        "Nfc",
-        "Usb"
+        "NFC",
+        "USB"
       ],
       "trustAnchorStatus": true,
       "userVerification": "Passcode External, Presence Internal",
@@ -3088,16 +3088,16 @@
     "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000009": {
       "aaguid": "f1d0f1d0-0000-4000-8000-000000000009",
       "algorithmInfo": "ECDSA_SHA256",
-      "algorithms": "SECP256R1 Ecdsa SHA256 Raw, ED25519 Eddsa SHA512 Raw",
+      "algorithms": "SECP256R1 ECDSA SHA256 Raw, Ed25519 EdDSA SHA512 Raw",
       "algorithmsList": [
-        "SECP256R1 Ecdsa SHA256 Raw",
-        "ED25519 Eddsa SHA512 Raw"
+        "SECP256R1 ECDSA SHA256 Raw",
+        "Ed25519 EdDSA SHA512 Raw"
       ],
-      "attachment": "External, Wired, Nfc",
+      "attachment": "External, Wired, NFC",
       "attachmentList": [
         "External",
         "Wired",
-        "Nfc"
+        "NFC"
       ],
       "attestationCertificates": [
         "MIIB4zCCAYqgAwIBAgICA+kwCgYIKoZIzj0EAwIwejELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweRml4dHVyZSBGSURPMiBBdHRlc3RhdGlvbiBSb290MCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkxMjMxMDAwMDAwWjB6MQswCQYDVQQGEwJTRTEeMBwGA1UECgwVQ2hhcmFjdGVyaXphdGlvbiBUZXN0MSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMScwJQYDVQQDDB5GaXh0dXJlIEZJRE8yIEF0dGVzdGF0aW9uIFJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAS2NMN/lCK0saWxUd5rkVIh9Ei5EtvzTEgqMetNQgkB7i2AsanRtevTVihqOd38gG/a5gOefcY/oZf434apVE2nMAoGCCqGSM49BAMCA0cAMEQCIEFIIETyPMXDPFw8WCMVUmh8oqnQkDRQHfA5BEJH9pKwAiAZKb6PCP0zD0pU1RnxivYGaaBpA9k0K5qVjTw6hrSBRA=="
@@ -3126,7 +3126,7 @@
         "Hardware",
         "Secure Element"
       ],
-      "latestStatus": "NOT FIDO Certified",
+      "latestStatus": "Not FIDO Certified",
       "metadataStatement": {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000009",
         "attachmentHint": [
@@ -3221,10 +3221,10 @@
         }
       ],
       "timeOfLastStatusChange": "2026-01-05",
-      "transports": "Nfc, Usb",
+      "transports": "NFC, USB",
       "transportsList": [
-        "Nfc",
-        "Usb"
+        "NFC",
+        "USB"
       ],
       "trustAnchorStatus": true,
       "userVerification": "Passcode External, Presence Internal",
@@ -3236,16 +3236,16 @@
     "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000010": {
       "aaguid": "f1d0f1d0-0000-4000-8000-000000000010",
       "algorithmInfo": "ECDSA_SHA256",
-      "algorithms": "SECP256R1 Ecdsa SHA256 Raw, ED25519 Eddsa SHA512 Raw",
+      "algorithms": "SECP256R1 ECDSA SHA256 Raw, Ed25519 EdDSA SHA512 Raw",
       "algorithmsList": [
-        "SECP256R1 Ecdsa SHA256 Raw",
-        "ED25519 Eddsa SHA512 Raw"
+        "SECP256R1 ECDSA SHA256 Raw",
+        "Ed25519 EdDSA SHA512 Raw"
       ],
-      "attachment": "External, Wired, Nfc",
+      "attachment": "External, Wired, NFC",
       "attachmentList": [
         "External",
         "Wired",
-        "Nfc"
+        "NFC"
       ],
       "attestationCertificates": [
         "MIIB4zCCAYqgAwIBAgICA+kwCgYIKoZIzj0EAwIwejELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweRml4dHVyZSBGSURPMiBBdHRlc3RhdGlvbiBSb290MCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkxMjMxMDAwMDAwWjB6MQswCQYDVQQGEwJTRTEeMBwGA1UECgwVQ2hhcmFjdGVyaXphdGlvbiBUZXN0MSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMScwJQYDVQQDDB5GaXh0dXJlIEZJRE8yIEF0dGVzdGF0aW9uIFJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAS2NMN/lCK0saWxUd5rkVIh9Ei5EtvzTEgqMetNQgkB7i2AsanRtevTVihqOd38gG/a5gOefcY/oZf434apVE2nMAoGCCqGSM49BAMCA0cAMEQCIEFIIETyPMXDPFw8WCMVUmh8oqnQkDRQHfA5BEJH9pKwAiAZKb6PCP0zD0pU1RnxivYGaaBpA9k0K5qVjTw6hrSBRA=="
@@ -3364,10 +3364,10 @@
       "sourceInfo": null,
       "statusReports": [],
       "timeOfLastStatusChange": "2025-12-12",
-      "transports": "Nfc, Usb",
+      "transports": "NFC, USB",
       "transportsList": [
-        "Nfc",
-        "Usb"
+        "NFC",
+        "USB"
       ],
       "trustAnchorStatus": true,
       "userVerification": "Passcode External, Presence Internal",
@@ -3379,9 +3379,9 @@
     "/assets/mds/entries/akid%3Af1d0000000000000000000000000000000000011": {
       "aaguid": "",
       "algorithmInfo": "ECDSA_SHA256",
-      "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+      "algorithms": "SECP256R1 ECDSA SHA256 Raw",
       "algorithmsList": [
-        "SECP256R1 Ecdsa SHA256 Raw"
+        "SECP256R1 ECDSA SHA256 Raw"
       ],
       "attachment": "External, Wired",
       "attachmentList": [
@@ -3493,9 +3493,9 @@
     "/assets/mds/entries/aaid%3AF1D0%230012": {
       "aaguid": "",
       "algorithmInfo": "ED25519_SHA512",
-      "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+      "algorithms": "SECP256R1 ECDSA SHA256 Raw",
       "algorithmsList": [
-        "SECP256R1 Ecdsa SHA256 Raw"
+        "SECP256R1 ECDSA SHA256 Raw"
       ],
       "attachment": "Internal",
       "attachmentList": [
@@ -3523,10 +3523,10 @@
       "id": "F1D0#0012",
       "index": 11,
       "isLightweightEntry": false,
-      "keyProtection": "Hardware, Tee",
+      "keyProtection": "Hardware, TEE",
       "keyProtectionList": [
         "Hardware",
-        "Tee"
+        "TEE"
       ],
       "latestStatus": "FIDO Certified L1",
       "metadataStatement": {
@@ -3572,7 +3572,7 @@
         ]
       },
       "name": "Fixture UAF Authenticator",
-      "protocol": "Uaf",
+      "protocol": "UAF",
       "rawEntry": null,
       "rogueListHash": null,
       "rogueListURL": null,
@@ -3604,15 +3604,15 @@
     "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000020": {
       "aaguid": "f1d0f1d0-0000-4000-8000-000000000020",
       "algorithmInfo": "ECDSA_SHA256",
-      "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+      "algorithms": "SECP256R1 ECDSA SHA256 Raw",
       "algorithmsList": [
-        "SECP256R1 Ecdsa SHA256 Raw"
+        "SECP256R1 ECDSA SHA256 Raw"
       ],
-      "attachment": "External, Wired, Nfc",
+      "attachment": "External, Wired, NFC",
       "attachmentList": [
         "External",
         "Wired",
-        "Nfc"
+        "NFC"
       ],
       "attestationCertificates": [
         "MIIB4zCCAYqgAwIBAgICA+kwCgYIKoZIzj0EAwIwejELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweRml4dHVyZSBGSURPMiBBdHRlc3RhdGlvbiBSb290MCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkxMjMxMDAwMDAwWjB6MQswCQYDVQQGEwJTRTEeMBwGA1UECgwVQ2hhcmFjdGVyaXphdGlvbiBUZXN0MSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMScwJQYDVQQDDB5GaXh0dXJlIEZJRE8yIEF0dGVzdGF0aW9uIFJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAS2NMN/lCK0saWxUd5rkVIh9Ei5EtvzTEgqMetNQgkB7i2AsanRtevTVihqOd38gG/a5gOefcY/oZf434apVE2nMAoGCCqGSM49BAMCA0cAMEQCIEFIIETyPMXDPFw8WCMVUmh8oqnQkDRQHfA5BEJH9pKwAiAZKb6PCP0zD0pU1RnxivYGaaBpA9k0K5qVjTw6hrSBRA=="
@@ -3734,10 +3734,10 @@
         }
       ],
       "timeOfLastStatusChange": "2025-01-01",
-      "transports": "Nfc, Usb",
+      "transports": "NFC, USB",
       "transportsList": [
-        "Nfc",
-        "Usb"
+        "NFC",
+        "USB"
       ],
       "trustAnchorStatus": true,
       "userVerification": "Presence Internal",
@@ -3748,15 +3748,15 @@
     "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000021": {
       "aaguid": "f1d0f1d0-0000-4000-8000-000000000021",
       "algorithmInfo": "ECDSA_SHA256",
-      "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+      "algorithms": "SECP256R1 ECDSA SHA256 Raw",
       "algorithmsList": [
-        "SECP256R1 Ecdsa SHA256 Raw"
+        "SECP256R1 ECDSA SHA256 Raw"
       ],
-      "attachment": "External, Wired, Nfc",
+      "attachment": "External, Wired, NFC",
       "attachmentList": [
         "External",
         "Wired",
-        "Nfc"
+        "NFC"
       ],
       "attestationCertificates": [
         "MIIB4zCCAYqgAwIBAgICA+kwCgYIKoZIzj0EAwIwejELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweRml4dHVyZSBGSURPMiBBdHRlc3RhdGlvbiBSb290MCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkxMjMxMDAwMDAwWjB6MQswCQYDVQQGEwJTRTEeMBwGA1UECgwVQ2hhcmFjdGVyaXphdGlvbiBUZXN0MSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMScwJQYDVQQDDB5GaXh0dXJlIEZJRE8yIEF0dGVzdGF0aW9uIFJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAS2NMN/lCK0saWxUd5rkVIh9Ei5EtvzTEgqMetNQgkB7i2AsanRtevTVihqOd38gG/a5gOefcY/oZf434apVE2nMAoGCCqGSM49BAMCA0cAMEQCIEFIIETyPMXDPFw8WCMVUmh8oqnQkDRQHfA5BEJH9pKwAiAZKb6PCP0zD0pU1RnxivYGaaBpA9k0K5qVjTw6hrSBRA=="
@@ -3878,10 +3878,10 @@
         }
       ],
       "timeOfLastStatusChange": "2025-02-02",
-      "transports": "Nfc, Usb",
+      "transports": "NFC, USB",
       "transportsList": [
-        "Nfc",
-        "Usb"
+        "NFC",
+        "USB"
       ],
       "trustAnchorStatus": true,
       "userVerification": "Presence Internal",
@@ -3892,15 +3892,15 @@
     "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000022": {
       "aaguid": "f1d0f1d0-0000-4000-8000-000000000022",
       "algorithmInfo": "ECDSA_SHA256",
-      "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+      "algorithms": "SECP256R1 ECDSA SHA256 Raw",
       "algorithmsList": [
-        "SECP256R1 Ecdsa SHA256 Raw"
+        "SECP256R1 ECDSA SHA256 Raw"
       ],
-      "attachment": "External, Wired, Nfc",
+      "attachment": "External, Wired, NFC",
       "attachmentList": [
         "External",
         "Wired",
-        "Nfc"
+        "NFC"
       ],
       "attestationCertificates": [
         "MIIB4zCCAYqgAwIBAgICA+kwCgYIKoZIzj0EAwIwejELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweRml4dHVyZSBGSURPMiBBdHRlc3RhdGlvbiBSb290MCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkxMjMxMDAwMDAwWjB6MQswCQYDVQQGEwJTRTEeMBwGA1UECgwVQ2hhcmFjdGVyaXphdGlvbiBUZXN0MSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMScwJQYDVQQDDB5GaXh0dXJlIEZJRE8yIEF0dGVzdGF0aW9uIFJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAS2NMN/lCK0saWxUd5rkVIh9Ei5EtvzTEgqMetNQgkB7i2AsanRtevTVihqOd38gG/a5gOefcY/oZf434apVE2nMAoGCCqGSM49BAMCA0cAMEQCIEFIIETyPMXDPFw8WCMVUmh8oqnQkDRQHfA5BEJH9pKwAiAZKb6PCP0zD0pU1RnxivYGaaBpA9k0K5qVjTw6hrSBRA=="
@@ -4022,10 +4022,10 @@
         }
       ],
       "timeOfLastStatusChange": "2025-03-03",
-      "transports": "Nfc, Usb",
+      "transports": "NFC, USB",
       "transportsList": [
-        "Nfc",
-        "Usb"
+        "NFC",
+        "USB"
       ],
       "trustAnchorStatus": true,
       "userVerification": "Presence Internal",
@@ -4036,15 +4036,15 @@
     "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000023": {
       "aaguid": "f1d0f1d0-0000-4000-8000-000000000023",
       "algorithmInfo": "ECDSA_SHA256",
-      "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+      "algorithms": "SECP256R1 ECDSA SHA256 Raw",
       "algorithmsList": [
-        "SECP256R1 Ecdsa SHA256 Raw"
+        "SECP256R1 ECDSA SHA256 Raw"
       ],
-      "attachment": "External, Wired, Nfc",
+      "attachment": "External, Wired, NFC",
       "attachmentList": [
         "External",
         "Wired",
-        "Nfc"
+        "NFC"
       ],
       "attestationCertificates": [
         "MIIB4zCCAYqgAwIBAgICA+kwCgYIKoZIzj0EAwIwejELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweRml4dHVyZSBGSURPMiBBdHRlc3RhdGlvbiBSb290MCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkxMjMxMDAwMDAwWjB6MQswCQYDVQQGEwJTRTEeMBwGA1UECgwVQ2hhcmFjdGVyaXphdGlvbiBUZXN0MSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMScwJQYDVQQDDB5GaXh0dXJlIEZJRE8yIEF0dGVzdGF0aW9uIFJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAS2NMN/lCK0saWxUd5rkVIh9Ei5EtvzTEgqMetNQgkB7i2AsanRtevTVihqOd38gG/a5gOefcY/oZf434apVE2nMAoGCCqGSM49BAMCA0cAMEQCIEFIIETyPMXDPFw8WCMVUmh8oqnQkDRQHfA5BEJH9pKwAiAZKb6PCP0zD0pU1RnxivYGaaBpA9k0K5qVjTw6hrSBRA=="
@@ -4166,10 +4166,10 @@
         }
       ],
       "timeOfLastStatusChange": "2025-04-04",
-      "transports": "Nfc, Usb",
+      "transports": "NFC, USB",
       "transportsList": [
-        "Nfc",
-        "Usb"
+        "NFC",
+        "USB"
       ],
       "trustAnchorStatus": true,
       "userVerification": "Presence Internal",
@@ -4180,15 +4180,15 @@
     "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000024": {
       "aaguid": "f1d0f1d0-0000-4000-8000-000000000024",
       "algorithmInfo": "ECDSA_SHA256",
-      "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+      "algorithms": "SECP256R1 ECDSA SHA256 Raw",
       "algorithmsList": [
-        "SECP256R1 Ecdsa SHA256 Raw"
+        "SECP256R1 ECDSA SHA256 Raw"
       ],
-      "attachment": "External, Wired, Nfc",
+      "attachment": "External, Wired, NFC",
       "attachmentList": [
         "External",
         "Wired",
-        "Nfc"
+        "NFC"
       ],
       "attestationCertificates": [
         "MIIB4zCCAYqgAwIBAgICA+kwCgYIKoZIzj0EAwIwejELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweRml4dHVyZSBGSURPMiBBdHRlc3RhdGlvbiBSb290MCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkxMjMxMDAwMDAwWjB6MQswCQYDVQQGEwJTRTEeMBwGA1UECgwVQ2hhcmFjdGVyaXphdGlvbiBUZXN0MSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMScwJQYDVQQDDB5GaXh0dXJlIEZJRE8yIEF0dGVzdGF0aW9uIFJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAS2NMN/lCK0saWxUd5rkVIh9Ei5EtvzTEgqMetNQgkB7i2AsanRtevTVihqOd38gG/a5gOefcY/oZf434apVE2nMAoGCCqGSM49BAMCA0cAMEQCIEFIIETyPMXDPFw8WCMVUmh8oqnQkDRQHfA5BEJH9pKwAiAZKb6PCP0zD0pU1RnxivYGaaBpA9k0K5qVjTw6hrSBRA=="
@@ -4310,10 +4310,10 @@
         }
       ],
       "timeOfLastStatusChange": "2025-05-05",
-      "transports": "Nfc, Usb",
+      "transports": "NFC, USB",
       "transportsList": [
-        "Nfc",
-        "Usb"
+        "NFC",
+        "USB"
       ],
       "trustAnchorStatus": true,
       "userVerification": "Presence Internal",
@@ -4324,15 +4324,15 @@
     "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000025": {
       "aaguid": "f1d0f1d0-0000-4000-8000-000000000025",
       "algorithmInfo": "ECDSA_SHA256",
-      "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+      "algorithms": "SECP256R1 ECDSA SHA256 Raw",
       "algorithmsList": [
-        "SECP256R1 Ecdsa SHA256 Raw"
+        "SECP256R1 ECDSA SHA256 Raw"
       ],
-      "attachment": "External, Wired, Nfc",
+      "attachment": "External, Wired, NFC",
       "attachmentList": [
         "External",
         "Wired",
-        "Nfc"
+        "NFC"
       ],
       "attestationCertificates": [
         "MIIB4zCCAYqgAwIBAgICA+kwCgYIKoZIzj0EAwIwejELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweRml4dHVyZSBGSURPMiBBdHRlc3RhdGlvbiBSb290MCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkxMjMxMDAwMDAwWjB6MQswCQYDVQQGEwJTRTEeMBwGA1UECgwVQ2hhcmFjdGVyaXphdGlvbiBUZXN0MSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMScwJQYDVQQDDB5GaXh0dXJlIEZJRE8yIEF0dGVzdGF0aW9uIFJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAS2NMN/lCK0saWxUd5rkVIh9Ei5EtvzTEgqMetNQgkB7i2AsanRtevTVihqOd38gG/a5gOefcY/oZf434apVE2nMAoGCCqGSM49BAMCA0cAMEQCIEFIIETyPMXDPFw8WCMVUmh8oqnQkDRQHfA5BEJH9pKwAiAZKb6PCP0zD0pU1RnxivYGaaBpA9k0K5qVjTw6hrSBRA=="
@@ -4454,10 +4454,10 @@
         }
       ],
       "timeOfLastStatusChange": "2025-06-06",
-      "transports": "Nfc, Usb",
+      "transports": "NFC, USB",
       "transportsList": [
-        "Nfc",
-        "Usb"
+        "NFC",
+        "USB"
       ],
       "trustAnchorStatus": true,
       "userVerification": "Presence Internal",
@@ -4468,15 +4468,15 @@
     "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000026": {
       "aaguid": "f1d0f1d0-0000-4000-8000-000000000026",
       "algorithmInfo": "ECDSA_SHA256",
-      "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+      "algorithms": "SECP256R1 ECDSA SHA256 Raw",
       "algorithmsList": [
-        "SECP256R1 Ecdsa SHA256 Raw"
+        "SECP256R1 ECDSA SHA256 Raw"
       ],
-      "attachment": "External, Wired, Nfc",
+      "attachment": "External, Wired, NFC",
       "attachmentList": [
         "External",
         "Wired",
-        "Nfc"
+        "NFC"
       ],
       "attestationCertificates": [
         "MIIB4zCCAYqgAwIBAgICA+kwCgYIKoZIzj0EAwIwejELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweRml4dHVyZSBGSURPMiBBdHRlc3RhdGlvbiBSb290MCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkxMjMxMDAwMDAwWjB6MQswCQYDVQQGEwJTRTEeMBwGA1UECgwVQ2hhcmFjdGVyaXphdGlvbiBUZXN0MSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMScwJQYDVQQDDB5GaXh0dXJlIEZJRE8yIEF0dGVzdGF0aW9uIFJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAS2NMN/lCK0saWxUd5rkVIh9Ei5EtvzTEgqMetNQgkB7i2AsanRtevTVihqOd38gG/a5gOefcY/oZf434apVE2nMAoGCCqGSM49BAMCA0cAMEQCIEFIIETyPMXDPFw8WCMVUmh8oqnQkDRQHfA5BEJH9pKwAiAZKb6PCP0zD0pU1RnxivYGaaBpA9k0K5qVjTw6hrSBRA=="
@@ -4598,10 +4598,10 @@
         }
       ],
       "timeOfLastStatusChange": "2025-07-07",
-      "transports": "Nfc, Usb",
+      "transports": "NFC, USB",
       "transportsList": [
-        "Nfc",
-        "Usb"
+        "NFC",
+        "USB"
       ],
       "trustAnchorStatus": true,
       "userVerification": "Presence Internal",
@@ -4612,15 +4612,15 @@
     "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000027": {
       "aaguid": "f1d0f1d0-0000-4000-8000-000000000027",
       "algorithmInfo": "ECDSA_SHA256",
-      "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+      "algorithms": "SECP256R1 ECDSA SHA256 Raw",
       "algorithmsList": [
-        "SECP256R1 Ecdsa SHA256 Raw"
+        "SECP256R1 ECDSA SHA256 Raw"
       ],
-      "attachment": "External, Wired, Nfc",
+      "attachment": "External, Wired, NFC",
       "attachmentList": [
         "External",
         "Wired",
-        "Nfc"
+        "NFC"
       ],
       "attestationCertificates": [
         "MIIB4zCCAYqgAwIBAgICA+kwCgYIKoZIzj0EAwIwejELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweRml4dHVyZSBGSURPMiBBdHRlc3RhdGlvbiBSb290MCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkxMjMxMDAwMDAwWjB6MQswCQYDVQQGEwJTRTEeMBwGA1UECgwVQ2hhcmFjdGVyaXphdGlvbiBUZXN0MSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMScwJQYDVQQDDB5GaXh0dXJlIEZJRE8yIEF0dGVzdGF0aW9uIFJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAS2NMN/lCK0saWxUd5rkVIh9Ei5EtvzTEgqMetNQgkB7i2AsanRtevTVihqOd38gG/a5gOefcY/oZf434apVE2nMAoGCCqGSM49BAMCA0cAMEQCIEFIIETyPMXDPFw8WCMVUmh8oqnQkDRQHfA5BEJH9pKwAiAZKb6PCP0zD0pU1RnxivYGaaBpA9k0K5qVjTw6hrSBRA=="
@@ -4742,10 +4742,10 @@
         }
       ],
       "timeOfLastStatusChange": "2025-08-08",
-      "transports": "Nfc, Usb",
+      "transports": "NFC, USB",
       "transportsList": [
-        "Nfc",
-        "Usb"
+        "NFC",
+        "USB"
       ],
       "trustAnchorStatus": true,
       "userVerification": "Presence Internal",
@@ -4756,15 +4756,15 @@
     "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000028": {
       "aaguid": "f1d0f1d0-0000-4000-8000-000000000028",
       "algorithmInfo": "ECDSA_SHA256",
-      "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+      "algorithms": "SECP256R1 ECDSA SHA256 Raw",
       "algorithmsList": [
-        "SECP256R1 Ecdsa SHA256 Raw"
+        "SECP256R1 ECDSA SHA256 Raw"
       ],
-      "attachment": "External, Wired, Nfc",
+      "attachment": "External, Wired, NFC",
       "attachmentList": [
         "External",
         "Wired",
-        "Nfc"
+        "NFC"
       ],
       "attestationCertificates": [
         "MIIB4zCCAYqgAwIBAgICA+kwCgYIKoZIzj0EAwIwejELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweRml4dHVyZSBGSURPMiBBdHRlc3RhdGlvbiBSb290MCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkxMjMxMDAwMDAwWjB6MQswCQYDVQQGEwJTRTEeMBwGA1UECgwVQ2hhcmFjdGVyaXphdGlvbiBUZXN0MSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMScwJQYDVQQDDB5GaXh0dXJlIEZJRE8yIEF0dGVzdGF0aW9uIFJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAS2NMN/lCK0saWxUd5rkVIh9Ei5EtvzTEgqMetNQgkB7i2AsanRtevTVihqOd38gG/a5gOefcY/oZf434apVE2nMAoGCCqGSM49BAMCA0cAMEQCIEFIIETyPMXDPFw8WCMVUmh8oqnQkDRQHfA5BEJH9pKwAiAZKb6PCP0zD0pU1RnxivYGaaBpA9k0K5qVjTw6hrSBRA=="
@@ -4886,10 +4886,10 @@
         }
       ],
       "timeOfLastStatusChange": "2025-09-09",
-      "transports": "Nfc, Usb",
+      "transports": "NFC, USB",
       "transportsList": [
-        "Nfc",
-        "Usb"
+        "NFC",
+        "USB"
       ],
       "trustAnchorStatus": true,
       "userVerification": "Presence Internal",
@@ -4900,15 +4900,15 @@
     "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000029": {
       "aaguid": "f1d0f1d0-0000-4000-8000-000000000029",
       "algorithmInfo": "ECDSA_SHA256",
-      "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+      "algorithms": "SECP256R1 ECDSA SHA256 Raw",
       "algorithmsList": [
-        "SECP256R1 Ecdsa SHA256 Raw"
+        "SECP256R1 ECDSA SHA256 Raw"
       ],
-      "attachment": "External, Wired, Nfc",
+      "attachment": "External, Wired, NFC",
       "attachmentList": [
         "External",
         "Wired",
-        "Nfc"
+        "NFC"
       ],
       "attestationCertificates": [
         "MIIB4zCCAYqgAwIBAgICA+kwCgYIKoZIzj0EAwIwejELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweRml4dHVyZSBGSURPMiBBdHRlc3RhdGlvbiBSb290MCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkxMjMxMDAwMDAwWjB6MQswCQYDVQQGEwJTRTEeMBwGA1UECgwVQ2hhcmFjdGVyaXphdGlvbiBUZXN0MSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMScwJQYDVQQDDB5GaXh0dXJlIEZJRE8yIEF0dGVzdGF0aW9uIFJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAS2NMN/lCK0saWxUd5rkVIh9Ei5EtvzTEgqMetNQgkB7i2AsanRtevTVihqOd38gG/a5gOefcY/oZf434apVE2nMAoGCCqGSM49BAMCA0cAMEQCIEFIIETyPMXDPFw8WCMVUmh8oqnQkDRQHfA5BEJH9pKwAiAZKb6PCP0zD0pU1RnxivYGaaBpA9k0K5qVjTw6hrSBRA=="
@@ -5030,10 +5030,10 @@
         }
       ],
       "timeOfLastStatusChange": "2025-01-10",
-      "transports": "Nfc, Usb",
+      "transports": "NFC, USB",
       "transportsList": [
-        "Nfc",
-        "Usb"
+        "NFC",
+        "USB"
       ],
       "trustAnchorStatus": true,
       "userVerification": "Presence Internal",
@@ -5044,15 +5044,15 @@
     "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000030": {
       "aaguid": "f1d0f1d0-0000-4000-8000-000000000030",
       "algorithmInfo": "ECDSA_SHA256",
-      "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+      "algorithms": "SECP256R1 ECDSA SHA256 Raw",
       "algorithmsList": [
-        "SECP256R1 Ecdsa SHA256 Raw"
+        "SECP256R1 ECDSA SHA256 Raw"
       ],
-      "attachment": "External, Wired, Nfc",
+      "attachment": "External, Wired, NFC",
       "attachmentList": [
         "External",
         "Wired",
-        "Nfc"
+        "NFC"
       ],
       "attestationCertificates": [
         "MIIB4zCCAYqgAwIBAgICA+kwCgYIKoZIzj0EAwIwejELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweRml4dHVyZSBGSURPMiBBdHRlc3RhdGlvbiBSb290MCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkxMjMxMDAwMDAwWjB6MQswCQYDVQQGEwJTRTEeMBwGA1UECgwVQ2hhcmFjdGVyaXphdGlvbiBUZXN0MSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMScwJQYDVQQDDB5GaXh0dXJlIEZJRE8yIEF0dGVzdGF0aW9uIFJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAS2NMN/lCK0saWxUd5rkVIh9Ei5EtvzTEgqMetNQgkB7i2AsanRtevTVihqOd38gG/a5gOefcY/oZf434apVE2nMAoGCCqGSM49BAMCA0cAMEQCIEFIIETyPMXDPFw8WCMVUmh8oqnQkDRQHfA5BEJH9pKwAiAZKb6PCP0zD0pU1RnxivYGaaBpA9k0K5qVjTw6hrSBRA=="
@@ -5174,10 +5174,10 @@
         }
       ],
       "timeOfLastStatusChange": "2025-02-11",
-      "transports": "Nfc, Usb",
+      "transports": "NFC, USB",
       "transportsList": [
-        "Nfc",
-        "Usb"
+        "NFC",
+        "USB"
       ],
       "trustAnchorStatus": true,
       "userVerification": "Presence Internal",
@@ -5188,15 +5188,15 @@
     "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000031": {
       "aaguid": "f1d0f1d0-0000-4000-8000-000000000031",
       "algorithmInfo": "ECDSA_SHA256",
-      "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+      "algorithms": "SECP256R1 ECDSA SHA256 Raw",
       "algorithmsList": [
-        "SECP256R1 Ecdsa SHA256 Raw"
+        "SECP256R1 ECDSA SHA256 Raw"
       ],
-      "attachment": "External, Wired, Nfc",
+      "attachment": "External, Wired, NFC",
       "attachmentList": [
         "External",
         "Wired",
-        "Nfc"
+        "NFC"
       ],
       "attestationCertificates": [
         "MIIB4zCCAYqgAwIBAgICA+kwCgYIKoZIzj0EAwIwejELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweRml4dHVyZSBGSURPMiBBdHRlc3RhdGlvbiBSb290MCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkxMjMxMDAwMDAwWjB6MQswCQYDVQQGEwJTRTEeMBwGA1UECgwVQ2hhcmFjdGVyaXphdGlvbiBUZXN0MSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMScwJQYDVQQDDB5GaXh0dXJlIEZJRE8yIEF0dGVzdGF0aW9uIFJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAS2NMN/lCK0saWxUd5rkVIh9Ei5EtvzTEgqMetNQgkB7i2AsanRtevTVihqOd38gG/a5gOefcY/oZf434apVE2nMAoGCCqGSM49BAMCA0cAMEQCIEFIIETyPMXDPFw8WCMVUmh8oqnQkDRQHfA5BEJH9pKwAiAZKb6PCP0zD0pU1RnxivYGaaBpA9k0K5qVjTw6hrSBRA=="
@@ -5318,10 +5318,10 @@
         }
       ],
       "timeOfLastStatusChange": "2025-03-12",
-      "transports": "Nfc, Usb",
+      "transports": "NFC, USB",
       "transportsList": [
-        "Nfc",
-        "Usb"
+        "NFC",
+        "USB"
       ],
       "trustAnchorStatus": true,
       "userVerification": "Presence Internal",
@@ -5332,15 +5332,15 @@
     "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000032": {
       "aaguid": "f1d0f1d0-0000-4000-8000-000000000032",
       "algorithmInfo": "ECDSA_SHA256",
-      "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+      "algorithms": "SECP256R1 ECDSA SHA256 Raw",
       "algorithmsList": [
-        "SECP256R1 Ecdsa SHA256 Raw"
+        "SECP256R1 ECDSA SHA256 Raw"
       ],
-      "attachment": "External, Wired, Nfc",
+      "attachment": "External, Wired, NFC",
       "attachmentList": [
         "External",
         "Wired",
-        "Nfc"
+        "NFC"
       ],
       "attestationCertificates": [
         "MIIB4zCCAYqgAwIBAgICA+kwCgYIKoZIzj0EAwIwejELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweRml4dHVyZSBGSURPMiBBdHRlc3RhdGlvbiBSb290MCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkxMjMxMDAwMDAwWjB6MQswCQYDVQQGEwJTRTEeMBwGA1UECgwVQ2hhcmFjdGVyaXphdGlvbiBUZXN0MSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMScwJQYDVQQDDB5GaXh0dXJlIEZJRE8yIEF0dGVzdGF0aW9uIFJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAS2NMN/lCK0saWxUd5rkVIh9Ei5EtvzTEgqMetNQgkB7i2AsanRtevTVihqOd38gG/a5gOefcY/oZf434apVE2nMAoGCCqGSM49BAMCA0cAMEQCIEFIIETyPMXDPFw8WCMVUmh8oqnQkDRQHfA5BEJH9pKwAiAZKb6PCP0zD0pU1RnxivYGaaBpA9k0K5qVjTw6hrSBRA=="
@@ -5462,10 +5462,10 @@
         }
       ],
       "timeOfLastStatusChange": "2025-04-13",
-      "transports": "Nfc, Usb",
+      "transports": "NFC, USB",
       "transportsList": [
-        "Nfc",
-        "Usb"
+        "NFC",
+        "USB"
       ],
       "trustAnchorStatus": true,
       "userVerification": "Presence Internal",
@@ -5476,15 +5476,15 @@
     "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000033": {
       "aaguid": "f1d0f1d0-0000-4000-8000-000000000033",
       "algorithmInfo": "ECDSA_SHA256",
-      "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+      "algorithms": "SECP256R1 ECDSA SHA256 Raw",
       "algorithmsList": [
-        "SECP256R1 Ecdsa SHA256 Raw"
+        "SECP256R1 ECDSA SHA256 Raw"
       ],
-      "attachment": "External, Wired, Nfc",
+      "attachment": "External, Wired, NFC",
       "attachmentList": [
         "External",
         "Wired",
-        "Nfc"
+        "NFC"
       ],
       "attestationCertificates": [
         "MIIB4zCCAYqgAwIBAgICA+kwCgYIKoZIzj0EAwIwejELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweRml4dHVyZSBGSURPMiBBdHRlc3RhdGlvbiBSb290MCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkxMjMxMDAwMDAwWjB6MQswCQYDVQQGEwJTRTEeMBwGA1UECgwVQ2hhcmFjdGVyaXphdGlvbiBUZXN0MSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMScwJQYDVQQDDB5GaXh0dXJlIEZJRE8yIEF0dGVzdGF0aW9uIFJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAS2NMN/lCK0saWxUd5rkVIh9Ei5EtvzTEgqMetNQgkB7i2AsanRtevTVihqOd38gG/a5gOefcY/oZf434apVE2nMAoGCCqGSM49BAMCA0cAMEQCIEFIIETyPMXDPFw8WCMVUmh8oqnQkDRQHfA5BEJH9pKwAiAZKb6PCP0zD0pU1RnxivYGaaBpA9k0K5qVjTw6hrSBRA=="
@@ -5606,10 +5606,10 @@
         }
       ],
       "timeOfLastStatusChange": "2025-05-14",
-      "transports": "Nfc, Usb",
+      "transports": "NFC, USB",
       "transportsList": [
-        "Nfc",
-        "Usb"
+        "NFC",
+        "USB"
       ],
       "trustAnchorStatus": true,
       "userVerification": "Presence Internal",
@@ -5620,15 +5620,15 @@
     "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000034": {
       "aaguid": "f1d0f1d0-0000-4000-8000-000000000034",
       "algorithmInfo": "ECDSA_SHA256",
-      "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+      "algorithms": "SECP256R1 ECDSA SHA256 Raw",
       "algorithmsList": [
-        "SECP256R1 Ecdsa SHA256 Raw"
+        "SECP256R1 ECDSA SHA256 Raw"
       ],
-      "attachment": "External, Wired, Nfc",
+      "attachment": "External, Wired, NFC",
       "attachmentList": [
         "External",
         "Wired",
-        "Nfc"
+        "NFC"
       ],
       "attestationCertificates": [
         "MIIB4zCCAYqgAwIBAgICA+kwCgYIKoZIzj0EAwIwejELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweRml4dHVyZSBGSURPMiBBdHRlc3RhdGlvbiBSb290MCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkxMjMxMDAwMDAwWjB6MQswCQYDVQQGEwJTRTEeMBwGA1UECgwVQ2hhcmFjdGVyaXphdGlvbiBUZXN0MSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMScwJQYDVQQDDB5GaXh0dXJlIEZJRE8yIEF0dGVzdGF0aW9uIFJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAS2NMN/lCK0saWxUd5rkVIh9Ei5EtvzTEgqMetNQgkB7i2AsanRtevTVihqOd38gG/a5gOefcY/oZf434apVE2nMAoGCCqGSM49BAMCA0cAMEQCIEFIIETyPMXDPFw8WCMVUmh8oqnQkDRQHfA5BEJH9pKwAiAZKb6PCP0zD0pU1RnxivYGaaBpA9k0K5qVjTw6hrSBRA=="
@@ -5750,10 +5750,10 @@
         }
       ],
       "timeOfLastStatusChange": "2025-06-15",
-      "transports": "Nfc, Usb",
+      "transports": "NFC, USB",
       "transportsList": [
-        "Nfc",
-        "Usb"
+        "NFC",
+        "USB"
       ],
       "trustAnchorStatus": true,
       "userVerification": "Presence Internal",
@@ -5764,15 +5764,15 @@
     "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000035": {
       "aaguid": "f1d0f1d0-0000-4000-8000-000000000035",
       "algorithmInfo": "ECDSA_SHA256",
-      "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+      "algorithms": "SECP256R1 ECDSA SHA256 Raw",
       "algorithmsList": [
-        "SECP256R1 Ecdsa SHA256 Raw"
+        "SECP256R1 ECDSA SHA256 Raw"
       ],
-      "attachment": "External, Wired, Nfc",
+      "attachment": "External, Wired, NFC",
       "attachmentList": [
         "External",
         "Wired",
-        "Nfc"
+        "NFC"
       ],
       "attestationCertificates": [
         "MIIB4zCCAYqgAwIBAgICA+kwCgYIKoZIzj0EAwIwejELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweRml4dHVyZSBGSURPMiBBdHRlc3RhdGlvbiBSb290MCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkxMjMxMDAwMDAwWjB6MQswCQYDVQQGEwJTRTEeMBwGA1UECgwVQ2hhcmFjdGVyaXphdGlvbiBUZXN0MSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMScwJQYDVQQDDB5GaXh0dXJlIEZJRE8yIEF0dGVzdGF0aW9uIFJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAS2NMN/lCK0saWxUd5rkVIh9Ei5EtvzTEgqMetNQgkB7i2AsanRtevTVihqOd38gG/a5gOefcY/oZf434apVE2nMAoGCCqGSM49BAMCA0cAMEQCIEFIIETyPMXDPFw8WCMVUmh8oqnQkDRQHfA5BEJH9pKwAiAZKb6PCP0zD0pU1RnxivYGaaBpA9k0K5qVjTw6hrSBRA=="
@@ -5894,10 +5894,10 @@
         }
       ],
       "timeOfLastStatusChange": "2025-07-16",
-      "transports": "Nfc, Usb",
+      "transports": "NFC, USB",
       "transportsList": [
-        "Nfc",
-        "Usb"
+        "NFC",
+        "USB"
       ],
       "trustAnchorStatus": true,
       "userVerification": "Presence Internal",
@@ -5908,15 +5908,15 @@
     "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000036": {
       "aaguid": "f1d0f1d0-0000-4000-8000-000000000036",
       "algorithmInfo": "ECDSA_SHA256",
-      "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+      "algorithms": "SECP256R1 ECDSA SHA256 Raw",
       "algorithmsList": [
-        "SECP256R1 Ecdsa SHA256 Raw"
+        "SECP256R1 ECDSA SHA256 Raw"
       ],
-      "attachment": "External, Wired, Nfc",
+      "attachment": "External, Wired, NFC",
       "attachmentList": [
         "External",
         "Wired",
-        "Nfc"
+        "NFC"
       ],
       "attestationCertificates": [
         "MIIB4zCCAYqgAwIBAgICA+kwCgYIKoZIzj0EAwIwejELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweRml4dHVyZSBGSURPMiBBdHRlc3RhdGlvbiBSb290MCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkxMjMxMDAwMDAwWjB6MQswCQYDVQQGEwJTRTEeMBwGA1UECgwVQ2hhcmFjdGVyaXphdGlvbiBUZXN0MSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMScwJQYDVQQDDB5GaXh0dXJlIEZJRE8yIEF0dGVzdGF0aW9uIFJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAS2NMN/lCK0saWxUd5rkVIh9Ei5EtvzTEgqMetNQgkB7i2AsanRtevTVihqOd38gG/a5gOefcY/oZf434apVE2nMAoGCCqGSM49BAMCA0cAMEQCIEFIIETyPMXDPFw8WCMVUmh8oqnQkDRQHfA5BEJH9pKwAiAZKb6PCP0zD0pU1RnxivYGaaBpA9k0K5qVjTw6hrSBRA=="
@@ -6038,10 +6038,10 @@
         }
       ],
       "timeOfLastStatusChange": "2025-08-17",
-      "transports": "Nfc, Usb",
+      "transports": "NFC, USB",
       "transportsList": [
-        "Nfc",
-        "Usb"
+        "NFC",
+        "USB"
       ],
       "trustAnchorStatus": true,
       "userVerification": "Presence Internal",
@@ -6052,15 +6052,15 @@
     "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000037": {
       "aaguid": "f1d0f1d0-0000-4000-8000-000000000037",
       "algorithmInfo": "ECDSA_SHA256",
-      "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+      "algorithms": "SECP256R1 ECDSA SHA256 Raw",
       "algorithmsList": [
-        "SECP256R1 Ecdsa SHA256 Raw"
+        "SECP256R1 ECDSA SHA256 Raw"
       ],
-      "attachment": "External, Wired, Nfc",
+      "attachment": "External, Wired, NFC",
       "attachmentList": [
         "External",
         "Wired",
-        "Nfc"
+        "NFC"
       ],
       "attestationCertificates": [
         "MIIB4zCCAYqgAwIBAgICA+kwCgYIKoZIzj0EAwIwejELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweRml4dHVyZSBGSURPMiBBdHRlc3RhdGlvbiBSb290MCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkxMjMxMDAwMDAwWjB6MQswCQYDVQQGEwJTRTEeMBwGA1UECgwVQ2hhcmFjdGVyaXphdGlvbiBUZXN0MSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMScwJQYDVQQDDB5GaXh0dXJlIEZJRE8yIEF0dGVzdGF0aW9uIFJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAS2NMN/lCK0saWxUd5rkVIh9Ei5EtvzTEgqMetNQgkB7i2AsanRtevTVihqOd38gG/a5gOefcY/oZf434apVE2nMAoGCCqGSM49BAMCA0cAMEQCIEFIIETyPMXDPFw8WCMVUmh8oqnQkDRQHfA5BEJH9pKwAiAZKb6PCP0zD0pU1RnxivYGaaBpA9k0K5qVjTw6hrSBRA=="
@@ -6182,10 +6182,10 @@
         }
       ],
       "timeOfLastStatusChange": "2025-09-18",
-      "transports": "Nfc, Usb",
+      "transports": "NFC, USB",
       "transportsList": [
-        "Nfc",
-        "Usb"
+        "NFC",
+        "USB"
       ],
       "trustAnchorStatus": true,
       "userVerification": "Presence Internal",
@@ -6196,15 +6196,15 @@
     "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000038": {
       "aaguid": "f1d0f1d0-0000-4000-8000-000000000038",
       "algorithmInfo": "ECDSA_SHA256",
-      "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+      "algorithms": "SECP256R1 ECDSA SHA256 Raw",
       "algorithmsList": [
-        "SECP256R1 Ecdsa SHA256 Raw"
+        "SECP256R1 ECDSA SHA256 Raw"
       ],
-      "attachment": "External, Wired, Nfc",
+      "attachment": "External, Wired, NFC",
       "attachmentList": [
         "External",
         "Wired",
-        "Nfc"
+        "NFC"
       ],
       "attestationCertificates": [
         "MIIB4zCCAYqgAwIBAgICA+kwCgYIKoZIzj0EAwIwejELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweRml4dHVyZSBGSURPMiBBdHRlc3RhdGlvbiBSb290MCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkxMjMxMDAwMDAwWjB6MQswCQYDVQQGEwJTRTEeMBwGA1UECgwVQ2hhcmFjdGVyaXphdGlvbiBUZXN0MSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMScwJQYDVQQDDB5GaXh0dXJlIEZJRE8yIEF0dGVzdGF0aW9uIFJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAS2NMN/lCK0saWxUd5rkVIh9Ei5EtvzTEgqMetNQgkB7i2AsanRtevTVihqOd38gG/a5gOefcY/oZf434apVE2nMAoGCCqGSM49BAMCA0cAMEQCIEFIIETyPMXDPFw8WCMVUmh8oqnQkDRQHfA5BEJH9pKwAiAZKb6PCP0zD0pU1RnxivYGaaBpA9k0K5qVjTw6hrSBRA=="
@@ -6326,10 +6326,10 @@
         }
       ],
       "timeOfLastStatusChange": "2025-01-19",
-      "transports": "Nfc, Usb",
+      "transports": "NFC, USB",
       "transportsList": [
-        "Nfc",
-        "Usb"
+        "NFC",
+        "USB"
       ],
       "trustAnchorStatus": true,
       "userVerification": "Presence Internal",
@@ -6340,15 +6340,15 @@
     "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000039": {
       "aaguid": "f1d0f1d0-0000-4000-8000-000000000039",
       "algorithmInfo": "ECDSA_SHA256",
-      "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+      "algorithms": "SECP256R1 ECDSA SHA256 Raw",
       "algorithmsList": [
-        "SECP256R1 Ecdsa SHA256 Raw"
+        "SECP256R1 ECDSA SHA256 Raw"
       ],
-      "attachment": "External, Wired, Nfc",
+      "attachment": "External, Wired, NFC",
       "attachmentList": [
         "External",
         "Wired",
-        "Nfc"
+        "NFC"
       ],
       "attestationCertificates": [
         "MIIB4zCCAYqgAwIBAgICA+kwCgYIKoZIzj0EAwIwejELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweRml4dHVyZSBGSURPMiBBdHRlc3RhdGlvbiBSb290MCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkxMjMxMDAwMDAwWjB6MQswCQYDVQQGEwJTRTEeMBwGA1UECgwVQ2hhcmFjdGVyaXphdGlvbiBUZXN0MSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMScwJQYDVQQDDB5GaXh0dXJlIEZJRE8yIEF0dGVzdGF0aW9uIFJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAS2NMN/lCK0saWxUd5rkVIh9Ei5EtvzTEgqMetNQgkB7i2AsanRtevTVihqOd38gG/a5gOefcY/oZf434apVE2nMAoGCCqGSM49BAMCA0cAMEQCIEFIIETyPMXDPFw8WCMVUmh8oqnQkDRQHfA5BEJH9pKwAiAZKb6PCP0zD0pU1RnxivYGaaBpA9k0K5qVjTw6hrSBRA=="
@@ -6470,10 +6470,10 @@
         }
       ],
       "timeOfLastStatusChange": "2025-01-01",
-      "transports": "Nfc, Usb",
+      "transports": "NFC, USB",
       "transportsList": [
-        "Nfc",
-        "Usb"
+        "NFC",
+        "USB"
       ],
       "trustAnchorStatus": true,
       "userVerification": "Presence Internal",

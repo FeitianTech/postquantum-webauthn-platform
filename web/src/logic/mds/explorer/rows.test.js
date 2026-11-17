@@ -27,11 +27,11 @@ describe('table cells', () => {
   it('tones the level by what the latest status says of it', () => {
     const tone = latestStatus => certificationParts({ certification: 'FIDO Certified L2 • Key', latestStatus }).tone;
     expect(tone('FIDO Certified L2')).toBe('success');
-    expect(tone('FIDO Certified L3plus')).toBe('success');
+    expect(tone('FIDO Certified L3+')).toBe('success');
     expect(tone('Update Available')).toBe('success');
     expect(tone('Revoked')).toBe('neutral');
-    expect(tone('USER KEY Physical Compromise')).toBe('neutral');
-    expect(tone('NOT FIDO Certified')).toBe('neutral');
+    expect(tone('User Key Physical Compromise')).toBe('neutral');
+    expect(tone('Not FIDO Certified')).toBe('neutral');
     expect(tone(undefined)).toBe('neutral');
   });
 
@@ -42,8 +42,8 @@ describe('table cells', () => {
 
   it('puts the latest status in one badge, in its tone', () => {
     expect(statusParts({ latestStatus: ' Revoked ' })).toEqual({ status: 'Revoked', tone: 'danger' });
-    expect(statusParts({ latestStatus: 'USER KEY Remote Compromise' }).tone).toBe('danger');
-    expect(statusParts({ latestStatus: 'FIDO Certified L1plus' })).toEqual({ status: 'FIDO Certified L1plus', tone: 'success' });
+    expect(statusParts({ latestStatus: 'User Key Remote Compromise' }).tone).toBe('danger');
+    expect(statusParts({ latestStatus: 'FIDO Certified L1+' })).toEqual({ status: 'FIDO Certified L1+', tone: 'success' });
     expect(statusParts({ latestStatus: 'Update Available' }).tone).toBe('neutral');
     expect(statusParts({ latestStatus: '' })).toEqual({ status: '—', tone: 'neutral' });
     expect(statusParts(null)).toEqual({ status: '—', tone: 'neutral' });

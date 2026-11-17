@@ -62,7 +62,7 @@ describe('the MDS entry page', () => {
     expect(screen.getByRole('heading', { level: 3, name: 'Authenticator' })).toBeInTheDocument();
     const subtitle = document.querySelector<HTMLElement>('[data-entry-subtitle]')!;
     expect(subtitle).toHaveTextContent('ID:F1D0#0012');
-    expect(subtitle).toHaveTextContent('Uaf');
+    expect(subtitle).toHaveTextContent('UAF');
     expect(within(subtitle).getByRole('button', { name: 'Copy AAID' })).toBeInTheDocument();
   });
 
@@ -401,7 +401,7 @@ describe('the MDS entry page: what an entry may lack', () => {
   it('shows no certification for an entry that reached none, and its status', () => {
     renderEntry(entryNamed('Fixture Uncertified Key'));
     expect(section('overview').querySelector('[data-item="Certification"]')).toBeNull();
-    expect(field(section('overview'), 'Status')).toHaveTextContent(/^NOT FIDO Certified$/);
+    expect(field(section('overview'), 'Status')).toHaveTextContent(/^Not FIDO Certified$/);
   });
 
   it('shows a method known only by its accuracy, and a descriptor or a version line alone', () => {

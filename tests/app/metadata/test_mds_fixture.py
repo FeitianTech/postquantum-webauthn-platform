@@ -46,14 +46,14 @@ def test_the_fixture_is_a_whole_snapshot():
 
 def test_the_fixture_holds_what_the_explorer_must_show_well():
     entries = _full_snapshot()["entries"]
-    assert {entry["protocol"] for entry in entries} == {"FIDO2", "U2F", "Uaf"}
+    assert {entry["protocol"] for entry in entries} == {"FIDO2", "U2F", "UAF"}
     assert {entry["entryId"].split(":")[0] for entry in entries} == {"aaguid", "aaid", "akid"}
     assert any("#" in entry["entryId"] for entry in entries)
     assert {entry["latestStatus"] for entry in entries} >= {
         "FIDO Certified",
         "FIDO Certified L1",
         "FIDO Certified L2",
-        "NOT FIDO Certified",
+        "Not FIDO Certified",
         "Revoked",
     }
     assert max(len(entry["commonName"]) for entry in entries) >= 954
