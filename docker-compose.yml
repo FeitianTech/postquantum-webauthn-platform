@@ -4,8 +4,9 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: WebAuthnServer
+    # This machine only: a local server is for its own browser.
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     environment:
       PORT: "8000"
     volumes:

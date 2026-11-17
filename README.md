@@ -71,7 +71,8 @@ docker compose up -d
 
 ### Step 3 — Access the Platform
 
-Open the following address in your browser:
+Open the following address in your browser on the same machine (the port is
+published on `127.0.0.1` only):
 
 ```text
 http://localhost:8000
