@@ -11,7 +11,7 @@ import logging
 from collections.abc import Mapping
 from typing import Any
 
-from flask import Blueprint, abort, jsonify, request, session
+from flask import Blueprint, jsonify, request, session
 
 from ...challenge_registry import (
     CHALLENGE_FRESH,
@@ -34,6 +34,14 @@ logger = logging.getLogger(__name__)
 # (an ML-DSA-87 key is 2.6 KB) would not fit a cookie; complete is sent the same
 # list again, and is refused when it is not the one begin built its options from.
 _CREDENTIALS_DIGEST_KEY = "simple_credentials_digest"
+
+# A begin sent no credential it could read: there is nothing to offer (the page says so on a 404).
+NO_CREDENTIAL_SENT = "This browser sent no saved credential for this username."
+# A complete with no ceremony begun in this session, or one that sent no credential to verify against.
+STATE_NOT_FOUND = "Authentication state not found or has expired. Please restart the authentication flow."
+NO_CREDENTIAL_TO_VERIFY = (
+    "No saved credential was sent to verify the sign-in against. Please restart the authentication flow."
+)
 
 
 def credentials_digest(serialized: list[dict[str, Any]]) -> str:
@@ -60,7 +68,7 @@ def authenticate_begin():
     credential_data_list, serialized = parsing._parse_client_credentials(raw_credentials)
 
     if not credential_data_list:
-        abort(404)
+        return jsonify({"error": NO_CREDENTIAL_SENT}), 404
 
     session[_CREDENTIALS_DIGEST_KEY] = credentials_digest(serialized)
     session["simple_credentials_email"] = username
@@ -115,7 +123,8 @@ def _consume_authentication_state(
     if begun_with is None or not credential_data_list:
         session.pop("authenticate_rp_id", None)
         session.pop("simple_credentials_email", None)
-        abort(400)
+        sentence = STATE_NOT_FOUND if begun_with is None else NO_CREDENTIAL_TO_VERIFY
+        return None, (jsonify({"error": sentence}), 400)
 
     # A client-supplied ``__session_state`` is stripped and ignored: accepting
     # it would let the caller choose the challenge it is verified against.
@@ -123,14 +132,7 @@ def _consume_authentication_state(
         response.pop("__session_state", None)
     if state is None:
         session.pop("authenticate_rp_id", None)
-        return None, (
-            jsonify(
-                {
-                    "error": "Authentication state not found or has expired. Please restart the authentication flow."
-                }
-            ),
-            400,
-        )
+        return None, (jsonify({"error": STATE_NOT_FOUND}), 400)
 
     rp_id = session.pop("authenticate_rp_id", None)
     if challenge_verdict != CHALLENGE_FRESH:

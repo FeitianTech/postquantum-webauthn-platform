@@ -124,6 +124,39 @@ def test_a_begin_body_that_is_no_object_offers_no_credential():
     response = entry_app().test_client().post(f"/api/authenticate/begin?email={EMAIL}", json=["not", "an", "object"])
 
     assert response.status_code == 404
+    assert response.get_json() == {"error": simple_authentication.NO_CREDENTIAL_SENT}
+
+
+def test_a_complete_with_no_begin_says_to_start_again_in_json(credential_store):
+    authenticator = Authenticator()
+    stored = [authenticator.stored_credential_entry()]
+
+    response = entry_app().test_client().post(
+        f"/api/authenticate/complete?email={EMAIL}",
+        json=simple_complete_body(assertion_payload(authenticator, challenge=b"\x00" * 32, counter=1), stored),
+        headers={"Origin": ORIGIN},
+    )
+
+    assert response.status_code == 400
+    assert response.get_json() == {"error": simple_authentication.STATE_NOT_FOUND}
+
+
+def test_a_complete_that_sends_no_credential_says_so_in_json(credential_store):
+    authenticator = Authenticator()
+    client = entry_app().test_client()
+    register_simple(client, authenticator)
+    stored = [authenticator.stored_credential_entry()]
+    begin = client.post(f"/api/authenticate/begin?email={EMAIL}", json={"credentials": stored})
+    challenge = unb64u(begin.get_json()["publicKey"]["challenge"])
+
+    response = client.post(
+        f"/api/authenticate/complete?email={EMAIL}",
+        json=simple_complete_body(assertion_payload(authenticator, challenge=challenge, counter=1), []),
+        headers={"Origin": ORIGIN},
+    )
+
+    assert response.status_code == 400
+    assert response.get_json() == {"error": simple_authentication.NO_CREDENTIAL_TO_VERIFY}
 
 
 def test_an_assertion_body_that_is_no_object_fails_without_naming_a_credential(credential_store):
