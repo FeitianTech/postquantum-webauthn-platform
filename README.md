@@ -7,25 +7,60 @@
 
 ## Overview
 
-This project provides an end-to-end platform for testing and exploring WebAuthn user flows with support for Post-Quantum Cryptography algorithms.
+A FIDO2/WebAuthn test platform and developer tool. It runs real WebAuthn
+ceremonies in your browser against its own relying party, verifies them on the
+server with [python-fido2](https://github.com/Yubico/python-fido2), and shows what
+every part of a credential holds, post-quantum (ML-DSA) credentials included.
 
-A **codec** is integrated for:
+* **Simple Authentication**: register a credential under a username and sign in
+  with it, with fixed settings: a cross-platform authenticator (a security key or a
+  phone), no user verification and no attestation asked for. The server checks
+  every ceremony: one that does not hold (a bad signature, or a challenge, origin
+  or RP ID that does not match) is refused, and any other finding is a warning
+  beside the result.
+* **Saved credentials**, which both tabs share: each registration is kept in the
+  browser and listed in both tabs. A credential's details show its properties and
+  the attestation's checks (signature, root, RP ID hash, AAGUID match) with what
+  the FIDO Metadata Service says of the authenticator, its user, AAGUID,
+  authenticator data and public key, and its registration: the attestation's
+  findings in words, each certificate, and every part the Codec can decode.
+  Deleting one removes it from the server and the browser, and a browser with
+  WebAuthn's Signal API is told it is gone.
+* **Advanced Authentication**: registration and authentication requests with every
+  option, set in a form or written as the request's JSON beside it, each following
+  the other: the user, challenge, timeout, authenticator attachment, resident key,
+  user verification, attestation, algorithms, hints, credentials to exclude or
+  allow (fake ones too), and the credProps, minPinLength, credProtect, largeBlob
+  and prf extensions; the JSON can name the RP ID too. The result lists every
+  finding as an error, and opens each part of the browser's response in the Codec.
+  An authentication can use any saved credential, the Simple tab's too.
+* **Codec**: decode JSON (a PublicKeyCredential, clientDataJSON), CBOR (an
+  attestation object; a CTAP makeCredential, getAssertion or getInfo message),
+  authenticator data, or X.509 certificates, given as JSON, PEM, hex, base64 or
+  base64url; each value is shown with what it means and what the decoder found. It
+  shows what was sent and never repairs it. Encode writes a value as JSON, CBOR,
+  EDN, a COSE key, DER or PEM.
+* **FIDO MDS Authenticators**: every authenticator in the FIDO Alliance's Metadata
+  Service, from a snapshot of its BLOB verified against the FIDO root and the
+  chain's CRLs, checked for a newer BLOB twice a day. Filter, sort and resize the
+  table; open an entry's statement, status reports, certificates and raw JSON, the
+  credentials saved for its AAGUID, and Try in Advanced, which sets up an Advanced
+  registration with what the statement says the authenticator takes. Manage
+  Metadata uploads statements of your own: they are listed in front of the FIDO
+  ones, and registrations are checked against them, with a warning that they are
+  not FIDO's.
+* **Analyze Browser**: which browser this is, and what it says about WebAuthn
+  (secure context, the API, passkey autofill, the JSON methods,
+  `getClientCapabilities()`, a built-in authenticator, a phone over hybrid), with
+  where each answer came from, or that it cannot be known; and a report to copy.
 
-* Encoding and decoding attestation objects
-* Parsing WebAuthn CBOR responses
-* Processing authenticator metadata
-* Handling related WebAuthn structures
+Registrations offer their algorithms in this order: **ML-DSA-44**, **ML-DSA-65**
+and **ML-DSA-87** (FIPS 204; COSE -48, -49, -50), then EdDSA, ES256, RS256 and
+ES384. The Simple tab offers these; the Advanced form ticks them by default and
+lists further classical ones to choose.
 
-A **FIDO MDS explorer** is included for:
-
-* Direct retrieval of authenticator metadata
-* Root certificate verification
-
-For PQC support, the following algorithms are available:
-
-* **ML-DSA 44**
-* **ML-DSA 65**
-* **ML-DSA 87**
+Flask serves the API and the UI, a Next.js static export; no Node runs in
+production.
 
 ---
 
