@@ -80,7 +80,8 @@ Ensure the following are available locally:
 
 * **Docker Desktop** or **Docker Engine**
 * **Docker Compose** (`docker compose`)
-* A modern browser with WebAuthn support (Edge, Chrome, Safari, Firefox, etc.)
+* A browser that reads WebAuthn options from JSON, which the ceremonies need:
+  Chrome or Edge 129, Firefox 119, Safari 18.4 or later
 
 ---
 
@@ -95,7 +96,8 @@ cd postquantum-webauthn-platform
 
 ### Step 2 — Start the Local Stack
 
-Run the following command:
+Run the following command. The first run builds the image, the UI's static
+export with it:
 
 ```bash
 docker compose up -d
@@ -117,8 +119,9 @@ http://localhost:8000
 ### Step 4 — Load the FIDO Metadata
 
 The MDS explorer is empty until the container has a metadata snapshot. This
-downloads the FIDO Alliance's BLOB, verifies it against the pinned trust root and
-writes the snapshot into the compose volume `instance` (the container's
+downloads the FIDO Alliance's BLOB, verifies it against the pinned trust root,
+checks its signing chain against the CAs' revocation lists, and writes the
+snapshot into the compose volume `instance` (the container's
 `/app/instance/mds-snapshot`), which the running server reads at once and keeps
 across restarts:
 
