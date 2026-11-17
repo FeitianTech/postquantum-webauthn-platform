@@ -7,8 +7,11 @@ files one at a time (its create-file endpoint refuses calls made in parallel), a
 take one every flusher backs off together. A delivery made twice finds its file at its path, so
 an entry is delivered at least once and never becomes two files.
 
-Locally the outbox is a folder (``FIDO_SERVER_GITHUB_OUTBOX_DIR``, else ``instance/github-outbox``):
-each entry ``<id>.entry``, and the lease an ``flock`` on ``.lease``, which also keeps when the
+On Cloud Storage the outbox is ``github-outbox/``, outside the visitors' ``user-data/``, which
+the idle sweep removes: each entry ``github-outbox/entries/<id>``, and the lease
+``github-outbox/lease``, written only at the generation it was read at, as the stores write.
+Locally it is a folder (``FIDO_SERVER_GITHUB_OUTBOX_DIR``, else ``instance/github-outbox``): each
+entry ``<id>.entry``, and the lease an ``flock`` on ``.lease``. Either lease also keeps when the
 outbox may next be tried. docs/STORAGE.md has the rules.
 """
 from __future__ import annotations
@@ -27,7 +30,7 @@ from enum import Enum
 from typing import NamedTuple
 
 from ..config.paths import GITHUB_OUTBOX_STORE, store_dir
-from . import common
+from . import cloud, common
 
 logger = logging.getLogger(__name__)
 
@@ -57,6 +60,8 @@ RUN_LIMIT = 20
 
 _LOCAL_SUFFIX = ".entry"
 _LOCAL_LEASE = ".lease"
+_CLOUD_ENTRIES = "github-outbox/entries/"
+_CLOUD_LEASE = "github-outbox/lease"
 
 
 class OutboxEntry(NamedTuple):
@@ -208,11 +213,66 @@ class _LocalOutbox:
                 fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
 
 
-def _backend() -> _LocalOutbox:
-    return _LocalOutbox(outbox_dir())
+class _CloudOutbox:
+    """The outbox in the bucket; its lease an object written only at the generation it was read at."""
+
+    def held(self) -> tuple[int, int]:
+        stats = cloud.list_blob_stats(_CLOUD_ENTRIES)
+        return len(stats), sum(stat.size for stat in stats)
+
+    def write(self, entry_id: str, data: bytes) -> None:
+        cloud.upload_bytes(_CLOUD_ENTRIES + entry_id, data, content_type="application/octet-stream")
+
+    def names(self) -> list[str]:
+        return sorted(cloud.list_blob_names(_CLOUD_ENTRIES))
+
+    def read(self, name: str) -> bytes | None:
+        return cloud.download_bytes(name)
+
+    def remove(self, name: str) -> None:
+        cloud.delete_blob(name)
+
+    @contextlib.contextmanager
+    def lease(self, now: float) -> Iterator[Lease]:
+        data, generation = cloud.download_bytes_with_generation(_CLOUD_LEASE)
+        until, not_before = _lease_times(data)
+        if until > now or not_before > now:
+            yield Lease(held=False, not_before=not_before)
+            return
+        # A lease past its time is taken over at the generation read: of two instances, one wins.
+        lease = Lease(held=True, until=now + LEASE_SECONDS)
+        written = cloud.upload_bytes_at_generation(
+            _CLOUD_LEASE, _lease_bytes(lease.until, 0.0), generation=generation, content_type="application/json"
+        )
+        if written is None:
+            yield Lease(held=False)
+            return
+        try:
+            yield lease
+        finally:
+            _give_back(lease, written)
 
 
-def _held_or_none(backend: _LocalOutbox, count: int) -> tuple[int, int] | None:
+def _give_back(lease: Lease, generation: int) -> None:
+    """Write the lease free again, with the time the outbox may next be tried, unless another
+    flusher took it over meanwhile (this run outlasted it): that flusher's lease stands."""
+
+    try:
+        written = cloud.upload_bytes_at_generation(
+            _CLOUD_LEASE, _lease_bytes(0.0, lease.not_before), generation=generation, content_type="application/json"
+        )
+    except Exception as exc:
+        logger.warning("Could not give the credential log outbox's lease back; it lapses by itself: %s", exc)
+        return
+    if written is None:
+        logger.info("Another flusher took the credential log outbox's lease over from a run that outlasted it")
+
+
+def _backend() -> _LocalOutbox | _CloudOutbox:
+    return _CloudOutbox() if common.using_gcs() else _LocalOutbox(outbox_dir())
+
+
+def _held_or_none(backend: _LocalOutbox | _CloudOutbox, count: int) -> tuple[int, int] | None:
     """What the outbox holds (entries, bytes); None when it cannot be listed, with a warning."""
 
     try:
@@ -266,7 +326,9 @@ def _delivered(deliver: Callable[[OutboxEntry], Delivery], entry: OutboxEntry) -
         return Delivery.UNAVAILABLE
 
 
-def _deliver_due(backend: _LocalOutbox, lease: Lease, deliver: Callable[[OutboxEntry], Delivery], limit: int) -> int:
+def _deliver_due(
+    backend: _LocalOutbox | _CloudOutbox, lease: Lease, deliver: Callable[[OutboxEntry], Delivery], limit: int
+) -> int:
     handled = 0
     for name in backend.names():
         if handled >= limit or time.time() > lease.until - LEASE_MARGIN_SECONDS:
