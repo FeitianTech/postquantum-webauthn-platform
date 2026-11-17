@@ -15,9 +15,10 @@ each is a ``json-nan-or-infinity`` finding with its offset and path, and is
 shown as the decoder shows such a CBOR float, ``{"diagnostic": "NaN"}`` -- never
 as a bare ``NaN``, which would make the decoder's own answer not JSON.
 
-A number beyond the range of a double (``1e400``) is JSON, but Python's reader
-makes it an infinity, which the answer would then hold bare (RFC 8259 section 6
-lets a reader limit the range it takes). Read strictly, it raises
+A number with a fraction or an exponent beyond the range of a double (``1e400``)
+is JSON, but Python's reader makes it an infinity, which the answer would then
+hold bare (RFC 8259 section 6 lets a reader limit the range it takes); an integer
+it reads as Python's int, never an infinity. Read strictly, it raises
 ``JsonRangeError``, a ``JsonConstantError``, with the offset and path of the
 first; read leniently, it is a ``json-number-out-of-range`` finding and is shown
 as written, ``{"diagnostic": "1e400"}``.
@@ -166,12 +167,13 @@ def read_or_none(
         return NOT_JSON, []
 
 
-_NUMBER = re.compile(r"-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?")
+# A number as json.scanner's NUMBER_RE reads it; groups 1 and 2 are its fraction and its exponent.
+_NUMBER = re.compile(r"-?(?:0|[1-9][0-9]*)(\.[0-9]+)?([eE][+-]?[0-9]+)?")
 
 
 def _constant_offsets(text: str) -> list[int]:
-    """Where each NaN, Infinity, -Infinity and number beyond a double's range starts in ``text``, which
-    JSON reads: outside its strings."""
+    """Where each NaN, Infinity, -Infinity and number with a fraction or an exponent beyond a double's
+    range starts in ``text``, which JSON reads: outside its strings."""
 
     offsets: list[int] = []
     index = 0
@@ -186,8 +188,9 @@ def _constant_offsets(text: str) -> list[int]:
             index += len(next(word for word in ("NaN", "Infinity", "-Infinity") if text.startswith(word, index)))
             continue
         elif number := _NUMBER.match(text, index):
-            # A whole number, read at once: its digits are no number of their own.
-            if isinstance(_number(number.group()), _OutOfRange):
+            # A whole number, read at once: its digits are no number of their own. Only one with a
+            # fraction or an exponent goes to parse_float; an integer is Python's int, never out of range.
+            if (number[1] or number[2]) and isinstance(_number(number.group()), _OutOfRange):
                 offsets.append(index)
             index = number.end()
             continue

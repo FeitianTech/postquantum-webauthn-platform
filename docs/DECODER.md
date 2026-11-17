@@ -175,8 +175,9 @@ provider would write it, and the answer would not be JSON.
 `tests/app/core/test_codec_answers_are_json.py` parses every decoder and encoder
 answer over the corpus with a reader that refuses them.
 
-A number beyond the range of a double (`1e400`) is JSON, but Python's reader makes
-it an infinity (RFC 8259 section 6 lets a reader limit the range it takes). Read
+A number with a fraction or an exponent beyond the range of a double (`1e400`) is
+JSON, but Python's reader makes it an infinity (RFC 8259 section 6 lets a reader
+limit the range it takes); an integer it reads as Python's int, never an infinity. Read
 strictly, it is refused with a 422 naming the offset and path of the first
 (`json_input.JsonRangeError`), and a nested field holding one is that field's
 `parse-error` finding; read leniently, each is a `json-number-out-of-range` finding

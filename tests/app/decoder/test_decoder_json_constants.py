@@ -192,6 +192,28 @@ def test_a_long_number_beyond_a_double_is_cut_short_in_its_sentence(client):
     assert body["error"].startswith(f"Number out of range at offset 1 ($[0]): {number[:29]}... is beyond")
 
 
+@pytest.mark.parametrize(
+    ("constant", "code"), [("NaN", "json-nan-or-infinity"), ("1e400", "json-number-out-of-range")]
+)
+def test_an_integer_beyond_a_double_is_its_number_and_leaves_the_next_offset_its_own(client, constant, code):
+    # 401 digits are beyond a double, but an integer is Python's int: never out of range, never given an offset.
+    integer = "1" * 401
+    payload = f"[{integer}, {constant}]"
+
+    status, body = _codec(client, payload=payload)
+
+    assert status == 422
+    assert (body["offset"], body["path"]) == (404, "$[1]")
+
+    status, body = _codec(client, payload=payload, lenient=True)
+
+    assert status == 200
+    assert body["data"]["json"] == [int(integer), {"diagnostic": constant}]
+    assert [(finding["code"], finding["offset"], finding["path"]) for finding in body["findings"]] == [
+        (code, 404, "$[1]")
+    ]
+
+
 def test_json_bytes_with_a_number_beyond_a_double_count_the_offset_in_bytes(client):
     status, body = _codec(client, payload='{"é": 1e400}'.encode().hex())
 
