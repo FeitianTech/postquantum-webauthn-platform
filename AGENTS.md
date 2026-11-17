@@ -474,8 +474,9 @@ its logic out here first.
   The credential log on GitHub (on only with `GITHUB_TOKEN`): a saved registration's file, and an
   uploaded metadata file once one of its entries saved, is queued in an outbox (`github-outbox/` in
   the bucket, outside `user-data/`; `instance/github-outbox` locally) with its repository path fixed
-  then, and a worker that requests start delivers it, one flusher at a time under a
-  generation-checked lease, never in a request's time (`github_mirror.init_app`). **Read
+  then, and a worker that requests start delivers it, one flusher at a time under one lease
+  (generation-checked on Cloud Storage, an `flock` locally), never in a request's time
+  (`github_mirror.init_app`). **Read
   `docs/STORAGE.md` first.** `decoder/`: the Codec's server side (`decode/text.py` the entry,
   `decode/answer.py` what it answers, `encode/text.py` the encoder's, `values.py` the leaf both
   share); it shows what was sent and
