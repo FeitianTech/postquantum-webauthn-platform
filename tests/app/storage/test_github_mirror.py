@@ -5,6 +5,7 @@ import http.client
 import io
 import json
 import logging
+import os
 import types
 import uuid
 from datetime import datetime, timezone
@@ -13,7 +14,7 @@ from urllib.error import HTTPError, URLError
 import cbor2
 import pytest
 
-from server.app.storage import github_mirror
+from server.app.storage import github_mirror, github_outbox
 from server.app.storage.github_mirror import is_logging_enabled
 from server.app.storage.github_outbox import Delivery, OutboxEntry
 from tests.app.storage import fake_github
@@ -1240,3 +1241,40 @@ def test_an_entry_waits_while_there_is_no_token(monkeypatch):
     )
 
     assert github_mirror.deliver(_log_entry()) is Delivery.UNAVAILABLE
+
+
+def test_a_request_flushes_the_outbox_while_the_log_is_on(make_app, monkeypatch, tmp_path):
+    github = fake_github.install(monkeypatch)
+    monkeypatch.setenv("FIDO_SERVER_GITHUB_OUTBOX_DIR", str(tmp_path / "outbox"))
+    assert github_outbox.enqueue([_log_entry()]) == 1
+
+    assert make_app().test_client().get("/health").status_code == 200
+
+    assert list(github.files) == [_log_entry().path]
+    assert [name for name in os.listdir(tmp_path / "outbox") if name.endswith(".entry")] == []
+
+
+def test_no_request_flushes_while_the_log_is_off(make_app, monkeypatch, tmp_path):
+    github = fake_github.install(monkeypatch)
+    monkeypatch.setenv("FIDO_SERVER_GITHUB_OUTBOX_DIR", str(tmp_path / "outbox"))
+    github_outbox.enqueue([_log_entry()])
+    monkeypatch.setenv("ENABLE_GITHUB_LOGGING", "0")
+
+    assert make_app().test_client().get("/health").status_code == 200
+
+    assert github.calls == []
+    assert len([name for name in os.listdir(tmp_path / "outbox") if name.endswith(".entry")]) == 1
+
+
+def test_a_flush_that_cannot_start_never_fails_the_request(make_app, monkeypatch, caplog):
+    fake_github.install(monkeypatch)
+
+    def _cannot_start(_deliver, **_kwargs):
+        raise RuntimeError("can't start new thread")
+
+    monkeypatch.setattr(github_outbox, "schedule_flush", _cannot_start)
+
+    with caplog.at_level(logging.WARNING, logger=github_mirror.__name__):
+        assert make_app().test_client().get("/health").status_code == 200
+
+    assert "Could not start flushing the credential log outbox" in caplog.text

@@ -23,6 +23,7 @@ from server.app.config import (
 )
 from server.app.config.web_export import WEB_EXPORT_ROOT_KEY
 from server.app.routes import assets
+from server.app.storage import github_mirror
 
 _SERVER_APP = Path(__file__).resolve().parents[3] / "server" / "app"
 
@@ -40,6 +41,7 @@ def test_init_steps_are_pinned_in_order():
         assets.init_app,
         factory._register_blueprints,
         relying_party.init_app,
+        github_mirror.init_app,
     )
     assert factory.CONFIG_SOURCES == (
         attestation_trust,
@@ -76,7 +78,11 @@ def test_hooks_and_blueprints_are_registered_in_order(app):
         compression.maybe_compress_response,
         security_headers.set_security_headers,
     ]
-    assert app.before_request_funcs[None] == [fetch_metadata._refuse_cross_site_write, assets._hide_private_static_files]
+    assert app.before_request_funcs[None] == [
+        fetch_metadata._refuse_cross_site_write,
+        assets._hide_private_static_files,
+        github_mirror._flush_when_due,
+    ]
     assert list(app.blueprints) == [
         "assets",
         "advanced_registration",

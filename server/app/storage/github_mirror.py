@@ -28,11 +28,13 @@ from urllib import request as urllib_request
 from zoneinfo import ZoneInfo
 
 import cbor2
+from flask import Flask
 
 from .. import aaguid, encoding
 from ..encoding import encode_base64, encode_base64url
 from ..env_flags import parse_env_flag
 from ..json_values import make_json_safe
+from . import github_outbox
 from .github_outbox import Delivery, OutboxEntry
 
 __all__ = [
@@ -43,6 +45,7 @@ __all__ = [
     "git_blob_sha",
     "github_metadata_blobs",
     "github_upload_file",
+    "init_app",
     "github_upload_json",
     "is_logging_enabled",
     "maybe_store_uploaded_metadata_file",
@@ -649,3 +652,20 @@ def _create_metadata_file(name: str, content: bytes, blob_sha: str, *, name_take
 
 class _PathTaken(Exception):
     """Another file holds the only path left for a metadata file: it is dropped."""
+
+
+def _flush_when_due() -> None:
+    if not is_logging_enabled():
+        return
+    try:
+        github_outbox.schedule_flush(deliver)
+    except Exception:
+        logger.warning("Could not start flushing the credential log outbox", exc_info=True)
+
+
+def init_app(app: Flask) -> None:
+    """Flush the credential log's outbox while requests come in: each request starts a run on a
+    worker when one is due (``github_outbox.schedule_flush``), so the outbox drains while Cloud
+    Run gives the instance CPU, and never in a request's own time."""
+
+    app.before_request(_flush_when_due)

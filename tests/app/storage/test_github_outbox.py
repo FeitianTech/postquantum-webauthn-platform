@@ -511,3 +511,122 @@ def test_a_lease_that_cannot_be_given_back_lapses_by_itself(bucket_outbox, monke
 
     assert "Could not give the credential log outbox's lease back; it lapses by itself: bucket unavailable" in caplog.text
     assert _lease(bucket_outbox.bucket)["until"] > 0
+
+
+def test_a_process_flushes_at_most_once_an_interval_unless_kicked(outbox, clock):
+    deliverer = _Deliverer()
+    github_outbox.enqueue([_entry("one")])
+    github_outbox.schedule_flush(deliverer)
+    github_outbox.enqueue([_entry("two")])
+
+    clock.now += github_outbox.FLUSH_INTERVAL_SECONDS - 1
+    github_outbox.schedule_flush(deliverer)
+    assert deliverer.paths == ["logs/unknown/one.json"]
+
+    github_outbox.schedule_flush(deliverer, kick=True)
+    assert deliverer.paths == ["logs/unknown/one.json", "logs/unknown/two.json"]
+
+    github_outbox.enqueue([_entry("three")])
+    clock.now += github_outbox.FLUSH_INTERVAL_SECONDS
+    github_outbox.schedule_flush(deliverer)
+    assert deliverer.paths[-1] == "logs/unknown/three.json"
+
+
+def test_a_process_leaves_the_outbox_alone_while_it_backs_off_even_when_kicked(outbox, clock):
+    github_outbox.enqueue([_entry("one")])
+    refusing = _Deliverer({"logs/unknown/one.json": Delivery.UNAVAILABLE})
+    github_outbox.schedule_flush(refusing)
+    assert github_outbox.FLUSH.not_before == clock.now + github_outbox.BACKOFF_SECONDS
+
+    clock.now += github_outbox.BACKOFF_SECONDS - 1
+    github_outbox.schedule_flush(refusing, kick=True)
+    assert refusing.paths == ["logs/unknown/one.json"]
+
+    clock.now += 1
+    deliverer = _Deliverer()
+    github_outbox.schedule_flush(deliverer, kick=True)
+    assert deliverer.paths == ["logs/unknown/one.json"]
+    assert outbox.entries() == []
+
+
+def test_a_new_process_delivers_what_an_earlier_one_queued(outbox, monkeypatch):
+    github_outbox.enqueue([_entry("one")])
+    monkeypatch.setattr(github_outbox, "FLUSH", github_outbox.FlushState())  # The instance stopped.
+    deliverer = _Deliverer()
+
+    github_outbox.schedule_flush(deliverer)
+
+    assert deliverer.paths == ["logs/unknown/one.json"]
+
+
+def test_a_run_that_fails_is_logged_and_the_process_tries_again_later(outbox, monkeypatch, clock, caplog):
+    github_outbox.enqueue([_entry("one")])
+    names = outbox.backend.names
+    failures = [OSError("listing failed")]
+
+    def _fails_once(self):
+        if failures:
+            raise failures.pop()
+        return names(self)
+
+    monkeypatch.setattr(outbox.backend, "names", _fails_once)
+    with caplog.at_level(logging.WARNING, logger=github_outbox.__name__):
+        github_outbox.schedule_flush(_Deliverer())
+    assert "Could not flush the credential log outbox" in caplog.text
+
+    clock.now += github_outbox.FLUSH_INTERVAL_SECONDS
+    deliverer = _Deliverer()
+    github_outbox.schedule_flush(deliverer)
+    assert deliverer.paths == ["logs/unknown/one.json"]
+
+
+def test_a_run_goes_on_a_worker_and_a_kick_meanwhile_runs_it_again(outbox, monkeypatch):
+    monkeypatch.setattr(github_outbox, "FLUSH_ASYNC", True)
+    started, release = threading.Event(), threading.Event()
+    deliverer = _Deliverer()
+
+    def _slow(entry):
+        if entry.path.endswith("/one.json"):
+            started.set()
+            assert release.wait(10)
+        return deliverer(entry)
+
+    github_outbox.enqueue([_entry("one")])
+    github_outbox.schedule_flush(_slow)
+    worker = github_outbox.FLUSH.worker
+    assert worker is not None and worker.name == "credential-log-flush" and worker.daemon
+    assert started.wait(10)
+
+    github_outbox.enqueue([_entry("two")])
+    github_outbox.schedule_flush(_slow)  # Not a kick: no second run for it.
+    assert github_outbox.FLUSH.pending is False
+    github_outbox.schedule_flush(_slow, kick=True)
+    assert github_outbox.FLUSH.pending is True
+    release.set()
+    worker.join(10)
+
+    assert deliverer.paths == ["logs/unknown/one.json", "logs/unknown/two.json"]
+    assert github_outbox.FLUSH.worker is None and github_outbox.FLUSH.pending is False
+
+
+def test_a_kick_while_a_worker_runs_waits_out_a_backoff_its_run_found(outbox, monkeypatch):
+    monkeypatch.setattr(github_outbox, "FLUSH_ASYNC", True)
+    started, release = threading.Event(), threading.Event()
+    calls = []
+
+    def _refuses(entry):
+        calls.append(entry.path)
+        started.set()
+        assert release.wait(10)
+        return Delivery.UNAVAILABLE
+
+    github_outbox.enqueue([_entry("one")])
+    github_outbox.schedule_flush(_refuses)
+    worker = github_outbox.FLUSH.worker
+    assert started.wait(10)
+    github_outbox.schedule_flush(_refuses, kick=True)
+    release.set()
+    worker.join(10)
+
+    assert calls == ["logs/unknown/one.json"]
+    assert github_outbox.FLUSH.worker is None and github_outbox.FLUSH.pending is False

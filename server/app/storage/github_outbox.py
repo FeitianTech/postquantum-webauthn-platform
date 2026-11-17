@@ -22,9 +22,10 @@ import json
 import logging
 import os
 import secrets
+import threading
 import time
 from collections.abc import Callable, Iterator, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
 from typing import NamedTuple
@@ -37,6 +38,7 @@ logger = logging.getLogger(__name__)
 __all__ = [
     "Delivery",
     "FlushRun",
+    "FlushState",
     "Lease",
     "OutboxEntry",
     "decode_entry",
@@ -44,6 +46,7 @@ __all__ = [
     "enqueue",
     "flush",
     "outbox_dir",
+    "schedule_flush",
 ]
 
 # The outbox's bound: an entry past either is dropped with a warning.
@@ -57,6 +60,10 @@ LEASE_MARGIN_SECONDS = 60.0
 BACKOFF_SECONDS = 300.0
 # The most entries one run delivers.
 RUN_LIMIT = 20
+# How often a process starts a run by itself; a kick (an entry just queued) starts one at once.
+FLUSH_INTERVAL_SECONDS = 30.0
+# Whether a run goes on a worker thread. Tests run it inline.
+FLUSH_ASYNC = True
 
 _LOCAL_SUFFIX = ".entry"
 _LOCAL_LEASE = ".lease"
@@ -366,3 +373,62 @@ def flush(deliver: Callable[[OutboxEntry], Delivery], *, limit: int = RUN_LIMIT)
             return FlushRun(0, lease.not_before)
         handled = _deliver_due(backend, lease, deliver, limit)
     return FlushRun(handled, lease.not_before)
+
+
+@dataclass
+class FlushState:
+    """This process's flushing: when it last started a run, when the outbox may next be tried
+    (as its last run found), the worker running one, and whether a kick came meanwhile."""
+
+    last_run: float = 0.0
+    not_before: float = 0.0
+    worker: threading.Thread | None = None
+    pending: bool = False
+    lock: threading.Lock = field(default_factory=threading.Lock)
+
+
+FLUSH = FlushState()
+
+
+def _run(deliver: Callable[[OutboxEntry], Delivery]) -> None:
+    try:
+        FLUSH.not_before = flush(deliver).not_before
+    except Exception:
+        logger.warning("Could not flush the credential log outbox", exc_info=True)
+
+
+def _work(deliver: Callable[[OutboxEntry], Delivery]) -> None:
+    while True:
+        _run(deliver)
+        with FLUSH.lock:
+            if not FLUSH.pending or time.time() < FLUSH.not_before:
+                FLUSH.pending = False
+                FLUSH.worker = None
+                return
+            FLUSH.pending = False
+
+
+def schedule_flush(deliver: Callable[[OutboxEntry], Delivery], *, kick: bool = False) -> None:
+    """Start a run on a worker thread, unless this process started one within
+    ``FLUSH_INTERVAL_SECONDS`` (a kick does not wait for that) or the outbox is backing off.
+
+    Requests call it, so a run goes on while a request holds the CPU, which is when Cloud Run
+    gives an instance any; a run that stalls between requests goes on at the next. A kick while
+    a run is under way has the worker run once more after it, for what was queued meanwhile.
+    """
+
+    now = time.time()
+    if now < FLUSH.not_before or (not kick and now - FLUSH.last_run < FLUSH_INTERVAL_SECONDS):
+        return
+    if not FLUSH_ASYNC:
+        FLUSH.last_run = now
+        _run(deliver)
+        return
+    with FLUSH.lock:
+        if FLUSH.worker is not None and FLUSH.worker.is_alive():
+            FLUSH.pending = FLUSH.pending or kick
+            return
+        FLUSH.last_run = now
+        worker = threading.Thread(target=_work, args=(deliver,), name="credential-log-flush", daemon=True)
+        FLUSH.worker = worker
+    worker.start()

@@ -7,7 +7,7 @@ import pytest
 
 from server.app import challenge_registry, visitor_session
 from server.app.mds import listed_uploads
-from server.app.storage import github_mirror
+from server.app.storage import github_mirror, github_outbox
 
 # Hypothesis writes under <cwd>/.hypothesis whatever its database setting -- a
 # cache of each local module's constants, the Unicode character map -- so its
@@ -118,7 +118,11 @@ def _fresh_touch_throttle(monkeypatch):
 def _isolated_github_log(monkeypatch):
     """Run every test without a GitHub token: the log is off without one, and the GitHub
     client refuses to build a request without one (github_mirror._token). And give every
-    test its own memory of the metadata delivered lately, which is process-global."""
+    test its own memory of the metadata delivered lately and its own flushing state, both
+    process-global."""
 
     monkeypatch.delenv("GITHUB_TOKEN", raising=False)
     monkeypatch.setattr(github_mirror, "RECENT_METADATA", github_mirror.RecentMetadata())
+    # Each test flushes as a new process would, inline: no worker outlives it.
+    monkeypatch.setattr(github_outbox, "FLUSH", github_outbox.FlushState())
+    monkeypatch.setattr(github_outbox, "FLUSH_ASYNC", False)

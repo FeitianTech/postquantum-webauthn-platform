@@ -36,6 +36,7 @@ from .routes.advanced import registration as advanced_registration
 from .routes.simple import authentication as simple_authentication
 from .routes.simple import deletion as simple_deletion
 from .routes.simple import registration as simple_registration
+from .storage import github_mirror
 
 __all__ = ["INIT_STEPS", "create_app"]
 
@@ -84,6 +85,7 @@ INIT_STEPS: tuple[Callable[[Flask], None], ...] = (
     assets.init_app,
     _register_blueprints,
     relying_party.init_app,
+    github_mirror.init_app,
 )
 
 
