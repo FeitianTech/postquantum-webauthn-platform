@@ -410,7 +410,8 @@ its logic out here first.
   holds BS set without BE an integrity error, `backup_state_without_eligibility` (L3 section 7.1
   step 17); a compound attestation (L3 section 8.9), which fido2 2.2.1 does not verify and every
   check after the signature reads as one statement, is `unsupported_attestation` naming its
-  format (the Codec shows each statement); `public_key_checks.py`,
+  format (the Codec shows each statement), as any format fido2 cannot verify is: not checked,
+  its signature and root `null`, never `attestation_signature_invalid`; `public_key_checks.py`,
   whether the credential's COSE key can be used: its key type and curve its algorithm's (L3
   section 5.8.5: EdDSA on Ed25519 alone), and a key `cryptography` loads (an EC2 point on its
   curve, an OKP or ML-DSA key of its length), else `cose_key_invalid` and why, and an RSA

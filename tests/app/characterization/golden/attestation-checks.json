@@ -2170,8 +2170,8 @@
  },
  "compound-two-statements": {
   "attestation_format": "compound",
-  "signature_valid": false,
-  "root_valid": false,
+  "signature_valid": null,
+  "root_valid": null,
   "rp_id_hash_valid": true,
   "aaguid_match": null,
   "client_data": {
@@ -2214,8 +2214,7 @@
    "verification_data": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAAABAgMEBQYHCAkKCwwNDg8AIDJIPdOx23LT_p1zXRVUhW1lC0epx4b3A1qG5iA3HvMepQECAyYgASFYIBYI3vJ8zBN8_1BXPnaJmNa4PXp_UfAlb1HChvIyOYePIlggoCKBPpHnrHJXul_DCL_k-x5DssSXZHm3pa7Gv-8SQSvn5acm5j7TiO_MEazXOcPBZas0TxerRKovlisMF_V9zg"
   },
   "errors": [
-   "unsupported_attestation: Attestation format \"compound\" is not supported",
-   "attestation_signature_invalid"
+   "unsupported_attestation: Attestation format \"compound\" is not supported"
   ],
   "warnings": []
  },
@@ -2562,8 +2561,8 @@
  },
  "captured-android-key": {
   "attestation_format": "android-key",
-  "signature_valid": false,
-  "root_valid": false,
+  "signature_valid": null,
+  "root_valid": null,
   "rp_id_hash_valid": false,
   "aaguid_match": null,
   "client_data": {
@@ -2607,8 +2606,7 @@
   },
   "errors": [
    "rp_id_hash_mismatch",
-   "unsupported_attestation: Attestation format \"android-key\" is not supported",
-   "attestation_signature_invalid"
+   "unsupported_attestation: Attestation format \"android-key\" is not supported"
   ],
   "warnings": []
  },

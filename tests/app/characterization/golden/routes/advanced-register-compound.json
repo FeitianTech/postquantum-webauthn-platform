@@ -125,7 +125,7 @@
     ],
     [
      "Content-Length",
-     "9521"
+     "9315"
     ],
     [
      "X-Content-Type-Options",
@@ -186,7 +186,7 @@
      "contents": null
     }
    ],
-   "bodySha256": "f68be587f238591934630218071c7832fe033121f043f8a83e017e77d8395599",
+   "bodySha256": "00c0466fb07ffca0f825618ea4a8e54af28649f86bee2ab0f15f8ecae6f0487e",
    "body": {
     "actualResidentKey": null,
     "algo": "ES256 (ECDSA)",
@@ -224,8 +224,7 @@
       "type_valid": true
      },
      "errors": [
-      "unsupported_attestation: Attestation format \"compound\" is not supported",
-      "attestation_signature_invalid"
+      "unsupported_attestation: Attestation format \"compound\" is not supported"
      ],
      "hash_binding": {
       "client_data_hash": "doGvfm6hPFgAmYfVFqA7PvgOTa9BLrwnQEFa2ZYkK1c",
@@ -240,24 +239,22 @@
       "latest_status": null,
       "root_certificates_present": false
      },
-     "root_valid": false,
+     "root_valid": null,
      "rp_id_hash_valid": true,
-     "signature_valid": false,
+     "signature_valid": null,
      "warnings": []
     },
     "attestationErrors": [
-     "unsupported_attestation: Attestation format \"compound\" is not supported",
-     "attestation_signature_invalid"
+     "unsupported_attestation: Attestation format \"compound\" is not supported"
     ],
     "attestationFormat": "compound",
-    "attestationRootValid": false,
+    "attestationRootValid": null,
     "attestationRpIdHashValid": true,
-    "attestationSignatureValid": false,
+    "attestationSignatureValid": null,
     "attestationSummary": {
      "aaguidMatch": null,
      "errors": [
-      "unsupported_attestation: Attestation format \"compound\" is not supported",
-      "attestation_signature_invalid"
+      "unsupported_attestation: Attestation format \"compound\" is not supported"
      ],
      "metadata": {
       "aaguid": null,
@@ -268,9 +265,9 @@
       "latest_status": null,
       "root_certificates_present": false
      },
-     "rootValid": false,
+     "rootValid": null,
      "rpIdHashValid": true,
-     "signatureValid": false,
+     "signatureValid": null,
      "verified": false
     },
     "attestationVerified": false,
@@ -328,8 +325,7 @@
         "type_valid": true
        },
        "errors": [
-        "unsupported_attestation: Attestation format \"compound\" is not supported",
-        "attestation_signature_invalid"
+        "unsupported_attestation: Attestation format \"compound\" is not supported"
        ],
        "hash_binding": {
         "client_data_hash": "doGvfm6hPFgAmYfVFqA7PvgOTa9BLrwnQEFa2ZYkK1c",
@@ -344,16 +340,15 @@
         "latest_status": null,
         "root_certificates_present": false
        },
-       "root_valid": false,
+       "root_valid": null,
        "rp_id_hash_valid": true,
-       "signature_valid": false,
+       "signature_valid": null,
        "warnings": []
       },
       "attestationSummary": {
        "aaguidMatch": null,
        "errors": [
-        "unsupported_attestation: Attestation format \"compound\" is not supported",
-        "attestation_signature_invalid"
+        "unsupported_attestation: Attestation format \"compound\" is not supported"
        ],
        "metadata": {
         "aaguid": null,
@@ -364,9 +359,9 @@
         "latest_status": null,
         "root_certificates_present": false
        },
-       "rootValid": false,
+       "rootValid": null,
        "rpIdHashValid": true,
-       "signatureValid": false,
+       "signatureValid": null,
        "verified": false
       },
       "authenticatorData": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d976345000000000000000000000000000000000000000000208121de757f0d15ba0f6ad62fff13afada5c8c8fecb959a3588cfb78c6b2adcd8a5010203262001215820549e375f114aa17a1fc1b4f18692adc51d21cd284c3d2813af72ddc8e42daa3c22582076ed86b747f61882444105d1ea93b85af13784b1e820d5c048feecf7a3c8a864",
@@ -414,14 +409,13 @@
       "aaguidGuid": "00000000-0000-0000-0000-000000000000",
       "aaguidHex": "00000000000000000000000000000000",
       "attestationAaguidMatch": null,
-      "attestationRootValid": false,
+      "attestationRootValid": null,
       "attestationRpIdHashValid": true,
-      "attestationSignatureValid": false,
+      "attestationSignatureValid": null,
       "attestationSummary": {
        "aaguidMatch": null,
        "errors": [
-        "unsupported_attestation: Attestation format \"compound\" is not supported",
-        "attestation_signature_invalid"
+        "unsupported_attestation: Attestation format \"compound\" is not supported"
        ],
        "metadata": {
         "aaguid": null,
@@ -432,9 +426,9 @@
         "latest_status": null,
         "root_certificates_present": false
        },
-       "rootValid": false,
+       "rootValid": null,
        "rpIdHashValid": true,
-       "signatureValid": false,
+       "signatureValid": null,
        "verified": false
       },
       "authenticatorAttachment": null,
@@ -499,7 +493,7 @@
    "stored": [
     {
      "file": "artifacts/Gc8h9BGoLKIan6lMLV7GGqAZrt798Ux0-yGsM98pQtQ/d78ae9afb9e74da003129a2df52c8be5c85cb59a56cb72f2c3782368a4dda021.json",
-     "sha256": "4a2fd2ae02f65900bdb117d70a8709ae16afc8fc11b342ab3c72e68367182b0c",
+     "sha256": "29352a9a38ee3cfa882cc0bafc5cd5c3dcb98677663e74ed5fa8ba40a1d53b1f",
      "content": {
       "storageId": "gSHedX8NFboPatYv_xOvraXI::1a0c4506c00::4110b1115577483bb1e4e759ca896a94",
       "createdAt": 1790000000.0,
@@ -564,8 +558,8 @@
           "signatureCounter": 0,
           "attestationChecks": {
            "attestation_format": "compound",
-           "signature_valid": false,
-           "root_valid": false,
+           "signature_valid": null,
+           "root_valid": null,
            "rp_id_hash_valid": true,
            "aaguid_match": null,
            "client_data": {
@@ -608,19 +602,17 @@
             "verification_data": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAAAAAAAAAAAAAAAAAAAAAAAAIIEh3nV_DRW6D2rWL_8Tr62lyMj-y5WaNYjPt4xrKtzYpQECAyYgASFYIFSeN18RSqF6H8G08YaSrcUdIc0oTD0oE69y3cjkLao8Ilggdu2Gt0f2GIJEQQXR6pO4WvE3hLHoINXASP7s96PIqGR2ga9-bqE8WACZh9UWoDs--A5Nr0EuvCdAQVrZliQrVw"
            },
            "errors": [
-            "unsupported_attestation: Attestation format \"compound\" is not supported",
-            "attestation_signature_invalid"
+            "unsupported_attestation: Attestation format \"compound\" is not supported"
            ],
            "warnings": []
           },
           "attestationSummary": {
-           "signatureValid": false,
-           "rootValid": false,
+           "signatureValid": null,
+           "rootValid": null,
            "rpIdHashValid": true,
            "aaguidMatch": null,
            "errors": [
-            "unsupported_attestation: Attestation format \"compound\" is not supported",
-            "attestation_signature_invalid"
+            "unsupported_attestation: Attestation format \"compound\" is not supported"
            ],
            "verified": false,
            "metadata": {
@@ -652,14 +644,14 @@
          "largeBlobClientOutput": {},
          "residentKeyRequested": null,
          "residentKeyRequired": false,
-         "attestationSignatureValid": false,
-         "attestationRootValid": false,
+         "attestationSignatureValid": null,
+         "attestationRootValid": null,
          "attestationRpIdHashValid": true,
          "attestationAaguidMatch": null,
          "attestationChecks": {
           "attestation_format": "compound",
-          "signature_valid": false,
-          "root_valid": false,
+          "signature_valid": null,
+          "root_valid": null,
           "rp_id_hash_valid": true,
           "aaguid_match": null,
           "client_data": {
@@ -702,19 +694,17 @@
            "verification_data": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAAAAAAAAAAAAAAAAAAAAAAAAIIEh3nV_DRW6D2rWL_8Tr62lyMj-y5WaNYjPt4xrKtzYpQECAyYgASFYIFSeN18RSqF6H8G08YaSrcUdIc0oTD0oE69y3cjkLao8Ilggdu2Gt0f2GIJEQQXR6pO4WvE3hLHoINXASP7s96PIqGR2ga9-bqE8WACZh9UWoDs--A5Nr0EuvCdAQVrZliQrVw"
           },
           "errors": [
-           "unsupported_attestation: Attestation format \"compound\" is not supported",
-           "attestation_signature_invalid"
+           "unsupported_attestation: Attestation format \"compound\" is not supported"
           ],
           "warnings": []
          },
          "attestationSummary": {
-          "signatureValid": false,
-          "rootValid": false,
+          "signatureValid": null,
+          "rootValid": null,
           "rpIdHashValid": true,
           "aaguidMatch": null,
           "errors": [
-           "unsupported_attestation: Attestation format \"compound\" is not supported",
-           "attestation_signature_invalid"
+           "unsupported_attestation: Attestation format \"compound\" is not supported"
           ],
           "verified": false,
           "metadata": {

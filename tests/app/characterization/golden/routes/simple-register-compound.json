@@ -190,7 +190,7 @@
     ],
     [
      "Content-Length",
-     "193"
+     "161"
     ],
     [
      "X-Content-Type-Options",
@@ -241,11 +241,10 @@
      "contents": null
     }
    ],
-   "bodySha256": "6a250aeae3d9149c3d31026efeb554e2e33d906ba4fb285168b80c03b0b019ed",
+   "bodySha256": "b098eec3966eebc5146b02fba5b753c7acff9c834c4ae85ec3b260a298858d08",
    "body": {
     "attestationErrors": [
-     "unsupported_attestation: Attestation format \"compound\" is not supported",
-     "attestation_signature_invalid"
+     "unsupported_attestation: Attestation format \"compound\" is not supported"
     ],
     "error": "Registration verification failed.",
     "verified": false

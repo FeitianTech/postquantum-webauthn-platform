@@ -196,7 +196,7 @@ def _perform_checks(response, state, public_key_options, rp_id="example.com"):
     )
 
 
-def test_perform_attestation_checks_unsupported_format_sets_signature_and_root_failure(monkeypatch):
+def test_an_unknown_format_is_not_checked_and_says_only_that_it_is_unsupported(monkeypatch):
     challenge = b"challenge"
     rp_id = "example.com"
     auth_data = AuthData(rp_id=rp_id, flags=AuthData.FLAG.UP | AuthData.FLAG.UV | AuthData.FLAG.AT)
@@ -221,10 +221,9 @@ def test_perform_attestation_checks_unsupported_format_sets_signature_and_root_f
         rp_id=rp_id,
     )
 
-    assert result["signature_valid"] is False
-    assert result["root_valid"] is False
-    assert "attestation_signature_invalid" in result["errors"]
-    assert any(error.startswith("unsupported_attestation:") for error in result["errors"])
+    assert result["signature_valid"] is None
+    assert result["root_valid"] is None
+    assert result["errors"] == ['unsupported_attestation: Attestation format "vendor-unknown" is not supported']
 
 
 def test_perform_attestation_checks_warns_when_metadata_verifier_unavailable(monkeypatch):
@@ -390,8 +389,6 @@ def test_a_compound_attestation_is_reported_unsupported_by_its_format(monkeypatc
     )
 
     assert result["attestation_format"] == "compound"
-    assert result["errors"] == [
-        'unsupported_attestation: Attestation format "compound" is not supported',
-        "attestation_signature_invalid",
-    ]
-    assert (result["signature_valid"], result["root_valid"]) == (False, False)
+    # Nothing was checked: not a signature found invalid (fido2's UnsupportedType).
+    assert result["errors"] == ['unsupported_attestation: Attestation format "compound" is not supported']
+    assert (result["signature_valid"], result["root_valid"]) == (None, None)

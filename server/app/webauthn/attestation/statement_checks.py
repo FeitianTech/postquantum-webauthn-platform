@@ -5,7 +5,7 @@ from collections.abc import Mapping
 from datetime import datetime, timezone
 from typing import Any
 
-from fido2.attestation import Attestation
+from fido2.attestation import Attestation, UnsupportedType
 
 from ...mds import verifier as mds_verifier
 from . import classical, error_codes, trust
@@ -31,6 +31,11 @@ def resolve_signature_validation(
                 client_data_hash,
             )
             signature_valid = True
+        except UnsupportedType as exc:
+            # A format fido2 cannot verify (compound, or one it does not know): its
+            # signature was not checked, so it is neither valid nor invalid.
+            attestation_errors.append(error_codes.statement_error(exc))
+            signature_valid = None
         except Exception as exc:
             attestation_errors.append(error_codes.statement_error(exc))
             signature_valid = False
