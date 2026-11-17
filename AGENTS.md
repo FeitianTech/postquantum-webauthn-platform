@@ -571,13 +571,14 @@ deliberate change (the characterization goldens show what it changes).
   between a commit and production.
 - Workflows (`ci-*.yml` run on `pull_request` and on `push` to `main`; `ci-security.yml` also
   weekly, since advisories land without a commit): `ci-python.yml`, `ci-web.yml` (web and the
-  Playwright tests), `ci-docker.yml` (builds the image and checks it answers), `ci-security.yml`
-  (`pip-audit`, `npm audit --audit-level=moderate` in `web/`, Trivy (its image pinned by digest)
-  on the image; fix the dependency, never widen a threshold), `ci-repository.yml` (actionlint
-  with shellcheck from its author's image pinned by digest, moved by hand; and
-  on a push, `tools/commit_messages.py` over the pushed commits), `ci-scheduled-runs.yml` (warns
-  while a scheduled workflow's latest run on `main` has failed: add any new scheduled workflow
-  to its list).
+  Playwright tests), `ci-docker.yml` (builds the image and, with the fixture snapshot, checks it
+  answers: the export's caching and gzip, COOP and CORP, uid 10001 writing `/app/instance`, the
+  MDS list and an entry), `ci-security.yml` (`pip-audit`, `npm audit --audit-level=moderate` in
+  `web/`, Trivy (its image pinned by digest) on the image; fix the dependency, never widen a
+  threshold), `ci-repository.yml` (actionlint with shellcheck from its author's image pinned by
+  digest, moved by hand; and on a push, `tools/commit_messages.py` over the pushed commits),
+  `ci-scheduled-runs.yml` (warns while a scheduled workflow's latest run on `main` has failed:
+  add any new scheduled workflow to its list).
 - Every action is pinned to a commit SHA (or an image digest) with its version in a trailing
   comment. No workflow pushes to `main`: `update-footer-year.yml` opens pull requests through
   `.github/actions/open-bot-pr` (merge them by rebase or cherry-pick, so each commit keeps a
