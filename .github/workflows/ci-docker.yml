@@ -27,10 +27,13 @@ jobs:
 
       - name: Start container and check it serves requests
         run: |
+          # The MDS fixture's snapshot, read-only: the server finds every file and writes none.
           docker run -d --name pqc-webauthn -p 8080:8080 \
             -e PORT=8080 \
             -e FIDO_SERVER_GCS_ENABLED=0 \
             -e FIDO_SERVER_SECRET_KEY=ci-only-secret \
+            -e FIDO_SERVER_MDS_SNAPSHOT_DIR=/srv/mds \
+            -v "$PWD/tests/fixtures/mds/snapshot:/srv/mds:ro" \
             pqc-webauthn
           start=$(date +%s)
           until curl -fsS http://localhost:8080/health > /dev/null; do
@@ -54,6 +57,18 @@ jobs:
           grep -qi '^cache-control: public, max-age=31536000, immutable' /tmp/chunk.headers
           grep -qi '^content-encoding: gzip' /tmp/chunk.headers
           echo "/ serves the export: ${chunk} is immutable and gzipped"
+          # No other site's window or page gets a handle on it or loads it.
+          grep -qi '^cross-origin-opener-policy: same-origin' /tmp/index.headers
+          grep -qi '^cross-origin-resource-policy: same-origin' /tmp/index.headers
+          # The server runs unprivileged and can write where it writes at run time.
+          test "$(docker exec pqc-webauthn id -u)" = 10001
+          docker exec pqc-webauthn sh -c 'mkdir -p /app/instance/written && rmdir /app/instance/written'
+          # The MDS explorer's files, which need the snapshot: the list and one entry.
+          curl -fsS -o /tmp/info.json http://localhost:8080/api/mds/metadata/info
+          curl -fsS -o /tmp/list.json http://localhost:8080/assets/mds/fido-mds3.explorer.list.json
+          entry=$(python3 -c 'import json, sys; info, rows = (json.load(open(path)) for path in sys.argv[1:]); assert info["entryCount"] > 0; print(rows["entries"][0]["detailUrl"])' /tmp/info.json /tmp/list.json)
+          curl -fsS -o /dev/null "http://localhost:8080${entry}"
+          echo "uid 10001 serves the MDS explorer: ${entry}"
 
       - name: Show container logs
         if: always()
