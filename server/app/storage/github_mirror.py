@@ -32,10 +32,11 @@ from ..env_flags import parse_env_flag
 from ..json_values import make_json_safe
 
 __all__ = [
+    "GitHubUnavailable",
     "RegistrationEvent",
     "credential_log_repository",
     "git_blob_sha",
-    "github_list_directory",
+    "github_metadata_blobs",
     "github_upload_file",
     "github_upload_json",
     "is_logging_enabled",
@@ -187,21 +188,60 @@ def github_upload_file(path: str, data: bytes, message: str, sha: str | None = N
     _request("PUT", url, body)
 
 
-def github_list_directory(path: str) -> list[dict[str, Any]]:
-    """Return the metadata for files within ``path`` in the log repository."""
+class GitHubUnavailable(RuntimeError):
+    """GitHub answered with something other than what the mirror reads."""
 
-    url = _api_url(f"contents/{path}")
+
+def _get_json(path: str, *, missing: Any = None) -> Any:
+    """GET ``path`` in the log repository and read its JSON; ``missing`` for a 404 when given."""
+
     try:
-        _, body = _request("GET", url)
+        _, body = _request("GET", _api_url(path))
     except urllib_error.HTTPError as exc:
-        if exc.code == 404:
-            return []
+        if exc.code == 404 and missing is not None:
+            return missing
         raise
+    try:
+        return json.loads(body.decode("utf-8"))
+    except ValueError as exc:
+        raise GitHubUnavailable(f"GitHub's answer for {path} is not JSON") from exc
 
-    payload = json.loads(body.decode("utf-8"))
-    if not isinstance(payload, list):
-        raise RuntimeError(f"Unexpected response listing directory {path}")
-    return payload
+
+def github_metadata_blobs() -> dict[str, str]:
+    """Each file directly in the log repository's ``metadata/`` folder: its name and blob SHA.
+
+    Read through the git trees API, which lists a whole folder (the contents API lists at most
+    1,000 entries): the root's listing names the folder's tree, and the tree its files. An empty
+    repository, or one without the folder, has none. A tree GitHub cuts short (past 100,000
+    entries) is logged, and what it lists is used.
+    """
+
+    root = _get_json("contents/", missing=[])
+    if not isinstance(root, list):
+        raise GitHubUnavailable("GitHub's listing of the log repository is not a list")
+    tree_sha = next(
+        (
+            item.get("sha")
+            for item in root
+            if isinstance(item, Mapping) and item.get("name") == _METADATA_REPO_FOLDER and item.get("type") == "dir"
+        ),
+        None,
+    )
+    if not isinstance(tree_sha, str):
+        return {}
+    tree = _get_json(f"git/trees/{tree_sha}")
+    if not isinstance(tree, Mapping) or not isinstance(tree.get("tree"), list):
+        raise GitHubUnavailable("GitHub's tree of the metadata folder holds no entries")
+    if tree.get("truncated"):
+        logger.info("GitHub listed the log repository's metadata folder in part")
+    return {
+        item["path"]: item["sha"]
+        for item in tree["tree"]
+        if isinstance(item, Mapping)
+        and item.get("type") == "blob"
+        and isinstance(item.get("path"), str)
+        and isinstance(item.get("sha"), str)
+    }
 
 
 # Registration events, one JSON file per registration.
@@ -446,43 +486,29 @@ def maybe_store_uploaded_metadata_file(filename: str, content: bytes) -> bool:
     safe_name = _safe_metadata_repo_filename(filename)
 
     try:
-        existing_items = github_list_directory(_METADATA_REPO_FOLDER)
-    except Exception as exc:  # pragma: no cover - best effort logging
-        logger.warning("Unable to list metadata repository contents: %s", exc)
+        existing = github_metadata_blobs()
+    except Exception as exc:
+        logger.warning("Unable to read the metadata folder of the log repository: %s", exc)
         return False
 
     blob_sha = git_blob_sha(content)
-    existing_sha_for_name: str | None = None
-    path_for_name: str | None = None
+    same = next((name for name, sha in existing.items() if sha == blob_sha), None)
+    if same is not None:
+        logger.info(
+            "Skipping upload of metadata file %s; identical content already present as %s.",
+            safe_name,
+            same,
+        )
+        return False
 
-    for item in existing_items:
-        if not isinstance(item, Mapping):
-            continue
-        if item.get("type") != "file":
-            continue
-
-        item_sha = item.get("sha")
-        if isinstance(item_sha, str) and item_sha == blob_sha:
-            logger.info(
-                "Skipping upload of metadata file %s; identical content already present as %s.",
-                safe_name,
-                item.get("name"),
-            )
-            return False
-
-        if item.get("name") == safe_name and isinstance(item_sha, str):
-            existing_sha_for_name = item_sha
-            path_value = item.get("path")
-            if isinstance(path_value, str):
-                path_for_name = path_value
-
-    remote_path = path_for_name or f"{_METADATA_REPO_FOLDER}/{safe_name}"
+    existing_sha_for_name = existing.get(safe_name)
+    remote_path = f"{_METADATA_REPO_FOLDER}/{safe_name}"
     action = "update" if existing_sha_for_name else "add"
     message = f"metadata: {action} {safe_name}"
 
     try:
         github_upload_file(remote_path, content, message, sha=existing_sha_for_name)
         return True
-    except Exception as exc:  # pragma: no cover - best effort logging
+    except Exception as exc:
         logger.warning("Failed to upload metadata file %s: %s", safe_name, exc)
         return False

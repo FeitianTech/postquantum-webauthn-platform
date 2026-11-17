@@ -13,6 +13,7 @@ import pytest
 
 from server.app.storage import github_mirror
 from server.app.storage.github_mirror import is_logging_enabled
+from tests.app.storage import fake_github
 
 
 class _FakeResponse:
@@ -395,68 +396,6 @@ def test_github_upload_file_omits_sha_when_not_provided(monkeypatch):
 
     assert captured["method"] == "PUT"
     assert "sha" not in captured["body"]
-
-
-def test_github_list_directory_returns_list_payload(monkeypatch):
-    directory_payload = [{"name": "a.json"}, {"name": "b.json"}]
-
-    monkeypatch.setattr(
-        github_mirror,
-        "_request",
-        lambda _method, _url: (200, json.dumps(directory_payload).encode("utf-8")),
-    )
-
-    result = github_mirror.github_list_directory("logs")
-
-    assert result == directory_payload
-
-
-def test_github_list_directory_returns_empty_list_on_404(monkeypatch):
-    monkeypatch.setattr(
-        github_mirror,
-        "_request",
-        lambda _method, _url: (_ for _ in ()).throw(
-            HTTPError(
-                url="https://api.github.com/example",
-                code=404,
-                msg="Not Found",
-                hdrs=None,
-                fp=io.BytesIO(b""),
-            )
-        ),
-    )
-
-    assert github_mirror.github_list_directory("missing") == []
-
-
-def test_github_list_directory_reraises_non_404_http_error(monkeypatch):
-    monkeypatch.setattr(
-        github_mirror,
-        "_request",
-        lambda _method, _url: (_ for _ in ()).throw(
-            HTTPError(
-                url="https://api.github.com/example",
-                code=500,
-                msg="Server Error",
-                hdrs=None,
-                fp=io.BytesIO(b""),
-            )
-        ),
-    )
-
-    with pytest.raises(HTTPError):
-        github_mirror.github_list_directory("logs")
-
-
-def test_github_list_directory_raises_on_non_list_response(monkeypatch):
-    monkeypatch.setattr(
-        github_mirror,
-        "_request",
-        lambda _method, _url: (200, json.dumps({"unexpected": True}).encode("utf-8")),
-    )
-
-    with pytest.raises(RuntimeError, match="Unexpected response listing directory"):
-        github_mirror.github_list_directory("logs")
 
 
 def test_git_blob_sha_matches_git_blob_spec():
@@ -904,47 +843,6 @@ def test_build_log_payload_handles_unknown_aaguid_and_decode_failures(monkeypatc
     assert summary["device"] == "unknown"
 
 
-def _store_metadata_against_listing(monkeypatch, listing, filename, content):
-    """Store ``content`` against a metadata folder that lists ``listing``; returns the upload made."""
-
-    uploads = []
-    monkeypatch.setenv("ENABLE_GITHUB_LOGGING", "true")
-    monkeypatch.setenv("GITHUB_TOKEN", "token-123")
-    monkeypatch.setattr(github_mirror, "github_list_directory", lambda _folder: listing)
-    monkeypatch.setattr(
-        github_mirror,
-        "github_upload_file",
-        lambda path, data, message, sha=None: uploads.append((path, data, message, sha)),
-    )
-
-    assert github_mirror.maybe_store_uploaded_metadata_file(filename, content) is True
-    assert len(uploads) == 1
-    return uploads[0]
-
-
-def test_metadata_upload_ignores_listing_entries_that_are_not_files(monkeypatch):
-    content = b'{"legalHeader": "demo"}'
-    same_content = github_mirror.git_blob_sha(content)
-    listing = [
-        123,
-        "target.json",
-        {"type": "dir", "name": "target.json", "sha": same_content, "path": "metadata/target.json"},
-    ]
-
-    upload = _store_metadata_against_listing(monkeypatch, listing, "target.json", content)
-
-    assert upload == ("metadata/target.json", content, "metadata: add target.json", None)
-
-
-def test_metadata_upload_replaces_a_same_named_file_listed_without_a_path(monkeypatch):
-    content = b'{"legalHeader": "demo"}'
-    listing = [{"type": "file", "name": "target.json", "sha": "old-sha", "path": 99}]
-
-    upload = _store_metadata_against_listing(monkeypatch, listing, "target.json", content)
-
-    assert upload == ("metadata/target.json", content, "metadata: update target.json", "old-sha")
-
-
 def test_safe_metadata_repo_filename_sanitizes_traversal_and_invalid_input():
     assert github_mirror._safe_metadata_repo_filename("../../../etc/passwd") == "passwd"
     assert github_mirror._safe_metadata_repo_filename(" /tmp/demo.json ") == "demo.json"
@@ -957,149 +855,168 @@ def test_a_metadata_file_named_for_a_folder_is_logged_as_metadata_json(name):
     assert github_mirror._safe_metadata_repo_filename(name) == "metadata.json"
 
 
-def test_maybe_store_uploaded_metadata_file_returns_false_when_logging_disabled(monkeypatch):
-    listed = []
-    monkeypatch.setattr(github_mirror, "is_logging_enabled", lambda: False)
-    monkeypatch.setattr(
-        github_mirror,
-        "github_list_directory",
-        lambda *_args, **_kwargs: listed.append(True),
-    )
+def test_no_metadata_is_copied_while_the_log_is_off(monkeypatch):
+    github = fake_github.install(monkeypatch)
+    monkeypatch.setenv("ENABLE_GITHUB_LOGGING", "0")
 
-    stored = github_mirror.maybe_store_uploaded_metadata_file("demo.json", b"{}")
+    assert github_mirror.maybe_store_uploaded_metadata_file("demo.json", b"{}") is False
 
-    assert stored is False
-    assert listed == []
+    assert github.calls == []
 
 
-def test_maybe_store_uploaded_metadata_file_skips_upload_when_identical_sha_exists(monkeypatch):
-    content = b'{"entry":1}'
-    blob_sha = "same-blob-sha"
-    upload_calls = []
+def test_metadata_is_added_to_an_empty_repository(monkeypatch):
+    github = fake_github.install(monkeypatch)
 
-    monkeypatch.setattr(github_mirror, "is_logging_enabled", lambda: True)
-    monkeypatch.setattr(github_mirror, "git_blob_sha", lambda _content: blob_sha)
-    monkeypatch.setattr(
-        github_mirror,
-        "github_list_directory",
-        lambda _folder: [
-            {
-                "type": "file",
-                "name": "existing.json",
-                "path": "metadata/existing.json",
-                "sha": blob_sha,
-            }
-        ],
-    )
-    monkeypatch.setattr(
-        github_mirror,
-        "github_upload_file",
-        lambda *args, **kwargs: upload_calls.append((args, kwargs)),
-    )
+    assert github_mirror.maybe_store_uploaded_metadata_file("../../../custom.json", b'{"entry":3}') is True
 
-    stored = github_mirror.maybe_store_uploaded_metadata_file("demo.json", content)
-
-    assert stored is False
-    assert upload_calls == []
+    assert github.files == {"metadata/custom.json": b'{"entry":3}'}
+    [(path, body)] = github.puts
+    assert body["message"] == "metadata: add custom.json"
+    assert "sha" not in body
 
 
-def test_maybe_store_uploaded_metadata_file_updates_existing_name_with_sha(monkeypatch):
-    content = b'{"entry":2}'
-    upload_calls = []
+def test_metadata_is_added_to_a_repository_without_a_metadata_folder(monkeypatch):
+    github = fake_github.install(monkeypatch)
+    github.files["logs/unknown/one.json"] = b"{}"
 
-    monkeypatch.setattr(github_mirror, "is_logging_enabled", lambda: True)
-    monkeypatch.setattr(github_mirror, "git_blob_sha", lambda _content: "new-sha")
-    monkeypatch.setattr(
-        github_mirror,
-        "github_list_directory",
-        lambda _folder: [
-            {
-                "type": "file",
-                "name": "demo.json",
-                "path": "metadata/demo.json",
-                "sha": "old-sha",
-            }
-        ],
-    )
-    monkeypatch.setattr(
-        github_mirror,
-        "github_upload_file",
-        lambda *args, **kwargs: upload_calls.append((args, kwargs)),
-    )
+    assert github_mirror.maybe_store_uploaded_metadata_file("demo.json", b'{"entry":1}') is True
 
-    stored = github_mirror.maybe_store_uploaded_metadata_file("demo.json", content)
-
-    assert stored is True
-    assert len(upload_calls) == 1
-    args, kwargs = upload_calls[0]
-    assert args[0] == "metadata/demo.json"
-    assert args[1] == content
-    assert args[2] == "metadata: update demo.json"
-    assert kwargs == {"sha": "old-sha"}
+    assert github.files["metadata/demo.json"] == b'{"entry":1}'
 
 
-def test_maybe_store_uploaded_metadata_file_adds_new_file_with_sanitized_name(monkeypatch):
-    content = b'{"entry":3}'
-    upload_calls = []
+def test_metadata_already_there_under_another_name_is_not_copied_again(monkeypatch, caplog):
+    github = fake_github.install(monkeypatch)
+    github.files["metadata/existing.json"] = b'{"entry":1}'
 
-    monkeypatch.setattr(github_mirror, "is_logging_enabled", lambda: True)
-    monkeypatch.setattr(github_mirror, "git_blob_sha", lambda _content: "fresh-sha")
-    monkeypatch.setattr(github_mirror, "github_list_directory", lambda _folder: [])
-    monkeypatch.setattr(
-        github_mirror,
-        "github_upload_file",
-        lambda *args, **kwargs: upload_calls.append((args, kwargs)),
-    )
+    with caplog.at_level(logging.INFO, logger=github_mirror.__name__):
+        assert github_mirror.maybe_store_uploaded_metadata_file("demo.json", b'{"entry":1}') is False
 
-    stored = github_mirror.maybe_store_uploaded_metadata_file("../../../custom.json", content)
-
-    assert stored is True
-    assert len(upload_calls) == 1
-    args, kwargs = upload_calls[0]
-    assert args[0] == "metadata/custom.json"
-    assert args[1] == content
-    assert args[2] == "metadata: add custom.json"
-    assert kwargs == {"sha": None}
+    assert github.puts == []
+    assert "identical content already present as existing.json" in caplog.text
 
 
-def test_safe_filename_and_upload_flow_handles_skip_update_and_disabled_logging(metadata_state, monkeypatch):
-    content = b"metadata-payload"
+def test_metadata_already_there_is_found_past_the_contents_api_s_1000_entries(monkeypatch):
+    github = fake_github.install(monkeypatch)
+    for index in range(1_500):
+        github.files[f"metadata/file-{index:04d}.json"] = f'{{"entry":{index}}}'.encode()
 
-    recorded = []
-    monkeypatch.setattr(github_mirror, "is_logging_enabled", lambda: True)
-    monkeypatch.setattr(github_mirror, "git_blob_sha", lambda _content: "sha-content")
+    assert github_mirror.maybe_store_uploaded_metadata_file("again.json", b'{"entry":1400}') is False
 
-    monkeypatch.setattr(
-        github_mirror,
-        "github_list_directory",
-        lambda _folder: [{"type": "file", "name": "metadata.json", "sha": "sha-content"}],
-    )
-    monkeypatch.setattr(
-        github_mirror,
-        "github_upload_file",
-        lambda *args, **kwargs: recorded.append((args, kwargs)),
-    )
+    assert github.puts == []
+    assert ("GET", "git/trees/tree-metadata") in github.calls
+    assert ("GET", "contents/metadata") not in github.calls
 
-    assert github_mirror.maybe_store_uploaded_metadata_file("metadata.json", content) is False
-    assert recorded == []
 
-    monkeypatch.setattr(
-        github_mirror,
-        "github_list_directory",
-        lambda _folder: [
-            {
-                "type": "file",
-                "name": "metadata.json",
-                "sha": "old-sha",
-                "path": "metadata/metadata.json",
-            }
-        ],
-    )
+def test_metadata_in_a_folder_inside_metadata_is_not_the_folder_s_own(monkeypatch):
+    github = fake_github.install(monkeypatch)
+    github.files["metadata/archive/old.json"] = b'{"entry":1}'
 
-    assert github_mirror.maybe_store_uploaded_metadata_file(" metadata.json ", content) is True
-    assert recorded and recorded[-1][0][0] == "metadata/metadata.json"
-    assert recorded[-1][0][2] == "metadata: update metadata.json"
-    assert recorded[-1][1]["sha"] == "old-sha"
+    assert github_mirror.maybe_store_uploaded_metadata_file("demo.json", b'{"entry":1}') is True
 
-    monkeypatch.setattr(github_mirror, "is_logging_enabled", lambda: False)
-    assert github_mirror.maybe_store_uploaded_metadata_file("metadata.json", content) is False
+    assert github.files["metadata/demo.json"] == b'{"entry":1}'
+
+
+def test_metadata_with_a_taken_name_replaces_the_file_there(monkeypatch):
+    github = fake_github.install(monkeypatch)
+    github.files["metadata/demo.json"] = b'{"entry":1}'
+
+    assert github_mirror.maybe_store_uploaded_metadata_file(" demo.json ", b'{"entry":2}') is True
+
+    assert github.files["metadata/demo.json"] == b'{"entry":2}'
+    [(_path, body)] = github.puts
+    assert body["message"] == "metadata: update demo.json"
+    assert body["sha"] == github_mirror.git_blob_sha(b'{"entry":1}')
+
+
+def test_a_tree_github_cuts_short_is_logged_and_read(monkeypatch, caplog):
+    github = fake_github.install(monkeypatch)
+    github.files["metadata/existing.json"] = b'{"entry":1}'
+    answer = github._tree
+
+    def _truncated(folder):
+        status, body = answer(folder)
+        return status, json.dumps({**json.loads(body), "truncated": True}).encode()
+
+    monkeypatch.setattr(github, "_tree", _truncated)
+
+    with caplog.at_level(logging.INFO, logger=github_mirror.__name__):
+        assert github_mirror.maybe_store_uploaded_metadata_file("demo.json", b'{"entry":1}') is False
+
+    assert "listed the log repository's metadata folder in part" in caplog.text
+
+
+@pytest.mark.parametrize(
+    "answers",
+    [
+        [(200, b"{}")],
+        [(200, b"not json")],
+        [(200, json.dumps([{"name": "metadata", "type": "dir", "sha": "t"}]).encode()), (200, b"[]")],
+        [(200, json.dumps([{"name": "metadata", "type": "dir", "sha": "t"}]).encode()), (200, b'{"tree": 1}')],
+    ],
+    ids=["root-not-a-list", "root-not-json", "tree-not-an-object", "tree-without-entries"],
+)
+def test_an_answer_the_mirror_does_not_read_copies_nothing(monkeypatch, caplog, answers):
+    fake_github.install(monkeypatch)
+    queued = list(answers)
+    puts = []
+
+    def _request(method, url, body=None):
+        if method == "PUT":
+            puts.append(url)
+            return 201, b"{}"
+        return queued.pop(0)
+
+    monkeypatch.setattr(github_mirror, "_request", _request)
+
+    with caplog.at_level(logging.WARNING, logger=github_mirror.__name__):
+        assert github_mirror.maybe_store_uploaded_metadata_file("demo.json", b"{}") is False
+
+    assert puts == []
+    assert "Unable to read the metadata folder of the log repository" in caplog.text
+
+
+def test_items_of_a_tree_that_are_not_files_are_left_out(monkeypatch):
+    fake_github.install(monkeypatch)
+    root = [{"name": "metadata", "type": "dir", "sha": "t"}, "metadata", {"name": "logs", "type": "dir", "sha": "u"}]
+    tree = {"tree": [7, {"path": "a.json", "type": "blob", "sha": "s"}, {"path": "b", "type": "tree", "sha": "x"},
+                     {"path": "c.json", "type": "blob", "sha": 3}]}
+    answers = [(200, json.dumps(root).encode()), (200, json.dumps(tree).encode())]
+    monkeypatch.setattr(github_mirror, "_request", lambda method, url, body=None: answers.pop(0))
+
+    assert github_mirror.github_metadata_blobs() == {"a.json": "s"}
+
+
+def test_github_failing_to_list_copies_nothing(monkeypatch, caplog):
+    github = fake_github.install(monkeypatch)
+    github.fail.append(fake_github.http_error(503))
+
+    with caplog.at_level(logging.WARNING, logger=github_mirror.__name__):
+        assert github_mirror.maybe_store_uploaded_metadata_file("demo.json", b"{}") is False
+
+    assert github.puts == []
+    assert "Unable to read the metadata folder" in caplog.text
+
+
+def test_a_root_listing_github_refuses_is_not_an_empty_repository(monkeypatch):
+    github = fake_github.install(monkeypatch)
+    github.fail.append(fake_github.http_error(403))
+
+    with pytest.raises(HTTPError):
+        github_mirror.github_metadata_blobs()
+
+
+def test_github_failing_to_take_the_file_is_logged(monkeypatch, caplog):
+    github = fake_github.install(monkeypatch)
+    real = github.request
+
+    def _refuse_puts(method, url, body=None):
+        if method == "PUT":
+            raise fake_github.http_error(500)
+        return real(method, url, body)
+
+    monkeypatch.setattr(github_mirror, "_request", _refuse_puts)
+
+    with caplog.at_level(logging.WARNING, logger=github_mirror.__name__):
+        assert github_mirror.maybe_store_uploaded_metadata_file("demo.json", b"{}") is False
+
+    assert "Failed to upload metadata file demo.json" in caplog.text
