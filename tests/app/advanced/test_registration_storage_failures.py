@@ -1,9 +1,10 @@
 """Tests of registration storage failures behavior."""
 
 import hashlib
+import json
 
 from server.app import visitor_session
-from server.app.config import relying_party
+from server.app.config import paths, relying_party
 from server.app.storage import credential_artifacts, github_mirror
 from server.app.storage import credentials as storage_credentials
 from server.app.webauthn.attestation import aaguid as attestation_aaguid
@@ -12,6 +13,9 @@ from server.app.webauthn.attestation import checks as attestation_checks
 from tests.app.entry_app import entry_app
 from tests.app.fido2_stand_ins import ES256_KEY, CredentialData
 from tests.app.security.ceremony_helpers import b64u
+from tests.app.storage import fake_github
+
+from .registration_ceremony import register
 
 
 class _FakeAuthData:
@@ -214,3 +218,34 @@ def test_advanced_register_complete_returns_400_when_add_public_key_material_rai
     }
     assert artifact_store_calls == []
     assert registration_events == []
+
+
+def _logged_registrations(monkeypatch, tmp_path):
+    """The stores and the credential log's outbox in this test's directory, the log on against a fake repository."""
+
+    for setting, folder in paths.LOCAL_STORES:
+        monkeypatch.setenv(setting, str(tmp_path / folder))
+    monkeypatch.setenv("FIDO_SERVER_GITHUB_OUTBOX_DIR", str(tmp_path / "outbox"))
+    return fake_github.install(monkeypatch)
+
+
+def test_an_advanced_registration_is_logged_once_its_artifact_is_stored(monkeypatch, tmp_path):
+    github = _logged_registrations(monkeypatch, tmp_path)
+
+    response = register(entry_app().test_client())
+
+    assert response.status_code == 200, response.get_json()
+    [path] = github.files
+    assert path.startswith("logs/") and path.endswith(".json")
+    assert json.loads(github.files[path])["rp_id"] == "localhost"
+
+
+def test_an_advanced_registration_whose_artifact_is_not_stored_is_not_logged(monkeypatch, tmp_path):
+    github = _logged_registrations(monkeypatch, tmp_path)
+    monkeypatch.setattr(credential_artifacts, "store_credential_artifact", lambda *_args, **_kwargs: False)
+
+    response = register(entry_app().test_client())
+
+    assert response.status_code == 500
+    assert github.files == {}
+    assert not (tmp_path / "outbox").exists() or not any((tmp_path / "outbox").glob("*.entry"))

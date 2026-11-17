@@ -2,9 +2,9 @@
 
 `server/app/storage/` keeps what the app persists: `credentials.py` (credential
 records), `record_format.py` (the JSON envelope), `credential_artifacts.py`,
-`session_metadata.py` (visitors' uploads), `cloud.py` (Cloud Storage), `common.py`, and
-`github_mirror.py` (the copy of registrations and uploads kept on GitHub). These are its
-rules. Read them before changing `server/app/storage`; `AGENTS.md` keeps only a summary.
+`session_metadata.py` (visitors' uploads), `cloud.py` (Cloud Storage), `common.py`,
+`github_mirror.py` (the copy of registrations and uploads kept on GitHub) and
+`github_outbox.py` (what waits to be copied there). These are its rules. Read them before changing `server/app/storage`; `AGENTS.md` keeps only a summary.
 
 ## Compare-and-swap
 
@@ -161,3 +161,54 @@ Two cookies, both signed with the app's secret, `HttpOnly`, `SameSite=Lax`, and
   (`config/paths.LOCAL_STORES`): the sweep lists the namespaces of all three and
   removes all three folders. Deleting a visitor's last upload leaves the namespace,
   its marker with it, for the sweep.
+
+## The credential log
+
+Each registration, and each uploaded metadata file, is copied to the owners' credential
+log repository on GitHub (`GITHUB_LOG_REPO_OWNER`/`GITHUB_LOG_REPO_NAME`, by default
+`rainzhang05/CredentialLogs`): a registration as `logs/<aaguid>/<time>_<random>.json` (its
+time, RP ID, AAGUID, MDS device name, attestation object and the four checks), a metadata
+file whole under `metadata/`. The log is on only with a `GITHUB_TOKEN`, and
+`ENABLE_GITHUB_LOGGING=0` turns it off.
+
+No registration waits for GitHub. Once its record is saved (`record_registration_event`),
+its file is written to an **outbox** with the path it lands at, fixed then
+(`github_outbox.enqueue`), and the request goes on: whatever fails there is a warning, never
+the visitor's error.
+
+- **Where entries wait.** On Cloud Storage under `github-outbox/` (`entries/<id>`, and a
+  `lease` object), outside `user-data/`, so the idle sweep never removes them; locally in
+  `FIDO_SERVER_GITHUB_OUTBOX_DIR`, else `instance/github-outbox` (`<id>.entry`, and `.lease`).
+  An entry is a line of JSON (kind, path, commit message) and the file's bytes. Ids begin with
+  the time they were queued, so entries are delivered oldest first.
+- **The bound.** 1,000 entries and 256 MiB (`MAX_ENTRIES`, `MAX_BYTES`), counted from one
+  listing per request that queues. Past either an entry is dropped with a warning naming its
+  path; a listing that fails is warned about and the entry written anyway. Two requests at
+  once can both pass the bound, as with the quotas.
+- **What delivers them.** `github_outbox.flush`, on a worker thread that requests start
+  (`schedule_flush`): one before each request at most every 30 s per process
+  (`github_mirror.init_app`), and one at once when a request has queued an entry. On Cloud Run
+  a run has CPU only while some request is being served, so it goes on through the requests
+  that follow; one that stalls resumes at the next, and an instance that is stopped leaves its
+  entries for the next instance's first request. A run delivers at most 20 entries.
+- **One flusher at a time.** A run holds the outbox's lease for 300 s: on Cloud Storage the
+  `lease` object, written only at the generation it was read at (as the stores write), so of
+  two instances taking it one wins, and one past its time is taken over; locally an `flock` on
+  `.lease`, which a stopped process gives up. A run starts no delivery with less than 60 s of
+  its lease left, and gives it back at its own generation only, so a flusher that took over
+  stays in charge. GitHub takes new files one at a time (its create-file endpoint refuses calls
+  in parallel), and one holder makes "this content is there already" safe to check.
+- **Delivery** (`github_mirror.deliver`). A file is created, never replaced. When GitHub says
+  a file is at the path already, its blob SHA is read: the same content is an earlier delivery
+  that landed, and counts as delivered; so a delivery made twice (a run that stalled past its
+  lease, a removal that failed after a landing) never becomes two files. The fixed path is the
+  guarantee, not the lease. A metadata file whose content is anywhere in `metadata/` is not
+  copied again: the folder is read through the git trees API (the root's listing names its
+  tree), which lists all of it, where the contents API stops at 1,000 entries. A name holding
+  other content is kept, and the new file goes beside it as `<name>-<first 12 of its blob
+  SHA><extension>`.
+- **Failures.** GitHub, the network or the token unable to take a file (401, 403, 404, 408,
+  409, 429, a 5xx, a timeout, an answer that is not what the mirror reads) leaves the entry
+  and stops the run, and every flusher leaves the outbox for 300 s: one failed call per 5
+  minutes in all while GitHub is down. A file GitHub refuses for good (another 4xx), or that
+  holds the only path left to it, is dropped with a warning; so is an entry that does not read.

@@ -6,6 +6,7 @@ import io
 import json
 import logging
 import os
+import threading
 import types
 import uuid
 from datetime import datetime, timezone
@@ -339,27 +340,6 @@ def test_request_does_not_retry_timeouts(monkeypatch):
     assert sleeps == []
 
 
-def test_github_upload_json_builds_add_message_and_base64_content(monkeypatch):
-    captured = {}
-
-    def _fake_request(method, url, body=None):
-        captured["method"] = method
-        captured["url"] = url
-        captured["body"] = body
-        return 200, b"{}"
-
-    monkeypatch.setattr(github_mirror, "_request", _fake_request)
-
-    github_mirror.github_upload_json("logs/aaguid-1/file.json", {"k": 1})
-
-    assert captured["method"] == "PUT"
-    assert "contents/logs/aaguid-1/file.json" in captured["url"]
-    assert captured["body"]["message"] == "add: file.json (AAGUID=aaguid-1)"
-    decoded = base64.b64decode(captured["body"]["content"]).decode("utf-8")
-    assert json.loads(decoded) == {"k": 1}
-    assert "sha" not in captured["body"]
-
-
 def test_github_upload_file_creates_the_file_and_never_names_a_sha(monkeypatch):
     captured = {}
 
@@ -385,200 +365,176 @@ def test_git_blob_sha_matches_git_blob_spec():
 
     assert result == "ce013625030ba8dba906f756967f9e9ca394464a"
 
-class ImmediateThread:
-    def __init__(self, target, args=(), kwargs=None, daemon=None):
-        self._target = target
-        self._args = args
-        self._kwargs = kwargs or {}
+@pytest.fixture
+def log_outbox(monkeypatch, tmp_path):
+    """The outbox in this test's directory."""
 
-    def start(self):
-        self._target(*self._args, **self._kwargs)
+    root = tmp_path / "outbox"
+    monkeypatch.setenv("FIDO_SERVER_GITHUB_OUTBOX_DIR", str(root))
+    return root
 
 
-def test_record_registration_event_uploads_json(monkeypatch, caplog):
-    caplog.set_level(logging.INFO, logger=github_mirror.__name__)
-    uploads = []
+def _queued_paths(root) -> list[str]:
+    if not root.exists():
+        return []
+    names = sorted(name for name in os.listdir(root) if name.endswith(".entry"))
+    return [github_outbox.decode_entry((root / name).read_bytes()).path for name in names]
 
-    def fake_upload(path, payload, **kwargs):
-        uploads.append((path, payload, kwargs))
 
-    monkeypatch.setenv("ENABLE_GITHUB_LOGGING", "1")
-    monkeypatch.setenv("GITHUB_TOKEN", "token-123")
-    monkeypatch.setattr(github_mirror, "github_upload_json", fake_upload)
-    monkeypatch.setattr(github_mirror.threading, "Thread", ImmediateThread)
+def _registration(**overrides) -> github_mirror.RegistrationEvent:
+    fields = {
+        "timestamp": datetime(2025, 10, 23, 9, 41, 10, tzinfo=timezone.utc),
+        "rp_id": "example.com",
+        "aaguid": uuid.UUID("7701a390-8b53-4ce0-bf7c-b331569b8d1a").bytes,
+        "device_name_mds": "Example Authenticator",
+        "attestation_object": cbor2.dumps({"test": b"value"}),
+        **overrides,
+    }
+    return github_mirror.RegistrationEvent(**fields)
+
+
+_LOGGED_PATH = "logs/7701a390-8b53-4ce0-bf7c-b331569b8d1a/20251023T094110Z_abcdef12.json"
+
+
+def test_a_registration_is_queued_then_delivered_to_its_path(monkeypatch, log_outbox):
+    github = fake_github.install(monkeypatch)
     monkeypatch.setattr(github_mirror, "random_shortid", lambda length=8: "abcdef12")
-
     attestation_object = cbor2.dumps({"test": b"value"})
-    event = github_mirror.RegistrationEvent(
-        timestamp=datetime(2025, 10, 23, 9, 41, 10, tzinfo=timezone.utc),
-        rp_id="example.com",
-        aaguid=uuid.UUID("7701a390-8b53-4ce0-bf7c-b331569b8d1a").bytes,
-        device_name_mds="Example Authenticator",
-        attestation_object=attestation_object,
-        signature_valid=True,
-        root_valid=True,
-        rp_id_hash_valid=True,
-        aaguid_match=True,
+
+    github_mirror.record_registration_event(
+        _registration(signature_valid=True, root_valid=True, rp_id_hash_valid=True, aaguid_match=True)
     )
 
-    github_mirror.record_registration_event(event)
-
-    out = "\n".join(record.getMessage() for record in caplog.records)
-    assert "Uploaded credential log" in out
-    assert "AAGUID=7701a390-8b53-4ce0-bf7c-b331569b8d1a" in out
-
-    assert len(uploads) == 1
-    path, payload, kwargs = uploads[0]
-
-    assert path == (
-        "logs/7701a390-8b53-4ce0-bf7c-b331569b8d1a/20251023T094110Z_abcdef12.json"
-    )
-
-    assert kwargs == {}
-
-    assert payload["timestamp"] == "2025-10-23T17:41:10+08:00"
-    assert payload["rp_id"] == "example.com"
-    assert payload["aaguid"] == "7701a390-8b53-4ce0-bf7c-b331569b8d1a"
-    assert payload["device_name_mds"] == "Example Authenticator"
-    assert payload["raw_attestation_object"] == github_mirror.to_b64url(attestation_object)
-    assert payload["decoded_attestation_object"] == {"test": github_mirror.to_b64url(b"value")}
-    # Verify attestation check fields are included
-    assert payload["signature_valid"] is True
-    assert payload["root_valid"] is True
-    assert payload["rp_id_hash_valid"] is True
-    assert payload["aaguid_match"] is True
+    assert list(github.files) == [_LOGGED_PATH]
+    [(_path, body)] = github.puts
+    assert body["message"] == "add: 20251023T094110Z_abcdef12.json (AAGUID=7701a390-8b53-4ce0-bf7c-b331569b8d1a)"
+    payload = json.loads(github.files[_LOGGED_PATH])
+    # The file is written as it always was: indented, non-ASCII kept.
+    assert github.files[_LOGGED_PATH] == json.dumps(payload, ensure_ascii=False, indent=2).encode("utf-8")
+    assert payload == {
+        "timestamp": "2025-10-23T17:41:10+08:00",
+        "rp_id": "example.com",
+        "aaguid": "7701a390-8b53-4ce0-bf7c-b331569b8d1a",
+        "device_name_mds": "Example Authenticator",
+        "raw_attestation_object": github_mirror.to_b64url(attestation_object),
+        "decoded_attestation_object": {"test": github_mirror.to_b64url(b"value")},
+        "signature_valid": True,
+        "root_valid": True,
+        "rp_id_hash_valid": True,
+        "aaguid_match": True,
+    }
+    assert _queued_paths(log_outbox) == []
 
 
-def test_record_registration_event_creates_unique_files(monkeypatch, caplog):
-    caplog.set_level(logging.INFO, logger=github_mirror.__name__)
-    uploads = []
-
-    def fake_upload(path, payload, **kwargs):
-        uploads.append((path, payload, kwargs))
-
+def test_each_registration_is_a_file_of_its_own(monkeypatch, log_outbox):
+    github = fake_github.install(monkeypatch)
     short_ids = iter(["firstid", "secondid"])
-
-    monkeypatch.setenv("ENABLE_GITHUB_LOGGING", "1")
-    monkeypatch.setenv("GITHUB_TOKEN", "token-123")
-    monkeypatch.setattr(github_mirror, "github_upload_json", fake_upload)
-    monkeypatch.setattr(github_mirror.threading, "Thread", ImmediateThread)
     monkeypatch.setattr(github_mirror, "random_shortid", lambda length=8: next(short_ids))
 
-    attestation_object = cbor2.dumps({"another": "value"})
+    github_mirror.record_registration_event(_registration())
+    github_mirror.record_registration_event(_registration(timestamp=datetime(2025, 10, 23, 9, 45, 10, tzinfo=timezone.utc)))
 
-    base_event_kwargs = dict(
-        rp_id="example.com",
-        aaguid=uuid.UUID("7701a390-8b53-4ce0-bf7c-b331569b8d1a").bytes,
-        device_name_mds="Example Authenticator",
-        attestation_object=attestation_object,
-    )
+    assert sorted(github.files) == [
+        "logs/7701a390-8b53-4ce0-bf7c-b331569b8d1a/20251023T094110Z_firstid.json",
+        "logs/7701a390-8b53-4ce0-bf7c-b331569b8d1a/20251023T094510Z_secondid.json",
+    ]
 
-    event1 = github_mirror.RegistrationEvent(
-        timestamp=datetime(2025, 10, 23, 9, 41, 10, tzinfo=timezone.utc),
-        **base_event_kwargs,
-    )
-    event2 = github_mirror.RegistrationEvent(
-        timestamp=datetime(2025, 10, 23, 9, 45, 10, tzinfo=timezone.utc),
-        **base_event_kwargs,
-    )
 
-    github_mirror.record_registration_event(event1)
-    github_mirror.record_registration_event(event2)
+def test_a_registration_waits_in_the_outbox_while_github_is_down(monkeypatch, log_outbox, caplog):
+    github = fake_github.install(monkeypatch)
+    monkeypatch.setattr(github_mirror, "random_shortid", lambda length=8: "abcdef12")
+    github.fail.append(fake_github.http_error(503))
 
-    out_lines = [record.getMessage() for record in caplog.records]
-    assert len(out_lines) == 2
-    for line in out_lines:
-        assert "Uploaded credential log" in line
-        assert "action=create" in line
+    with caplog.at_level(logging.WARNING):
+        github_mirror.record_registration_event(_registration())
 
-    assert len(uploads) == 2
-    paths = [entry[0] for entry in uploads]
-    assert paths[0] == "logs/7701a390-8b53-4ce0-bf7c-b331569b8d1a/20251023T094110Z_firstid.json"
-    assert paths[1] == "logs/7701a390-8b53-4ce0-bf7c-b331569b8d1a/20251023T094510Z_secondid.json"
+    assert github.files == {}
+    assert _queued_paths(log_outbox) == [_LOGGED_PATH]
+    assert f"GitHub could not take {_LOGGED_PATH} now (HTTP 503); it stays queued" in caplog.text
 
-    for _path, payload, kwargs in uploads:
-        assert kwargs == {}
+    # Once the outbox may be tried again, the next run delivers it.
+    monkeypatch.setattr(github_outbox, "FLUSH", github_outbox.FlushState())
+    (log_outbox / ".lease").write_bytes(b"{}")
+    github_outbox.schedule_flush(github_mirror.deliver)
+
+    assert list(github.files) == [_LOGGED_PATH]
+    assert _queued_paths(log_outbox) == []
+
+
+def test_the_registration_never_waits_for_github(monkeypatch, log_outbox):
+    github = fake_github.install(monkeypatch)
+    monkeypatch.setattr(github_outbox, "FLUSH_ASYNC", True)
+    at_github, release = threading.Event(), threading.Event()
+    request = github.request
+
+    def _slow(method, url, body=None):
+        at_github.set()
+        assert release.wait(10)
+        return request(method, url, body)
+
+    monkeypatch.setattr(github_mirror, "_request", _slow)
+
+    github_mirror.record_registration_event(_registration())
+
+    # It returned while the worker waits on GitHub.
+    assert at_github.wait(10)
+    assert github.files == {}
+    worker = github_outbox.FLUSH.worker
+    release.set()
+    worker.join(10)
+    assert len(github.files) == 1
+
+
+def test_a_registration_without_a_token_is_not_logged_and_warns_nothing(monkeypatch, log_outbox, caplog):
+    monkeypatch.delenv("ENABLE_GITHUB_LOGGING", raising=False)
+    monkeypatch.delenv("GITHUB_TOKEN", raising=False)
+    sent = []
+    monkeypatch.setattr(github_mirror, "_request", lambda *args, **kwargs: sent.append(args))
+
+    with caplog.at_level(logging.DEBUG):
+        github_mirror.record_registration_event(_registration())
+        assert github_mirror.maybe_store_uploaded_metadata_file("demo.json", b"{}") is False
+
+    assert sent == []
+    assert not log_outbox.exists()
+    assert [record for record in caplog.records if record.levelno >= logging.WARNING] == []
+
+
+def test_a_registration_is_not_logged_while_the_log_is_turned_off(monkeypatch, log_outbox):
+    github = fake_github.install(monkeypatch)
+    monkeypatch.setenv("ENABLE_GITHUB_LOGGING", "0")
+
+    github_mirror.record_registration_event(_registration())
+
+    assert github.calls == []
+    assert not log_outbox.exists()
+
+
+def test_a_registration_whose_entry_cannot_be_built_stands_with_a_warning(monkeypatch, log_outbox, caplog):
+    github = fake_github.install(monkeypatch)
+
+    with caplog.at_level(logging.WARNING, logger=github_mirror.__name__):
+        github_mirror.record_registration_event(_registration(attestation_object=None))
+
+    assert github.calls == []
+    assert _queued_paths(log_outbox) == []
+    assert "Could not build the credential log entry of a registration for example.com" in caplog.text
+
+
+def test_a_registration_past_the_outbox_s_bound_starts_no_flush(monkeypatch, log_outbox, caplog):
+    github = fake_github.install(monkeypatch)
+    monkeypatch.setattr(github_outbox, "MAX_ENTRIES", 0)
+
+    with caplog.at_level(logging.WARNING):
+        github_mirror.record_registration_event(_registration())
+
+    assert github.calls == []
+    assert "The credential log outbox is full" in caplog.text
 
 
 def test_the_test_run_never_logs_to_github():
     # tests/conftest.py turns the log off for the whole run.
     assert is_logging_enabled() is False
-
-
-def test_a_registration_without_a_token_is_not_logged_and_warns_nothing(monkeypatch, caplog):
-    monkeypatch.delenv("ENABLE_GITHUB_LOGGING", raising=False)
-    monkeypatch.delenv("GITHUB_TOKEN", raising=False)
-    monkeypatch.setattr(github_mirror.threading, "Thread", ImmediateThread)
-    sent = []
-    monkeypatch.setattr(github_mirror, "_request", lambda *args, **kwargs: sent.append(args))
-
-    with caplog.at_level(logging.DEBUG, logger=github_mirror.__name__):
-        github_mirror.record_registration_event(
-            github_mirror.RegistrationEvent(
-                timestamp=datetime(2025, 10, 23, 9, 41, 10, tzinfo=timezone.utc),
-                rp_id="example.com",
-                aaguid=None,
-                device_name_mds=None,
-                attestation_object=cbor2.dumps({}),
-            )
-        )
-        assert github_mirror.maybe_store_uploaded_metadata_file("demo.json", b"{}") is False
-
-    assert sent == []
-    assert [record for record in caplog.records if record.levelno >= logging.WARNING] == []
-
-
-def test_record_registration_event_disabled(monkeypatch):
-    monkeypatch.setenv("ENABLE_GITHUB_LOGGING", "0")
-
-    uploads = []
-    monkeypatch.setattr(github_mirror, "github_upload_json", lambda *args, **kwargs: uploads.append(args))
-
-    event = github_mirror.RegistrationEvent(
-        timestamp=datetime(2025, 10, 23, 9, 41, 10, tzinfo=timezone.utc),
-        rp_id="example.com",
-        aaguid=None,
-        device_name_mds=None,
-        attestation_object=cbor2.dumps({}),
-    )
-
-    github_mirror.record_registration_event(event)
-
-    assert uploads == []
-
-
-def test_record_registration_event_uploads_inline_on_cloud_run(monkeypatch, caplog):
-    caplog.set_level(logging.INFO, logger=github_mirror.__name__)
-    uploads = []
-
-    def fake_upload(path, payload, **kwargs):
-        uploads.append((path, payload, kwargs))
-
-    def fail_thread(*_args, **_kwargs):
-        raise AssertionError("Threaded upload should not be used on Cloud Run by default")
-
-    monkeypatch.setenv("ENABLE_GITHUB_LOGGING", "1")
-    monkeypatch.setenv("GITHUB_TOKEN", "token-123")
-    monkeypatch.setenv("K_SERVICE", "pqc-webauthn")
-    monkeypatch.delenv("GITHUB_LOG_ASYNC", raising=False)
-    monkeypatch.setattr(github_mirror, "github_upload_json", fake_upload)
-    monkeypatch.setattr(github_mirror.threading, "Thread", fail_thread)
-    monkeypatch.setattr(github_mirror, "random_shortid", lambda length=8: "inline01")
-
-    event = github_mirror.RegistrationEvent(
-        timestamp=datetime(2025, 10, 23, 9, 41, 10, tzinfo=timezone.utc),
-        rp_id="example.com",
-        aaguid=uuid.UUID("7701a390-8b53-4ce0-bf7c-b331569b8d1a").bytes,
-        device_name_mds="Example Authenticator",
-        attestation_object=cbor2.dumps({}),
-    )
-
-    github_mirror.record_registration_event(event)
-
-    out = "\n".join(record.getMessage() for record in caplog.records)
-    assert "Uploaded credential log" in out
-    assert len(uploads) == 1
-    assert uploads[0][0].endswith("_inline01.json")
 
 
 @pytest.mark.parametrize(
@@ -660,149 +616,6 @@ def test_log_path_sanitizes_folder_and_formats_timestamp(monkeypatch):
     assert path == "logs/unknown/20260102T030405Z_path01.json"
 
 
-def test_should_upload_async_env_override_has_priority(monkeypatch):
-    monkeypatch.setenv("GITHUB_LOG_ASYNC", "0")
-    monkeypatch.setenv("K_SERVICE", "service-name")
-    assert github_mirror._should_upload_async() is False
-
-    monkeypatch.setenv("GITHUB_LOG_ASYNC", "1")
-    assert github_mirror._should_upload_async() is True
-
-
-def test_should_upload_async_defaults_to_inline_on_cloud_run(monkeypatch):
-    monkeypatch.delenv("GITHUB_LOG_ASYNC", raising=False)
-    monkeypatch.setenv("K_SERVICE", "service-name")
-
-    assert github_mirror._should_upload_async() is False
-
-
-def test_should_upload_async_defaults_to_background_off_cloud_run(monkeypatch):
-    monkeypatch.delenv("GITHUB_LOG_ASYNC", raising=False)
-    monkeypatch.delenv("K_SERVICE", raising=False)
-
-    assert github_mirror._should_upload_async() is True
-
-
-def test_should_upload_async_unknown_override_falls_back_to_cloud_run_policy(monkeypatch):
-    monkeypatch.setenv("GITHUB_LOG_ASYNC", "maybe")
-    monkeypatch.setenv("K_SERVICE", "service-name")
-
-    assert github_mirror._should_upload_async() is False
-
-
-def test_upload_worker_logs_failure_without_raising(monkeypatch, caplog):
-    caplog.set_level(logging.INFO, logger=github_mirror.__name__)
-    monkeypatch.setattr(
-        github_mirror,
-        "github_upload_json",
-        lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("upload failed")),
-    )
-
-    github_mirror._upload_worker(
-        "logs/unknown/file.json",
-        {"a": 1},
-        {
-            "timestamp": "2026-04-03T00:00:00+0800",
-            "aaguid": "unknown",
-            "device": "unknown",
-            "action": "create",
-        },
-    )
-
-    output = "\n".join(record.getMessage() for record in caplog.records)
-    assert "Failed to upload credential log" in output
-    assert "upload failed" in output
-
-
-def test_upload_worker_logs_success(monkeypatch, caplog):
-    caplog.set_level(logging.INFO, logger=github_mirror.__name__)
-    monkeypatch.setattr(github_mirror, "github_upload_json", lambda *_args, **_kwargs: None)
-
-    github_mirror._upload_worker(
-        "logs/unknown/file.json",
-        {"a": 1},
-        {
-            "timestamp": "2026-04-03T00:00:00+0800",
-            "aaguid": "7701a390-8b53-4ce0-bf7c-b331569b8d1a",
-            "device": "Demo Device",
-            "action": "create",
-        },
-    )
-
-    output = "\n".join(record.getMessage() for record in caplog.records)
-    assert "Uploaded credential log" in output
-    assert "AAGUID=7701a390-8b53-4ce0-bf7c-b331569b8d1a" in output
-
-
-def test_record_registration_event_honors_async_false_override(monkeypatch):
-    uploads = []
-
-    def fake_upload(path, payload, **kwargs):
-        uploads.append((path, payload, kwargs))
-
-    def fail_thread(*_args, **_kwargs):
-        raise AssertionError("Thread should not be used when GITHUB_LOG_ASYNC=0")
-
-    monkeypatch.setenv("ENABLE_GITHUB_LOGGING", "1")
-    monkeypatch.setenv("GITHUB_TOKEN", "token-123")
-    monkeypatch.setenv("GITHUB_LOG_ASYNC", "0")
-    monkeypatch.delenv("K_SERVICE", raising=False)
-    monkeypatch.setattr(github_mirror, "github_upload_json", fake_upload)
-    monkeypatch.setattr(github_mirror.threading, "Thread", fail_thread)
-
-    event = github_mirror.RegistrationEvent(
-        timestamp=datetime(2025, 10, 23, 9, 41, 10, tzinfo=timezone.utc),
-        rp_id="example.com",
-        aaguid=None,
-        device_name_mds="Demo",
-        attestation_object=cbor2.dumps({}),
-    )
-
-    github_mirror.record_registration_event(event)
-
-    assert len(uploads) == 1
-
-
-def test_record_registration_event_honors_async_true_override_on_cloud_run(monkeypatch):
-    uploads = []
-    thread_events = []
-
-    class _CapturingThread:
-        def __init__(self, target, args=(), kwargs=None, daemon=None):
-            thread_events.append(("init", daemon))
-            self._target = target
-            self._args = args
-            self._kwargs = kwargs or {}
-
-        def start(self):
-            thread_events.append(("start", None))
-            self._target(*self._args, **self._kwargs)
-
-    monkeypatch.setenv("ENABLE_GITHUB_LOGGING", "1")
-    monkeypatch.setenv("GITHUB_TOKEN", "token-123")
-    monkeypatch.setenv("K_SERVICE", "service-name")
-    monkeypatch.setenv("GITHUB_LOG_ASYNC", "true")
-    monkeypatch.setattr(github_mirror.threading, "Thread", _CapturingThread)
-    monkeypatch.setattr(
-        github_mirror,
-        "github_upload_json",
-        lambda path, payload, **kwargs: uploads.append((path, payload, kwargs)),
-    )
-
-    event = github_mirror.RegistrationEvent(
-        timestamp=datetime(2025, 10, 23, 9, 41, 10, tzinfo=timezone.utc),
-        rp_id="example.com",
-        aaguid=None,
-        device_name_mds="Demo",
-        attestation_object=cbor2.dumps({}),
-    )
-
-    github_mirror.record_registration_event(event)
-
-    assert ("start", None) in thread_events
-    assert len(uploads) == 1
-
-
 def test_build_log_payload_handles_unknown_aaguid_and_decode_failures(monkeypatch):
     monkeypatch.setattr(github_mirror, "random_shortid", lambda length=8: "abc123")
 
@@ -814,13 +627,12 @@ def test_build_log_payload_handles_unknown_aaguid_and_decode_failures(monkeypatc
         attestation_object=b"not-cbor",
     )
 
-    path, payload, summary = github_mirror._build_log_payload(event)
+    path, payload = github_mirror._build_log_payload(event)
 
     assert path == "logs/unknown/20260403T010203Z_abc123.json"
     assert payload["aaguid"] == "unknown"
+    assert payload["device_name_mds"] == "unknown"
     assert payload["decoded_attestation_object"] == {"error": "decode_failed"}
-    assert summary["aaguid"] == "unknown"
-    assert summary["device"] == "unknown"
 
 
 def test_safe_metadata_repo_filename_sanitizes_traversal_and_invalid_input():

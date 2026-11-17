@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import json
 
+from server.app.config import paths
 from server.app.storage import common as storage_common
 from server.app.storage import credentials, github_mirror
 from tests.app.entry_app import entry_app
 from tests.app.security import ceremony_helpers as ceremony
+from tests.app.storage import fake_github
 
 
 def test_real_registration_round_trips_through_the_json_store(monkeypatch, tmp_path):
@@ -57,3 +59,40 @@ def test_real_registration_round_trips_through_the_json_store(monkeypatch, tmp_p
     assert records[0]["credential_id"] == authenticator.credential_id
     assert records[0]["sign_count"] == 0
     assert len(records[0]["user_handle"]) == 32
+
+
+def _logged_registrations(monkeypatch, tmp_path):
+    """The stores and the credential log's outbox in this test's directory, the log on against a fake repository."""
+
+    monkeypatch.setattr(storage_common, "using_gcs", lambda: False)
+    for setting, folder in paths.LOCAL_STORES:
+        monkeypatch.setenv(setting, str(tmp_path / folder))
+    monkeypatch.setenv("FIDO_SERVER_GITHUB_OUTBOX_DIR", str(tmp_path / "outbox"))
+    return fake_github.install(monkeypatch)
+
+
+def test_a_simple_registration_is_logged_once_its_record_is_saved(monkeypatch, tmp_path):
+    github = _logged_registrations(monkeypatch, tmp_path)
+
+    ceremony.register_simple(entry_app().test_client(), ceremony.Authenticator())
+
+    [path] = github.files
+    assert path.startswith("logs/")
+    logged = json.loads(github.files[path])
+    assert logged["rp_id"] == "localhost"
+    assert [logged[check] for check in ("signature_valid", "root_valid", "rp_id_hash_valid", "aaguid_match")] != [None] * 4
+
+
+def test_a_simple_registration_whose_record_is_not_saved_is_not_logged(monkeypatch, tmp_path):
+    github = _logged_registrations(monkeypatch, tmp_path)
+
+    def _store_down(*_args, **_kwargs):
+        raise RuntimeError("store down")
+
+    monkeypatch.setattr(credentials, "save_if_unchanged", _store_down)
+
+    response = ceremony.complete_simple_registration(entry_app().test_client(), ceremony.Authenticator())
+
+    assert response.status_code == 500
+    assert github.files == {}
+    assert not (tmp_path / "outbox").exists() or not any((tmp_path / "outbox").glob("*.entry"))

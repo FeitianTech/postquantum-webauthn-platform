@@ -146,12 +146,13 @@ warning. "On Cloud Run" means `K_SERVICE` is set, which Cloud Run does.
 | `ENABLE_GITHUB_LOGGING` | on when `GITHUB_TOKEN` is set | Log each registration and uploaded metadata file to the credential log repository; `0` turns it off |
 | `GITHUB_TOKEN` | none | The token the log writes with; without it nothing is logged |
 | `GITHUB_LOG_REPO_OWNER`, `GITHUB_LOG_REPO_NAME` | `rainzhang05`, `CredentialLogs` | The credential log repository |
-| `GITHUB_HTTP_TIMEOUT_SECONDS` | `4` | Each GitHub request's timeout |
-| `GITHUB_LOG_ASYNC` | off on Cloud Run, else on | Upload the log entry on a background thread |
+| `GITHUB_HTTP_TIMEOUT_SECONDS` | `4` | Each GitHub request's timeout, in the worker that delivers the log's outbox (no request waits for GitHub) |
+| `FIDO_SERVER_GITHUB_OUTBOX_DIR` | `instance/github-outbox` | Where the log's entries wait for delivery without Cloud Storage; with it they wait under `github-outbox/` in the bucket ([STORAGE.md](../docs/STORAGE.md#the-credential-log)) |
 
 `FIDO_SERVER_CONTENT_SECURITY_POLICY_REPORT_ONLY` and `FIDO_SERVER_REPORTING_ENDPOINTS`
 are no longer read: Trusted Types are part of the enforced policy, and the reporting
-endpoint is the one the policy names.
+endpoint is the one the policy names. Nor is `GITHUB_LOG_ASYNC`: no request uploads to
+GitHub, and the log's entries wait in an outbox that a worker delivers.
 
 ## Measuring cold starts
 

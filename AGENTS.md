@@ -462,10 +462,15 @@ its logic out here first.
   browser's response: docs/STORAGE.md). `config/logs.py` holds `fido2.server`'s logger at WARNING: fido2 logs
   credential IDs at INFO.
 - `storage/` (`credentials.py`, `credential_artifacts.py`, `session_metadata.py`,
-  `github_mirror.py`, over `cloud.py`, `common.py` and `record_format.py`): every read-modify-write is
+  `github_mirror.py`, `github_outbox.py`, over `cloud.py`, `common.py` and `record_format.py`): every
+  read-modify-write is
   compare-and-swap; a failed read raises `StorageReadError` (503), never a shorter list; a write past
   a namespace's quota raises `StorageQuotaExceeded` (409 for a count, 413 for bytes), and a begin
-  refuses a namespace already full, before the authenticator is asked. **Read
+  refuses a namespace already full, before the authenticator is asked. The credential log on GitHub
+  (on only with `GITHUB_TOKEN`): a saved registration's file is queued in an outbox (`github-outbox/`
+  in the bucket, outside `user-data/`; `instance/github-outbox` locally) with its repository path
+  fixed then, and a worker that requests start delivers it, one flusher at a time under a
+  generation-checked lease, never in a request's time (`github_mirror.init_app`). **Read
   `docs/STORAGE.md` first.** `decoder/`: the Codec's server side (`decode/text.py` the entry,
   `decode/answer.py` what it answers, `encode/text.py` the encoder's, `values.py` the leaf both
   share); it shows what was sent and

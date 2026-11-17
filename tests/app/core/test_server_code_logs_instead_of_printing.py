@@ -11,6 +11,7 @@ import logging
 from pathlib import Path
 
 from server.app.storage import github_mirror
+from server.app.storage.github_outbox import OutboxEntry
 from server.app.webauthn.attestation import certificates
 
 SERVER = Path(__file__).resolve().parents[3] / "server"
@@ -26,31 +27,35 @@ def test_no_server_module_calls_print():
     assert calls == []
 
 
-def test_a_failed_log_upload_is_a_warning(monkeypatch, caplog, capsys):
-    def _fail(_path, _payload):
+def _log_entry() -> OutboxEntry:
+    return OutboxEntry("registration", "logs/x.json", "add: x.json (AAGUID=unknown)", b"{}")
+
+
+def test_a_failed_log_delivery_is_a_warning(monkeypatch, caplog, capsys):
+    def _fail(_method, _url, _body=None):
         raise OSError("github unreachable")
 
-    monkeypatch.setattr(github_mirror, "github_upload_json", _fail)
+    monkeypatch.setattr(github_mirror, "_request", _fail)
 
     with caplog.at_level(logging.INFO, logger=github_mirror.__name__):
-        github_mirror._upload_worker("logs/x.json", {}, {"timestamp": "t", "aaguid": "a"})
+        github_mirror.deliver(_log_entry())
 
     assert capsys.readouterr().out == ""
     (record,) = caplog.records
     assert record.levelno == logging.WARNING
-    assert "Failed to upload credential log logs/x.json: github unreachable" in record.getMessage()
+    assert "GitHub could not take logs/x.json now; it stays queued: github unreachable" in record.getMessage()
 
 
-def test_an_uploaded_log_is_info(monkeypatch, caplog, capsys):
-    monkeypatch.setattr(github_mirror, "github_upload_json", lambda _path, _payload: None)
+def test_a_delivered_log_is_info(monkeypatch, caplog, capsys):
+    monkeypatch.setattr(github_mirror, "_request", lambda _method, _url, _body=None: (201, b"{}"))
 
     with caplog.at_level(logging.INFO, logger=github_mirror.__name__):
-        github_mirror._upload_worker("logs/x.json", {}, {"timestamp": "t", "aaguid": "a", "device": "d", "action": "create"})
+        github_mirror.deliver(_log_entry())
 
     assert capsys.readouterr().out == ""
     (record,) = caplog.records
     assert record.levelno == logging.INFO
-    assert "AAGUID=a device=d action=create" in record.getMessage()
+    assert record.getMessage() == "Delivered logs/x.json to the credential log"
 
 
 def test_unparseable_registration_data_is_logged_at_debug(caplog, capsys):

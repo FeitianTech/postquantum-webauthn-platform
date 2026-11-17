@@ -1,7 +1,7 @@
 """The GitHub mirror: registrations and uploaded metadata, copied to the credential log repository.
 
-``record_registration_event`` writes one JSON file per registration under
-``logs/<aaguid>/`` (on Cloud Run inline, otherwise on a thread), and
+``record_registration_event`` queues one JSON file per registration, for
+``logs/<aaguid>/``, in the outbox (``github_outbox``), which a worker delivers; and
 ``maybe_store_uploaded_metadata_file`` copies a visitor's uploaded metadata under
 ``metadata/`` unless an identical file is there, never replacing a file: one whose name is
 taken goes beside it under its content's hash. The mirror is on only with a
@@ -46,7 +46,6 @@ __all__ = [
     "github_metadata_blobs",
     "github_upload_file",
     "init_app",
-    "github_upload_json",
     "is_logging_enabled",
     "maybe_store_uploaded_metadata_file",
     "random_shortid",
@@ -169,24 +168,6 @@ def git_blob_sha(data: bytes) -> str:
     return hashlib.sha1(header + data).hexdigest()
 
 
-def github_upload_json(path: str, obj: dict[str, Any]) -> None:
-    """Create a JSON file at ``path`` in the credential log repository."""
-
-    serialised = json.dumps(obj, ensure_ascii=False, indent=2)
-    content = _encode_content(serialised.encode("utf-8"))
-
-    filename = os.path.basename(path)
-    folder = os.path.basename(os.path.dirname(path)) or "unknown"
-
-    body: dict[str, Any] = {
-        "message": f"add: {filename} (AAGUID={folder})",
-        "content": content,
-    }
-
-    url = _api_url(f"contents/{path}")
-    _request("PUT", url, body)
-
-
 def github_upload_file(path: str, data: bytes, message: str) -> None:
     """Create a file at ``path`` with ``data`` in the log repository. It names no SHA, so GitHub
     refuses it (422) when a file is there: the mirror never replaces one."""
@@ -285,7 +266,6 @@ def github_metadata_blobs() -> dict[str, str]:
 # Registration events, one JSON file per registration.
 
 BEIJING_TZ = ZoneInfo("Asia/Shanghai")
-TIMEZONE_LABEL = "CST"
 _LOGS_DIR = "logs"
 
 
@@ -402,7 +382,7 @@ def _log_path(aaguid: str, timestamp: datetime) -> str:
     return f"{_LOGS_DIR}/{folder_name}/{filename}"
 
 
-def _build_log_payload(event: RegistrationEvent) -> tuple[str, Mapping[str, Any], Mapping[str, str]]:
+def _build_log_payload(event: RegistrationEvent) -> tuple[str, Mapping[str, Any]]:
     timestamp_local = event.timestamp.astimezone(BEIJING_TZ).replace(microsecond=0)
     timestamp_iso = timestamp_local.isoformat()
 
@@ -428,79 +408,43 @@ def _build_log_payload(event: RegistrationEvent) -> tuple[str, Mapping[str, Any]
         "aaguid_match": event.aaguid_match,
     }
 
-    summary: MutableMapping[str, str] = {
-        "timestamp": timestamp_local.strftime("%Y-%m-%dT%H:%M:%S%z"),
-        "aaguid": aaguid_str,
-        "device": event.device_name_mds or "unknown",
-        "action": "create",
-    }
-
-    return path, payload, summary
+    return path, payload
 
 
-def _upload_worker(
-    path: str,
-    payload: Mapping[str, Any],
-    summary: Mapping[str, str],
-) -> None:
-    payload_dict: MutableMapping[str, Any] = dict(payload)
-    summary_dict: MutableMapping[str, str] = dict(summary)
+def _registration_entry(event: RegistrationEvent) -> OutboxEntry:
+    """A registration's log entry as the outbox keeps it: its path, fixed now, and its JSON."""
 
+    path, payload = _build_log_payload(event)
+    filename = posixpath.basename(path)
+    folder = posixpath.basename(posixpath.dirname(path)) or "unknown"
+    content = json.dumps(payload, ensure_ascii=False, indent=2).encode("utf-8")
+    return OutboxEntry("registration", path, f"add: {filename} (AAGUID={folder})", content)
+
+
+def _start_flush(*, kick: bool) -> None:
     try:
-        github_upload_json(path, dict(payload_dict))
-    except Exception as exc:
-        logger.warning(
-            "[%s %s] Failed to upload credential log %s: %s",
-            TIMEZONE_LABEL,
-            summary_dict.get("timestamp", ""),
-            path,
-            exc,
-        )
-        return
-
-    logger.info(
-        "[%s %s] Uploaded credential log AAGUID=%s device=%s action=%s",
-        TIMEZONE_LABEL,
-        summary_dict.get("timestamp", ""),
-        summary_dict.get("aaguid"),
-        summary_dict.get("device"),
-        summary_dict.get("action"),
-    )
-
-
-def _should_upload_async() -> bool:
-    """Return ``True`` when uploads should be handed off to a background thread."""
-
-    explicit = parse_env_flag("GITHUB_LOG_ASYNC")
-    if explicit is not None:
-        return explicit
-
-    # Cloud Run request-based services can throttle CPU after the HTTP response is
-    # sent, so background uploads may never complete. Prefer inline delivery there.
-    if os.environ.get("K_SERVICE"):
-        return False
-
-    return True
+        github_outbox.schedule_flush(deliver, kick=kick)
+    except Exception:
+        logger.warning("Could not start flushing the credential log outbox", exc_info=True)
 
 
 def record_registration_event(event: RegistrationEvent) -> None:
-    """Serialize *event* and upload it to the credential log repository."""
+    """Queue a saved registration's log entry for the credential log repository.
+
+    Both tabs call it once the registration is saved. The entry waits in the outbox, at a
+    path fixed now, and a worker delivers it (``github_outbox``): the registration's answer
+    never waits for GitHub. Never raises: a failure is a warning, and the registration stands.
+    """
 
     if not is_logging_enabled():
-        logger.debug("GitHub credential logging disabled; skipping upload for rp_id=%s", event.rp_id)
         return
-
-    path, payload, summary = _build_log_payload(event)
-    if not _should_upload_async():
-        _upload_worker(path, payload, summary)
+    try:
+        entry = _registration_entry(event)
+    except Exception:
+        logger.warning("Could not build the credential log entry of a registration for %s", event.rp_id, exc_info=True)
         return
-
-    thread = threading.Thread(
-        target=_upload_worker,
-        args=(path, payload, summary),
-        daemon=True,
-    )
-    thread.start()
+    if github_outbox.enqueue([entry]):
+        _start_flush(kick=True)
 
 
 # Uploaded metadata, one copy per file.
@@ -655,12 +599,8 @@ class _PathTaken(Exception):
 
 
 def _flush_when_due() -> None:
-    if not is_logging_enabled():
-        return
-    try:
-        github_outbox.schedule_flush(deliver)
-    except Exception:
-        logger.warning("Could not start flushing the credential log outbox", exc_info=True)
+    if is_logging_enabled():
+        _start_flush(kick=False)
 
 
 def init_app(app: Flask) -> None:

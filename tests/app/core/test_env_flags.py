@@ -12,7 +12,7 @@ import pytest
 from server.app import env_flags
 from server.app.storage import cloud, github_mirror
 
-_FLAGS = ("FIDO_SERVER_GCS_ENABLED", "ENABLE_GITHUB_LOGGING", "GITHUB_LOG_ASYNC")
+_FLAGS = ("FIDO_SERVER_GCS_ENABLED", "ENABLE_GITHUB_LOGGING")
 
 
 @pytest.fixture(autouse=True)
@@ -25,8 +25,8 @@ def _fresh(monkeypatch):
         monkeypatch.delenv(name, raising=False)
 
 
-def _readings() -> tuple[bool, bool, bool]:
-    return cloud.gcs_enabled(), github_mirror.is_logging_enabled(), github_mirror._should_upload_async()
+def _readings() -> tuple[bool, bool]:
+    return cloud.gcs_enabled(), github_mirror.is_logging_enabled()
 
 
 @pytest.mark.parametrize("value", ["1", "true", "YES", " on "])
@@ -34,8 +34,8 @@ def test_every_flag_reads_the_same_true_spellings(monkeypatch, value):
     for name in _FLAGS:
         monkeypatch.setenv(name, value)
 
-    assert [env_flags.parse_env_flag(name) for name in _FLAGS] == [True, True, True]
-    assert _readings() == (True, True, True)
+    assert [env_flags.parse_env_flag(name) for name in _FLAGS] == [True, True]
+    assert _readings() == (True, True)
 
 
 @pytest.mark.parametrize("value", ["0", "false", "No", " off ", ""])
@@ -43,8 +43,8 @@ def test_every_flag_reads_the_same_false_spellings(monkeypatch, value):
     for name in _FLAGS:
         monkeypatch.setenv(name, value)
 
-    assert [env_flags.parse_env_flag(name) for name in _FLAGS] == [False, False, False]
-    assert _readings() == (False, False, False)
+    assert [env_flags.parse_env_flag(name) for name in _FLAGS] == [False, False]
+    assert _readings() == (False, False)
 
 
 def test_an_unknown_value_is_no_setting_and_is_warned_about_once(monkeypatch, caplog):
@@ -52,10 +52,10 @@ def test_an_unknown_value_is_no_setting_and_is_warned_about_once(monkeypatch, ca
         monkeypatch.setenv(name, "enabled")
 
     with caplog.at_level(logging.WARNING, logger="server.app.env_flags"):
-        assert [env_flags.parse_env_flag(name) for name in _FLAGS] == [None, None, None]
-        # Each flag keeps its default: GCS off, GitHub logging on, uploads in the background.
-        assert _readings() == (False, True, True)
-        assert _readings() == (False, True, True)
+        assert [env_flags.parse_env_flag(name) for name in _FLAGS] == [None, None]
+        # Each flag keeps its default: GCS off, GitHub logging on (with a token).
+        assert _readings() == (False, True)
+        assert _readings() == (False, True)
 
     warnings = [record.getMessage() for record in caplog.records if record.name == "server.app.env_flags"]
     assert len(warnings) == len(_FLAGS)
@@ -63,4 +63,4 @@ def test_an_unknown_value_is_no_setting_and_is_warned_about_once(monkeypatch, ca
 
 
 def test_an_unset_flag_is_no_setting():
-    assert [env_flags.parse_env_flag(name) for name in _FLAGS] == [None, None, None]
+    assert [env_flags.parse_env_flag(name) for name in _FLAGS] == [None, None]
