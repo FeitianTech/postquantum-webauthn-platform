@@ -66,10 +66,9 @@ production.
 
 ## Deployments
 
-| Environment                 | Description             | URL                                                        |
-| --------------------------- | ----------------------- | ---------------------------------------------------------- |
-| **Google Cloud Deployment** | Full FIDO MDS Support   | https://webauthndev.com                                    |
-| **Server Deployment**       | Limited FIDO MDS Update | https://webauthndev.ftsafe.com *(Temporarily Unavailable)* |
+| Environment                 | Description           | URL                     |
+| --------------------------- | --------------------- | ----------------------- |
+| **Google Cloud Deployment** | Full FIDO MDS Support | https://webauthndev.com |
 
 ---
 
