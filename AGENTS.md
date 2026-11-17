@@ -63,8 +63,9 @@ the CSP and the source rules.
   `src/test/logic`.
 - `src/components/ui/`: the primitives (Button, IconButton, text fields, Select, Switch,
   ToggleChip, SegmentedControl, Badge, StatusChip, Overlay with Dialog / Drawer / Sheet,
-  Toast, InfoPopover, the table primitives, MonoValue, CodeBlock, KeyValueGrid,
-  ConfirmDialog, FieldRow, OverlayHeader with `back`). Overlays stack: a module-level list of
+  Toast, InfoPopover, LanguageToggle (English or 中文, for text in both), the table
+  primitives, MonoValue, CodeBlock, KeyValueGrid, ConfirmDialog, FieldRow, BackButton,
+  OverlayHeader with `back`). Overlays stack: a module-level list of
   open layers, z-index by depth, only the top one handling Escape and Tab, focus returned
   layer by layer. `SegmentedControl` moves its highlight through the CSSOM from a ref;
   `MonoValue` measures overflow as if its "Show all" were not there, again when fonts load.
