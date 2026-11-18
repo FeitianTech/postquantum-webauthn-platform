@@ -215,6 +215,16 @@ def test_a_report_nested_too_deep_is_refused_unread(client, lines, body):
     assert lines() == []
 
 
+def test_a_report_holding_more_than_100000_values_is_refused_unread(client, lines):
+    response = post(client, b"[" + b"{}," * 100_000 + b"{}]")
+
+    assert response.status_code == 400
+    assert response.get_json() == {
+        "error": "The request body is JSON holding more than 100,000 values, more than this server reads."
+    }
+    assert lines() == []
+
+
 def test_a_report_holding_nan_is_refused_as_any_request_body_is(client, lines):
     response = post(client, b'{"csp-report": {"line-number": NaN}}')
 

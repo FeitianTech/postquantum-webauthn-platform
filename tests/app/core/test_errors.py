@@ -90,3 +90,12 @@ def test_the_nesting_refusal_keeps_its_own_sentence(api_client):
 
     assert response.status_code == 400
     assert "nested more than 64 deep" in response.get_json()["error"]
+
+
+def test_the_value_count_refusal_keeps_its_own_sentence(api_client):
+    many = b"[" + b"0," * json_body.MAX_VALUES + b"0]"
+
+    response = api_client.post("/api/codec", data=many, content_type="application/json")
+
+    assert response.status_code == 400
+    assert "more than 100,000 values" in response.get_json()["error"]

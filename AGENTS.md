@@ -393,7 +393,8 @@ its logic out here first.
   JSON body: an object, or read as an empty one, malformed JSON too; RFC 8259's JSON only, so `NaN`,
   `Infinity`, `-Infinity` and a number no double holds are refused, 400 in JSON, the CSP report's
   too, never through `request.get_json`, whose reader takes them; one nested more than 64 deep
-  refused, 400 in JSON, before it is parsed, as the CSP report and the metadata upload's files are);
+  refused, 400 in JSON, before it is parsed, as the CSP report and the metadata upload's files are,
+  and one holding more than 100,000 values (`MAX_VALUES`), as the CSP report is);
   `routes/ceremony_errors.py`
   (what a ceremony's complete answers when a response is refused: fido2's own findings, the challenge,
   origin, RP ID hash, UP, UV, signature, as fido2 wrote them, else a sentence of the app's own, the

@@ -50,8 +50,7 @@ def csp_report():
         log.refused_as_too_large(MAX_REPORT_BYTES)
         return too_large_answer(MAX_REPORT_BYTES)
 
-    if json_body.nested_too_deep(body):
-        raise json_body.NestedTooDeep()
+    json_body.check_limits(body)
     try:
         payload = json_body.loads(body)
     except ValueError:

@@ -2,8 +2,9 @@
 
 Any other JSON -- a list, a string, a number, true -- is read as an object with
 no members, so a route answers what it answers for a missing member, never a
-failure of its own. A JSON body nested more than 64 deep is refused, 400 in
-JSON, before it is parsed, by a scan linear in the body's length.
+failure of its own. A JSON body nested more than 64 deep, or holding more than
+100,000 values, is refused, 400 in JSON, before it is parsed, by a scan linear in
+the body's length.
 """
 from __future__ import annotations
 
@@ -18,6 +19,7 @@ from server.app.routes import json_body
 # The routes that take no JSON: the metadata upload takes a form, the CSP reports their own type.
 _NOT_JSON = {"/api/mds/metadata/upload", "/api/csp-report"}
 _TOO_DEEP = {"error": "The request body is JSON nested more than 64 deep, deeper than this server reads."}
+_TOO_MANY = {"error": "The request body is JSON holding more than 100,000 values, more than this server reads."}
 # A scan quadratic in the body's length takes seconds at 64 KiB, and hours at 8 MiB: each cost test asks it first.
 _SECONDS_IF_QUADRATIC = 64 * 1024
 
@@ -145,6 +147,89 @@ def test_a_body_of_many_strings_is_scanned_in_memory_about_its_own_size():
     assert peak < 3 * len(body)
 
 
+def _array(count):
+    """JSON text of an array holding ``count`` values in all: itself and ``count - 1`` numbers."""
+
+    return "[" + "0," * (count - 2) + "0]"
+
+
+@pytest.mark.parametrize("encoding", ["utf-8", "utf-16", "utf-32-le"])
+@pytest.mark.parametrize(
+    ("text", "too_many"),
+    [
+        (_array(100_000), False),
+        (_array(100_001), True),
+        ('["' + "[{," * 100_000 + '", 1]', False),
+        ('["\\"' + ", 0" * 100_000 + '"]', False),
+        ('["\\\\"' + ", 0" * 100_000 + "]", True),
+    ],
+    ids=["100,000 values", "100,001 values", "in a string", "after an escaped quote", "after a backslash"],
+)
+def test_a_body_holding_more_than_100000_values_is_refused_its_strings_set_aside(app, text, too_many, encoding):
+    with app.test_request_context("/api/codec", method="POST", data=text.encode(encoding), content_type="application/json"):
+        if too_many:
+            with pytest.raises(json_body.TooManyValues):
+                json_body.json_object()
+        else:
+            assert json_body.json_object() == {}
+
+
+@pytest.mark.parametrize(
+    ("start", "unit", "end"),
+    [(b'["', b'\\",', b""), (b'["', b",", b""), (b"[", b'"",', b"0]"), (b"[", b'"\\"",', b"0]")],
+    ids=["escaped quotes and commas no quote closes", "commas no quote closes", "empty strings", "strings of an escaped quote"],
+)
+def test_a_body_of_commas_and_strings_is_counted_in_time_linear_in_the_body(start, unit, end):
+    for size in (_SECONDS_IF_QUADRATIC, 8 * 1024 * 1024):
+        body = start + unit * ((size - len(start) - len(end)) // len(unit)) + end
+
+        started = time.perf_counter()
+        try:
+            json_body.check_limits(body)
+        except json_body.TooManyValues:
+            pass
+        elapsed = time.perf_counter() - started
+
+        # Room for a slow, loaded machine: a scan that is not linear takes hours at 8 MiB.
+        assert elapsed < 20, f"{size} bytes scanned in {elapsed:.1f} s"
+
+
+def test_every_route_refuses_a_json_body_holding_more_than_100000_values_with_a_400_in_json(app, make_app, monkeypatch, tmp_path):
+    for name in ("CREDENTIAL", "CREDENTIAL_ARTIFACT", "SESSION_METADATA"):
+        monkeypatch.setenv(f"FIDO_SERVER_{name}_DIR", str(tmp_path / name.lower()))
+    client = make_app().test_client()
+    body = ('{"publicKey": ' + _array(100_001) + "}").encode()
+
+    # The Simple begins read the body once the username is one they take.
+    answers = {
+        (method, path): client.open(f"{path}?email=user@example.org", method=method, data=body, content_type="application/json")
+        for method, path in _json_routes(app)
+    }
+
+    assert len(answers) > 10
+    assert {route: (response.status_code, response.get_json()) for route, response in answers.items()} == {
+        route: (400, _TOO_MANY) for route in answers
+    }
+
+
+def test_a_route_refuses_8_mib_of_empty_objects_in_memory_far_below_what_parsing_takes(make_app, monkeypatch, tmp_path):
+    for name in ("CREDENTIAL", "CREDENTIAL_ARTIFACT", "SESSION_METADATA"):
+        monkeypatch.setenv(f"FIDO_SERVER_{name}_DIR", str(tmp_path / name.lower()))
+    client = make_app().test_client()
+    # Parsed, these 8 MiB took 210 MiB.
+    body = b"[" + b"{}," * ((8 * 1024 * 1024 - 3) // 3) + b"0]"
+
+    tracemalloc.start()
+    try:
+        response = client.post("/api/advanced/credential-artifacts/bulk", data=body, content_type="application/json")
+        _current, peak = tracemalloc.get_traced_memory()
+    finally:
+        tracemalloc.stop()
+
+    assert (response.status_code, response.get_json()) == (400, _TOO_MANY)
+    assert peak < 40 * 1024 * 1024
+
+
 def test_a_body_that_does_not_say_it_is_json_is_not_read(app):
     with app.test_request_context("/api/codec", method="POST", data="[" * 100_000, content_type="text/plain"):
         assert json_body.json_object() == {}
@@ -199,8 +284,9 @@ def test_every_route_refuses_nan_and_infinity_with_a_400_in_json(app, make_app, 
         (b'{"a": "NaN", "b": "Infinity"}', {"a": "NaN", "b": "Infinity"}),
         (b'{"a": 1e308, "b": -1e-400}', {"a": 1e308, "b": -0.0}),
         (b"{not json", {}),
+        (("[0," * 100_000).encode("utf-16-be") + b"\x00", {}),
     ],
-    ids=["the words in strings", "numbers a double holds", "malformed"],
+    ids=["the words in strings", "numbers a double holds", "malformed", "undecodable"],
 )
 def test_strings_and_finite_numbers_are_read_and_malformed_json_as_no_members(app, data, body):
     with app.test_request_context("/api/codec", method="POST", data=data, content_type="application/json"):

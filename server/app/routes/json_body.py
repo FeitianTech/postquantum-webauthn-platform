@@ -10,8 +10,16 @@ before it is parsed (``NestedTooDeep``, answered 400 in JSON by
 ``routes/errors.py``). Python's JSON reader goes as deep as the text does until
 its stack runs out, about 10,000 levels on Python 3.12, and any walk over a value
 deeper than about 1,000 levels fails the same way; no body the page sends nests
-deeper than about a dozen. The CSP report route and the metadata upload, which
-read their own JSON, ask ``nested_too_deep`` too.
+deeper than about a dozen.
+
+A JSON body holding more than 100,000 values is refused before it is parsed too
+(``TooManyValues``, 400 in JSON): Python's reader keeps about 26 bytes for each
+byte of ``{},``, 210 MiB for an 8 MiB body. Its strings set aside, a body holds at
+most one value more than its commas and opening brackets, and that is what is
+counted. The page's largest body, an Advanced sign-in sending every saved
+credential, holds 14 values for each one: about 20,000 for as many as a browser's
+storage keeps. ``check_limits`` asks both, for every route and the CSP report; the
+metadata upload, which reads its own JSON, asks ``nested_too_deep``.
 
 The body is scanned as the reader reads bytes: in the UTF-8, UTF-16 or UTF-32
 its first bytes name (``json.detect_encoding``). Read byte by byte, UTF-16 or
@@ -39,6 +47,7 @@ from flask import request
 from werkzeug.exceptions import BadRequest
 
 MAX_DEPTH = 64
+MAX_VALUES = 100_000
 
 # A string to its closing quote, or to the body's end when none closes it: Python's reader reads no further.
 # So a match never fails, and the search never starts again inside text it took; nor does a possessive
@@ -55,6 +64,10 @@ _NOT_BRACKETS = bytes(byte for byte in range(256) if byte not in b"[]{}")
 
 class NestedTooDeep(BadRequest):
     """A JSON body nested more than ``MAX_DEPTH`` deep, refused before it is parsed."""
+
+
+class TooManyValues(BadRequest):
+    """A JSON body holding more than ``MAX_VALUES`` values, refused before it is parsed."""
 
 
 class NotStrictJson(BadRequest):
@@ -87,23 +100,59 @@ def loads(data: str | bytes, **kwargs: Any) -> Any:
 
 
 
-def nested_too_deep(data: bytes) -> bool:
-    """Whether JSON ``data`` nests arrays and objects more than ``MAX_DEPTH`` deep, its strings set aside."""
+def _as_utf8(data: bytes) -> bytes | None:
+    """JSON ``data`` in UTF-8, as the reader decodes it; None when it cannot (it reads nothing then)."""
 
     encoding = json.detect_encoding(data)
     if encoding.startswith(("utf-16", "utf-32")):
         try:
             # Decoded as json.loads decodes it. In UTF-8 each bracket, quote and backslash is its one ASCII byte.
-            data = data.decode(encoding, "surrogatepass").encode("utf-8", "surrogatepass")
+            return data.decode(encoding, "surrogatepass").encode("utf-8", "surrogatepass")
         except UnicodeDecodeError:
-            return False  # the reader cannot decode it either: it reads nothing nested
-    if data.count(b"[") + data.count(b"{") <= MAX_DEPTH:
-        return False
-    outside = b"".join(_STRING.sub(b"", stretch) for stretch in _STRETCH.findall(data))
+            return None
+    return data
+
+
+def _outside_strings(data: bytes) -> bytes:
+    return b"".join(_STRING.sub(b"", stretch) for stretch in _STRETCH.findall(data))
+
+
+def _too_deep(outside: bytes) -> bool:
     steps = outside.translate(_STEPS, _NOT_BRACKETS)
     # After k brackets, twice the opening ones less k is how deep the text is there.
     depths = map(operator.sub, itertools.accumulate(steps), itertools.count(1))
     return any(map(MAX_DEPTH.__lt__, depths))
+
+
+def _openings(data: bytes) -> int:
+    return data.count(b"[") + data.count(b"{")
+
+
+def nested_too_deep(data: bytes) -> bool:
+    """Whether JSON ``data`` nests arrays and objects more than ``MAX_DEPTH`` deep, its strings set aside."""
+
+    data = _as_utf8(data)
+    if data is None or _openings(data) <= MAX_DEPTH:
+        return False
+    return _too_deep(_outside_strings(data))
+
+
+def check_limits(data: bytes) -> None:
+    """Refuse JSON ``data`` nested more than ``MAX_DEPTH`` deep (``NestedTooDeep``) or holding
+    more than ``MAX_VALUES`` values (``TooManyValues``), its strings set aside, before it is parsed."""
+
+    data = _as_utf8(data)
+    if data is None:
+        return
+    openings = _openings(data)
+    # Counted with its strings in, most bodies are within both limits: nothing more to do.
+    if openings <= MAX_DEPTH and openings + data.count(b",") < MAX_VALUES:
+        return
+    outside = _outside_strings(data)
+    if _too_deep(outside):
+        raise NestedTooDeep()
+    if _openings(outside) + outside.count(b",") >= MAX_VALUES:
+        raise TooManyValues()
 
 
 def json_object() -> dict[str, Any]:
@@ -113,8 +162,7 @@ def json_object() -> dict[str, Any]:
     if not request.is_json:
         return {}
     data = request.get_data(cache=True)
-    if nested_too_deep(data):
-        raise NestedTooDeep()
+    check_limits(data)
     try:
         body = loads(data)
     except ValueError:
