@@ -15,6 +15,7 @@ from server.app.config import relying_party
 from server.app.routes.simple import account
 from server.app.routes.simple import authentication as simple_authentication
 from server.app.storage import credentials as storage_credentials
+from server.app.webauthn import client_credentials
 from tests.app.characterization import material
 from tests.app.entry_app import entry_app
 from tests.app.security.ceremony_helpers import (
@@ -26,6 +27,7 @@ from tests.app.security.ceremony_helpers import (
     authenticate_simple,
     b64u,
     register_simple,
+    saved_credential_list,
     simple_complete_body,
     unb64u,
 )
@@ -118,6 +120,65 @@ def test_a_complete_checks_the_stored_counter_of_the_username_its_begin_checked(
 
     assert complete.status_code == 400
     assert "stored 5, received 4" in complete.get_json()["error"]
+
+
+MAX_SENT = client_credentials.MAX_SENT_CREDENTIALS
+
+
+def test_a_begin_sent_more_saved_credentials_than_a_browser_keeps_is_refused_before_reading_any(credential_reads):
+    client = entry_app().test_client()
+    begin = client.post(
+        f"/api/authenticate/begin?email={EMAIL}", json={"credentials": saved_credential_list(Authenticator(), MAX_SENT + 1)}
+    )
+
+    assert begin.status_code == 400
+    assert begin.get_json() == {"error": client_credentials.TOO_MANY_CREDENTIALS}
+    assert credential_reads == []
+    assert begin.headers.getlist("Set-Cookie") == []
+
+
+def test_a_complete_sent_more_saved_credentials_than_a_browser_keeps_is_refused_before_reading_any(
+    credential_store, credential_reads
+):
+    authenticator = Authenticator()
+    stored = [authenticator.stored_credential_entry()]
+    client = entry_app().test_client()
+    begin = client.post(f"/api/authenticate/begin?email={EMAIL}", json={"credentials": stored})
+    challenge = unb64u(begin.get_json()["publicKey"]["challenge"])
+    credential_reads.clear()
+
+    complete = client.post(
+        f"/api/authenticate/complete?email={EMAIL}",
+        json=simple_complete_body(
+            assertion_payload(authenticator, challenge=challenge, counter=1),
+            saved_credential_list(authenticator, MAX_SENT + 1),
+        ),
+        headers={"Origin": ORIGIN},
+    )
+
+    assert complete.status_code == 400
+    assert complete.get_json() == {"error": client_credentials.TOO_MANY_CREDENTIALS}
+    assert credential_reads == []
+    with client.session_transaction() as session:
+        assert not {"simple_authenticate_state", "authenticate_rp_id", "simple_credentials_email"} & set(session)
+
+
+def test_a_sign_in_sent_as_many_saved_credentials_as_a_request_may_send_reads_them_all(credential_store, credential_reads):
+    authenticator = Authenticator()
+    credentials = saved_credential_list(authenticator, MAX_SENT)
+    client = entry_app().test_client()
+    begin = client.post(f"/api/authenticate/begin?email={EMAIL}", json={"credentials": credentials})
+    challenge = unb64u(begin.get_json()["publicKey"]["challenge"])
+
+    complete = client.post(
+        f"/api/authenticate/complete?email={EMAIL}",
+        json=simple_complete_body(assertion_payload(authenticator, challenge=challenge, counter=1), credentials),
+        headers={"Origin": ORIGIN},
+    )
+
+    assert len(begin.get_json()["publicKey"]["allowCredentials"]) == MAX_SENT
+    assert complete.status_code == 200, complete.get_json()
+    assert len(credential_reads) == 2 * MAX_SENT
 
 
 def test_a_begin_body_that_is_no_object_offers_no_credential():

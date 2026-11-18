@@ -21,7 +21,7 @@ from ...challenge_registry import (
 )
 from ...config import origins, relying_party, request_limits
 from ...mds import provisioning as mds_provisioning
-from ...webauthn import cose_algorithms
+from ...webauthn import client_credentials, cose_algorithms
 from ...webauthn.attachments import normalize_attachment
 from ...webauthn.attestation import aaguid as attestation_aaguid
 from ...webauthn.attestation import certificates as attestation_certificates
@@ -292,6 +292,8 @@ def register_begin():
         raw_candidates = payload.get("credentials") or payload.get("existingCredentials")
         if isinstance(raw_candidates, list):
             existing_credentials_raw = raw_candidates
+    if client_credentials.too_many(existing_credentials_raw):
+        return jsonify({"error": client_credentials.TOO_MANY_CREDENTIALS}), 400
 
     credentials, _serialized = parsing._parse_client_credentials(existing_credentials_raw)
 

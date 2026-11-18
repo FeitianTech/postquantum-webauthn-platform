@@ -16,6 +16,7 @@ from server.app.mds import cache as mds_cache
 from server.app.mds import provisioning as mds_provisioning
 from server.app.mds import trust as mds_trust
 from server.app.storage import github_mirror
+from server.app.webauthn import client_credentials
 from server.app.webauthn.attestation import certificates as attestation_certificates
 from tests.app.metadata import mds_fixture
 from tests.app.web_export_files import write, write_export
@@ -165,3 +166,18 @@ def session_metadata_dir(own_stores):
     session_dir = own_stores / "session-metadata"
     session_dir.mkdir()
     return session_dir
+
+
+@pytest.fixture
+def credential_reads(monkeypatch):
+    """The saved credentials a request's entries were read from, in order (``read_key_material``'s calls)."""
+
+    reads: list[Any] = []
+    read = client_credentials.read_key_material
+
+    def _counted(entry, fields):
+        reads.append(entry)
+        return read(entry, fields)
+
+    monkeypatch.setattr(client_credentials, "read_key_material", _counted)
+    return reads

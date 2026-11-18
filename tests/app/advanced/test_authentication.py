@@ -10,7 +10,7 @@ import pytest
 from server.app.config import relying_party
 from server.app.routes.advanced import algorithms as advanced_algorithms
 from server.app.routes.advanced import parsing as advanced_parsing
-from server.app.webauthn import assertion_hash
+from server.app.webauthn import assertion_hash, client_credentials
 from tests.app.entry_app import entry_app
 from tests.app.security.ceremony_helpers import (
     FLAG_BE,
@@ -18,6 +18,7 @@ from tests.app.security.ceremony_helpers import (
     Authenticator,
     assertion_payload,
     b64u,
+    saved_credential_list,
     unb64u,
 )
 from tests.app.storage.codec_examples import _stored_credential_entry
@@ -28,6 +29,46 @@ from .assertion_ceremony import CHALLENGE, begin, complete
 
 def _complete(client, body):
     return client.post("/api/advanced/authenticate/complete", json=body)
+
+
+MAX_SENT = client_credentials.MAX_SENT_CREDENTIALS
+
+
+def test_a_begin_sent_more_saved_credentials_than_a_browser_keeps_is_refused_before_reading_any(credential_reads):
+    response = begin(entry_app().test_client(), saved_credential_list(Authenticator(), MAX_SENT + 1))
+
+    assert response.status_code == 400
+    assert response.get_json() == {"error": client_credentials.TOO_MANY_CREDENTIALS}
+    assert credential_reads == []
+
+
+def test_a_complete_sent_more_saved_credentials_than_a_browser_keeps_is_refused_before_reading_any(credential_reads):
+    authenticator = Authenticator()
+    client = entry_app().test_client()
+    begin(client, [authenticator.stored_credential_entry()])
+    credential_reads.clear()
+
+    response = complete(
+        client,
+        saved_credential_list(authenticator, MAX_SENT + 1),
+        assertion_payload(authenticator, challenge=CHALLENGE, counter=1),
+    )
+
+    assert response.status_code == 400
+    assert response.get_json()["error"] == client_credentials.TOO_MANY_CREDENTIALS
+    assert credential_reads == []
+
+
+def test_a_sign_in_sent_as_many_saved_credentials_as_a_request_may_send_reads_them_all(credential_reads):
+    authenticator = Authenticator()
+    credentials = saved_credential_list(authenticator, MAX_SENT)
+    client = entry_app().test_client()
+
+    assert begin(client, credentials).status_code == 200
+    response = complete(client, credentials, assertion_payload(authenticator, challenge=CHALLENGE, counter=1))
+
+    assert response.status_code == 200, response.get_json()
+    assert len(credential_reads) == 2 * MAX_SENT
 
 
 def test_a_complete_without_public_key_options_is_refused():

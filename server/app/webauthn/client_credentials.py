@@ -18,6 +18,21 @@ from fido2.webauthn import AttestedCredentialData
 from .. import encoding
 from . import client_binary, mldsa
 
+# The most saved credentials one request may send: more than one browser's storage holds
+# (about 1,470 of the smallest saved records fit localStorage's 5 MB), so no real browser
+# is refused, while a request sent by hand cannot make the server read tens of thousands.
+MAX_SENT_CREDENTIALS = 2_000
+TOO_MANY_CREDENTIALS = (
+    f"This request sent more than {MAX_SENT_CREDENTIALS:,} saved credentials, more than a browser keeps. "
+    "Delete some saved credentials and try again."
+)
+
+
+def too_many(raw_credentials: Any) -> bool:
+    """Whether a list of saved credentials a request sent is longer than ``MAX_SENT_CREDENTIALS``."""
+
+    return isinstance(raw_credentials, list) and len(raw_credentials) > MAX_SENT_CREDENTIALS
+
 
 @dataclass(frozen=True)
 class CredentialFields:

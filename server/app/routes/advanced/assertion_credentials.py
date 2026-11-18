@@ -13,7 +13,7 @@ from typing import Any
 from flask import jsonify
 
 from ...encoding import encode_base64url
-from ...webauthn import client_binary
+from ...webauthn import client_binary, client_credentials
 from . import parsing
 
 _CREDENTIAL_FIELDS = ("__storedCredentials", "storedCredentials", "credentials")
@@ -162,6 +162,8 @@ def restore_complete_credentials(data: Mapping[str, Any]) -> tuple[list[dict[str
     """The stored credentials for complete, or the failure payload and status to answer."""
 
     raw_credentials_input = credential_list_input(data)
+    if client_credentials.too_many(raw_credentials_input):
+        return [], ({"error": client_credentials.TOO_MANY_CREDENTIALS}, 400)
 
     stored_records: list[dict[str, Any]] = []
     if isinstance(raw_credentials_input, list):

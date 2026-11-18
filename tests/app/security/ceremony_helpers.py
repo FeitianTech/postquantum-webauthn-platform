@@ -406,6 +406,13 @@ def authenticate_simple(
     )
 
 
+def saved_credential_list(authenticator: Authenticator, count: int) -> list[dict[str, Any]]:
+    """A browser's saved list of ``count`` credentials: ``authenticator``'s first, then others of its key."""
+
+    entry = authenticator.stored_credential_entry()
+    return [entry] + [{**entry, "credentialId": b64u(index.to_bytes(4, "big"))} for index in range(1, count)]
+
+
 def simple_complete_body(credential: Mapping[str, Any], credentials: list[Any]) -> dict[str, Any]:
     """What the page sends /api/authenticate/complete: the assertion's JSON, and the credentials begin was sent."""
 

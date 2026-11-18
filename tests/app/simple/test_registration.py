@@ -11,7 +11,7 @@ from fido2.webauthn import AuthenticatorData
 from server.app.config import relying_party, request_limits
 from server.app.routes.simple import account, stored_sign_count
 from server.app.storage import credentials as storage_credentials
-from server.app.webauthn import cose_algorithms
+from server.app.webauthn import client_credentials, cose_algorithms
 from server.app.webauthn.attestation import certificates as attestation_certificates
 from tests.app import visitor_namespace
 from tests.app.entry_app import entry_app
@@ -22,6 +22,7 @@ from tests.app.security.ceremony_helpers import (
     begin_simple_registration,
     register_simple,
     registration_payload,
+    saved_credential_list,
     unb64u,
 )
 from tests.app.storage.codec_examples import _stored_credential_entry
@@ -35,6 +36,25 @@ def test_a_begin_body_that_is_no_object_excludes_no_credential():
 
     assert response.status_code == 200
     assert response.get_json()["publicKey"]["excludeCredentials"] == []
+
+
+MAX_SENT = client_credentials.MAX_SENT_CREDENTIALS
+
+
+@pytest.mark.parametrize(("count", "status", "reads"), [(MAX_SENT + 1, 400, 0), (MAX_SENT, 200, MAX_SENT)])
+def test_a_begin_excludes_as_many_saved_credentials_as_a_request_may_send_and_reads_no_more(
+    credential_reads, count, status, reads
+):
+    response = entry_app().test_client().post(
+        f"/api/register/begin?email={EMAIL}", json={"credentials": saved_credential_list(Authenticator(), count)}
+    )
+
+    assert response.status_code == status
+    assert len(credential_reads) == reads
+    if status == 400:
+        assert response.get_json() == {"error": client_credentials.TOO_MANY_CREDENTIALS}
+    else:
+        assert len(response.get_json()["publicKey"]["excludeCredentials"]) == count
 
 
 def test_a_begin_excludes_the_credentials_it_is_sent_and_keeps_none_in_the_session():

@@ -21,7 +21,7 @@ from ...challenge_registry import (
 )
 from ...config import relying_party
 from ...encoding import encode_base64url
-from ...webauthn import assertion_checks, client_binary
+from ...webauthn import assertion_checks, client_binary, client_credentials
 from ...webauthn.attestation import error_codes
 from .. import ceremony_errors, ceremony_session, json_body
 from . import account, parsing, stored_sign_count
@@ -64,6 +64,8 @@ def authenticate_begin():
         candidate_credentials = payload.get("credentials") or payload.get("storedCredentials")
         if isinstance(candidate_credentials, list):
             raw_credentials = candidate_credentials
+    if client_credentials.too_many(raw_credentials):
+        return jsonify({"error": client_credentials.TOO_MANY_CREDENTIALS}), 400
 
     credential_data_list, serialized = parsing._parse_client_credentials(raw_credentials)
 
@@ -119,6 +121,10 @@ def _consume_authentication_state(
     )
 
     begun_with = session.pop(_CREDENTIALS_DIGEST_KEY, None)
+    if client_credentials.too_many(sent_credentials):
+        session.pop("authenticate_rp_id", None)
+        session.pop("simple_credentials_email", None)
+        return None, (jsonify({"error": client_credentials.TOO_MANY_CREDENTIALS}), 400)
     credential_data_list, session_credentials = parsing._parse_client_credentials(sent_credentials)
     if begun_with is None or not credential_data_list:
         session.pop("authenticate_rp_id", None)

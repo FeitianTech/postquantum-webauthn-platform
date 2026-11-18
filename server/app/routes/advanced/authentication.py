@@ -8,7 +8,7 @@ from flask import Blueprint, jsonify, session
 
 from ... import json_values
 from ...challenge_registry import consume_ceremony_state, stamp_ceremony_state
-from ...webauthn import client_binary
+from ...webauthn import client_binary, client_credentials
 from ...webauthn.attachments import (
     attachment_hint_violation,
     normalize_attachment,
@@ -67,6 +67,8 @@ def advanced_authenticate_begin():
     uv_req = assertion_options.user_verification_requirement(public_key)
 
     raw_credentials_input = assertion_credentials.credential_list_input(data) or []
+    if client_credentials.too_many(raw_credentials_input):
+        return jsonify({"error": client_credentials.TOO_MANY_CREDENTIALS}), 400
     stored_records = parsing._parse_client_supplied_credentials(raw_credentials_input)
     if not stored_records:
         return jsonify(
