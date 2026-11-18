@@ -79,11 +79,23 @@ def test_json_bytes_with_nan_count_the_offset_in_bytes(client):
 
 
 @pytest.mark.parametrize("target", ["CBOR", "JSON"])
-def test_encoding_json_with_nan_is_refused(client, target):
+def test_encoding_json_with_nan_is_refused_and_pointed_at_edn(client, target):
     status, body = _codec(client, payload=_CONSTANTS, mode="encode", format=target)
 
     assert status == 422
-    assert body["error"] == _REFUSED.format(offset=6, path='${"a"}')
+    assert body["error"] == (
+        'Not JSON at offset 6 (${"a"}): NaN is not JSON: RFC 8259 has no NaN or Infinity. Write the item in '
+        'EDN (format "EDN"), which writes NaN, Infinity and -Infinity.'
+    )
+    assert (body["offset"], body["path"]) == (6, '${"a"}')
+
+
+def test_an_encoder_refusal_counts_its_offset_from_the_input_as_sent(client):
+    nan = _codec(client, payload="  \n" + _CONSTANTS, mode="encode", format="CBOR")[1]
+    beyond = _codec(client, payload='   {"1": 2, "-1": 1e400}', mode="encode", format="CBOR")[1]
+
+    assert (nan["offset"], beyond["offset"]) == (9, 18)
+    assert nan["error"].startswith('Not JSON at offset 9 (${"a"})')
 
 
 def _credential(client_data: bytes) -> str:
@@ -226,7 +238,10 @@ def test_encoding_json_with_a_number_beyond_a_double_is_refused(client, target):
     status, body = _codec(client, payload='{"1": 2, "-1": 1e400}', mode="encode", format=target)
 
     assert status == 422
-    assert body["error"].startswith('Number out of range at offset 15 (${"-1"}): 1e400 is beyond the range')
+    assert body["error"] == (
+        'Number out of range at offset 15 (${"-1"}): 1e400 is beyond the range of a double, the widest float '
+        "CBOR has."
+    )
 
 
 def test_client_data_with_a_number_beyond_a_double_in_a_credential_does_not_decode(client):
