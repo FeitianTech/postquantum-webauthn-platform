@@ -158,7 +158,11 @@ keys are refused, naming both.
 JSON input is read by `decode/json_input.py`, which reports a key given twice in
 one object as `duplicate-json-key` (the path, the value kept and the values
 dropped; no offset, which the JSON reader cannot give); the encoder refuses such
-input and points at EDN, which can express it. The encoder shows the JSON it was
+input and points at EDN, which can express it. A JSON path spells a key longer
+than 32 characters by its first 29 and `...`, as a CBOR path does, a finding's
+path longer than 256 characters is cut in its middle (its start and end kept,
+`...` between), and a value kept or dropped whose JSON spelling passes 256
+characters is given as that spelling's first 253 and `...`. The encoder shows the JSON it was
 given back with its keys as written (`decode/json_keys.as_written` marks them
 `JsonLabel`), so its own output can be pasted back in.
 

@@ -6,8 +6,10 @@ import tracemalloc
 
 import pytest
 
+from server.app.config.request_limits import DEFAULT_MAX_CODEC_REQUEST_BYTES
 from server.app.decoder import item_budget
 from server.app.decoder.decode import json_input, readings
+from server.app.decoder.decode.text import decode_payload_text
 
 
 def _nested(depth: int) -> str:
@@ -104,3 +106,53 @@ def test_a_recursion_error_its_depth_does_not_explain_is_raised_as_it_is(monkeyp
 
     with pytest.raises(RecursionError):
         json_input.read("[1]")
+
+
+def test_a_long_key_above_many_repeated_keys_is_cut_in_each_path_so_the_answer_stays_near_the_input_size():
+    def text(key_length: int) -> str:
+        return '{"' + "k" * key_length + '": [' + ",".join(['{"a": 1, "a": 2}'] * 6_000) + "]}"
+
+    hostile = text(DEFAULT_MAX_CODEC_REQUEST_BYTES - len(text(0)))
+
+    answer = decode_payload_text(hostile, lenient=True)
+
+    duplicates = [finding for finding in answer["findings"] if finding["code"] == "duplicate-json-key"]
+    assert len(duplicates) == 6_000
+    assert duplicates[0]["path"] == '${"' + "k" * 29 + '..."}[0]{"a"}'
+    # Each path once spelled the whole key: 6,000 copies of it, about 6 GB.
+    assert len(json.dumps(answer)) < 4 * len(hostile)
+
+
+def test_a_repeated_key_nested_60_deep_gives_each_long_value_kept_cut_so_the_answer_stays_near_the_input_size():
+    def text(string_length: int) -> str:
+        nested = '"' + "x" * string_length + '"'
+        for _ in range(60):
+            nested = '{"a": 0, "a": ' + nested + "}"
+        return nested
+
+    hostile = text(DEFAULT_MAX_CODEC_REQUEST_BYTES - len(text(0)))
+
+    answer = decode_payload_text(hostile, lenient=True)
+
+    kept = [finding["kept"] for finding in answer["findings"] if finding["code"] == "duplicate-json-key"]
+    assert len(kept) == 60
+    assert all(isinstance(value, str) and len(value) == 256 and value.endswith("...") for value in kept)
+    # Each finding once held its whole subtree, the long string with it: 61 copies of the input.
+    assert len(json.dumps(answer)) < 4 * len(hostile)
+
+
+def test_a_finding_deep_under_long_keys_keeps_its_path_cut_in_its_middle_so_the_answer_stays_small():
+    # 62 objects, each under a 32-character key, around 19,000 NaNs: a finding for each, nearly the
+    # item budget, and each one's path 2,300 characters whole.
+    key = '"' + "k" * 32 + '"'
+    hostile = ("{" + key + ":") * 62 + "[" + ",".join(["NaN"] * 19_000) + "]" + "}" * 62
+
+    answer = decode_payload_text(hostile, lenient=True)
+
+    paths = [finding["path"] for finding in answer["findings"] if finding["code"] == "json-nan-or-infinity"]
+    assert len(paths) == 19_000
+    assert {len(path) for path in paths} == {256}
+    assert paths[-1].startswith('${"' + "k" * 32 + '"}{"') and paths[-1].endswith('}[18999]')
+    assert "..." in paths[-1][100:200]
+    # Whole paths made an answer of 52 MB.
+    assert len(json.dumps(answer)) < 16 * 1024 * 1024

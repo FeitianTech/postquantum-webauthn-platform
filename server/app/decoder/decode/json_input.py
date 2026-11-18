@@ -5,8 +5,10 @@ without a word. ``read`` gives the same value -- the later value wins -- read
 with ``object_pairs_hook`` so that every repeated key is also reported, as a
 ``duplicate-json-key`` finding naming its path, the value kept and each value
 dropped -- or, inside a value that is itself dropped for a later repeat of its
-key, that none is kept. ``object_pairs_hook`` gives no positions, so a JSON
-finding carries a path and no offset (``None``).
+key, that none is kept. A path cuts a long key short, a finding's path longer
+than 256 characters is cut in its middle, and a long value kept or dropped is
+given as its JSON spelling cut short. ``object_pairs_hook`` gives no positions,
+so a JSON finding carries a path and no offset (``None``).
 
 Python's reader also accepts ``NaN``, ``Infinity`` and ``-Infinity``, which RFC
 8259 does not: text holding one is not JSON. Read strictly, it raises
@@ -243,7 +245,7 @@ def _resolve(
     if budget is not None:
         budget.charge(None, path)
     if isinstance(value, _Constant):
-        constants.append((value, path))
+        constants.append((value, _kept_path(path)))
         return {"diagnostic": str(value)}
     if isinstance(value, _Members):
         # The later value wins: the last occurrence of each key is the one kept.
@@ -264,7 +266,7 @@ def _resolve(
             resolved[key] = member_value
         for key, values in occurrences.items():
             if len(values) > 1:
-                findings.append(_duplicate(_member_path(path, key), key, values, dropped))
+                findings.append(_duplicate(_kept_path(_member_path(path, key)), key, values, dropped))
         return resolved
     if isinstance(value, list):
         return [
@@ -323,19 +325,57 @@ def _first_too_deep(text: str) -> tuple[str, int] | None:
 
 
 def _member_path(path: str, key: str) -> str:
-    return f"{path}{{{json.dumps(key, ensure_ascii=False)}}}"
+    # A long key cut short, as cbor_parser._diagnostic_key cuts one: paths name, and every path
+    # below the key would otherwise repeat it whole.
+    spelled = key if len(key) <= 32 else f"{key[:29]}..."
+    return f"{path}{{{json.dumps(spelled, ensure_ascii=False)}}}"
+
+
+# A path an answer keeps, one per finding, is at most this long: 64 levels of keys cut to 32
+# characters would make each finding's path 2 KB, and an input can make thousands of findings.
+_MAX_PATH = 256
+
+
+def _kept_path(path: str) -> str:
+    # Cut in its middle: the start says where the path starts from, the end what it names.
+    if len(path) <= _MAX_PATH:
+        return path
+    half = (_MAX_PATH - 3) // 2
+    return f"{path[:half]}...{path[-(_MAX_PATH - 3 - half):]}"
+
+
+# A kept or dropped value spelled longer than this is given as its spelling cut short: a value
+# holds every value nested in it, so whole ones would repeat a subtree at every level above it.
+_MAX_VALUE_SPELLING = 256
+
+
+def _spelling(value: Any) -> str:
+    # The JSON spelling of ``value``, stopped once it passes the bound: never the whole subtree.
+    text = ""
+    for chunk in json.JSONEncoder(ensure_ascii=False).iterencode(value):
+        text += chunk
+        if len(text) > _MAX_VALUE_SPELLING:
+            break
+    return text
 
 
 def _duplicate(path: str, key: str, values: list[Any], inside_dropped: bool) -> dict[str, Any]:
+    spellings = [_spelling(value) for value in values]
+    values = [
+        value if len(text) <= _MAX_VALUE_SPELLING else f"{text[: _MAX_VALUE_SPELLING - 3]}..."
+        for value, text in zip(values, spellings)
+    ]
     kept, dropped = values[-1], values[:-1]
     times, which = ("twice", "later") if len(values) == 2 else (f"{len(values)} times", "last")
     spelled = json.dumps(key, ensure_ascii=False)
     if inside_dropped:
         # The object is inside a value the decoded value drops: none of these is in it.
         kept, dropped = None, values
-        outcome = f"the decoded value keeps none of them: the object is inside a value it drops ({_all(values)})"
+        outcome = f"the decoded value keeps none of them: the object is inside a value it drops ({_all(spellings)})"
     else:
-        outcome = f"the decoded value keeps the {which} value, {_short(kept)}, and drops {_all(dropped)}"
+        outcome = (
+            f"the decoded value keeps the {which} value, {_short(spellings[-1])}, and drops {_all(spellings[:-1])}"
+        )
     return {
         "code": "duplicate-json-key",
         "category": "json",
@@ -348,10 +388,9 @@ def _duplicate(path: str, key: str, values: list[Any], inside_dropped: bool) -> 
     }
 
 
-def _all(values: list[Any]) -> str:
-    return ", ".join(_short(value) for value in values)
+def _all(spellings: list[str]) -> str:
+    return ", ".join(_short(text) for text in spellings)
 
 
-def _short(value: Any) -> str:
-    text = json.dumps(value, ensure_ascii=False)
+def _short(text: str) -> str:
     return text if len(text) <= 40 else f"{text[:37]}..."
