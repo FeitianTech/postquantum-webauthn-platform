@@ -4,11 +4,9 @@
 // route, failedCredentialId, signCountStatus, challengeSource and
 // challengeStatus, or (the codec) the offset and path where the input stops
 // being well-formed, under /api/ for every error (routes/errors.py). An answer
-// that is not JSON (a proxy's error page) is described by its status instead of
-// shown as markup. Where the server's message does not already say what to do, a
-// sentence for the status is added.
-
-const MAX_PLAIN_TEXT = 300;
+// that is not JSON (a proxy's error page, as HTML or as plain text) is described
+// by its status: a response's raw body is never shown. Where the server's message
+// does not already say what to do, a sentence for the status is added.
 
 // When the body carries no message of its own.
 const STATUS_MESSAGES = {
@@ -42,6 +40,7 @@ export class FailedResponseError extends Error {
     }
 }
 
+// The answer's JSON object, or null for any other body.
 async function readBody(response) {
     let text = '';
     try {
@@ -63,20 +62,7 @@ async function readBody(response) {
         parsed = undefined;
     }
 
-    const body = parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : null;
-    return { text, body, isJson: parsed !== undefined };
-}
-
-function contentTypeOf(response) {
-    try {
-        return String(response?.headers?.get?.('content-type') || '');
-    } catch (error) {
-        return '';
-    }
-}
-
-function looksLikeMarkup(text, contentType) {
-    return /html|xml/i.test(contentType) || /^\s*</.test(text);
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : null;
 }
 
 function stringField(body, key) {
@@ -115,16 +101,11 @@ function adviceFor(status, message, { body, hasServerMessage }) {
  */
 export async function readFailedResponse(response) {
     const status = Number(response?.status) || 0;
-    const { text, body, isJson } = await readBody(response);
+    const body = await readBody(response);
 
     const serverMessage = stringField(body, 'error');
-    const plainText = !isJson && text.trim() && !looksLikeMarkup(text, contentTypeOf(response))
-        && text.trim().length <= MAX_PLAIN_TEXT
-        ? text.trim()
-        : null;
-    const hasServerMessage = Boolean(serverMessage || plainText);
+    const hasServerMessage = Boolean(serverMessage);
     const message = serverMessage
-        || plainText
         || STATUS_MESSAGES[status]
         || (status ? `The server answered with status ${status}.` : 'The server did not answer.');
     const advice = adviceFor(status, message, { body, hasServerMessage });

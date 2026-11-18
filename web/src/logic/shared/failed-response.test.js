@@ -67,7 +67,12 @@ describe('readFailedResponse', () => {
     [
       '500 answered as plain text',
       response(500, 'backend down', 'text/plain'),
-      'backend down',
+      'The server failed while handling the request.',
+    ],
+    [
+      '400 answered as plain text by a proxy',
+      response(400, 'Bad Request', 'text/plain'),
+      'The server could not accept the request. Start the ceremony again.',
     ],
     [
       'an unlisted status with no body',
@@ -126,10 +131,12 @@ describe('readFailedResponse', () => {
     expect(failure).toMatchObject({ offset: null, path: null });
   });
 
-  it('does not show a long plain-text body', async () => {
-    const failure = await readFailedResponse(response(500, 'x'.repeat(301), 'text/plain'));
+  it('never shows a plain-text body, short or long', async () => {
+    for (const text of ['upstream connect error', 'x'.repeat(301)]) {
+      const failure = await readFailedResponse(response(500, text, 'text/plain'));
 
-    expect(failure.text).toBe('The server failed while handling the request.');
+      expect(failure.text).toBe('The server failed while handling the request.');
+    }
   });
 
   it('ignores a JSON body that is not an object', async () => {
@@ -145,10 +152,10 @@ describe('readFailedResponse', () => {
     expect(failure.text).toBe('bad payload');
   });
 
-  it('reads a body whose answer names no content type', async () => {
+  it('describes a plain-text body that names no content type by its status', async () => {
     const failure = await readFailedResponse({ status: 500, headers: { get: () => null }, text: vi.fn().mockResolvedValue('Out of order') });
 
-    expect(failure.text).toBe('Out of order');
+    expect(failure.text).toBe('The server failed while handling the request.');
   });
 
   it('copes with a body that cannot be read, or no response at all', async () => {
@@ -188,13 +195,13 @@ describe('reading an odd failed answer', () => {
     expect(failure.text).toBe('The server could not be reached.');
   });
 
-  it('reads headers that cannot be read as no content type', async () => {
+  it('reads no header: a plain-text body is its status even when the headers cannot be read', async () => {
     const headers = {
       get() {
         throw new TypeError('headers are gone');
       },
     };
     const failure = await readFailedResponse({ status: 400, headers, text: async () => 'Invalid signature.' });
-    expect(failure.message).toBe('Invalid signature.');
+    expect(failure.message).toBe('The server could not accept the request.');
   });
 });
