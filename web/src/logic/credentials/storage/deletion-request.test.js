@@ -61,25 +61,25 @@ describe('a deletion\'s answer', () => {
     await expect(requestDeletion(URL)).resolves.toMatchObject({ ok: false, status: 'failed', httpStatus: 500 });
   });
 
-  it('reports a plain-text refusal as its error', async () => {
-    answering('  Service Unavailable\n', { status: 503, headers: { 'Content-Type': 'text/plain' } });
+  it('describes a refusal that is not JSON by its status, never by its body', async () => {
+    answering('<html><body>upstream connect error</body></html>', { status: 503, headers: { 'Content-Type': 'text/html' } });
 
     await expect(requestDeletion(URL)).resolves.toEqual({
       ok: false,
       status: 'failed',
       httpStatus: 503,
-      error: 'Service Unavailable',
+      error: 'The server is unavailable.',
     });
   });
 
-  it('names the status when a refusal has an empty body', async () => {
+  it('says what the status means when a refusal has an empty body', async () => {
     answering(null, { status: 502 });
 
     await expect(requestDeletion(URL)).resolves.toEqual({
       ok: false,
       status: 'failed',
       httpStatus: 502,
-      error: 'Request failed with status 502',
+      error: 'The server could not be reached.',
     });
   });
 
@@ -101,7 +101,7 @@ describe('a deletion\'s answer', () => {
       ok: false,
       status: 'failed',
       httpStatus: 500,
-      error: 'Request failed with status 500',
+      error: 'The server failed while handling the request.',
     });
   });
 

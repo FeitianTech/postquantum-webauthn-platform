@@ -2,6 +2,8 @@
 // a Simple credential's record), and what its answer says: deleted, absent, or
 // failed with the reason. DOM-free.
 
+import { readFailedResponse } from '../../shared/failed-response.js';
+
 /**
  * What a deletion's answer said.
  * @typedef {{ ok: boolean, status: 'deleted' | 'absent' | 'failed', httpStatus: number | null, error?: string }} DeletionAnswer
@@ -29,14 +31,8 @@ export async function requestDeletion(url) {
                 payload = null;
             }
         } else {
-            try {
-                const text = await response.text();
-                if (typeof text === 'string' && text.trim()) {
-                    payload = { error: text.trim() };
-                }
-            } catch (error) {
-                payload = null;
-            }
+            // Not JSON (a proxy's page): said by its status, never shown as it came.
+            payload = { error: (await readFailedResponse(response)).message };
         }
 
         const status = typeof payload?.status === 'string'
