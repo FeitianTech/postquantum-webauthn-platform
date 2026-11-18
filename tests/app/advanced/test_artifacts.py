@@ -253,3 +253,21 @@ def test_an_artifact_past_the_visitors_bytes_is_refused_with_a_413(make_app, own
         )
     }
     assert client.get(f"{base}/cred-1").get_json()["artifact"] == {"x": 1}
+
+
+def test_bulk_naming_more_ids_than_the_visitors_count_is_refused_before_any_read(make_app, monkeypatch):
+    monkeypatch.setattr(visitor_session, "current_id", lambda **_kwargs: "session-id")
+    reads = []
+    monkeypatch.setattr(credential_artifacts, "load_credential_artifact", lambda storage_id, **_kwargs: reads.append(storage_id))
+    client = make_app({request_limits.STORED_ARTIFACTS_KEY: 2}).test_client()
+
+    # Repeats count once: two distinct ids are within the count and read.
+    within = client.post("/api/advanced/credential-artifacts/bulk", json={"storageIds": ["a", "b", "a"]})
+    assert within.status_code == 200
+    assert reads == ["a", "b"]
+
+    reads.clear()
+    response = client.post("/api/advanced/credential-artifacts/bulk", json={"storageIds": ["a", "b", "c"]})
+    assert response.status_code == 400
+    assert response.get_json() == {"error": "storageIds names more credentials than one visitor can keep."}
+    assert reads == []

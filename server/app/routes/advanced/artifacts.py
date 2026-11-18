@@ -55,6 +55,11 @@ def api_get_advanced_credential_artifacts_bulk():
         seen.add(trimmed)
         storage_ids.append(trimmed)
 
+    # Each id is a storage read; a namespace never holds more than its quota, so a longer list
+    # would only hold the worker's threads.
+    if len(storage_ids) > request_limits.artifacts_quota(current_app.config).count:
+        return jsonify({"error": "storageIds names more credentials than one visitor can keep."}), 400
+
     metadata_session_id = visitor_session.current_id()
     artifacts: dict[str, Any] = {}
     for storage_id in storage_ids if metadata_session_id else []:
