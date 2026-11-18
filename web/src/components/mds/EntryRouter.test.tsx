@@ -243,7 +243,10 @@ describe('an MDS entry\'s saved credentials', () => {
       window.history.back();
     });
     await waitFor(() => expect(window.location.hash).toBe(registration));
-    expect(await screen.findByRole('dialog')).toHaveFocus();
+    // The dialog takes the focus as it opens and gives it on to the button it was left on: wait for
+    // the focus inside it rather than catch it on the dialog itself.
+    const dialog = await screen.findByRole('dialog');
+    await waitFor(() => expect(dialog).toContainElement(document.activeElement as HTMLElement | null));
     await waitFor(() => expect(screen.getByRole('button', { name: 'Decode in Codec: attestation object' })).toHaveFocus());
     expect(watched).toEqual(['registration']);
     fireEvent.wheel(document.querySelector('[data-overlay-scroll]')!);
