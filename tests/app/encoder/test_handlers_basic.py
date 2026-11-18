@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+
 import pytest
 
 from server.app.decoder.encode import handlers_basic as encode_handlers_basic
@@ -55,3 +57,21 @@ def test_encoder_response_keeps_the_qualifier_and_warnings():
     assert prepared['type'] == 'JSON (encoded)'
     assert prepared['malformed'] == ['warn']
     assert prepared['data']['value']['bytes'] == 'AQI'
+
+
+def test_json_text_is_indented_up_to_its_limit_and_compact_past_it():
+    limit = encode_handlers_basic._INDENTED_TEXT_LIMIT
+    # '[\n  "' + s + '"\n]' is the string's length and 8 more.
+    at_limit = encode_text.encode_payload_text(json.dumps(["x" * (limit - 8)]), "JSON")["data"]
+    assert at_limit["text"] == '[\n  "' + "x" * (limit - 8) + '"\n]'
+    assert at_limit["binary"]["length"] == limit
+
+    past_limit = encode_text.encode_payload_text(json.dumps(["x" * (limit - 7)]), "JSON")["data"]
+    assert past_limit["text"] == '["' + "x" * (limit - 7) + '"]'
+    assert past_limit["binary"]["length"] == limit - 3
+
+
+def test_deeply_nested_json_answers_a_small_multiple_of_its_input():
+    text = "[" * 63 + ",".join(["0"] * 19_000) + "]" * 63
+    answer = encode_text.encode_payload_text(text, "JSON", max_items=20_000)
+    assert len(json.dumps(answer)) < 4_000_000

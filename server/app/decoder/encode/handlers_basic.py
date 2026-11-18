@@ -62,9 +62,17 @@ def _normalize_encoding_format(value: str) -> str:
     raise ValueError(f"Unsupported encoder format: {value}")
 
 
+# Indentation is for a person to read; deep nesting makes it most of the text, and the
+# answer repeats the text's bytes in four encodings, so past this the text is written compact.
+_INDENTED_TEXT_LIMIT = 256 * 1024
+
+
 def _encode_json_value(parsed: Any) -> dict[str, Any]:
     text = json.dumps(parsed, indent=2, ensure_ascii=False)
     data_bytes = text.encode("utf-8")
+    if len(data_bytes) > _INDENTED_TEXT_LIMIT:
+        text = json.dumps(parsed, ensure_ascii=False, separators=(",", ":"))
+        data_bytes = text.encode("utf-8")
     payload = {
         "json": make_json_safe(parsed),
         "text": text,
