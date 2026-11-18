@@ -19,12 +19,22 @@ from .build import build_explorer_entry
 from .statement_fields import lookup_keys
 
 # What the kept uploads may weigh, by the JSON of their rows and items (in memory they take
-# about two and a half times that): some 5,000 uploads of the BLOB's own entries, more than
-# two namespaces at the quota. One heavier than an eighth of it (an icon no file is made of,
-# kept in its row) is worked out each time instead.
-BUDGET_BYTES = 8 * 2**20
+# about two and a half times that): a namespace at its count quota (2,000 uploads) with every
+# row at ``ROW_BOUND_BYTES``, beside its item, or some 12,000 uploads of the BLOB's own
+# entries. One heavier than an eighth of it would be worked out each time instead.
+BUDGET_BYTES = 20 * 2**20
 # What a kept upload weighs beside its JSON, and one that does not read.
 _OVERHEAD_BYTES = 256
+# A row or item heavier than this as JSON (about twice the heaviest real metadata gives) is
+# cut down until it fits (``_bounded``); one at or under it is listed exactly as it is. Texts
+# are cut by their weight as JSON (``\uXXXX`` for each character outside ASCII), as the
+# answer and the cache weigh them.
+ROW_BOUND_BYTES = 8 * 2**10
+_TEXT_BOUND = 256
+_LIST_BOUND = 16
+_LIST_ITEM_BOUND = 32
+# What a row cut down to the last keeps: what identifies the entry, and what it came from.
+_IDENTIFYING = frozenset({"entryId", "name", "id", "aaguid", "source", "storedFilename"})
 
 
 @dataclass(frozen=True)
@@ -76,6 +86,77 @@ def _source_info(item: mds_uploads.SessionMetadataItem) -> dict[str, Any]:
     return info
 
 
+def _cut_text(text: str, bound: int) -> str:
+    """``text``, or as much of its start as weighs ``bound`` bytes as JSON with ``...``."""
+
+    weight, end = 0, None
+    for index, character in enumerate(text):
+        weight += len(json.dumps(character)) - 2
+        if end is None and weight > bound - 3:
+            end = index
+        if weight > bound:
+            return text[:end] + "..."
+    return text
+
+
+def _cut_texts(value: Any, bound: int, *, in_lists: bool = False, in_list: bool = False) -> Any:
+    """``value`` with each text (with ``in_lists``, each in a list) cut to ``bound`` bytes."""
+
+    if isinstance(value, str):
+        return _cut_text(value, bound) if in_list or not in_lists else value
+    if isinstance(value, list):
+        return [_cut_texts(part, bound, in_lists=in_lists, in_list=True) for part in value]
+    if isinstance(value, dict):
+        return {key: _cut_texts(part, bound, in_lists=in_lists) for key, part in value.items()}
+    return value
+
+
+def _cut_lists(value: Any, length: int) -> Any:
+    if isinstance(value, list):
+        return [_cut_lists(part, length) for part in value[:length]]
+    if isinstance(value, dict):
+        return {key: _cut_lists(part, length) for key, part in value.items()}
+    return value
+
+
+def _identifying(value: Any) -> Any:
+    """``value`` with each text and list emptied but under ``_IDENTIFYING``'s keys: every
+    field stays, so the page reads the row as any other."""
+
+    if isinstance(value, dict):
+        return {key: part if key in _IDENTIFYING else _identifying(part) for key, part in value.items()}
+    if isinstance(value, str):
+        return ""
+    if isinstance(value, list):
+        return []
+    return value
+
+
+_CUTS = (
+    lambda row: {**row, "icon": ""} if row.get("icon") else row,
+    lambda row: _cut_texts(row, _TEXT_BOUND),
+    lambda row: _cut_lists(row, _LIST_BOUND),
+    lambda row: _cut_texts(row, _LIST_ITEM_BOUND, in_lists=True),
+    lambda row: _cut_lists(row, 0),
+    _identifying,
+)
+
+
+def _bounded(listed: dict[str, Any]) -> dict[str, Any]:
+    """A row or item at most ``ROW_BOUND_BYTES`` as JSON, so that a namespace's every row is
+    small enough to keep: one heavier is cut down, step by step until it fits, dropping an
+    icon no file is made of (the row then has none, as a statement without one), cutting each
+    text with ``...``, keeping the first items of each list, cutting their texts shorter,
+    emptying the lists, and last emptying all but what identifies it, whose texts are cut
+    already. Statements a client made large are the ones cut."""
+
+    for cut in _CUTS:
+        if len(json.dumps(listed)) <= ROW_BOUND_BYTES:
+            break
+        listed = cut(listed)
+    return listed
+
+
 def _listed_upload(item: mds_uploads.SessionMetadataItem) -> ListedUpload:
     row = explorer_files.list_row(upload_entry(item, index=0, include_detail=False))
     file = explorer_files.icon_file(row["icon"])
@@ -85,8 +166,8 @@ def _listed_upload(item: mds_uploads.SessionMetadataItem) -> ListedUpload:
     return ListedUpload(
         filename=item.filename,
         mtime=item.mtime,
-        item=mds_uploads.serialize_session_metadata_item(item),
-        row=row,
+        item=_bounded(mds_uploads.serialize_session_metadata_item(item)),
+        row=_bounded(row),
         icon_file=file[0] if file is not None else None,
         aaguid_key=aaguid_key,
         aaid=aaid,

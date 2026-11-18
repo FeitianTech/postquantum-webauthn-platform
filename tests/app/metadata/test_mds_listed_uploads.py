@@ -138,6 +138,61 @@ def test_an_icon_no_file_is_made_of_is_kept_in_its_row(visitor):
     assert (upload.row["icon"], upload.icon_file) == ("data:image/bmp;base64,Qk0=", None)
 
 
+def _listing_bytes(uploads: list[listed_uploads.ListedUpload]) -> int:
+    return len(json.dumps([[upload.row, upload.item] for upload in uploads]))
+
+
+def test_uploads_a_client_made_huge_are_listed_small_and_kept(visitor, reads):
+    huge = 15 * 2**20
+    _save("Icon", metadataStatement={"description": "Icon", "icon": "data:image/bmp;base64," + "Qk0A" * (huge // 4)})
+    _save("Name", metadataStatement={"description": "N" * huge})
+    _save("List", metadataStatement={"description": "List", "keyProtection": ["key_" + "k" * 60] * (huge // 70)})
+
+    first = listed_uploads.list_uploads()
+    reads.clear()
+
+    assert _listing_bytes(first) < 64 * 2**10
+    by_name = {upload.row["name"][:4]: upload.row for upload in first}
+    assert by_name["Icon"]["icon"] == ""
+    assert by_name["NNNN"]["name"] == "N" * 253 + "..."
+    assert len(by_name["List"]["keyProtectionList"]) == 16
+    assert listed_uploads.list_uploads() == first
+    assert reads == []
+
+
+def _description_for_row_weight(weight: int) -> str:
+    """A description whose upload's row weighs ``weight`` bytes as JSON."""
+
+    base = _entry_payload(aaguid="f1d0f1d0-0000-4000-8000-000000000000", description="")
+    item = mds_uploads.SessionMetadataItem(
+        filename="0" * 32 + ".json", payload=base, legal_header=None, entry=None,
+        uploaded_at="2026-01-01T00:00:00.000000+00:00", original_filename=None, mtime=1.0,
+    )
+    unnamed = explorer_files.list_row(listed_uploads.upload_entry(item, index=0, include_detail=False))
+    return "d" * (weight - len(json.dumps(unnamed)))
+
+
+def test_a_namespace_at_its_count_quota_of_rows_at_their_bound_is_listed_and_kept_whole(visitor, reads, monkeypatch):
+    # An eighth of the count quota (2,000 uploads) in an eighth of the budget: what each
+    # upload at the bound costs is what the quota's would, in an eighth of the time.
+    monkeypatch.setattr(listed_uploads, "KEPT", listed_uploads.KeptUploads(listed_uploads.BUDGET_BYTES // 8))
+    description = _description_for_row_weight(listed_uploads.ROW_BOUND_BYTES - 100)
+    namespace = visitor_session.ensure_id()
+    for number in range(250):
+        payload = _entry_payload(aaguid=f"f1d0f1d0-0000-4000-8000-{number:012d}", description=description)
+        session_metadata.write_file(namespace, f"{number:032d}.json", json.dumps(payload).encode())
+    first = listed_uploads.list_uploads()
+    reads.clear()
+
+    assert len(first) == 250
+    # Left as they are, each just under the bound: none is cut down.
+    assert all(upload.row["name"] == description for upload in first)
+    assert max(len(json.dumps(upload.row)) for upload in first) in range(listed_uploads.ROW_BOUND_BYTES - 1_000, listed_uploads.ROW_BOUND_BYTES + 1)
+    assert _listing_bytes(first) <= 16 * 2**20 // 8
+    assert listed_uploads.list_uploads() == first
+    assert reads == []
+
+
 def _kept(name: str, size: int = 1_000) -> listed_uploads.ListedUpload:
     return listed_uploads.ListedUpload(
         filename=name, mtime=None, item={}, row={"name": "x" * size}, icon_file=None, aaguid_key="", aaid=None
@@ -204,3 +259,49 @@ def test_an_upload_without_names_or_times_names_its_file_alone():
     )
 
     assert listed_uploads._source_info(item) == {"storedFilename": "session.json"}
+
+
+def test_the_heaviest_row_a_statement_can_make_is_cut_to_its_bound():
+    # Every text and list at its largest, in characters JSON writes as ``\\uXXXX`` pairs.
+    text = "\U0001F511" * 20_000
+    texts = [f"{number}{text}" for number in range(100)]
+    payload = {
+        "aaid": text,
+        "timeOfLastStatusChange": text,
+        "statusReports": [{"status": "FIDO_CERTIFIED_L1", "certificationDescriptor": text, "certificateNumber": text}],
+        "metadataStatement": {
+            "description": text, "protocolFamily": text, "icon": "data:image/bmp;base64," + "Qk0A" * 100_000,
+            "attachmentHint": texts, "keyProtection": texts, "authenticationAlgorithms": texts, "transports": texts,
+            "userVerificationDetails": [[{"userVerificationMethod": method}] for method in texts],
+        },
+    }
+    item = mds_uploads.SessionMetadataItem(
+        filename="0" * 32 + ".json", payload=payload, legal_header=text, entry=None,
+        uploaded_at="2026-01-01T00:00:00+00:00", original_filename=text, mtime=1.0,
+    )
+
+    upload = listed_uploads._listed_upload(item)
+
+    assert len(json.dumps(upload.row)) <= listed_uploads.ROW_BOUND_BYTES
+    assert len(json.dumps(upload.item)) <= listed_uploads.ROW_BOUND_BYTES
+    # Still the page's row: every field there, the entry named, its lists' first items shortened.
+    assert upload.row.keys() == explorer_files.list_row(listed_uploads.upload_entry(item, index=0, include_detail=False)).keys()
+    assert upload.row["name"].startswith("\U0001F511") and upload.row["name"].endswith("...")
+    assert len(upload.row["keyProtectionList"]) == 16
+    assert all(len(json.dumps(method)) <= 2 + 32 for method in upload.row["keyProtectionList"])
+
+
+def test_a_row_still_too_heavy_once_its_texts_and_lists_are_cut_keeps_what_identifies_it():
+    row = {
+        "entryId": "aaid:F1D0#0001", "name": "Named", "id": "F1D0#0001", "aaguid": "", "source": "session", "index": 3,
+        "sourceInfo": {"storedFilename": "kept.json", "originalFilename": "dropped.json"},
+        "transportsList": ["usb"] * 20, **{f"field{number}": "t" * 200 for number in range(100)},
+    }
+
+    bounded = listed_uploads._bounded(row)
+
+    assert bounded == {
+        "entryId": "aaid:F1D0#0001", "name": "Named", "id": "F1D0#0001", "aaguid": "", "source": "session", "index": 3,
+        "sourceInfo": {"storedFilename": "kept.json", "originalFilename": ""},
+        "transportsList": [], **{f"field{number}": "" for number in range(100)},
+    }
