@@ -168,10 +168,12 @@ offset and path of the first (`json_input.JsonConstantError`), and a nested fiel
 holding one (client data inside a PublicKeyCredential) is that field's
 `parse-error` finding; read leniently, each is a `json-nan-or-infinity` finding
 (category `malformed`) and is shown as the decoder shows such a CBOR float,
-`{"diagnostic": "NaN"}`. Every JSON read takes the request's leniency. The
-encoder, which reads no JSON leniently, refuses such input with the offset and
-path counted in the input as sent, and points at EDN, which writes them; the
-metadata upload refuses it. No answer may hold a bare `NaN`: Flask's JSON
+`{"diagnostic": "NaN"}`. Every JSON read takes the request's leniency, but a
+SafetyNet response's JWS header and payload, which are read strictly whatever the
+request asks: such a part is shown as its text with why it is not JSON (the format
+is retired). The encoder, which reads no JSON leniently, refuses such input with
+the offset and path counted in the input as sent, and points at EDN, which writes
+them; the metadata upload refuses it. No answer may hold a bare `NaN`: Flask's JSON
 provider would write it, and the answer would not be JSON.
 `tests/app/core/test_codec_answers_are_json.py` parses every decoder and encoder
 answer over the corpus with a reader that refuses them.
