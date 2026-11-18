@@ -16,6 +16,8 @@ app, in the order ``factory.INIT_STEPS`` fixes.
   ``<instance_path>/session-secret.key`` when an app is built.
 - ``proxy``: ``ProxyFix`` when the forwarded headers are trusted (never
   ``X-Forwarded-Host``).
+- ``fetch_metadata``: refuses a write under ``/api/`` whose ``Sec-Fetch-Site``
+  names another site (403).
 - ``compression``: the gzip ``after_request`` handler.
 - ``security_headers``: CSP, Permissions-Policy, HSTS and friends. Its
   ``after_request`` handler is registered after ``compression``'s, and Flask runs
