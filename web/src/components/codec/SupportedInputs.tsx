@@ -19,7 +19,7 @@ const SUPPORTED_INPUTS: { name: string; kinds: string[] }[] = [
       'Generic CBOR payloads',
     ],
   },
-  { name: 'Binary', kinds: ['Authenticator data', 'Signature fields'] },
+  { name: 'Binary', kinds: ['Authenticator data'] },
   { name: 'PEM', kinds: ['X.509 certificates', 'Certificate chains'] },
   { name: 'DER', kinds: ['X.509 certificates'] },
 ];
