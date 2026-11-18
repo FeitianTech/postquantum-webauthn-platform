@@ -17,6 +17,7 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.x509.oid import NameOID
 from fido2.utils import ByteBuffer
 
+from server.app.config import attestation_trust as trusted_ca_config
 from server.app.webauthn.attestation import constants as attestation_constants
 from server.app.webauthn.attestation import trust as attestation_trust
 from tests.app.characterization import material
@@ -191,9 +192,9 @@ def test_a_trust_path_keeps_at_most_the_first_ten_x5c_entries():
     assert attestation_trust._collect_trust_path_entries(x5c) == x5c[:10]
 
 
-def _self_signed_cert_der() -> bytes:
+def _self_signed_cert_der(name: x509.Name | None = None) -> bytes:
     private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
-    subject = issuer = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "attestation-test")])
+    subject = issuer = name or x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "attestation-test")])
     cert = (
         x509.CertificateBuilder()
         .subject_name(subject)
@@ -248,3 +249,25 @@ def test_is_trusted_ca_certificate_uses_fingerprint_and_subject_allowlists(monke
     )
     with app.app_context():
         assert attestation_trust._is_trusted_ca_certificate(cert_der) is False
+
+
+def test_a_ca_configured_by_its_whole_subject_is_trusted_and_a_part_of_it_is_not(monkeypatch):
+    app = entry_app()
+    root = _self_signed_cert_der(
+        x509.Name(
+            [
+                x509.NameAttribute(NameOID.COUNTRY_NAME, "SE"),
+                x509.NameAttribute(NameOID.ORGANIZATION_NAME, "Org"),
+                x509.NameAttribute(NameOID.COMMON_NAME, "Root"),
+            ]
+        )
+    )
+    part = _self_signed_cert_der(x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "Root")]))
+    trusted = trusted_ca_config._parse_trusted_ca_subjects("CN=Root, O=Org, C=SE")
+    monkeypatch.setitem(app.config, "TRUSTED_ATTESTATION_CA_SUBJECTS", trusted)
+    monkeypatch.setitem(app.config, "TRUSTED_ATTESTATION_CA_FINGERPRINTS", None)
+
+    with app.app_context():
+        assert attestation_trust._is_trusted_ca_certificate(root) is True
+        assert attestation_trust._is_trusted_ca_certificate(part) is False
+

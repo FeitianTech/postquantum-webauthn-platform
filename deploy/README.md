@@ -122,7 +122,7 @@ and `PYTHONUNBUFFERED` for itself, and `docker-compose.yml` sets `PORT` to `8000
 | `FIDO_SERVER_ALLOWED_ORIGINS` | the request's own origin | The exact origins a ceremony may come from, separated by commas or new lines; an RP ID an Advanced request names must be one of their hosts or a registrable suffix of one; unset is a development fallback, which takes any RP ID named |
 | `FIDO_SERVER_RP_NAME` | `FIDO2/WebAuthn PQC Developer Tools` | The relying party's name |
 | `FIDO_SERVER_CHALLENGE_TTL_SECONDS` | `600` | How long an issued challenge can be used |
-| `FIDO_SERVER_TRUSTED_ATTESTATION_CA_SUBJECTS` | none | Attestation roots the operator trusts, by subject (RFC 4514), separated by `,`, `;` or new lines |
+| `FIDO_SERVER_TRUSTED_ATTESTATION_CA_SUBJECTS` | none | Attestation roots the operator trusts, by subject (RFC 4514, as `CN=Root,O=Org`), one per line or separated by `;`: a subject's commas separate its attributes |
 | `FIDO_SERVER_TRUSTED_ATTESTATION_CA_FINGERPRINTS` | none | The same by SHA-256 fingerprint (hex, 40 digits or more) |
 | `FIDO_SERVER_CONTENT_SECURITY_POLICY` | the strict policy | Replaces the enforced Content-Security-Policy (`server/app/config/security_headers.py`) |
 | `FIDO_SERVER_MAX_REQUEST_BYTES` | 8 MiB | The largest request body; larger answers 413 |

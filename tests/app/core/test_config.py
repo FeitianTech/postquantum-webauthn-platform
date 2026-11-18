@@ -64,35 +64,24 @@ def test_resolve_secret_key_generates_and_stores(tmp_path, monkeypatch):
     assert _resolve_secret_key(types.SimpleNamespace(instance_path=str(instance_path))) == secret
 
 
-def test_parse_trusted_ca_subjects():
-    """Test parsing of trusted CA subjects."""
-    
-    # Test None input
+def test_trusted_ca_subjects_are_separated_by_lines_or_semicolons_and_keep_their_commas():
     assert _parse_trusted_ca_subjects(None) is None
-    
-    # Test empty string
     assert _parse_trusted_ca_subjects("") is None
-    assert _parse_trusted_ca_subjects("  ") is None
-    
-    # Test single subject
-    result = _parse_trusted_ca_subjects("CN=Test CA")
-    assert result == {"CN=Test CA"}
-    
-    # Test comma-separated subjects
-    result = _parse_trusted_ca_subjects("CN=CA1, CN=CA2, CN=CA3")
-    assert result == {"CN=CA1", "CN=CA2", "CN=CA3"}
-    
-    # Test newline-separated subjects
-    result = _parse_trusted_ca_subjects("CN=CA1\nCN=CA2\nCN=CA3")
-    assert result == {"CN=CA1", "CN=CA2", "CN=CA3"}
-    
-    # Test mixed separators with whitespace
-    result = _parse_trusted_ca_subjects("  CN=CA1  ,  CN=CA2  \n  CN=CA3  ")
-    assert result == {"CN=CA1", "CN=CA2", "CN=CA3"}
-    
-    # Test duplicate removal
-    result = _parse_trusted_ca_subjects("CN=CA1, CN=CA1, CN=CA2")
-    assert result == {"CN=CA1", "CN=CA2"}
+    assert _parse_trusted_ca_subjects(" ; \n ") is None
+
+    assert _parse_trusted_ca_subjects("CN=Test CA") == {"CN=Test CA"}
+    assert _parse_trusted_ca_subjects("CN=CA1\nCN=CA2;CN=CA3;CN=CA1") == {"CN=CA1", "CN=CA2", "CN=CA3"}
+    # A subject's commas separate its attributes: one subject, never three.
+    assert _parse_trusted_ca_subjects("CN=Root,O=Org,C=SE") == {"CN=Root,O=Org,C=SE"}
+
+
+def test_a_trusted_ca_subject_is_kept_as_a_certificates_subject_is_written():
+    # Blank space around its commas dropped, and attribute types by name.
+    assert _parse_trusted_ca_subjects("  CN=Root , O=Org  \r\n2.5.4.3=Other") == {"CN=Root,O=Org", "CN=Other"}
+    # An escaped comma is part of its value.
+    assert _parse_trusted_ca_subjects("CN=a\\,b,O=x") == {"CN=a\\,b,O=x"}
+    # One cryptography does not read is kept as written: it matches no certificate's subject.
+    assert _parse_trusted_ca_subjects("FOO=bar , baz") == {"FOO=bar,baz"}
 
 
 def test_mds_metadata_paths(monkeypatch):

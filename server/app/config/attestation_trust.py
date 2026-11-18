@@ -10,15 +10,31 @@ import os
 import re
 from typing import Any
 
+from cryptography import x509
+
+
+def _canonical_subject(text: str) -> str:
+    """A subject name (RFC 4514) as cryptography writes a certificate's, which the trust check
+    compares (``rfc4514_string``): blank space around the commas between its attributes
+    dropped, an escaped comma (``\\,``) kept in its value; as written when it does not read."""
+
+    joined = ",".join(part.strip() for part in re.split(r"(?<!\\),", text))
+    try:
+        return x509.Name.from_rfc4514_string(joined).rfc4514_string()
+    except ValueError:
+        return joined
+
 
 def _parse_trusted_ca_subjects(raw_value: str | None) -> set[str] | None:
-    """Normalise a comma or newline separated list of CA subject names."""
+    """CA subject names, one per line or separated by ``;``: the commas in a subject separate
+    its attributes (``CN=Root,O=Org`` is one subject), so a subject is trusted whole, never
+    by its parts."""
 
     if raw_value is None:
         return None
 
-    components = re.split(r"[,;\n]+", raw_value)
-    subjects = {component.strip() for component in components if component.strip()}
+    components = re.split(r"[;\n]+", raw_value)
+    subjects = {_canonical_subject(component.strip()) for component in components if component.strip()}
     if not subjects:
         return None
     return subjects
