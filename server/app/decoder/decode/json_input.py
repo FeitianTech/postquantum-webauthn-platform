@@ -44,6 +44,7 @@ from collections.abc import Callable
 from typing import Any
 
 from .. import item_budget
+from .findings import kept_path
 
 # decode/cbor_parser's limit, which edn/reader keeps too: JSON is read as deep as CBOR is.
 _MAX_DEPTH = 64
@@ -245,7 +246,7 @@ def _resolve(
     if budget is not None:
         budget.charge(None, path)
     if isinstance(value, _Constant):
-        constants.append((value, _kept_path(path)))
+        constants.append((value, kept_path(path)))
         return {"diagnostic": str(value)}
     if isinstance(value, _Members):
         # The later value wins: the last occurrence of each key is the one kept.
@@ -266,7 +267,7 @@ def _resolve(
             resolved[key] = member_value
         for key, values in occurrences.items():
             if len(values) > 1:
-                findings.append(_duplicate(_kept_path(_member_path(path, key)), key, values, dropped))
+                findings.append(_duplicate(kept_path(_member_path(path, key)), key, values, dropped))
         return resolved
     if isinstance(value, list):
         return [
@@ -329,19 +330,6 @@ def _member_path(path: str, key: str) -> str:
     # below the key would otherwise repeat it whole.
     spelled = key if len(key) <= 32 else f"{key[:29]}..."
     return f"{path}{{{json.dumps(spelled, ensure_ascii=False)}}}"
-
-
-# A path an answer keeps, one per finding, is at most this long: 64 levels of keys cut to 32
-# characters would make each finding's path 2 KB, and an input can make thousands of findings.
-_MAX_PATH = 256
-
-
-def _kept_path(path: str) -> str:
-    # Cut in its middle: the start says where the path starts from, the end what it names.
-    if len(path) <= _MAX_PATH:
-        return path
-    half = (_MAX_PATH - 3) // 2
-    return f"{path[:half]}...{path[-(_MAX_PATH - 3 - half):]}"
 
 
 # A kept or dropped value spelled longer than this is given as its spelling cut short: a value

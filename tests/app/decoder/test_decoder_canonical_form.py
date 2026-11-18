@@ -6,11 +6,13 @@ byte) and on which item (the path); they never change the decoded value.
 from __future__ import annotations
 
 import hashlib
+import json
 from typing import Any
 
 import pytest
 from fido2 import cbor
 
+from server.app.config.request_limits import DEFAULT_MAX_CODEC_REQUEST_BYTES
 from server.app.decoder import edn
 from server.app.decoder.decode import text as decode_text
 from server.app.decoder.decode.text import decode_payload_text
@@ -320,3 +322,43 @@ def test_canonical_input_has_no_findings():
     # byte): nothing about its form.
     assert [finding for finding in result["findings"] if finding["category"] != "input"] == []
     assert result["malformed"] == []
+
+
+def test_a_key_repeated_60_deep_around_a_long_byte_string_gives_each_earlier_value_cut_short():
+    def hostile(length: int) -> str:
+        nested = cbor.encode(bytes(length))
+        for _ in range(60):
+            # {0: <what is nested>, 0: 0}: each level's earlier value holds every level below it.
+            nested = b"\xa2\x00" + nested + b"\x00\x00"
+        return nested.hex()
+
+    payload = hostile((DEFAULT_MAX_CODEC_REQUEST_BYTES - len(hostile(0))) // 2 - 8)
+
+    result = decode_payload_text(payload)
+
+    earlier = [entry for finding in result["findings"] for entry in finding.get("earlier", [])]
+    assert len(earlier) == 60
+    assert {entry["key"] for entry in earlier} == {"0"}
+    assert {len(entry["value"]) for entry in earlier} == {256}
+    assert all(entry["value"].endswith("...") for entry in earlier)
+    # Each finding once held its whole subtree in EDN, the byte string with it: 61 copies of the input.
+    assert len(json.dumps(result)) < 4 * len(payload)
+
+
+def test_a_finding_deep_under_long_keys_keeps_its_path_cut_in_its_middle():
+    # 60 maps, each under a 32-character key, around 3,000 integers with a longer head than they
+    # need: a finding for each, as many as every reading of the input gets from the item budget,
+    # and each one's path 2,160 characters whole.
+    payload = b"\x99" + (3_000).to_bytes(2, "big") + b"\x18\x01" * 3_000
+    for level in range(60):
+        payload = b"\xa1" + cbor.encode(f"k{level:031d}") + payload
+
+    result = decode_payload_text(payload.hex())
+
+    paths = [finding["path"] for finding in result["findings"] if finding["code"] == "non-shortest-integer"]
+    assert len(paths) == 3_000
+    assert {len(path) for path in paths} == {256}
+    assert paths[-1].startswith('${"k' + "0" * 29 + '59"}') and paths[-1].endswith("[2999]")
+    assert "..." in paths[-1][100:200]
+    # Whole paths made an answer of 7.6 MB.
+    assert len(json.dumps(result)) < 3 * 1024 * 1024

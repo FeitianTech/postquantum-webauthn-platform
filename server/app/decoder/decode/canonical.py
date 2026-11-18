@@ -282,11 +282,17 @@ def _with_duplicate_message(finding: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+# An earlier key or value spelled longer than this is given as its spelling cut short: a value
+# holds every map nested in it, so whole ones would repeat a subtree at every level above it.
+_MAX_SPELLING = 256
+
+
 def _edn(node: Mapping[str, Any]) -> str:
     try:
-        return edn.spell(node, inline=True)
+        text = edn.spell(node, inline=True)
     except (KeyError, TypeError, ValueError):
-        return str(node.get("summary", "?"))
+        text = str(node.get("summary", "?"))
+    return text if len(text) <= _MAX_SPELLING else f"{text[: _MAX_SPELLING - 3]}..."
 
 
 def _short(text: str) -> str:

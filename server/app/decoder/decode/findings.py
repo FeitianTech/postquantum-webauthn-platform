@@ -39,7 +39,25 @@ def _trailing_findings(data: bytes, end: int) -> list[dict[str, Any]]:
     ]
 
 
+# A path an answer keeps, one per finding, is at most this long: 64 levels of keys cut to 32
+# characters would make each finding's path 2 KB, and an input can make thousands of findings.
+MAX_PATH = 256
+
+
+def kept_path(path: str) -> str:
+    # Cut in its middle: the start says where the path starts from, the end what it names.
+    if len(path) <= MAX_PATH:
+        return path
+    half = (MAX_PATH - 3) // 2
+    return f"{path[:half]}...{path[-(MAX_PATH - 3 - half):]}"
+
+
 def _attach_findings(result: dict[str, Any], findings: list[dict[str, Any]]) -> None:
+    # Every finding reaches the answer here, whichever reading or nested part made its path.
+    findings = [
+        {**finding, "path": kept_path(finding["path"])} if len(finding.get("path") or "") > MAX_PATH else finding
+        for finding in findings
+    ]
     # A finding in JSON has a path and no offset (None): it sorts first.
     ordered = sorted(findings, key=lambda finding: (finding.get("source", ""), _offset(finding)))
     result["findings"] = ordered

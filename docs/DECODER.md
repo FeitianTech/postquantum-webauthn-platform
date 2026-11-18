@@ -117,7 +117,8 @@ encoder.
 
 Findings inside authData, a nested PublicKeyCredential field or a TPM structure
 carry the input offset and path (`${2}<credentialPublicKey>{1}`; a nested field's
-findings add `source`).
+findings add `source`). A finding's path longer than 256 characters, CBOR's or
+JSON's, is cut in its middle (its start and end kept, `...` between).
 
 `malformed` lists the messages of the findings that the input is not well-formed
 (RFC 8949 appendix F, trailing bytes included) or not in CTAP2 canonical form, and
@@ -140,9 +141,10 @@ Map keys are equal by RFC 8949 section 5.6.1 (`decode/key_equivalence.py`): 1.0 
 any width is one key, -0.0 and 0.0 are one key, a chunked string equals the same
 text unchunked, NaNs differ by payload, 1 and 1.0 differ. Equal keys are one entry
 of `decodedValue` (the later value) and one `duplicate-map-key` finding at the entry
-kept, whose `earlier` lists every earlier entry's offsets and key and value in EDN;
-inside a value the decoded value drops, `kept` is null and the message says none is
-kept (`duplicate-json-key` does the same).
+kept, whose `earlier` lists every earlier entry's offsets and key and value in EDN
+(an EDN spelling longer than 256 characters given as its first 253 and `...`: the
+offsets locate the bytes); inside a value the decoded value drops, `kept` is null
+and the message says none is kept (`duplicate-json-key` does the same).
 
 A key `json_keys` spells with its type is written by `values.qualified_key_text`
 and read back only by `decode/json_keys.read_json_key`, which the encoder uses for
