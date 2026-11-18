@@ -10,8 +10,10 @@ from ...encoding import try_decode_base64
 from ...webauthn.attestation import certificates as attestation_certificates
 from .. import values
 
+# The body cannot cross a dash (base64 has none), so each BEGIN's scan ends at the
+# next dash and the whole search stays linear in the text.
 _PEM_CERT_PATTERN = re.compile(
-    r"-----BEGIN CERTIFICATE-----\s*(?P<body>.*?)\s*-----END CERTIFICATE-----",
+    r"-----BEGIN CERTIFICATE-----(?P<body>[^-]*+)-----END CERTIFICATE-----",
     re.IGNORECASE | re.DOTALL,
 )
 
@@ -23,7 +25,7 @@ def looks_like_pem(value: str) -> bool:
 def decode_pem_certificates(text: str) -> dict[str, Any]:
     certificates = []
     for match in _PEM_CERT_PATTERN.finditer(text):
-        cert_bytes = try_decode_base64(match.group("body"))
+        cert_bytes = try_decode_base64(match.group("body").strip())
         if cert_bytes is None:
             continue
         certificates.append(cert_bytes)

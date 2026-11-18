@@ -1,6 +1,7 @@
 """Tests of pem behavior."""
 
 import base64
+import time
 
 import pytest
 
@@ -42,3 +43,23 @@ def test_try_decode_certificate_bytes_returns_none_for_malformed_der_payload():
     malformed_der = _GSR2_DER[:24]
 
     assert decode_pem.try_decode_der_certificate(malformed_der, "base64url") is None
+
+
+def test_decode_pem_certificates_reads_a_body_with_blank_lines_and_spaces_around_it():
+    body = base64.b64encode(_GSR2_DER).decode("ascii")
+    pem_text = f"-----BEGIN CERTIFICATE-----\n\n   {body}  \n\n-----END CERTIFICATE-----"
+
+    result = decode_pem.decode_pem_certificates(pem_text)
+
+    assert isinstance(result["decoded"].get("fingerprints"), dict)
+
+
+def test_decode_pem_certificates_refuses_a_mebibyte_of_unclosed_begin_lines_quickly():
+    # A quadratic scan takes minutes here; the bound leaves room for a slow, loaded machine.
+    begin = "-----BEGIN CERTIFICATE-----\n"
+    pem_text = begin * (1024 * 1024 // len(begin))
+
+    start = time.perf_counter()
+    with pytest.raises(ValueError, match="No PEM certificate data found"):
+        decode_pem.decode_pem_certificates(pem_text)
+    assert time.perf_counter() - start < 2
