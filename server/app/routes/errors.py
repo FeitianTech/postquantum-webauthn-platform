@@ -90,6 +90,15 @@ def json_too_many_values(exc: json_body.TooManyValues):
     return jsonify({"error": f"The request body is JSON holding more than {json_body.MAX_VALUES:,} values, more than this server reads."}), 400
 
 
+def json_large_bodies_busy(exc: json_body.LargeBodiesBusy):
+    # Its bytes were read but not parsed: two other large bodies held the places (routes/json_body.py).
+    logger.warning("Refused a large body while others were read in %s %s (%s bytes)", request.method, request.path, request.content_length)
+    response = jsonify({"error": "The server is reading other large requests: try again in a few seconds."})
+    response.status_code = 503
+    response.headers["Retry-After"] = str(json_body.RETRY_AFTER_SECONDS)
+    return response
+
+
 def json_not_strict(exc: json_body.NotStrictJson):
     logger.warning("Refused a JSON body holding %s in %s %s", exc.text, request.method, request.path)
     return jsonify({"error": exc.sentence}), 400
@@ -138,5 +147,6 @@ def init_app(app) -> None:
     app.register_error_handler(json_body.NestedTooDeep, json_nested_too_deep)
     app.register_error_handler(json_body.TooManyValues, json_too_many_values)
     app.register_error_handler(json_body.NotStrictJson, json_not_strict)
+    app.register_error_handler(json_body.LargeBodiesBusy, json_large_bodies_busy)
     # Looked up by status first: the handlers above keep their own answers.
     app.register_error_handler(HTTPException, api_http_error)

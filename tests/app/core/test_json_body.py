@@ -4,7 +4,8 @@ Any other JSON -- a list, a string, a number, true -- is read as an object with
 no members, so a route answers what it answers for a missing member, never a
 failure of its own. A JSON body nested more than 64 deep, or holding more than
 100,000 values, is refused, 400 in JSON, before it is parsed, by a scan linear in
-the body's length.
+the body's length. A body over 256 KiB is worked on two at a time: a third is told
+to try again (503), and a place is given back however its request ends.
 """
 from __future__ import annotations
 
@@ -12,6 +13,7 @@ import time
 import tracemalloc
 
 import pytest
+from flask import abort
 
 from server.app.config import request_limits
 from server.app.routes import json_body
@@ -324,3 +326,131 @@ def test_a_route_refuses_a_string_no_quote_closes_at_its_size_limit_in_well_unde
 
         assert (response.status_code, response.get_json()) == (400, _TOO_DEEP)
         assert elapsed < 2, f"{size} bytes answered in {elapsed:.1f} s"
+
+
+_BUSY = {"error": "The server is reading other large requests: try again in a few seconds."}
+
+
+def _object_of(size):
+    """A JSON object of exactly ``size`` bytes."""
+
+    body = b'{"pad":"' + b"x" * (size - 10) + b'"}'
+    assert len(body) == size
+    return body
+
+
+def _free_places():
+    """How many of the large bodies' places no request holds."""
+
+    taken = 0
+    while json_body._LARGE_BODIES.acquire(blocking=False):
+        taken += 1
+    for _ in range(taken):
+        json_body._LARGE_BODIES.release()
+    return taken
+
+
+@pytest.fixture
+def places_held(monkeypatch):
+    """Both places held by the test, and a large body told at once that none is free."""
+
+    monkeypatch.setattr(json_body, "_WAIT_SECONDS", 0)
+    assert json_body._LARGE_BODIES.acquire(blocking=False)
+    assert json_body._LARGE_BODIES.acquire(blocking=False)
+    yield
+    json_body._LARGE_BODIES.release()
+    json_body._LARGE_BODIES.release()
+
+
+def test_every_route_refuses_a_large_body_with_a_503_while_two_are_read(app, own_stores, places_held):
+    client = app.test_client()
+    body = _object_of(json_body.LARGE_BODY_BYTES + 1)
+
+    # The Simple begins read the body once the username is one they take.
+    answers = {
+        (method, path): client.open(f"{path}?email=user@example.org", method=method, data=body, content_type="application/json")
+        for method, path in _json_routes(app)
+    }
+
+    # A Simple registration's whole body is held to 256 KiB, so none is large (config/request_limits.py).
+    too_large = answers.pop(("POST", "/api/register/complete"))
+    assert ("POST", "/api/codec") in answers and ("POST", "/api/advanced/authenticate/begin") in answers
+    assert {route: (response.status_code, response.headers.get("Retry-After"), response.get_json()) for route, response in answers.items()} == {
+        route: (503, "5", _BUSY) for route in answers
+    }
+    assert too_large.status_code == 413
+
+
+def test_a_body_up_to_the_threshold_is_answered_while_both_places_are_held(client, places_held):
+    at_threshold = client.post("/api/codec", data=_object_of(json_body.LARGE_BODY_BYTES), content_type="application/json")
+    one_byte_more = client.post("/api/codec", data=_object_of(json_body.LARGE_BODY_BYTES + 1), content_type="application/json")
+
+    assert (at_threshold.status_code, at_threshold.get_json()) == (400, {"error": "Codec payload must be a non-empty string."})
+    assert one_byte_more.status_code == 503
+
+
+@pytest.mark.parametrize("reads", [1, 2])
+def test_a_large_body_holds_one_place_until_its_request_ends_however_often_it_is_read(app, reads):
+    body = _object_of(json_body.LARGE_BODY_BYTES + 1)
+
+    with app.test_request_context("/api/codec", method="POST", data=body, content_type="application/json"):
+        for _ in range(reads):
+            assert json_body.json_object() == {"pad": "x" * (len(body) - 10)}
+        held = _free_places()
+
+    assert (held, _free_places()) == (1, 2)
+
+
+def test_a_body_at_the_threshold_takes_no_place(app):
+    with app.test_request_context("/api/codec", method="POST", data=_object_of(json_body.LARGE_BODY_BYTES), content_type="application/json"):
+        json_body.json_object()
+        assert _free_places() == 2
+
+
+def _read_then(ending):
+    def view():
+        json_body.json_object()
+        ending()
+
+    return view
+
+
+def _conflict():
+    abort(409)
+
+
+def _fail():
+    raise RuntimeError("unexpected")
+
+
+def test_the_place_is_given_back_after_an_answer(client):
+    response = client.post("/api/codec", data=_object_of(json_body.LARGE_BODY_BYTES + 1), content_type="application/json")
+
+    assert response.status_code == 400
+    assert _free_places() == 2
+
+
+def test_the_place_is_given_back_after_an_http_error_the_route_raises(make_app):
+    app = make_app()
+    app.add_url_rule("/api/read-then-conflict", view_func=_read_then(_conflict), methods=["POST"])
+
+    response = app.test_client().post("/api/read-then-conflict", data=_object_of(json_body.LARGE_BODY_BYTES + 1), content_type="application/json")
+
+    assert response.status_code == 409
+    assert _free_places() == 2
+
+
+@pytest.mark.parametrize("testing", [True, False])
+def test_the_place_is_given_back_after_an_unhandled_exception(make_app, testing):
+    app = make_app({"TESTING": testing})
+    app.add_url_rule("/api/read-then-fail", view_func=_read_then(_fail), methods=["POST"])
+    client = app.test_client()
+    body = _object_of(json_body.LARGE_BODY_BYTES + 1)
+
+    # Raised to the caller while testing; answered 500, as in production, otherwise.
+    if testing:
+        with pytest.raises(RuntimeError):
+            client.post("/api/read-then-fail", data=body, content_type="application/json")
+    else:
+        assert client.post("/api/read-then-fail", data=body, content_type="application/json").status_code == 500
+    assert _free_places() == 2

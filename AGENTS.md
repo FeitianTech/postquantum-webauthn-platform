@@ -398,7 +398,9 @@ its logic out here first.
   `Infinity`, `-Infinity` and a number no double holds are refused, 400 in JSON, the CSP report's
   too, never through `request.get_json`, whose reader takes them; one nested more than 64 deep
   refused, 400 in JSON, before it is parsed, as the CSP report and the metadata upload's files are,
-  and one holding more than 100,000 values (`MAX_VALUES`), as the CSP report is);
+  and one holding more than 100,000 values (`MAX_VALUES`), as the CSP report is; once read, a body
+  over 256 KiB takes one of two places a process until the request ends, a teardown giving it back,
+  and one that waits 2 s for a place answers 503 with `Retry-After`);
   `routes/ceremony_errors.py`
   (what a ceremony's complete answers when a response is refused: fido2's own findings, the challenge,
   origin, RP ID hash, UP, UV, signature, as fido2 wrote them, else a sentence of the app's own, the

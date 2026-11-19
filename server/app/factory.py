@@ -27,7 +27,7 @@ from .config import (
     session_secret,
     web_export,
 )
-from .routes import assets, codec, csp_report, errors
+from .routes import assets, codec, csp_report, errors, json_body
 from .routes import mds as mds_routes
 from .routes import web_export as web_export_routes
 from .routes.advanced import artifacts as advanced_artifacts
@@ -84,6 +84,7 @@ INIT_STEPS: tuple[Callable[[Flask], None], ...] = (
     security_headers.init_app,
     assets.init_app,
     _register_blueprints,
+    json_body.init_app,
     relying_party.init_app,
     github_mirror.init_app,
 )

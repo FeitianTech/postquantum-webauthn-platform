@@ -127,7 +127,7 @@ the worker gives back the memory of a burst of large requests) for itself, and
 | `FIDO_SERVER_TRUSTED_ATTESTATION_CA_SUBJECTS` | none | Attestation roots the operator trusts, by subject (RFC 4514, as `CN=Root,O=Org`), one per line or separated by `;`: a subject's commas separate its attributes |
 | `FIDO_SERVER_TRUSTED_ATTESTATION_CA_FINGERPRINTS` | none | The same by SHA-256 fingerprint (hex, 40 digits or more) |
 | `FIDO_SERVER_CONTENT_SECURITY_POLICY` | the strict policy | Replaces the enforced Content-Security-Policy (`server/app/config/security_headers.py`) |
-| `FIDO_SERVER_MAX_REQUEST_BYTES` | 8 MiB | The largest request body; larger answers 413 |
+| `FIDO_SERVER_MAX_REQUEST_BYTES` | 8 MiB | The largest request body; larger answers 413. An instance works on two JSON bodies over 256 KiB at a time, and another that waits 2 s for its place answers 503 with `Retry-After` |
 | `FIDO_SERVER_MAX_METADATA_UPLOAD_BYTES` | 16 MiB | The largest metadata upload; an instance reads one at a time, and another that waits 2 s for its place answers 503 with `Retry-After` |
 | `FIDO_SERVER_MAX_METADATA_ENTRY_BYTES` | 1 MiB | The largest uploaded metadata entry once stored; a larger one is refused in the upload's errors |
 | `FIDO_SERVER_MAX_CODEC_REQUEST_BYTES` | 1 MiB | The largest `/api/codec` request; larger answers 413 |

@@ -32,6 +32,12 @@ refuses them; so is a number too large for a double (``1e400``), which it would 
 as Infinity. Every route reads its body here (``json_object``), and the CSP report
 through ``loads``; not ``request.get_json``, whose reader (``app.json``, which Flask
 gives each request) takes them. The app's own answers are read back as written.
+
+A body of more than ``LARGE_BODY_BYTES`` costs many times its size to check, parse and
+answer, so a process works on two at a time: once its bytes are read, such a body takes
+one of two places, kept until the request ends (``give_back_place``, a teardown). One that
+finds no place within 2 seconds is refused (``LargeBodiesBusy``, 503 with ``Retry-After``).
+The place is taken after the read, so a client sending slowly holds none.
 """
 from __future__ import annotations
 
@@ -40,14 +46,27 @@ import json
 import math
 import operator
 import re
+import threading
 from typing import Any
 
 from flask import json as flask_json
 from flask import request
-from werkzeug.exceptions import BadRequest
+from werkzeug.exceptions import BadRequest, ServiceUnavailable
 
 MAX_DEPTH = 64
 MAX_VALUES = 100_000
+
+# Larger bodies cost far more than their size while read: 8 MiB of 4-byte characters about 74 MiB,
+# a 1 MiB Codec text of control characters about 50 MB to answer. 256 KiB takes in a Codec request
+# near its limit; a sign-in sending a few hundred saved credentials passes it too.
+LARGE_BODY_BYTES = 256 * 1024
+# Two such bodies at a time in a process, of 16 threads in 1 GiB; the others' bytes wait.
+_LARGE_BODIES = threading.BoundedSemaphore(2)
+# A large body waits this long for a place, then is told to try again.
+_WAIT_SECONDS = 2
+RETRY_AFTER_SECONDS = 5
+# In the request's environ while it holds a place: taken once, however often the body is read.
+_PLACE = "pqc.large_body_place"
 
 # A string to its closing quote, or to the body's end when none closes it: Python's reader reads no further.
 # So a match never fails, and the search never starts again inside text it took; nor does a possessive
@@ -68,6 +87,10 @@ class NestedTooDeep(BadRequest):
 
 class TooManyValues(BadRequest):
     """A JSON body holding more than ``MAX_VALUES`` values, refused before it is parsed."""
+
+
+class LargeBodiesBusy(ServiceUnavailable):
+    """A body over ``LARGE_BODY_BYTES`` that found no place while others were read."""
 
 
 class NotStrictJson(BadRequest):
@@ -168,9 +191,29 @@ def json_object() -> dict[str, Any]:
     if not request.is_json:
         return {}
     data = request.get_data(cache=True)
+    _take_place(data)
     check_limits(data)
     try:
         body = loads(data)
     except ValueError:
         return {}
     return body if isinstance(body, dict) else {}
+
+
+def _take_place(data: bytes) -> None:
+    if len(data) <= LARGE_BODY_BYTES or request.environ.get(_PLACE):
+        return
+    if not _LARGE_BODIES.acquire(timeout=_WAIT_SECONDS):
+        raise LargeBodiesBusy()
+    request.environ[_PLACE] = True
+
+
+def give_back_place(_error: BaseException | None = None) -> None:
+    """Give back the request's place, if it holds one, once it has been answered or failed."""
+
+    if request.environ.pop(_PLACE, False):
+        _LARGE_BODIES.release()
+
+
+def init_app(app) -> None:
+    app.teardown_request(give_back_place)

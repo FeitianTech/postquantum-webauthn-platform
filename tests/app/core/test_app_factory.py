@@ -22,7 +22,7 @@ from server.app.config import (
     web_export,
 )
 from server.app.config.web_export import WEB_EXPORT_ROOT_KEY
-from server.app.routes import assets
+from server.app.routes import assets, json_body
 from server.app.storage import github_mirror
 
 _SERVER_APP = Path(__file__).resolve().parents[3] / "server" / "app"
@@ -40,6 +40,7 @@ def test_init_steps_are_pinned_in_order():
         security_headers.init_app,
         assets.init_app,
         factory._register_blueprints,
+        json_body.init_app,
         relying_party.init_app,
         github_mirror.init_app,
     )
@@ -83,6 +84,8 @@ def test_hooks_and_blueprints_are_registered_in_order(app):
         assets._hide_private_static_files,
         github_mirror._flush_when_due,
     ]
+    # The only teardown, a blueprint's included: one that raised first would skip it, and the place would be lost.
+    assert app.teardown_request_funcs == {None: [json_body.give_back_place]}
     assert list(app.blueprints) == [
         "assets",
         "advanced_registration",
