@@ -63,6 +63,8 @@ jobs:
           # The server runs unprivileged and can write where it writes at run time.
           test "$(docker exec pqc-webauthn id -u)" = 10001
           docker exec pqc-webauthn sh -c 'mkdir -p /app/instance/written && rmdir /app/instance/written'
+          # The allocator settings that give back a burst of large requests' memory (Dockerfile).
+          test "$(docker exec pqc-webauthn printenv MALLOC_ARENA_MAX MALLOC_MMAP_THRESHOLD_ | xargs)" = "1 131072"
           # The MDS explorer's files, which need the snapshot: the list and one entry.
           curl -fsS -o /tmp/info.json http://localhost:8080/api/mds/metadata/info
           curl -fsS -o /tmp/list.json http://localhost:8080/assets/mds/fido-mds3.explorer.list.json

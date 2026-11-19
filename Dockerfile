@@ -79,6 +79,13 @@ RUN groupadd --system --gid 10001 app \
 
 WORKDIR /app
 ENV PYTHONPATH=/app
+# glibc's allocator gives the worker's threads arenas of their own (up to eight a CPU),
+# each keeping what it freed, and raises its mmap threshold once a large buffer is freed:
+# after a burst of large requests the worker stays hundreds of MiB above rest, and the
+# next burst can pass the instance's 1 GiB. One arena, and buffers of 128 KiB or more
+# always mapped apart, give most of it back.
+ENV MALLOC_ARENA_MAX=1 \
+    MALLOC_MMAP_THRESHOLD_=131072
 USER 10001:10001
 
 CMD ["gunicorn", "-c", "/app/gunicorn.conf.py", "server.app.app:app"]

@@ -104,8 +104,10 @@ Everything the server reads from its environment (`server/app`, `gunicorn.conf.p
 `deploy/service.yaml` sets the ones production needs. A boolean takes `1`/`true`/`yes`/`on`
 or `0`/`false`/`no`/`off`, and an empty value is off (`server/app/env_flags.py`); any other
 value is ignored with a warning. "On Cloud Run" means `K_SERVICE` is set, which Cloud Run
-does. The Dockerfile reads none: the image sets `PYTHONPATH=/app`, `PYTHONDONTWRITEBYTECODE`
-and `PYTHONUNBUFFERED` for itself, and `docker-compose.yml` sets `PORT` to `8000`.
+does. The Dockerfile reads none: the image sets `PYTHONPATH=/app`, `PYTHONDONTWRITEBYTECODE`,
+`PYTHONUNBUFFERED`, and glibc's `MALLOC_ARENA_MAX=1` and `MALLOC_MMAP_THRESHOLD_=131072` (so
+the worker gives back the memory of a burst of large requests) for itself, and
+`docker-compose.yml` sets `PORT` to `8000`.
 
 | Variable | Default | What it does |
 | --- | --- | --- |
