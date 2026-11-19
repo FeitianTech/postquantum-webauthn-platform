@@ -132,7 +132,7 @@ the worker gives back the memory of a burst of large requests) for itself, and
 | `FIDO_SERVER_MAX_METADATA_ENTRY_BYTES` | 1 MiB | The largest uploaded metadata entry once stored; a larger one is refused in the upload's errors |
 | `FIDO_SERVER_MAX_CODEC_REQUEST_BYTES` | 1 MiB | The largest `/api/codec` request; larger answers 413 |
 | `FIDO_SERVER_MAX_CODEC_ITEMS` | `20000` | The most items `/api/codec` reads for one request (`server/app/decoder/item_budget.py`); past it the input is refused, 422 |
-| `FIDO_SERVER_MAX_REGISTRATION_RESPONSE_BYTES` | 256 KiB | The largest credential response a registration completes with (a Simple complete's whole body, an Advanced complete's `__credential_response`); larger answers 413 |
+| `FIDO_SERVER_MAX_REGISTRATION_RESPONSE_BYTES` | 256 KiB | The largest credential response a registration or a sign-in completes with (a Simple registration's whole body, a Simple sign-in's `credential`, an Advanced complete's `__credential_response` or `__assertion_response`; the saved credentials a sign-in sends beside it are not counted); larger answers 413 |
 | `FIDO_SERVER_MAX_STORED_ARTIFACTS` | `1000` | The most credential artifacts one visitor's namespace keeps; a new one past it answers 409 |
 | `FIDO_SERVER_MAX_STORED_ARTIFACT_BYTES` | 256 MiB | The most bytes of them; a write past it answers 413 |
 | `FIDO_SERVER_MAX_STORED_METADATA_ENTRIES` | `2000` | The most uploaded metadata entries one visitor's namespace keeps; an upload past it answers 409 |

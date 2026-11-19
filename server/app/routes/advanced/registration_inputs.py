@@ -10,7 +10,6 @@ that: it parses every x5c certificate the response carries.
 """
 from __future__ import annotations
 
-import json
 from collections.abc import Mapping, MutableMapping
 from typing import Any
 
@@ -109,7 +108,7 @@ def _response_too_large(response: Any) -> Any | None:
     """
 
     limit = current_app.config[request_limits.REGISTRATION_RESPONSE_LIMIT_KEY]
-    size = len(json.dumps(response, ensure_ascii=False, separators=(",", ":")).encode("utf-8"))
+    size = request_limits.credential_response_size(response)
     if size <= limit:
         return None
     return (

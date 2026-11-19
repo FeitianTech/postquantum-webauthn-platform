@@ -6,12 +6,14 @@ store is the real one, in this test's directory.
 
 from __future__ import annotations
 
+import json
 from types import SimpleNamespace
 from urllib.parse import urlencode
 
 import pytest
 
-from server.app.config import relying_party
+from server.app.config import relying_party, request_limits
+from server.app.routes import ceremony_errors
 from server.app.routes.simple import account
 from server.app.routes.simple import authentication as simple_authentication
 from server.app.storage import credentials as storage_credentials
@@ -26,6 +28,7 @@ from tests.app.security.ceremony_helpers import (
     assertion_payload,
     authenticate_simple,
     b64u,
+    padded_to,
     register_simple,
     saved_credential_list,
     simple_complete_body,
@@ -179,6 +182,63 @@ def test_a_sign_in_sent_as_many_saved_credentials_as_a_request_may_send_reads_th
     assert len(begin.get_json()["publicKey"]["allowCredentials"]) == MAX_SENT
     assert complete.status_code == 200, complete.get_json()
     assert len(credential_reads) == 2 * MAX_SENT
+
+
+def _begin_simple(client, credentials) -> bytes:
+    begin = client.post(f"/api/authenticate/begin?email={EMAIL}", json={"credentials": credentials})
+    assert begin.status_code == 200, begin.get_json()
+    return unb64u(begin.get_json()["publicKey"]["challenge"])
+
+
+def _complete_simple(client, assertion, credentials):
+    return client.post(
+        f"/api/authenticate/complete?email={EMAIL}",
+        json=simple_complete_body(assertion, credentials),
+        headers={"Origin": ORIGIN},
+    )
+
+
+def test_a_sign_in_response_over_its_limit_is_refused_before_its_challenge_is_used(make_app, credential_store):
+    authenticator = Authenticator()
+    credentials = [authenticator.stored_credential_entry()]
+    client = make_app({request_limits.REGISTRATION_RESPONSE_LIMIT_KEY: 4096}).test_client()
+    assertion = assertion_payload(authenticator, challenge=_begin_simple(client, credentials), counter=1)
+
+    refused = _complete_simple(client, padded_to(assertion, 4097), credentials)
+    signed_in = _complete_simple(client, assertion, credentials)
+
+    assert refused.status_code == 413
+    assert refused.get_json() == {
+        "error": (
+            "This authentication's response is 4,097 bytes, more than the 4,096 this server reads for one. "
+            "Please restart the authentication flow."
+        )
+    }
+    assert signed_in.status_code == 200, signed_in.get_json()
+
+
+def test_the_saved_credentials_beside_a_sign_in_response_are_not_measured(make_app, credential_store):
+    authenticator = Authenticator()
+    credentials = saved_credential_list(authenticator, 100)
+    client = make_app({request_limits.REGISTRATION_RESPONSE_LIMIT_KEY: 4096}).test_client()
+    challenge = _begin_simple(client, credentials)
+
+    response = _complete_simple(client, padded_to(assertion_payload(authenticator, challenge=challenge, counter=1), 4096), credentials)
+
+    assert len(json.dumps(credentials)) > 4 * 4096
+    assert response.status_code == 200, response.get_json()
+
+
+def test_a_sign_in_response_holding_a_lone_surrogate_is_answered_as_any_unreadable_response(credential_store):
+    authenticator = Authenticator()
+    credentials = [authenticator.stored_credential_entry()]
+    client = entry_app().test_client()
+    _begin_simple(client, credentials)
+
+    response = _complete_simple(client, {"id": "\ud800"}, credentials)
+
+    assert response.status_code == 400
+    assert response.get_json() == {"error": ceremony_errors.AUTHENTICATION_FAILED}
 
 
 def test_a_begin_body_that_is_no_object_offers_no_credential():

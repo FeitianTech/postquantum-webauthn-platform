@@ -6,12 +6,19 @@ flags, the signature, the credential. Those are answered as fido2 wrote them
 (``FIDO2_FINDINGS``, fido2 2.2.1's). Any other exception's text was written for whoever
 reads the code (fido2's parsers name their classes and arguments, a store its paths):
 the answer is a sentence of the app's own, and the exception is logged at INFO.
+
+A sign-in's credential response over a registration's limit (``config/request_limits.py``) is
+refused before anything reads it: fido2 parses its clientDataJSON, one string in the body,
+which the cap on a body's values does not see.
 """
 from __future__ import annotations
 
 import logging
+from typing import Any
 
-from flask import request
+from flask import current_app, jsonify, request
+
+from ..config import request_limits
 
 logger = logging.getLogger(__name__)
 
@@ -42,3 +49,26 @@ def answer_text(exc: Exception, sentence: str) -> str:
         return str(exc)
     logger.info("%s %s: %s", request.method, request.path, sentence, exc_info=exc)
     return sentence
+
+
+def authentication_response_too_large(response: Any) -> Any | None:
+    """The 413 for a sign-in's credential response over its limit, else None.
+
+    The response alone is measured, as a registration's is: the saved credentials sent beside it are not.
+    """
+
+    limit = current_app.config[request_limits.REGISTRATION_RESPONSE_LIMIT_KEY]
+    size = request_limits.credential_response_size(response)
+    if size <= limit:
+        return None
+    return (
+        jsonify(
+            {
+                "error": (
+                    f"This authentication's response is {size:,} bytes, more than the {limit:,} this server "
+                    "reads for one. Please restart the authentication flow."
+                )
+            }
+        ),
+        413,
+    )

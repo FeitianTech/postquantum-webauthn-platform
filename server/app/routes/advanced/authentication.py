@@ -16,7 +16,7 @@ from ...webauthn.attachments import (
     resolve_allowed_attachments,
     resolve_effective_attachments,
 )
-from .. import ceremony_session, json_body
+from .. import ceremony_errors, ceremony_session, json_body
 from . import (
     algorithms,
     assertion_credentials,
@@ -133,11 +133,15 @@ def _begin_payload(options: Any, resident_key_only: bool, hints: list[str]) -> d
 @bp.route("/api/advanced/authenticate/complete", methods=["POST"])
 def advanced_authenticate_complete():
     data = json_body.json_object()
+    # Measured before the ceremony's state is consumed, as a body over the request limit is.
+    too_large = ceremony_errors.authentication_response_too_large(data.get("__assertion_response"))
+    if too_large is not None:
+        return too_large
 
-    # Consumed before anything can fail, as in the simple flow: an early error
+    # Consumed before anything else can fail, as in the simple flow: an early error
     # burns the challenge too, so a replay is always labelled as one. The
     # request editor is permissive, so a replayed or stale server challenge is
-    # reported via ``challengeStatus`` rather than rejected -- on every response.
+    # reported via ``challengeStatus`` rather than rejected -- on every response from here on.
     state = session.pop("advanced_auth_state", None)
     trace: dict[str, Any] = {}
     if state is not None:

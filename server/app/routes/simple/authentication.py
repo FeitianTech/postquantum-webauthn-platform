@@ -244,6 +244,10 @@ def authenticate_complete():
     # The browser's own JSON of the assertion, and the credentials begin was sent.
     body = json_body.json_object()
     response = body.get("credential")
+    # Measured before the ceremony's state is consumed, as a body over the request limit is.
+    too_large = ceremony_errors.authentication_response_too_large(response)
+    if too_large is not None:
+        return too_large
 
     consumed, error_response = _consume_authentication_state(response, body.get("credentials"))
     if error_response is not None:

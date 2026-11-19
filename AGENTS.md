@@ -315,8 +315,9 @@ its logic out here first.
   only when an allowed origin can use it, `requested_rp_id_refusal`), `paths.py` (the project and instance roots; `store_dir`: every local
   store under `instance/`, its setting read when used; `LOCAL_STORES`, the three stores' settings
   and folders), `request_limits.py` (8 MiB, the metadata
-  upload 16 MiB, `/api/codec` 1 MiB, a registration's credential response 256 KiB (a Simple
-  complete's body, an Advanced complete's `__credential_response`); 413 in JSON; the namespace's
+  upload 16 MiB, `/api/codec` 1 MiB, a registration's or a sign-in's credential response 256 KiB
+  (a Simple registration's body, a Simple sign-in's `credential`, an Advanced complete's
+  `__credential_response` or `__assertion_response`, never the saved credentials beside it); 413 in JSON; the namespace's
   quotas, `artifacts_quota` and `metadata_quota`, and the Simple credentials a username keeps; the codec's 20,000 items read per request,
   `decoder/item_budget.py`, 422 past it, and the 16,000,000 weighted units of EDN it spells per request
   to name container keys, repeated keys' values and tagged CTAP members, 422 past them too; and the metadata upload's 200,000 JSON values and 1 MiB

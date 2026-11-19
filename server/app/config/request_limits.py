@@ -1,4 +1,4 @@
-"""How large a request body the app reads (``MAX_CONTENT_LENGTH``, and the metadata upload's, the codec's and a registration's own), and how much one visitor's namespace keeps.
+"""How large a request body the app reads (``MAX_CONTENT_LENGTH``, and the metadata upload's, the codec's and a credential response's own), and how much one visitor's namespace keeps.
 
 A body over the limit is answered 413 before any route reads it
 (``routes/errors.py`` answers it as JSON). Without one, only Cloud Run's 32 MiB
@@ -29,8 +29,11 @@ it again in several forms: a crafted one under 8 MiB was stored as 12 MB and
 answered as 15 MB. The upload, the codec and the Simple registration's complete
 set their own limit on the request before reading it; the advanced registration's
 complete measures its ``__credential_response`` once its ceremony's state is
-consumed, so that refusal carries the challenge's trace. Each can be set in the
-environment.
+consumed, so that refusal carries the challenge's trace. A sign-in's credential
+response is held to the same limit (an ML-DSA-87 assertion is 6,617 bytes), measured
+alone before the ceremony's state is consumed, since the saved credentials beside it
+run to megabytes: fido2 parses its clientDataJSON, one string in the body, and 5.8 MiB
+of empty objects there took about 170 MiB. Each can be set in the environment.
 
 ``/api/codec`` also reads at most ``MAX_CODEC_ITEMS`` items for one request,
 20,000 unless the environment says otherwise (``decoder/item_budget.py`` says
@@ -57,6 +60,7 @@ e2e runs one, a tester with every authenticator they own perhaps five. So 100.
 """
 from __future__ import annotations
 
+import json
 import os
 from collections.abc import Mapping
 from typing import Any
@@ -133,6 +137,14 @@ def config_from_env() -> dict[str, Any]:
             "FIDO_SERVER_MAX_SIMPLE_CREDENTIALS_PER_USERNAME", DEFAULT_MAX_SIMPLE_CREDENTIALS_PER_USERNAME
         ),
     }
+
+
+def credential_response_size(response: Any) -> int:
+    """How many bytes a credential response is as its limit measures it: compact JSON, in UTF-8."""
+
+    # A lone surrogate ("\ud800" in the body, which JSON allows) counts its three bytes instead of raising.
+    text = json.dumps(response, ensure_ascii=False, separators=(",", ":"))
+    return len(text.encode("utf-8", "surrogatepass"))
 
 
 def artifacts_quota(config: Mapping[str, Any]) -> Quota:

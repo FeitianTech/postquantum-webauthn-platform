@@ -6,6 +6,7 @@ import json
 import pytest
 
 from server.app.config import request_limits
+from server.app.routes import ceremony_errors
 from tests.app.entry_app import entry_app
 from tests.app.security.ceremony_helpers import (
     ORIGIN,
@@ -135,6 +136,20 @@ def test_a_credential_response_over_its_limit_is_refused_with_its_size_and_nothi
         "challengeStatus": "fresh",
     }
     assert list((tmp_path / "credential-artifacts").rglob("*.json")) == []
+
+
+def test_a_credential_response_holding_a_lone_surrogate_is_measured_and_refused_as_unreadable(own_stores):
+    client = entry_app().test_client()
+    challenge = _begin_with(client, advanced_public_key_options(challenge=b"\x73" * 32))
+
+    response = client.post(
+        "/api/advanced/register/complete",
+        json={"publicKey": advanced_public_key_options(challenge=challenge), "__credential_response": {"id": "\ud800"}},
+        headers={"Origin": ORIGIN},
+    )
+
+    assert response.status_code == 400
+    assert response.get_json()["error"] == ceremony_errors.REGISTRATION_FAILED
 
 
 def test_the_editors_request_beside_the_response_is_not_measured(make_app, own_stores):

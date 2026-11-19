@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import json
+import tracemalloc
 import types
 from types import SimpleNamespace
 
 import pytest
 
-from server.app.config import relying_party
+from server.app.config import relying_party, request_limits
+from server.app.routes import ceremony_errors
 from server.app.routes.advanced import algorithms as advanced_algorithms
 from server.app.routes.advanced import parsing as advanced_parsing
 from server.app.webauthn import assertion_hash, client_credentials
@@ -15,9 +18,11 @@ from tests.app.entry_app import entry_app
 from tests.app.security.ceremony_helpers import (
     FLAG_BE,
     FLAG_BS,
+    ORIGIN,
     Authenticator,
     assertion_payload,
     b64u,
+    padded_to,
     saved_credential_list,
     unb64u,
 )
@@ -69,6 +74,76 @@ def test_a_sign_in_sent_as_many_saved_credentials_as_a_request_may_send_reads_th
 
     assert response.status_code == 200, response.get_json()
     assert len(credential_reads) == 2 * MAX_SENT
+
+
+def test_a_sign_in_response_over_its_limit_is_refused_before_its_challenge_is_used(make_app):
+    authenticator = Authenticator()
+    credentials = [authenticator.stored_credential_entry()]
+    client = make_app({request_limits.REGISTRATION_RESPONSE_LIMIT_KEY: 4096}).test_client()
+    begin(client, credentials)
+    assertion = assertion_payload(authenticator, challenge=CHALLENGE, counter=1)
+
+    refused = complete(client, credentials, padded_to(assertion, 4097))
+    signed_in = complete(client, credentials, assertion)
+
+    assert refused.status_code == 413
+    assert refused.get_json() == {
+        "error": (
+            "This authentication's response is 4,097 bytes, more than the 4,096 this server reads for one. "
+            "Please restart the authentication flow."
+        )
+    }
+    assert signed_in.status_code == 200, signed_in.get_json()
+    assert signed_in.get_json()["challengeStatus"] == "fresh"
+
+
+def test_the_saved_credentials_beside_a_sign_in_response_are_not_measured(make_app):
+    authenticator = Authenticator()
+    credentials = saved_credential_list(authenticator, 100)
+    client = make_app({request_limits.REGISTRATION_RESPONSE_LIMIT_KEY: 4096}).test_client()
+    begin(client, credentials)
+
+    response = complete(client, credentials, padded_to(assertion_payload(authenticator, challenge=CHALLENGE, counter=1), 4096))
+
+    assert len(json.dumps(credentials)) > 4 * 4096
+    assert response.status_code == 200, response.get_json()
+
+
+def test_a_sign_in_response_holding_a_lone_surrogate_is_answered_as_any_unreadable_response():
+    authenticator = Authenticator()
+    credentials = [authenticator.stored_credential_entry()]
+    client = entry_app().test_client()
+    begin(client, credentials)
+
+    response = complete(client, credentials, {"id": "\ud800"})
+
+    assert response.status_code == 400
+    assert response.get_json()["error"] == ceremony_errors.AUTHENTICATION_FAILED
+
+
+def test_a_sign_in_response_of_megabytes_of_client_data_is_refused_in_memory_far_below_what_parsing_takes():
+    authenticator = Authenticator()
+    credentials = [authenticator.stored_credential_entry()]
+    client = entry_app().test_client()
+    begin(client, credentials)
+    assertion = assertion_payload(authenticator, challenge=CHALLENGE, counter=1)
+    # 5.8 MiB of empty objects, which fido2 parsed in about 170 MiB before refusing them.
+    assertion["response"]["clientDataJSON"] = b64u(b"[" + b"{}," * 2_027_000 + b"{}]")
+    body = json.dumps(
+        {"publicKey": {"challenge": {"$base64url": b64u(CHALLENGE)}}, "__assertion_response": assertion, "__storedCredentials": credentials}
+    ).encode()
+
+    tracemalloc.start()
+    try:
+        response = client.post(
+            "/api/advanced/authenticate/complete", data=body, content_type="application/json", headers={"Origin": ORIGIN}
+        )
+        _current, peak = tracemalloc.get_traced_memory()
+    finally:
+        tracemalloc.stop()
+
+    assert response.status_code == 413
+    assert peak < 40 * 1024 * 1024
 
 
 def test_a_complete_without_public_key_options_is_refused():

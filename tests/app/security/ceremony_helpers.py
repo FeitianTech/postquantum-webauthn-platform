@@ -303,6 +303,14 @@ def assertion_payload(
     }
 
 
+def padded_to(credential: Mapping[str, Any], size: int) -> dict[str, Any]:
+    """``credential`` with a ``padding`` member that makes it exactly ``size`` bytes of compact JSON."""
+
+    padded = {**credential, "padding": ""}
+    padded["padding"] = "x" * (size - len(json.dumps(padded, separators=(",", ":")).encode()))
+    return padded
+
+
 def advanced_public_key_options(
     *,
     challenge: bytes,
