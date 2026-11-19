@@ -8,6 +8,7 @@ from collections.abc import Mapping
 from typing import Any
 
 import pytest
+from fido2 import cbor
 
 from server.app import factory, visitor_session
 from server.app.config import paths
@@ -181,3 +182,21 @@ def credential_reads(monkeypatch):
 
     monkeypatch.setattr(client_credentials, "read_key_material", _counted)
     return reads
+
+
+@pytest.fixture
+def cbor_decodes(monkeypatch):
+    """The length of every input fido2's CBOR decoder is handed; one longer than a saved key may be is
+    refused undecoded, so that a test of the cap fails on this list rather than after seconds of decoding."""
+
+    lengths: list[int] = []
+    decode = cbor.decode
+
+    def _recorded(data):
+        lengths.append(len(data))
+        if len(data) > client_credentials.MAX_PUBLIC_KEY_BYTES:
+            raise ValueError("refused undecoded by the test")
+        return decode(data)
+
+    monkeypatch.setattr(cbor, "decode", _recorded)
+    return lengths

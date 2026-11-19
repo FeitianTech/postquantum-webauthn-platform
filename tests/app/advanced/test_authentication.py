@@ -39,6 +39,23 @@ def _complete(client, body):
 MAX_SENT = client_credentials.MAX_SENT_CREDENTIALS
 
 
+# A saved credential whose public key is a CBOR array of 1,000,000 empty maps: fido2's
+# decoder took 8.3 s and 74 MiB to read it.
+OVERSIZED_KEY = b"\x9a" + (1_000_000).to_bytes(4, "big") + b"\xa0" * 1_000_000
+
+
+def test_a_begin_sent_a_key_longer_than_any_real_one_answers_as_for_an_unreadable_key(cbor_decodes):
+    client = entry_app().test_client()
+    authenticator = Authenticator()
+
+    oversized = begin(client, [authenticator.stored_credential_entry(cose_key_bytes=OVERSIZED_KEY)])
+    unreadable = begin(client, [authenticator.stored_credential_entry(cose_key_bytes=b"\xff")])
+
+    assert (oversized.status_code, oversized.get_json()) == (unreadable.status_code, unreadable.get_json())
+    assert oversized.status_code == 404
+    assert cbor_decodes == [1]
+
+
 def test_a_begin_sent_more_saved_credentials_than_a_browser_keeps_is_refused_before_reading_any(credential_reads):
     response = begin(entry_app().test_client(), saved_credential_list(Authenticator(), MAX_SENT + 1))
 

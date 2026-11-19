@@ -27,6 +27,10 @@ TOO_MANY_CREDENTIALS = (
     "Delete some saved credentials and try again."
 )
 
+# The longest saved public key read: the largest real COSE key, ML-DSA-87's, is 2,602 bytes.
+# fido2's CBOR decoder is quadratic in time, so a longer key is refused before it is decoded.
+MAX_PUBLIC_KEY_BYTES = 8 * 1024
+
 
 def too_many(raw_credentials: Any) -> bool:
     """Whether a list of saved credentials a request sent is longer than ``MAX_SENT_CREDENTIALS``."""
@@ -109,6 +113,8 @@ def read_key_material(entry: Mapping[str, Any], fields: CredentialFields) -> Key
     )
     credential_id = read(credential_id_raw)
     public_key = read(public_key_raw)
+    if len(public_key) > MAX_PUBLIC_KEY_BYTES:
+        raise ValueError(f"This saved credential's public key is longer than {MAX_PUBLIC_KEY_BYTES:,} bytes, longer than any real key.")
 
     cose_key = CoseKey.parse(mldsa.with_raw_public_key(cbor.decode(public_key)))
     attested = AttestedCredentialData.create(aaguid, credential_id, cose_key)
