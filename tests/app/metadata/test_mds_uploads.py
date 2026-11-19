@@ -12,6 +12,7 @@ import os
 import pytest
 
 from server.app import visitor_session
+from server.app.mds import entries as mds_entries
 from server.app.mds import uploads as mds_uploads
 from server.app.storage import common as storage_common
 from server.app.storage import session_metadata
@@ -342,13 +343,14 @@ def test_delete_session_metadata_item_validates_session_filename_and_storage_err
 
 
 QUOTA = storage_common.Quota(count=2, total_bytes=4096)
+ENTRY_LIMIT = 1024 * 1024
 
 
 def test_entries_past_the_namespaces_count_are_refused_with_a_409(storage):
     _stored(storage, info="{}")
 
     with pytest.raises(storage_common.StorageQuotaExceeded) as refused:
-        mds_uploads.refuse_past_quota(SESSION, [STATEMENT, STATEMENT], QUOTA)
+        mds_uploads.refuse_past_quota(SESSION, [STATEMENT, STATEMENT], QUOTA, ENTRY_LIMIT)
 
     # The upload's info file beside it is not counted.
     assert refused.value.status == 409
@@ -356,14 +358,14 @@ def test_entries_past_the_namespaces_count_are_refused_with_a_409(storage):
         "Nothing was saved: these 2 metadata entries would take this browser's uploads past the 2 metadata "
         "entries this server keeps for one visitor. Delete uploads you no longer use and try again."
     )
-    mds_uploads.refuse_past_quota(SESSION, [STATEMENT], QUOTA)
+    mds_uploads.refuse_past_quota(SESSION, [STATEMENT], QUOTA, ENTRY_LIMIT)
 
 
 def test_entries_past_the_namespaces_bytes_are_refused_with_a_413(storage):
     large = {**STATEMENT, "legalHeader": "x" * 5000}
 
     with pytest.raises(storage_common.StorageQuotaExceeded) as refused:
-        mds_uploads.refuse_past_quota(SESSION, [large], QUOTA)
+        mds_uploads.refuse_past_quota(SESSION, [large], QUOTA, ENTRY_LIMIT)
 
     size = len(mds_uploads.stored_json(large))
     assert refused.value.status == 413
@@ -377,7 +379,27 @@ def test_an_entry_json_cannot_hold_is_not_counted_and_none_is_no_upload(storage)
     unsupported = {"aaguid": object()}
 
     for payloads in ([unsupported, unsupported, unsupported], []):
-        mds_uploads.refuse_past_quota(SESSION, payloads, storage_common.Quota(count=0, total_bytes=0))
+        mds_uploads.refuse_past_quota(SESSION, payloads, storage_common.Quota(count=0, total_bytes=0), ENTRY_LIMIT)
+
+
+def test_an_entry_stored_in_more_than_its_limit_is_refused_and_not_counted(storage):
+    stored = mds_uploads.stored_json(STATEMENT)
+    sentence = "It is larger, once stored, than the {} this server keeps for one metadata entry."
+
+    assert mds_uploads.stored_json(STATEMENT, len(stored)) == stored
+    # Past it once indented, and already past it compact.
+    for limit in (len(stored) - 1, 16):
+        with pytest.raises(mds_entries.MetadataRefused) as refused:
+            mds_uploads.stored_json(STATEMENT, limit)
+        assert str(refused.value) == sentence.format(f"{limit:,} bytes")
+    mds_uploads.refuse_past_quota(SESSION, [STATEMENT], storage_common.Quota(count=0, total_bytes=0), 16)
+
+
+def test_an_entry_past_its_limit_is_refused_before_anything_is_written(storage, in_request):
+    with pytest.raises(mds_entries.MetadataRefused):
+        mds_uploads.save_session_metadata_item(STATEMENT, max_bytes=16)
+
+    assert list(storage.rglob("*.json")) == []
 
 
 def test_deleting_the_last_upload_keeps_the_namespace_for_the_sweep(storage):

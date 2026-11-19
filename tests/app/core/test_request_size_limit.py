@@ -51,18 +51,21 @@ def test_the_limits_are_the_defaults_unless_the_environment_sets_them(make_app, 
     app = make_app()
     assert app.config["MAX_CONTENT_LENGTH"] == _LIMIT
     assert app.config[request_limits.METADATA_UPLOAD_LIMIT_KEY] == _UPLOAD_LIMIT
+    assert app.config[request_limits.METADATA_ENTRY_LIMIT_KEY] == _MIB
     assert app.config[request_limits.CODEC_REQUEST_LIMIT_KEY] == _CODEC_LIMIT
     assert app.config[request_limits.CODEC_ITEM_LIMIT_KEY] == 20_000
     assert app.config[request_limits.REGISTRATION_RESPONSE_LIMIT_KEY] == _REGISTRATION_LIMIT
 
     monkeypatch.setenv("FIDO_SERVER_MAX_REQUEST_BYTES", "4096")
     monkeypatch.setenv("FIDO_SERVER_MAX_METADATA_UPLOAD_BYTES", "8192")
+    monkeypatch.setenv("FIDO_SERVER_MAX_METADATA_ENTRY_BYTES", "4096")
     monkeypatch.setenv("FIDO_SERVER_MAX_CODEC_REQUEST_BYTES", "2048")
     monkeypatch.setenv("FIDO_SERVER_MAX_CODEC_ITEMS", "500")
     monkeypatch.setenv("FIDO_SERVER_MAX_REGISTRATION_RESPONSE_BYTES", "1024")
     app = make_app()
     assert app.config["MAX_CONTENT_LENGTH"] == 4096
     assert app.config[request_limits.METADATA_UPLOAD_LIMIT_KEY] == 8192
+    assert app.config[request_limits.METADATA_ENTRY_LIMIT_KEY] == 4096
     assert app.config[request_limits.CODEC_REQUEST_LIMIT_KEY] == 2048
     assert app.config[request_limits.CODEC_ITEM_LIMIT_KEY] == 500
     assert app.config[request_limits.REGISTRATION_RESPONSE_LIMIT_KEY] == 1024

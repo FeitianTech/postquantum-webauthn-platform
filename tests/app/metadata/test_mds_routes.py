@@ -20,6 +20,7 @@ from server.app.storage import github_mirror, session_metadata
 from server.app.webauthn.attestation import certificates as attestation_certificates
 from tests.app.core.codec_examples import PLAIN_TEXT
 from tests.app.entry_app import entry_app
+from tests.app.metadata import mds_fixture
 from tests.app.metadata.upload_entries import minimal_entry
 from tests.app.storage import fake_github
 
@@ -174,6 +175,108 @@ def test_an_uploaded_file_nested_too_deep_is_refused_and_nothing_is_saved(mds_fi
         "items": [],
         "errors": ["deep.json: JSON nested more than 64 deep, deeper than this server reads"],
     }
+
+
+def _posted(client, *files):
+    """POST ``files``, each a name and its bytes, to the upload route."""
+
+    data = {"files": [(io.BytesIO(content), name) for name, content in files]}
+    return client.post("/api/mds/metadata/upload", data=data, content_type="multipart/form-data")
+
+
+def test_a_second_upload_is_told_to_try_again_while_one_is_read_and_taken_once_it_ends(
+    mds_fixture_snapshot, client, monkeypatch
+):
+    monkeypatch.setattr(mds_routes, "_UPLOAD_WAIT_SECONDS", 0)
+    entry = ("entry.json", json.dumps(minimal_entry("Waiting")).encode())
+    assert mds_routes._UPLOADS_READ.acquire(blocking=False)
+    try:
+        refused = _posted(client, entry)
+        refused_cookie = client.get_cookie("fido.mds.session")
+    finally:
+        mds_routes._UPLOADS_READ.release()
+    accepted = _posted(client, entry)
+
+    assert refused.status_code == 503
+    assert refused.headers["Retry-After"] == "5"
+    assert refused.get_json() == {"error": "The server is reading other metadata uploads: try again in a few seconds."}
+    assert refused_cookie is None
+    assert accepted.status_code == 200, accepted.get_json()
+
+
+def test_an_upload_that_fails_gives_its_place_back(monkeypatch, visitor):
+    monkeypatch.setattr(mds_routes, "_UPLOAD_WAIT_SECONDS", 0)
+    monkeypatch.setattr(mds_entries, "expand_metadata_entry_payloads", lambda _payload: {}["unexpected"])
+
+    for _ in range(3):
+        with pytest.raises(KeyError):
+            _upload(monkeypatch, _Storage("failing.json", b"{}"))
+
+    assert mds_routes._UPLOADS_READ.acquire(blocking=False)
+    mds_routes._UPLOADS_READ.release()
+
+
+def test_an_entry_larger_than_the_server_keeps_is_refused_naming_its_file(mds_fixture_snapshot, make_app):
+    client = make_app({request_limits.METADATA_ENTRY_LIMIT_KEY: 1024}).test_client()
+    two = {"entries": [minimal_entry("Kept"), minimal_entry("x" * 1024)]}
+
+    response = _posted(client, ("two.json", json.dumps(two).encode()))
+
+    assert response.status_code == 200
+    assert [item["source"]["originalFilename"] for item in response.get_json()["items"]] == ["two.json (entry 1)"]
+    assert response.get_json()["errors"] == [
+        "two.json (entry 2): It is larger, once stored, than the 1,024 bytes this server keeps for one metadata entry."
+    ]
+    assert len(client.get("/api/mds/metadata/custom").get_json()["items"]) == 1
+
+
+def test_an_upload_holding_more_values_than_the_server_reads_is_refused_before_it_is_parsed(
+    mds_fixture_snapshot, client, monkeypatch
+):
+    parsed = []
+    monkeypatch.setattr(mds_routes, "_read_metadata_json", parsed.append)
+    many = b'{"entries": [' + b"{}," * 200_000 + b"{}]}"
+
+    response = _posted(client, ("many.json", many))
+
+    assert response.status_code == 400
+    assert response.get_json() == {
+        "items": [],
+        "errors": ["many.json: JSON holding more than 200,000 values in one upload, more than this server reads"],
+    }
+    assert parsed == []
+
+
+def test_the_values_of_an_uploads_files_are_counted_together(mds_fixture_snapshot, client, monkeypatch):
+    # Each file is an object, its metadataStatement and a comma: 3 counted, of the 5 one upload may hold.
+    monkeypatch.setattr(request_limits, "MAX_METADATA_UPLOAD_VALUES", 5)
+    entry = json.dumps(minimal_entry("Counted")).encode()
+
+    response = _posted(client, ("first.json", entry), ("second.json", entry))
+
+    assert response.status_code == 200
+    assert [item["source"]["originalFilename"] for item in response.get_json()["items"]] == ["first.json"]
+    assert response.get_json()["errors"] == [
+        "second.json: JSON holding more than 5 values in one upload, more than this server reads"
+    ]
+
+
+def test_the_whole_mds_metadata_is_taken_in_one_upload(mds_fixture_snapshot, client):
+    # As FIDO publishes it: about 540 entries in 7.4 MB. The fixture's real entries, repeated,
+    # each with an icon of the size that brings it to the published entries' average.
+    published = json.loads((mds_fixture.SNAPSHOT_DIR / "fido-mds3.verified.json").read_text(encoding="utf-8"))
+    icon = "data:image/png;base64," + base64.b64encode(PNG * 137).decode()
+    entries = [json.loads(json.dumps(published["entries"][index % len(published["entries"])])) for index in range(540)]
+    for entry in entries:
+        entry["metadataStatement"]["icon"] = icon
+    body = json.dumps({**published, "entries": entries}).encode()
+    assert 7_000_000 < len(body) < 8_000_000
+
+    response = _posted(client, ("fido-mds3.json", body))
+
+    assert response.status_code == 200, response.get_json().get("errors")
+    assert len(response.get_json()["items"]) == 540
+    assert "errors" not in response.get_json()
 
 
 def test_the_visitors_uploads_are_never_cached_and_keyed_on_the_cookie(mds_fixture_snapshot, client):
@@ -383,7 +486,7 @@ def test_an_upload_whose_entries_do_not_read_is_refused_with_its_own_sentence_on
     ids=["refused", "value-error"],
 )
 def test_an_upload_keeps_the_entries_it_can_save_and_names_the_others(monkeypatch, two_entry_upload, raised, error):
-    def _save_item(entry_payload, original_filename=None):
+    def _save_item(entry_payload, original_filename=None, max_bytes=None):
         if entry_payload.get("entry") == 1:
             raise raised
         return {"storedFilename": "stored-2.json", "originalFilename": original_filename}
@@ -419,7 +522,7 @@ def test_an_upload_without_a_file_name_is_named_metadata_json(monkeypatch, visit
     monkeypatch.setattr(
         mds_uploads,
         "save_session_metadata_item",
-        lambda _payload, original_filename=None: {"originalFilename": original_filename},
+        lambda _payload, original_filename=None, max_bytes=None: {"originalFilename": original_filename},
     )
     monkeypatch.setattr(mds_uploads, "serialize_session_metadata_item", lambda item: item)
     monkeypatch.setattr(mds_effective, "load_custom_entries", lambda: {"meta": {"customEntryCount": 1}, "entries": []})
@@ -457,7 +560,7 @@ def test_a_file_is_queued_for_the_device_log_only_once_one_of_its_entries_saved(
     monkeypatch.setattr(github_mirror, "queue_uploaded_metadata_files", lambda files: queued.append(list(files)))
     monkeypatch.setattr(mds_entries, "expand_metadata_entry_payloads", lambda payload: [payload])
 
-    def _save_item(entry_payload, original_filename=None):
+    def _save_item(entry_payload, original_filename=None, max_bytes=None):
         if entry_payload.get("refuse"):
             raise mds_entries.MetadataRefused("not kept")
         return {"storedFilename": "stored.json", "originalFilename": original_filename}

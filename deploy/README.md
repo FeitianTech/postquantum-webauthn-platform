@@ -128,7 +128,8 @@ the worker gives back the memory of a burst of large requests) for itself, and
 | `FIDO_SERVER_TRUSTED_ATTESTATION_CA_FINGERPRINTS` | none | The same by SHA-256 fingerprint (hex, 40 digits or more) |
 | `FIDO_SERVER_CONTENT_SECURITY_POLICY` | the strict policy | Replaces the enforced Content-Security-Policy (`server/app/config/security_headers.py`) |
 | `FIDO_SERVER_MAX_REQUEST_BYTES` | 8 MiB | The largest request body; larger answers 413 |
-| `FIDO_SERVER_MAX_METADATA_UPLOAD_BYTES` | 16 MiB | The largest metadata upload |
+| `FIDO_SERVER_MAX_METADATA_UPLOAD_BYTES` | 16 MiB | The largest metadata upload; an instance reads one at a time, and another that waits 2 s for its place answers 503 with `Retry-After` |
+| `FIDO_SERVER_MAX_METADATA_ENTRY_BYTES` | 1 MiB | The largest uploaded metadata entry once stored; a larger one is refused in the upload's errors |
 | `FIDO_SERVER_MAX_CODEC_REQUEST_BYTES` | 1 MiB | The largest `/api/codec` request; larger answers 413 |
 | `FIDO_SERVER_MAX_CODEC_ITEMS` | `20000` | The most items `/api/codec` reads for one request (`server/app/decoder/item_budget.py`); past it the input is refused, 422 |
 | `FIDO_SERVER_MAX_REGISTRATION_RESPONSE_BYTES` | 256 KiB | The largest credential response a registration completes with (a Simple complete's whole body, an Advanced complete's `__credential_response`); larger answers 413 |

@@ -174,6 +174,16 @@ def test_a_body_holding_more_than_100000_values_is_refused_its_strings_set_aside
             assert json_body.json_object() == {}
 
 
+@pytest.mark.parametrize("body", [_array(10), "[" + "[]," * 100 + "[]]"], ids=["few brackets", "past the depth's quick count"])
+def test_a_reader_with_a_cap_of_its_own_is_given_the_count_it_was_held_to(body):
+    counted = body.count("[") + body.count(",")
+
+    assert json_body.check_limits(body.encode(), max_values=counted + 1) == counted
+    with pytest.raises(json_body.TooManyValues):
+        json_body.check_limits(body.encode(), max_values=counted)
+    assert json_body.check_limits(("[" * 100).encode("utf-16-be") + b"\x00", max_values=1) == 0
+
+
 @pytest.mark.parametrize(
     ("start", "unit", "end"),
     [(b'["', b'\\",', b""), (b'["', b",", b""), (b"[", b'"",', b"0]"), (b"[", b'"\\"",', b"0]")],

@@ -317,8 +317,10 @@ its logic out here first.
   and folders), `request_limits.py` (8 MiB, the metadata
   upload 16 MiB, `/api/codec` 1 MiB, a registration's credential response 256 KiB (a Simple
   complete's body, an Advanced complete's `__credential_response`); 413 in JSON; the namespace's
-  quotas, `artifacts_quota` and `metadata_quota`, and the Simple credentials a username keeps; and the codec's 20,000 items read per request,
-  `decoder/item_budget.py`, 422 past it), `web_export.py`. Importing it configures nothing, and
+  quotas, `artifacts_quota` and `metadata_quota`, and the Simple credentials a username keeps; the codec's 20,000 items read per request,
+  `decoder/item_budget.py`, 422 past it; and the metadata upload's 200,000 JSON values and 1 MiB
+  stored entry, each refused in its errors, with one upload read at a time and another 503 with
+  `Retry-After`), `web_export.py`. Importing it configures nothing, and
   the package re-exports nothing: routes call `relying_party.create_fido_server` and
   `origins.determine_expected_origin` through their modules, where tests patch them. Tests reach
   the entry point's app through `tests/app/entry_app.py`.

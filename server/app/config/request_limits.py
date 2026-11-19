@@ -36,6 +36,13 @@ environment.
 20,000 unless the environment says otherwise (``decoder/item_budget.py`` says
 what counts, and why that many).
 
+The metadata upload's files hold at most ``MAX_METADATA_UPLOAD_VALUES`` JSON values
+together, 200,000, counted before they are parsed, and no entry is kept larger than
+1 MiB once stored; a file or entry past either is refused in the upload's errors.
+The fixture's real statements hold 71 values on average and 159 at most, and the
+largest is under 10 KB stored: the whole MDS metadata holds about 38,000 values,
+2,000 entries (the namespace's count) about 140,000.
+
 What one visitor's namespace keeps (docs/STORAGE.md, "Quotas"): a write past it
 raises ``storage.common.StorageQuotaExceeded``, 409 for a count, 413 for bytes.
 Measured: an advanced registration's artifact is about 10 KB for a classical
@@ -67,12 +74,17 @@ DEFAULT_MAX_STORED_ARTIFACT_BYTES = 256 * _MIB
 DEFAULT_MAX_STORED_METADATA_ENTRIES = 2000
 DEFAULT_MAX_STORED_METADATA_BYTES = 64 * _MIB
 DEFAULT_MAX_SIMPLE_CREDENTIALS_PER_USERNAME = 100
+DEFAULT_MAX_METADATA_ENTRY_BYTES = _MIB
+# The most JSON values one metadata upload's files hold together (routes/json_body.py counts them).
+MAX_METADATA_UPLOAD_VALUES = 200_000
 
 # The app.config key the metadata upload reads its limit from.
 METADATA_UPLOAD_LIMIT_KEY = "MAX_METADATA_UPLOAD_LENGTH"
 # The app.config keys /api/codec reads its own limit and its item budget from.
 CODEC_REQUEST_LIMIT_KEY = "MAX_CODEC_REQUEST_LENGTH"
 CODEC_ITEM_LIMIT_KEY = "MAX_CODEC_ITEMS"
+# The app.config key of how large one uploaded metadata entry may be once stored.
+METADATA_ENTRY_LIMIT_KEY = "MAX_METADATA_ENTRY_BYTES"
 # The app.config key a registration's complete reads the limit of its credential response from.
 REGISTRATION_RESPONSE_LIMIT_KEY = "MAX_REGISTRATION_RESPONSE_LENGTH"
 # The app.config keys of the namespace's quota of credential artifacts: how many, how many bytes.
@@ -105,6 +117,7 @@ def config_from_env() -> dict[str, Any]:
         METADATA_UPLOAD_LIMIT_KEY: _positive_int(
             "FIDO_SERVER_MAX_METADATA_UPLOAD_BYTES", DEFAULT_MAX_METADATA_UPLOAD_BYTES
         ),
+        METADATA_ENTRY_LIMIT_KEY: _positive_int("FIDO_SERVER_MAX_METADATA_ENTRY_BYTES", DEFAULT_MAX_METADATA_ENTRY_BYTES),
         CODEC_REQUEST_LIMIT_KEY: _positive_int("FIDO_SERVER_MAX_CODEC_REQUEST_BYTES", DEFAULT_MAX_CODEC_REQUEST_BYTES),
         CODEC_ITEM_LIMIT_KEY: _positive_int("FIDO_SERVER_MAX_CODEC_ITEMS", item_budget.DEFAULT_MAX_ITEMS),
         REGISTRATION_RESPONSE_LIMIT_KEY: _positive_int(

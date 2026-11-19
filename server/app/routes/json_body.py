@@ -19,7 +19,7 @@ most one value more than its commas and opening brackets, and that is what is
 counted. The page's largest body, an Advanced sign-in sending every saved
 credential, holds 14 values for each one: about 20,000 for as many as a browser's
 storage keeps. ``check_limits`` asks both, for every route and the CSP report; the
-metadata upload, which reads its own JSON, asks ``nested_too_deep``.
+metadata upload, which reads its own JSON, asks it with a cap of its own.
 
 The body is scanned as the reader reads bytes: in the UTF-8, UTF-16 or UTF-32
 its first bytes name (``json.detect_encoding``). Read byte by byte, UTF-16 or
@@ -137,22 +137,28 @@ def nested_too_deep(data: bytes) -> bool:
     return _too_deep(_outside_strings(data))
 
 
-def check_limits(data: bytes) -> None:
+def check_limits(data: bytes, max_values: int = MAX_VALUES) -> int:
     """Refuse JSON ``data`` nested more than ``MAX_DEPTH`` deep (``NestedTooDeep``) or holding
-    more than ``MAX_VALUES`` values (``TooManyValues``), its strings set aside, before it is parsed."""
+    more than ``max_values`` values (``TooManyValues``), its strings set aside, before it is parsed.
+
+    Gives the count it compared otherwise: its opening brackets and commas, those in its strings
+    too unless it holds many."""
 
     data = _as_utf8(data)
     if data is None:
-        return
+        return 0
     openings = _openings(data)
+    values = openings + data.count(b",")
     # Counted with its strings in, most bodies are within both limits: nothing more to do.
-    if openings <= MAX_DEPTH and openings + data.count(b",") < MAX_VALUES:
-        return
+    if openings <= MAX_DEPTH and values < max_values:
+        return values
     outside = _outside_strings(data)
     if _too_deep(outside):
         raise NestedTooDeep()
-    if _openings(outside) + outside.count(b",") >= MAX_VALUES:
+    values = _openings(outside) + outside.count(b",")
+    if values >= max_values:
         raise TooManyValues()
+    return values
 
 
 def json_object() -> dict[str, Any]:

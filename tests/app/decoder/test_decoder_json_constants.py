@@ -144,7 +144,7 @@ def test_an_uploaded_metadata_file_with_nan_or_a_number_beyond_a_double_is_refus
     monkeypatch.setattr(visitor_session, "ensure_id", lambda: "session-id")
     monkeypatch.setattr(mds_entries, "expand_metadata_entry_payloads", lambda payload: [payload])
     monkeypatch.setattr(github_mirror, "queue_uploaded_metadata_files", lambda _files: None)
-    monkeypatch.setattr(mds_uploads, "save_session_metadata_item", lambda payload, original_filename=None: saved.append(payload))
+    monkeypatch.setattr(mds_uploads, "save_session_metadata_item", lambda payload, original_filename=None, max_bytes=None: saved.append(payload))
     monkeypatch.setattr(mds_uploads, "serialize_session_metadata_item", lambda _item: {"storedFilename": "custom.json"})
 
     response = client.post(

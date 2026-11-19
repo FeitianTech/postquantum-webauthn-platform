@@ -32,6 +32,8 @@ _BYTES_PAST = (
     "Nothing was saved: these {size} of metadata would take this browser's uploads past the {limit} "
     "this server keeps for one visitor. Delete uploads you no longer use and try again."
 )
+# What the visitor reads, after the file's name, for one entry larger than this server keeps.
+_ENTRY_PAST = "It is larger, once stored, than the {limit} this server keeps for one metadata entry."
 
 logger = logging.getLogger(__name__)
 
@@ -115,28 +117,38 @@ def _load_session_metadata_info(session_id: str, filename: str) -> dict[str, Any
     return payload
 
 
-def stored_json(raw_payload: Mapping[str, Any]) -> bytes:
-    """The bytes an uploaded entry is stored as; ``ValueError`` for one JSON cannot hold."""
+def stored_json(raw_payload: Mapping[str, Any], max_bytes: int | None = None) -> bytes:
+    """The bytes an uploaded entry is stored as; ``ValueError`` for one JSON cannot hold,
+    or one stored in more than ``max_bytes``."""
 
     try:
-        serialisable_payload = json.loads(json.dumps(raw_payload))
+        compact = json.dumps(raw_payload)
     except (TypeError, ValueError) as exc:
         raise entries.MetadataRefused("Metadata JSON contains unsupported types.") from exc
-    return (json.dumps(serialisable_payload, indent=2, sort_keys=True) + "\n").encode("utf-8")
+    # Indented, an entry is never shorter than compact: one already past the limit is neither read
+    # back nor indented.
+    if max_bytes is None or len(compact) <= max_bytes:
+        stored = (json.dumps(json.loads(compact), indent=2, sort_keys=True) + "\n").encode("utf-8")
+        if max_bytes is None or len(stored) <= max_bytes:
+            return stored
+    raise entries.MetadataRefused(_ENTRY_PAST.format(limit=storage_common.describe_size(max_bytes)))
 
 
-def refuse_past_quota(session_id: str, raw_payloads: list[Mapping[str, Any]], quota: storage_common.Quota) -> None:
+def refuse_past_quota(
+    session_id: str, raw_payloads: list[Mapping[str, Any]], quota: storage_common.Quota, max_entry_bytes: int
+) -> None:
     """Refuse, before any is saved, entries that would take the namespace's uploads past its quota.
 
     Raises ``StorageQuotaExceeded``: 409 past the count of entries, 413 past their
     bytes (each upload's own file; its info file beside it is not counted). An entry
-    JSON cannot hold is not counted: it is refused when it is saved.
+    JSON cannot hold, or one stored in more than ``max_entry_bytes``, is not counted:
+    it is refused when it is saved.
     """
 
     sizes = []
     for raw_payload in raw_payloads:
         try:
-            sizes.append(len(stored_json(raw_payload)))
+            sizes.append(len(stored_json(raw_payload, max_entry_bytes)))
         except ValueError:
             continue
     if not sizes:
@@ -154,12 +166,14 @@ def save_session_metadata_item(
     raw_payload: Mapping[str, Any],
     *,
     original_filename: str | None = None,
+    max_bytes: int | None = None,
 ) -> SessionMetadataItem:
     session_id = visitor_session.ensure_id()
     directory = _session_metadata_directory(session_id, create=True)
 
+    # Its size first: an entry past it is refused before fido2 reads it.
+    json_payload = stored_json(raw_payload, max_bytes)
     entry, legal_header, payload = entries.build_metadata_entry_components(raw_payload)
-    json_payload = stored_json(raw_payload)
 
     stored_filename = f"{uuid.uuid4().hex}{_SESSION_METADATA_SUFFIX}"
 

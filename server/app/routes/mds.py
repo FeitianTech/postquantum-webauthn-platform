@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import logging
 import math
+import threading
 from collections.abc import Mapping
 from typing import Any, NamedTuple
 
@@ -39,6 +40,15 @@ _DELETE_FAILED = "Failed to delete the uploaded metadata file."
 
 # An upload's icon (api_custom_metadata_icon): the browser keeps it, and no shared cache.
 _ICON_CACHE_CONTROL = "private, max-age=31536000, immutable"
+
+# One upload is read at a time in a process: it holds its body, its text and its JSON several
+# times over, and the worst the limits let in (16 MiB of strings each with a 4-byte character,
+# kept at 4 bytes a character) peaks at 177 MiB as tracemalloc counts it, in an instance of 1 GiB.
+# Another waits a moment for the place, then is told to try again, its body unread.
+_UPLOADS_READ = threading.BoundedSemaphore(1)
+_UPLOAD_WAIT_SECONDS = 2
+_UPLOAD_RETRY_AFTER_SECONDS = 5
+_UPLOADS_BUSY = "The server is reading other metadata uploads: try again in a few seconds."
 
 
 def _custom_entries_state(metadata_session_id: str | None) -> str:
@@ -162,28 +172,43 @@ def _finite_number(text: str) -> float:
     return number
 
 
+def _metadata_values(raw_bytes: bytes, max_values: int) -> int:
+    """How many values an uploaded file's JSON holds, as ``json_body`` counts them; refused past
+    ``max_values``, what is left of the upload's, or nested deeper than a JSON body may be.
+
+    Python's reader goes as deep as the text, and keeps about 26 bytes for each byte of ``{},``;
+    the files of one upload are all kept until it is answered."""
+
+    try:
+        return json_body.check_limits(raw_bytes, max_values)
+    except json_body.NestedTooDeep:
+        raise mds_entries.MetadataRefused(f"JSON nested more than {json_body.MAX_DEPTH} deep, deeper than this server reads") from None
+    except json_body.TooManyValues:
+        cap = request_limits.MAX_METADATA_UPLOAD_VALUES
+        raise mds_entries.MetadataRefused(f"JSON holding more than {cap:,} values in one upload, more than this server reads") from None
+
+
 def _read_metadata_json(text: str) -> Any:
     # RFC 8259's JSON: the metadata is answered back, and NaN, or a number beyond a double's
     # range, which Python's reader makes an infinity, would make that answer not JSON.
-    # Nested at most as deep as a JSON body (routes/json_body.py): Python's reader goes as deep as the text.
-    if json_body.nested_too_deep(text.encode("utf-8")):
-        raise mds_entries.MetadataRefused(f"JSON nested more than {json_body.MAX_DEPTH} deep, deeper than this server reads")
     return json.loads(text, parse_constant=_refuse_json_constant, parse_float=_finite_number)
 
 
 class _UploadedFile(NamedTuple):
-    """One uploaded file read as metadata: its name, its bytes and the entries it holds."""
+    """One uploaded file read as metadata: its name, its bytes, the entries it holds and how many
+    values its JSON holds (``_metadata_values``)."""
 
     name: str
     raw_bytes: bytes
     entries: list[Mapping[str, Any]]
+    values: int
 
 
-def _read_uploaded_file(storage: Any) -> tuple[_UploadedFile | None, str | None]:
+def _read_uploaded_file(storage: Any, max_values: int) -> tuple[_UploadedFile | None, str | None]:
     """One file of an upload, read and expanded into its entries; or the sentence that refuses it.
 
-    A sentence is the app's own (``MetadataRefused``) or one written here: an exception's
-    own text (a reader's, fido2's) is logged at INFO, never answered."""
+    Its JSON holds at most ``max_values`` values. A sentence is the app's own (``MetadataRefused``)
+    or one written here: an exception's own text (a reader's, fido2's) is logged at INFO, never answered."""
 
     trimmed = (storage.filename or "").strip() or "metadata.json"
     if not trimmed.lower().endswith(".json"):
@@ -196,12 +221,11 @@ def _read_uploaded_file(storage: Any) -> tuple[_UploadedFile | None, str | None]
         return None, f"Failed to read {trimmed}."
 
     try:
-        text = raw_bytes.decode("utf-8-sig")
+        # Counted before the text is decoded and parsed: both cost more than the bytes.
+        values = _metadata_values(raw_bytes, max_values)
+        payload: dict[str, Any] = _read_metadata_json(raw_bytes.decode("utf-8-sig"))
     except UnicodeDecodeError:
         return None, f"{trimmed} is not valid UTF-8 JSON."
-
-    try:
-        payload: dict[str, Any] = _read_metadata_json(text)
     except json.JSONDecodeError as exc:
         logger.info("The uploaded file %s is not JSON", trimmed, exc_info=exc)
         return None, f"{trimmed} is not JSON (line {exc.lineno}, column {exc.colno})."
@@ -218,7 +242,7 @@ def _read_uploaded_file(storage: Any) -> tuple[_UploadedFile | None, str | None]
     except (TypeError, ValueError) as exc:
         logger.info("Could not read the entries of the uploaded file %s", trimmed, exc_info=exc)
         return None, f"{trimmed}: {mds_entries.UNREADABLE_ENTRY}"
-    return _UploadedFile(trimmed, raw_bytes, list(entry_payloads)), None
+    return _UploadedFile(trimmed, raw_bytes, list(entry_payloads), values), None
 
 
 def _save_uploaded_file(uploaded: _UploadedFile, saved_items: list[Any], errors: list[str]) -> Any | None:
@@ -231,6 +255,7 @@ def _save_uploaded_file(uploaded: _UploadedFile, saved_items: list[Any], errors:
             item = mds_uploads.save_session_metadata_item(
                 entry_payload,
                 original_filename=display_name,
+                max_bytes=current_app.config[request_limits.METADATA_ENTRY_LIMIT_KEY],
             )
         except mds_entries.MetadataRefused as exc:
             errors.append(f"{display_name}: {exc}")
@@ -250,6 +275,20 @@ def _save_uploaded_file(uploaded: _UploadedFile, saved_items: list[Any], errors:
 @bp.route("/api/mds/metadata/upload", methods=["POST"])
 @mds_provisioning.waits_for_the_snapshot
 def api_upload_custom_metadata():
+    # The place is taken before the body is read, where an upload's memory starts, and given
+    # back once its answer is built.
+    if not _UPLOADS_READ.acquire(timeout=_UPLOAD_WAIT_SECONDS):
+        response = jsonify({"error": _UPLOADS_BUSY})
+        response.status_code = 503
+        response.headers["Retry-After"] = str(_UPLOAD_RETRY_AFTER_SECONDS)
+        return response
+    try:
+        return _read_and_save_upload()
+    finally:
+        _UPLOADS_READ.release()
+
+
+def _read_and_save_upload():
     # Its own limit, before the body is read: the whole MDS metadata (config/request_limits.py).
     request.max_content_length = current_app.config[METADATA_UPLOAD_LIMIT_KEY]
     namespace = visitor_session.ensure_id()
@@ -259,13 +298,19 @@ def api_upload_custom_metadata():
         return jsonify({"items": [], "errors": ["No JSON files were provided."]}), 400
 
     # Every file is read before any is saved; each file's sentences stay in its place.
-    read_files = [_read_uploaded_file(storage) for storage in file_entries]
+    read_files = []
+    values_left = request_limits.MAX_METADATA_UPLOAD_VALUES
+    for storage in file_entries:
+        uploaded, refusal = _read_uploaded_file(storage, values_left)
+        values_left -= uploaded.values if uploaded is not None else 0
+        read_files.append((uploaded, refusal))
     errors_by_file = [[refusal] if refusal is not None else [] for _uploaded, refusal in read_files]
     # Past the namespace's quota nothing is saved or queued (StorageQuotaExceeded: routes/errors.py).
     mds_uploads.refuse_past_quota(
         namespace,
         [entry for uploaded, _refusal in read_files if uploaded is not None for entry in uploaded.entries],
         request_limits.metadata_quota(current_app.config),
+        current_app.config[request_limits.METADATA_ENTRY_LIMIT_KEY],
     )
 
     saved_items: list[Any] = []
@@ -282,6 +327,8 @@ def api_upload_custom_metadata():
     # A file one of whose entries was saved is queued, whole, for the device log (never in this
     # request's time); a file none of whose entries was saved is not.
     github_mirror.queue_uploaded_metadata_files(logged)
+    # The upload's bytes and entries go before the answer reads the namespace's rows back.
+    del read_files, uploaded, logged
     return _upload_answer(saved_items, [error for file_errors in errors_by_file for error in file_errors])
 
 
