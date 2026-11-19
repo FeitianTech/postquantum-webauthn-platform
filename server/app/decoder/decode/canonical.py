@@ -203,24 +203,21 @@ def _check_map(
     node: Mapping[str, Any], data: bytes, path: str, findings: list[dict[str, Any]], depth: int, dropped: bool
 ) -> None:
     entries = [entry for entry in node.get("entries") or [] if isinstance(entry.get("key"), Mapping)]
-    identities = [key_equivalence.identity(entry["key"]) for entry in entries]
-    # The decoded value keeps the last entry of each key (cbor_parser._map_value).
-    last = {identity: index for index, identity in enumerate(identities)}
-    seen: dict[Any, list[Mapping[str, Any]]] = {}
+    first, kept, repeated = _occurrences(entries)
     previous: tuple[bytes, Mapping[str, Any]] | None = None
-    for index, (entry, identity) in enumerate(zip(entries, identities)):
+    for index, entry in enumerate(entries):
         key, value = entry["key"], entry.get("value")
         entry_path = entry.get("path") or path
-        seen.setdefault(identity, []).append(entry)
         if key.get("type") == "invalid":
             # A key the lenient parser could not read has no order to check; its value does.
-            _check_node(value, data, entry_path, findings, depth, dropped or last[identity] != index)
+            _check_node(value, data, entry_path, findings, depth, dropped or not kept[index])
             continue
-        key_offset = key["offset"]
-        encoded = data[key_offset : key["end"]]
+        key_offset, key_end = key["offset"], key["end"]
         _check_node(key, data, entry_path, findings, depth, dropped)
+        # Copied only once the key is checked: a key holding keys is not copied at every level.
+        encoded = data[key_offset:key_end]
 
-        if len(seen[identity]) == 1:
+        if first[index]:
             if previous is not None and ctap2_key_order(encoded) < ctap2_key_order(previous[0]):
                 findings.append(
                     _finding(
@@ -232,12 +229,30 @@ def _check_map(
                     )
                 )
         previous = (encoded, key)
-        _check_node(value, data, entry_path, findings, depth, dropped or last[identity] != index)
+        _check_node(value, data, entry_path, findings, depth, dropped or not kept[index])
     # One finding per repeated key, at the entry the decoded value keeps: the last.
+    for occurrences in repeated:
+        last_entry = entries[occurrences[-1]]
+        earlier = [entries[index] for index in occurrences[:-1]]
+        findings.append(_duplicate(last_entry["key"], last_entry.get("path") or path, earlier, dropped))
+
+
+def _occurrences(entries: list[Mapping[str, Any]]) -> tuple[list[bool], list[bool], list[list[int]]]:
+    """For each entry, whether it is its key's first and whether its last; and each repeated key's entries.
+
+    Worked out before the map is walked, so that no key's identity is alive while
+    its own keys are checked: a key holding a key holding a key would otherwise
+    keep one copy of its subtree per level. The decoded value keeps the last
+    entry of each key (cbor_parser._map_value).
+    """
+
+    seen: dict[Any, list[int]] = {}
+    for index, entry in enumerate(entries):
+        seen.setdefault(key_equivalence.identity(entry["key"]), []).append(index)
+    first, kept = [False] * len(entries), [False] * len(entries)
     for occurrences in seen.values():
-        if len(occurrences) > 1:
-            kept = occurrences[-1]
-            findings.append(_duplicate(kept["key"], kept.get("path") or path, occurrences[:-1], dropped))
+        first[occurrences[0]], kept[occurrences[-1]] = True, True
+    return first, kept, [occurrences for occurrences in seen.values() if len(occurrences) > 1]
 
 
 def _duplicate(

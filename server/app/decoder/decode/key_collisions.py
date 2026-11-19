@@ -42,20 +42,14 @@ def _walk(node: Any, path: str, findings: list[dict[str, Any]]) -> None:
 
 
 def _check_map(node: Mapping[str, Any], path: str, findings: list[dict[str, Any]]) -> None:
-    # The keys the decoded map holds, as it holds them: equivalent keys are one
-    # key, spelled as the first of them (cbor_parser._map_value).
-    keys: dict[Any, Any] = {}
-    for entry in node.get("entries") or []:
+    entries = node.get("entries") or []
+    shared = _shared_spellings(entries)
+    for entry in entries:
         key_node, entry_path = entry.get("key"), entry.get("path") or path
         if isinstance(key_node, Mapping) and key_node.get("type") != "invalid":
-            keys.setdefault(key_equivalence.identity(key_node), _map_key(key_node))
             _walk(key_node, entry_path, findings)
         _walk(entry.get("value"), entry_path, findings)
 
-    groups: dict[str, list[Any]] = {}
-    for key in keys.values():
-        groups.setdefault(values.key_text(key), []).append(key)
-    shared = {text: group for text, group in groups.items() if len(group) > 1}
     if not shared:
         return
     clauses = [
@@ -76,3 +70,24 @@ def _check_map(node: Mapping[str, Any], path: str, findings: list[dict[str, Any]
             ),
         }
     )
+
+
+def _shared_spellings(entries: list[Any]) -> dict[str, list[Any]]:
+    """The map's keys that share a JSON spelling, by that spelling.
+
+    Worked out before the map is walked, so that no key's identity or spelling is
+    alive while its own keys are checked: a key holding a key holding a key would
+    otherwise keep one copy of its subtree per level.
+    """
+
+    # The keys the decoded map holds, as it holds them: equivalent keys are one
+    # key, spelled as the first of them (cbor_parser._map_value).
+    keys: dict[Any, Any] = {}
+    for entry in entries:
+        key_node = entry.get("key")
+        if isinstance(key_node, Mapping) and key_node.get("type") != "invalid":
+            keys.setdefault(key_equivalence.identity(key_node), _map_key(key_node))
+    groups: dict[str, list[Any]] = {}
+    for key in keys.values():
+        groups.setdefault(values.key_text(key), []).append(key)
+    return {text: group for text, group in groups.items() if len(group) > 1}
