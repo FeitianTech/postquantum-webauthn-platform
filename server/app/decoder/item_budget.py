@@ -39,7 +39,9 @@ from __future__ import annotations
 
 import contextlib
 import contextvars
-from collections.abc import Iterator
+import functools
+from collections.abc import Callable, Iterator
+from typing import NoReturn
 
 DEFAULT_MAX_ITEMS = 20_000
 # What one request may spell in EDN, in units of about what a byte of a byte string costs to spell
@@ -90,26 +92,28 @@ class Budget:
         self.limit = limit
         self.used = 0
         self.spelled = 0
-        self.refusal: ValueError | None = None
+        # What raises the first refusal again, never a raised error: its traceback holds the frames
+        # that read the input, and they this budget, a cycle only a full collection would free.
+        self.refusal: Callable[[], ValueError] | None = None
 
-    def _refuse(self, refusal: ValueError) -> None:
+    def _refuse(self, refusal: Callable[[], ValueError]) -> NoReturn:
         if self.refusal is None:
             self.refusal = refusal
-        raise refusal
+        raise refusal()
 
     def charge(self, offset: int | None, path: str | None) -> None:
         """Count one item, read at ``offset`` and ``path``; past the limit, refuse it there."""
 
         self.used += 1
         if self.used > self.limit:
-            self._refuse(ItemLimitError(self.limit, offset, path))
+            self._refuse(functools.partial(ItemLimitError, self.limit, offset, path))
 
     def spell(self, units: int) -> None:
         """Count ``units`` about to be spelled in EDN; past ``MAX_SPELLING_UNITS``, refuse them."""
 
         self.spelled += units
         if self.spelled > MAX_SPELLING_UNITS:
-            self._refuse(SpellingLimitError(MAX_SPELLING_UNITS))
+            self._refuse(functools.partial(SpellingLimitError, MAX_SPELLING_UNITS))
 
 
 _CURRENT: contextvars.ContextVar[Budget | None] = contextvars.ContextVar("codec_item_budget", default=None)
@@ -121,24 +125,27 @@ def current() -> Budget | None:
     return _CURRENT.get()
 
 
-@contextlib.contextmanager
-def limit(max_items: int) -> Iterator[Budget]:
-    """Read under a budget of ``max_items``; when the block ends, raise its first refusal, whatever caught it."""
+class limit:
+    """Read under a budget of ``max_items``; when the block ends, raise its first refusal, whatever caught it.
 
-    budget = Budget(max_items)
-    token = _CURRENT.set(budget)
-    try:
-        yield budget
-    except Exception:
-        # The error that ends the block can be another one, raised by a reading
-        # that went on without the read that ran out.
-        if budget.refusal is not None:
-            raise budget.refusal from None
-        raise
-    finally:
-        _CURRENT.reset(token)
-    if budget.refusal is not None:
-        raise budget.refusal
+    A class, not a ``contextlib.contextmanager`` generator: its ``__exit__`` holds the error the block
+    ended with, and on Python 3.12 that error's traceback reaches back to it through the generator's
+    frame, a cycle only a full collection would free.
+    """
+
+    def __init__(self, max_items: int) -> None:
+        self.budget = Budget(max_items)
+
+    def __enter__(self) -> Budget:
+        self._token = _CURRENT.set(self.budget)
+        return self.budget
+
+    def __exit__(self, error_type: type[BaseException] | None, *_: object) -> None:
+        _CURRENT.reset(self._token)
+        # The error that ends the block can be another one, raised by a reading that went on
+        # without the read that ran out; one that is not an Exception goes on as it is.
+        if self.budget.refusal is not None and (error_type is None or issubclass(error_type, Exception)):
+            raise self.budget.refusal() from None
 
 
 @contextlib.contextmanager

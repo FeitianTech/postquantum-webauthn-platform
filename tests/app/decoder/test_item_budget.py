@@ -6,6 +6,7 @@ import contextlib
 import pytest
 
 from server.app.decoder import item_budget
+from tests.app.unreachable import unreachable_after
 
 
 def test_items_are_counted_to_the_limit_and_the_next_is_refused_where_it_was_read():
@@ -82,6 +83,30 @@ def test_spelling_is_counted_to_its_limit_and_past_it_refused_again_when_the_blo
 
     assert isinstance(refused.value, ValueError)
     assert refused.value.limit == item_budget.MAX_SPELLING_UNITS
+
+
+def _items_refused_then_raised_again():
+    with item_budget.limit(1) as budget:
+        with contextlib.suppress(ValueError):
+            budget.charge(0, "$")
+            budget.charge(1, "$[0]")
+        raise KeyError("a reading that went on without the read that ran out")
+
+
+def _spelling_refused():
+    with item_budget.limit(1) as budget:
+        budget.spell(item_budget.MAX_SPELLING_UNITS + 1)
+
+
+@pytest.mark.parametrize(
+    ("block", "refusal"),
+    [(_items_refused_then_raised_again, item_budget.ItemLimitError), (_spelling_refused, item_budget.SpellingLimitError)],
+    ids=["items", "spelling"],
+)
+def test_a_refusal_leaves_nothing_for_the_garbage_collector(block, refusal):
+    # A refusal kept on the budget would hold, through its traceback, the frames that read the input,
+    # and they the budget: freed only by a full collection, which a quiet process may never run.
+    assert unreachable_after(block) == (0, refusal)
 
 
 def test_the_spelling_refusal_names_its_limit_and_what_is_spelled():

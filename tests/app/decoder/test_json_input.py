@@ -10,6 +10,7 @@ from server.app.config.request_limits import DEFAULT_MAX_CODEC_REQUEST_BYTES
 from server.app.decoder import item_budget
 from server.app.decoder.decode import json_input, readings
 from server.app.decoder.decode.text import decode_payload_text
+from tests.app.unreachable import unreachable_after
 
 
 def _nested(depth: int) -> str:
@@ -156,3 +157,14 @@ def test_a_finding_deep_under_long_keys_keeps_its_path_cut_in_its_middle_so_the_
     assert "..." in paths[-1][100:200]
     # Whole paths made an answer of 52 MB.
     assert len(json.dumps(answer)) < 16 * 1024 * 1024
+
+
+@pytest.mark.parametrize(
+    ("text", "refusal"),
+    [('{"a": [1, [2, {"b": "c"}]], "a": 3}', None), (_nested(65), json_input.JsonDepthError)],
+    ids=["a-repeated-key-spelled", "too-deep-found"],
+)
+def test_a_read_leaves_nothing_for_the_garbage_collector(text, refusal):
+    # JSONEncoder.iterencode's functions, and a recursive closure, hold themselves: cycles that keep
+    # the value spelled, or the text searched, until a full collection.
+    assert unreachable_after(lambda: json_input.read(text)) == (0, refusal)

@@ -92,7 +92,11 @@ def _extract_ctap_numeric_payload(parsed: Any) -> tuple[dict[int, Any], str]:
                 _enqueue_candidates(candidates, value, visited)
 
     if classification_error is not None:
-        raise classification_error
+        try:
+            raise classification_error
+        finally:
+            # This frame would hold the error, its traceback this frame and ``parsed``: a cycle.
+            classification_error = error = salvage_error = None
 
     raise ValueError(
         "Unable to locate CTAP/WebAuthn numeric-keyed fields in input JSON."

@@ -6,8 +6,10 @@ import json
 import pytest
 
 from server.app.decoder import item_budget
+from server.app.decoder.edn.errors import EdnError
 from server.app.decoder.encode import text as encode_text
 from tests.app.security.ceremony_helpers import b64u
+from tests.app.unreachable import unreachable_after
 
 
 def test_encode_payload_text_cbor_is_deterministic_across_equivalent_permutations():
@@ -99,3 +101,23 @@ def test_input_of_as_many_items_as_the_budget_is_encoded_and_one_more_is_refused
     with pytest.raises(item_budget.ItemLimitError) as refused:
         encode_text.encode_payload_text("[1, 2, 3]", target_format, max_items=3)
     assert (refused.value.offset, refused.value.path) == (offset, path)
+
+
+@pytest.mark.parametrize(
+    ("text", "target_format", "refusal"),
+    [
+        ("[1, 2, 3, 4]", "CBOR", item_budget.ItemLimitError),
+        ("[1, 2, 3, 4]", "EDN", item_budget.ItemLimitError),
+        ("[1, 2", "EDN", EdnError),
+        ('{"1": "a"}', "CBOR (CTAP/WebAuthn data)", ValueError),
+        ('{"a": 1}', "CBOR", None),
+    ],
+    ids=["items-json", "items-edn", "malformed-edn", "ctap-refused", "answered"],
+)
+def test_an_encode_leaves_nothing_for_the_garbage_collector(text, target_format, refusal):
+    # Not an answer in a JSON format: its indented text is written by CPython's pure-Python encoder
+    # before 3.14, whose functions hold one another, a small cycle of the standard library's own.
+    assert unreachable_after(lambda: encode_text.encode_payload_text(text, target_format, max_items=3)) == (
+        0,
+        refusal,
+    )

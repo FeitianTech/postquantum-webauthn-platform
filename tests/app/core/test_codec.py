@@ -12,6 +12,7 @@ from server.app.decoder.encode import text as encode_text
 from tests.app.decoder.credential_bytes import _build_attestation_object
 from tests.app.entry_app import entry_app
 from tests.app.security.ceremony_helpers import b64u, unb64u
+from tests.app.unreachable import unreachable_after
 
 
 def test_codec_api_rejects_non_json_payload():
@@ -265,3 +266,33 @@ def test_the_codec_refuses_a_request_that_would_spell_more_than_its_budget():
 
     assert response.status_code == 422
     assert response.get_json() == {"error": str(item_budget.SpellingLimitError(item_budget.MAX_SPELLING_UNITS))}
+
+
+@pytest.mark.parametrize(
+    ("body", "status"),
+    [
+        ({"payload": "9878" + "4100" * 120}, 422),
+        ({"payload": json.dumps(list(range(120))), "mode": "encode", "format": "CBOR"}, 422),
+        ({"payload": "a20102"}, 422),
+        ({"payload": "a1a14361626300" + "00"}, 200),
+    ],
+    ids=["refused-at-the-item-limit", "encode-refused-at-the-item-limit", "refused-as-malformed", "answered"],
+)
+def test_a_codec_request_leaves_no_more_for_the_garbage_collector_than_one_it_does_not_read(
+    make_app, monkeypatch, body, status
+):
+    # Werkzeug's routing and test client leave a few small cycles of their own with every request: a
+    # request whose payload the route refuses before reading it leaves only those.
+    monkeypatch.setenv("FIDO_SERVER_MAX_CODEC_ITEMS", "100")
+    client = make_app().test_client()
+    statuses = []
+
+    def post(sent):
+        return lambda: statuses.append(client.post("/api/codec", json=sent).status_code)
+
+    post({"payload": "a0"})()
+    unread = unreachable_after(post({"payload": " "}))
+    read = unreachable_after(post(body))
+
+    assert statuses[1:] == [400, status]
+    assert read == unread

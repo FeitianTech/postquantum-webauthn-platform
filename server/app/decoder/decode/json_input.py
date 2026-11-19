@@ -40,7 +40,7 @@ from __future__ import annotations
 import json
 import math
 import re
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from typing import Any
 
 from .. import item_budget
@@ -321,7 +321,11 @@ def _first_too_deep(text: str) -> tuple[str, int] | None:
             count += 1
         return index + 1
 
-    skip_value(0, "$", 0)
+    try:
+        skip_value(0, "$", 0)
+    finally:
+        # skip_value's own cell holds it, and it ``text``: a cycle only a full collection would free.
+        skip_value = None
     return found[0] if found else None
 
 
@@ -340,11 +344,31 @@ _MAX_VALUE_SPELLING = 256
 def _spelling(value: Any) -> str:
     # The JSON spelling of ``value``, stopped once it passes the bound: never the whole subtree.
     text = ""
-    for chunk in json.JSONEncoder(ensure_ascii=False).iterencode(value):
+    for chunk in _spelled_chunks(value):
         text += chunk
         if len(text) > _MAX_VALUE_SPELLING:
             break
     return text
+
+
+def _spelled_chunks(value: Any) -> Iterator[str]:
+    # ``json.dumps(value, ensure_ascii=False)`` in pieces, of a value ``_resolve`` gives. Not
+    # JSONEncoder.iterencode: its functions hold one another, a cycle that keeps the value it stopped in.
+    if isinstance(value, dict):
+        yield "{"
+        for index, (key, member) in enumerate(value.items()):
+            yield f"{', ' if index else ''}{json.dumps(key, ensure_ascii=False)}: "
+            yield from _spelled_chunks(member)
+        yield "}"
+    elif isinstance(value, list):
+        yield "["
+        for index, item in enumerate(value):
+            if index:
+                yield ", "
+            yield from _spelled_chunks(item)
+        yield "]"
+    else:
+        yield json.dumps(value, ensure_ascii=False)
 
 
 def _duplicate(path: str, key: str, values: list[Any], inside_dropped: bool) -> dict[str, Any]:
