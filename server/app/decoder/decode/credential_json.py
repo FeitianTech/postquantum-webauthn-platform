@@ -14,6 +14,7 @@ from fido2.webauthn import CollectedClientData
 
 from ...encoding import encode_base64url
 from ...json_values import make_json_safe
+from ...webauthn import byte_members
 from .. import values
 from . import (
     ambiguous_input,
@@ -233,6 +234,9 @@ def describe_client_data_from_bytes(data: bytes, *, lenient: bool = False) -> di
     parsed, _repeated = json_input.read(text, lenient=lenient)
     details = build_client_data_details(parsed, raw_text=text)
 
+    # fido2 would make a number as the challenge that many zero bytes.
+    if byte_members.client_data_number(data):
+        return details
     try:
         client_data = CollectedClientData(data)
     except Exception:

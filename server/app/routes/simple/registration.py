@@ -9,6 +9,7 @@ from fido2.webauthn import (
     PublicKeyCredentialParameters,
     PublicKeyCredentialType,
     PublicKeyCredentialUserEntity,
+    RegistrationResponse,
 )
 from flask import Blueprint, current_app, jsonify, request, session
 
@@ -21,7 +22,7 @@ from ...challenge_registry import (
 )
 from ...config import origins, relying_party, request_limits
 from ...mds import provisioning as mds_provisioning
-from ...webauthn import client_credentials, cose_algorithms
+from ...webauthn import byte_members, client_credentials, cose_algorithms
 from ...webauthn.attachments import normalize_attachment
 from ...webauthn.attestation import aaguid as attestation_aaguid
 from ...webauthn.attestation import certificates as attestation_certificates
@@ -228,6 +229,11 @@ def register_complete():
     # it would let the caller choose the challenge it is verified against.
     if isinstance(response, dict):
         response.pop("__session_state", None)
+
+    # Refused before the ceremony's state is consumed, as a body over its limit is.
+    number = byte_members.number_refusal(RegistrationResponse, response)
+    if number is not None:
+        return jsonify({"error": number}), 400
 
     rp_id = session.get("register_rp_id")
     state, error_response = _consume_registration_state()

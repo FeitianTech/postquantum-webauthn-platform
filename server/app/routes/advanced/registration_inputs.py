@@ -13,10 +13,12 @@ from __future__ import annotations
 from collections.abc import Mapping, MutableMapping
 from typing import Any
 
+from fido2.webauthn import RegistrationResponse
 from flask import current_app, jsonify, session
 
 from ... import visitor_session
 from ...config import relying_party, request_limits
+from ...webauthn import byte_members
 from ...webauthn.attachments import (
     attachment_hint_violation,
     normalize_attachment,
@@ -133,6 +135,9 @@ def prepare_register_complete_inputs(
     too_large = _response_too_large(response)
     if too_large is not None:
         return None, too_large
+    number = byte_members.number_refusal(RegistrationResponse, response)
+    if number is not None:
+        return None, (jsonify({"error": number}), 400)
 
     original_request = {key: value for key, value in data.items() if not key.startswith("__")}
 

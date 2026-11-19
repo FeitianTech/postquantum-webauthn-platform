@@ -24,12 +24,14 @@ from ...webauthn.attestation import aaguid as attestation_aaguid
 
 
 def resolve_user_handle(user_info: Mapping[str, Any], username: str) -> Any:
-    """``user.id`` decoded, or the user name's bytes when it is missing or undecodable."""
+    """``user.id`` decoded, or the user name's bytes when it is missing or undecodable.
+
+    A number is undecodable: read as bytes, N would be N zero bytes."""
 
     user_id_value = user_info.get("id", "")
     if user_id_value:
         try:
-            return client_binary.read_request_field(user_id_value)
+            return client_binary.read_request_bytes(user_id_value)
         except (ValueError, TypeError):
             return username.encode("utf-8")
     return username.encode("utf-8")

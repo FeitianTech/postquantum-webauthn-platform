@@ -11,6 +11,7 @@ import logging
 from collections.abc import Mapping
 from typing import Any
 
+from fido2.webauthn import AuthenticationResponse
 from flask import Blueprint, jsonify, request, session
 
 from ...challenge_registry import (
@@ -21,7 +22,12 @@ from ...challenge_registry import (
 )
 from ...config import relying_party
 from ...encoding import encode_base64url
-from ...webauthn import assertion_checks, client_binary, client_credentials
+from ...webauthn import (
+    assertion_checks,
+    byte_members,
+    client_binary,
+    client_credentials,
+)
 from ...webauthn.attestation import error_codes
 from .. import ceremony_errors, ceremony_session, json_body
 from . import account, parsing, stored_sign_count
@@ -248,6 +254,9 @@ def authenticate_complete():
     too_large = ceremony_errors.authentication_response_too_large(response)
     if too_large is not None:
         return too_large
+    number = byte_members.number_refusal(AuthenticationResponse, response)
+    if number is not None:
+        return jsonify({"error": number}), 400
 
     consumed, error_response = _consume_authentication_state(response, body.get("credentials"))
     if error_response is not None:

@@ -65,7 +65,7 @@ def test_an_upload_still_mints_the_namespace_it_is_stored_under(mds_fixture_snap
 
 def test_a_statement_fido2_cannot_read_is_refused_in_the_answer_not_a_500(mds_fixture_snapshot, client, caplog):
     entry = minimal_entry("Unreadable")
-    entry["metadataStatement"]["aaguid"] = 5
+    entry["metadataStatement"]["aaguid"] = [5]
 
     with caplog.at_level("INFO", logger=mds_entries.__name__):
         response = client.post(
@@ -77,6 +77,23 @@ def test_a_statement_fido2_cannot_read_is_refused_in_the_answer_not_a_500(mds_fi
     assert response.status_code == 400
     assert response.get_json() == {"items": [], "errors": [f"unreadable.json: {mds_entries.UNREADABLE_ENTRY}"]}
     assert [record.levelname for record in caplog.records if record.name == mds_entries.__name__] == ["INFO"]
+
+
+def test_a_statement_with_a_number_where_fido2_reads_bytes_is_refused_by_that_members_name(mds_fixture_snapshot, client):
+    entry = minimal_entry("Numbered")
+    entry["metadataStatement"]["attestationRootCertificates"] = [50_000_000]
+
+    response = client.post(
+        "/api/mds/metadata/upload",
+        data={"files": (io.BytesIO(json.dumps(entry).encode()), "numbered.json")},
+        content_type="multipart/form-data",
+    )
+
+    assert response.status_code == 400
+    assert response.get_json() == {
+        "items": [],
+        "errors": ["numbered.json: metadataStatement.attestationRootCertificates[0] must be text, not a number."],
+    }
 
 
 def test_an_upload_past_the_visitors_quota_saves_and_copies_nothing(mds_fixture_snapshot, make_app, monkeypatch):

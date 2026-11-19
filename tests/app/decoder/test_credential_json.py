@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import json
+import tracemalloc
 
 from server.app.decoder.decode import binary_text, credential_json
 from server.app.decoder.decode.text import decode_payload_text
@@ -64,6 +65,21 @@ def test_client_data_fido2_cannot_read_is_still_shown_as_its_json():
     assert details["challenge"]["hex"] == "010203"
     assert details["rawText"] == text
     assert "origin" not in details
+
+
+def test_client_data_whose_challenge_is_a_number_is_shown_without_fido2_making_it_bytes():
+    text = json.dumps({"type": "webauthn.get", "challenge": 50_000_000})
+
+    tracemalloc.start()
+    try:
+        details = credential_json.describe_client_data_from_bytes(text.encode("utf-8"))
+        _current, peak = tracemalloc.get_traced_memory()
+    finally:
+        tracemalloc.stop()
+
+    assert details["type"] == "webauthn.get"
+    assert details["rawText"] == text
+    assert peak < 4 * 1024 * 1024
 
 
 def test_a_credential_whose_attestation_object_is_an_empty_map_interprets_nothing():

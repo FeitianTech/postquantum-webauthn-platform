@@ -4,11 +4,12 @@ import logging
 from collections.abc import Iterable, Mapping
 from typing import Any
 
+from fido2.webauthn import AuthenticationResponse
 from flask import Blueprint, jsonify, session
 
 from ... import json_values
 from ...challenge_registry import consume_ceremony_state, stamp_ceremony_state
-from ...webauthn import client_binary, client_credentials
+from ...webauthn import byte_members, client_binary, client_credentials
 from ...webauthn.attachments import (
     attachment_hint_violation,
     normalize_attachment,
@@ -137,6 +138,9 @@ def advanced_authenticate_complete():
     too_large = ceremony_errors.authentication_response_too_large(data.get("__assertion_response"))
     if too_large is not None:
         return too_large
+    number = byte_members.number_refusal(AuthenticationResponse, data.get("__assertion_response"))
+    if number is not None:
+        return jsonify({"error": number}), 400
 
     # Consumed before anything else can fail, as in the simple flow: an early error
     # burns the challenge too, so a replay is always labelled as one. The

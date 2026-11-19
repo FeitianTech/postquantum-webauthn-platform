@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import time
+import tracemalloc
 from types import SimpleNamespace
 
 import pytest
@@ -11,7 +12,7 @@ from server.app.routes.advanced import (
     registration_record as advanced_registration_record,
 )
 from tests.app.entry_app import entry_app
-from tests.app.security.ceremony_helpers import RP_ID, Authenticator
+from tests.app.security.ceremony_helpers import RP_ID, Authenticator, b64u
 
 from .registration_ceremony import register
 
@@ -82,6 +83,19 @@ def test_the_record_says_an_exclude_list_was_used_when_the_request_sent_one(own_
     properties = response.get_json()["storedCredential"]["properties"]
     assert (properties["excludeCredentialsSentCount"], properties["excludeCredentialsUsed"]) == (len(excluded), used)
     assert response.get_json()["excludeCredentialsUsed"] is used
+
+
+def test_a_number_as_the_requests_user_id_is_read_as_no_user_id(own_stores):
+    tracemalloc.start()
+    try:
+        response = register(entry_app().test_client(), public_key_changes={"user": {"id": 50_000_000, "name": "user@example.com"}})
+        _current, peak = tracemalloc.get_traced_memory()
+    finally:
+        tracemalloc.stop()
+
+    assert response.status_code == 200, response.get_json()
+    assert response.get_json()["storedCredential"]["userHandle"] == b64u(b"user@example.com")
+    assert peak < 4 * 1024 * 1024
 
 
 def test_a_registration_without_cred_props_reports_no_resident_key(own_stores):

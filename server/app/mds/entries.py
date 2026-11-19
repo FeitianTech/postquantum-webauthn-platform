@@ -9,6 +9,8 @@ from typing import Any
 
 from fido2.mds3 import MetadataBlobPayload, MetadataBlobPayloadEntry
 
+from ..webauthn import byte_members
+
 logger = logging.getLogger(__name__)
 
 # An uploaded entry fido2 cannot read as MDS3 metadata: why is logged, not answered.
@@ -227,6 +229,9 @@ def build_metadata_entry_components(raw: Mapping[str, Any]) -> tuple[
     metadata_statement, legal_header = _normalise_metadata_statement(raw)
     payload["metadataStatement"] = metadata_statement
 
+    number = byte_members.number_refusal(MetadataBlobPayloadEntry, payload)
+    if number is not None:
+        raise MetadataRefused(number)
     try:
         entry = parse_entry(payload)
     except Exception as exc:  # fido2 reads each field as its type: a wrong one raises what that type raises

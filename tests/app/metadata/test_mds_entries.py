@@ -66,10 +66,17 @@ def test_an_upload_that_is_no_object_is_refused():
 
 def test_an_entry_fido2_cannot_read_is_refused_with_a_sentence_of_its_own():
     with pytest.raises(mds_entries.MetadataRefused) as refused:
-        mds_entries.build_metadata_entry_components({"metadataStatement": {"aaguid": 5}})
+        mds_entries.build_metadata_entry_components({"metadataStatement": {"aaguid": [5]}})
 
     assert str(refused.value) == mds_entries.UNREADABLE_ENTRY
     assert isinstance(refused.value.__cause__, AttributeError)
+
+
+def test_an_entry_with_a_number_where_fido2_reads_bytes_is_refused_by_that_members_name():
+    with pytest.raises(mds_entries.MetadataRefused) as refused:
+        mds_entries.build_metadata_entry_components({"rogueListHash": 5, "metadataStatement": {"description": "demo"}})
+
+    assert str(refused.value) == "rogueListHash must be text, not a number."
 
 
 def test_a_single_entry_upload_is_one_entry_and_a_blob_shaped_one_its_entries():

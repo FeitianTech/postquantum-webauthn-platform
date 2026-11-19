@@ -460,7 +460,12 @@ its logic out here first.
   sizes and certificate keys), `webauthn/cose_keys.py` (RS384, RS512, PS384, PS512: the package
   imports it so fido2's `CoseKey` lookups find them), `webauthn/assertion_hash.py` (the Advanced
   tab's hash choice for an assertion), `webauthn/sign_count.py`, `webauthn/client_binary.py`
-  (bytes a client sends, read one way for both tabs), `webauthn/assertion_checks.py` (an
+  (bytes a client sends, read one way for both tabs), `webauthn/byte_members.py` (a number
+  where fido2 reads bytes, which it would make that many zero bytes: found by fido2's own
+  declared types, and inside the client data, the attestation object and a safetynet JWS, and
+  refused with a 400 by the four completes, before the ceremony's state is read except on the
+  Advanced registration, which consumes its state first, and in an upload's errors),
+  `webauthn/assertion_checks.py` (an
   assertion's authenticator data and userHandle, read one way for both tabs; the userHandle's
   `match`, `mismatch`, `absent` or `not-compared`, every sign-in answer's `userHandleStatus`
   (a mismatch the integrity error `user_handle_mismatch`): the Simple tab's against the
