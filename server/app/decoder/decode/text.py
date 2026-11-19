@@ -52,7 +52,9 @@ def decode_payload_text(
     in ``ambiguous_input``, and the response names the reading not taken.
 
     Every reading of the input counts against one budget of ``max_items``
-    (``item_budget``): past it, the input is refused with ``ItemLimitError``.
+    (``item_budget``): past it, the input is refused with ``ItemLimitError``;
+    what they spell in EDN to name parts of it, against ``MAX_SPELLING_UNITS``,
+    past which it is refused with ``SpellingLimitError``.
     """
 
     with item_budget.limit(max_items):

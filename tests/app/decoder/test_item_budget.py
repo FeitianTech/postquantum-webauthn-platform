@@ -69,3 +69,24 @@ def test_the_refusal_names_the_limit_and_where_its_read_was(offset, path, where)
         f"Too many items at {where}: the codec reads at most 20000 items (CBOR items, JSON values, EDN items) "
         "for one request, over all its readings of the input"
     )
+
+
+def test_spelling_is_counted_to_its_limit_and_past_it_refused_again_when_the_block_ends():
+    with pytest.raises(item_budget.SpellingLimitError) as refused:
+        with item_budget.limit(1) as budget:
+            budget.spell(item_budget.MAX_SPELLING_UNITS)
+            # A reading that spells a map key goes on without its spelling when it is refused.
+            with contextlib.suppress(ValueError):
+                budget.spell(1)
+            assert budget.spelled == item_budget.MAX_SPELLING_UNITS + 1
+
+    assert isinstance(refused.value, ValueError)
+    assert refused.value.limit == item_budget.MAX_SPELLING_UNITS
+
+
+def test_the_spelling_refusal_names_its_limit_and_what_is_spelled():
+    assert str(item_budget.SpellingLimitError(16_000_000)) == (
+        "Too much to spell in EDN: the codec spells map keys that are arrays, maps or tags, the earlier values "
+        "of repeated keys and tagged CTAP members to name them, at most 16000000 units (about a byte of a byte "
+        "string each) for one request. Send fewer or smaller such parts, or nest them less deeply"
+    )

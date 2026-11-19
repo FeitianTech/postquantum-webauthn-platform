@@ -13,7 +13,7 @@ import pytest
 from fido2 import cbor
 
 from server.app.config.request_limits import DEFAULT_MAX_CODEC_REQUEST_BYTES
-from server.app.decoder import edn
+from server.app.decoder import edn, item_budget
 from server.app.decoder.decode import text as decode_text
 from server.app.decoder.decode.text import decode_payload_text
 
@@ -324,15 +324,18 @@ def test_canonical_input_has_no_findings():
     assert result["malformed"] == []
 
 
-def test_a_key_repeated_60_deep_around_a_long_byte_string_gives_each_earlier_value_cut_short():
-    def hostile(length: int) -> str:
-        nested = cbor.encode(bytes(length))
-        for _ in range(60):
-            # {0: <what is nested>, 0: 0}: each level's earlier value holds every level below it.
-            nested = b"\xa2\x00" + nested + b"\x00\x00"
-        return nested.hex()
+def _repeated_key_tower(length: int) -> str:
+    nested = cbor.encode(bytes(length))
+    for _ in range(60):
+        # {0: <what is nested>, 0: 0}: each level's earlier value holds every level below it.
+        nested = b"\xa2\x00" + nested + b"\x00\x00"
+    return nested.hex()
 
-    payload = hostile((DEFAULT_MAX_CODEC_REQUEST_BYTES - len(hostile(0))) // 2 - 8)
+
+def test_a_key_repeated_60_deep_around_a_long_byte_string_gives_each_earlier_value_cut_short():
+    # Each level spells its earlier value whole before cutting it: about 70 units of the spelling
+    # budget a byte, which a tower around 235,000 bytes, under half a request, still fits.
+    payload = _repeated_key_tower(200_000)
 
     result = decode_payload_text(payload)
 
@@ -343,6 +346,13 @@ def test_a_key_repeated_60_deep_around_a_long_byte_string_gives_each_earlier_val
     assert all(entry["value"].endswith("...") for entry in earlier)
     # Each finding once held its whole subtree in EDN, the byte string with it: 61 copies of the input.
     assert len(json.dumps(result)) < 4 * len(payload)
+
+
+def test_a_key_repeated_60_deep_around_a_byte_string_filling_a_request_spells_past_the_budget():
+    payload = _repeated_key_tower((DEFAULT_MAX_CODEC_REQUEST_BYTES - len(_repeated_key_tower(0))) // 2 - 8)
+
+    with pytest.raises(item_budget.SpellingLimitError):
+        decode_payload_text(payload)
 
 
 def test_a_finding_deep_under_long_keys_keeps_its_path_cut_in_its_middle():

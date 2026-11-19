@@ -117,3 +117,38 @@ def test_an_item_is_spelled_without_counting_its_text_read_back():
         node, _end, _skipped = decode_item(bytes.fromhex("8400010203"))
         assert edn.spell(node) == "[0, 1, 2, 3]"
     assert budget.used == 5
+
+
+def test_spelling_counts_each_item_and_its_bytes_or_characters_against_the_request():
+    # An array, a two-byte string and a two-character text: three items (256 each), two bytes
+    # (one each) and two characters (32 each, an escape costing about as much to read back).
+    node, _end, _skipped = decode_item(bytes.fromhex("82 42abcd 626869".replace(" ", "")))
+    with item_budget.limit(10) as budget:
+        edn.spell(node)
+        with item_budget.unmetered():
+            edn.spell(node)
+    edn.spell(node)
+
+    assert budget.spelled == 3 * 256 + 2 + 2 * 32
+
+
+def test_an_item_is_counted_before_it_is_written_so_damage_further_on_stops_nothing_uncounted():
+    # A byte string, then an item the lenient parser could not read: the string was written first.
+    node, _end, _skipped = decode_item(bytes.fromhex("82 43010203 1c".replace(" ", "")), lenient=True)
+    with item_budget.limit(10) as budget:
+        with pytest.raises(ValueError):
+            edn.spell(node)
+
+    assert budget.spelled == 2 * 256 + 3
+
+
+def test_spelling_past_the_request_budget_is_refused_before_its_text_is_written():
+    node, _end, _skipped = decode_item(bytes.fromhex("8100"))
+
+    with pytest.raises(item_budget.SpellingLimitError):
+        with item_budget.limit(10) as budget:
+            budget.spell(item_budget.MAX_SPELLING_UNITS - 256)
+            edn.spell(node)
+
+    # The array fits the budget exactly; its member, past it, was refused before it was written.
+    assert budget.spelled == item_budget.MAX_SPELLING_UNITS + 256

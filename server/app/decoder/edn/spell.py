@@ -24,6 +24,10 @@ from . import floats, strings
 from .reader import encode
 
 _INDENT = "  "
+# What spelling costs, counted against the request's budget (``item_budget``) in units of what a byte of a
+# byte string takes, measured with the text read back: an item about 100 to 250, a character of text up to 40.
+_ITEM_COST = 256
+_CHARACTER_COST = 32
 
 
 def spell(node: Mapping[str, Any], *, inline: bool = False) -> str:
@@ -47,6 +51,10 @@ def _item(node: Mapping[str, Any], depth: int, inline: bool) -> str:
         or "error" in node
     ):
         raise ValueError("an item the lenient parser could not read whole has no exact spelling")
+    budget = item_budget.current()
+    if budget is not None:
+        # Item by item, before each is written: what an item damaged further on stops was counted too.
+        budget.spell(_cost(node))
     major_type = node.get("majorType")
     if major_type in (0, 1):
         return _integer(node)
@@ -63,6 +71,20 @@ def _item(node: Mapping[str, Any], depth: int, inline: bool) -> str:
         return f"{tag}{_indicator(node, tag)}({_item(node['value'], depth, inline)})"
     # Major type 7: the type is three bits, and the other seven are spelled above.
     return _simple(node)
+
+
+def _cost(node: Mapping[str, Any]) -> int:
+    """What spelling ``node`` costs, the items it holds aside: the item, a string's chunks, its bytes or text."""
+
+    chunks = node.get("chunks") or node.get("segments") or ()
+    major_type = node.get("majorType")
+    if major_type == 2:
+        payload = node.get("length", 0)
+    elif major_type == 3:
+        payload = _CHARACTER_COST * len(node.get("value", ""))
+    else:
+        payload = 0
+    return _ITEM_COST * (1 + len(chunks)) + payload
 
 
 def _indicator(node: Mapping[str, Any], argument: int) -> str:

@@ -255,3 +255,13 @@ def test_the_codec_reads_at_most_as_many_items_as_the_environment_sets(make_app,
     error = item_budget.ItemLimitError(3, named.get("offset"), named.get("path"))
     assert response.status_code == 422
     assert response.get_json() == {"error": str(error), **named}
+
+
+def test_the_codec_refuses_a_request_that_would_spell_more_than_its_budget():
+    # 2,100 maps {0: 0} under a map key that is a map key, 60 deep: each level spells every level below it.
+    payload = "a1" * 60 + "990834" + "a10000" * 2_100 + "00" * 60
+
+    response = entry_app().test_client().post("/api/codec", json={"payload": payload})
+
+    assert response.status_code == 422
+    assert response.get_json() == {"error": str(item_budget.SpellingLimitError(item_budget.MAX_SPELLING_UNITS))}

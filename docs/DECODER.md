@@ -250,6 +250,23 @@ answer. That read may be a later reading than the first, or a part read on its
 own (authenticator data inside an attestation object, a credential's base64url
 field), whose offsets are that part's.
 
+What the decoder spells in EDN to name a part of the input counts too: a map key
+that is an array, map or tag, the earlier values of a repeated key (spelled whole
+before the finding cuts them) and a tagged CTAP member. A part nested in another
+is spelled again with each level, so one request spells at most 16,000,000 units
+(`item_budget.MAX_SPELLING_UNITS`), weighed by what each costs to write and read
+back: a byte of a byte string 1, a character of text 32, an item 256. `data.edn`,
+spelled once per reading, is not counted: the item count bounds it. Past it the
+input is refused, 422, with `item_budget.SpellingLimitError`, raised again in the
+same way. Real inputs spell at most 7,168 units, a flat map of 600 two-item array
+keys 1.8 million; a text of more than 500,000 characters is refused where it must
+be spelled to name it (inside a key that is an array, map or tag, which is spelled
+about four times, more than about 125,000), and so is a key repeated 60 deep
+around more than about 235,000 bytes. The 1 MiB towers of repeated or nested keys
+that took 17 to 38 s are refused in about 1 s or less and 100 MB; the costliest
+request the budget answers, a 1 MiB CTAP message with a tagged text of control
+characters, takes 1.2 s and 35 MB, as before (its spelling about 0.25 s).
+
 Measured when the limits were set (on an M5, idle and under load): the largest
 input in the corpus and the goldens reads 143 items, a getInfo holding every
 CTAP 2.2 member 1,888, a makeCredential request excluding 64 credentials 3,114.

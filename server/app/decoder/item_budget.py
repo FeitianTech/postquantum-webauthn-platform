@@ -1,4 +1,4 @@
-"""How many items the codec reads for one request: the budget that bounds what a request costs.
+"""How many items the codec reads and how much it spells for one request: the budget that bounds what it costs.
 
 Each item the codec reads costs a node, its findings and its place in the
 answer, and the decoder reads an input more than once: ``decode/readings.py``
@@ -26,6 +26,14 @@ The default, 20,000, from measurement: the largest real inputs read 72 items
 every CTAP 2.2 member) and 3,114 (a makeCredential request excluding 64
 credentials), and at 20,000 the costliest request, lenient input that writes a
 finding for each item, takes 0.2 to 0.4 s and about 30 MB (docs/DECODER.md).
+
+The decoder also spells parts of what it read in EDN to name them (``edn.spell``:
+a map key that is an array, map or tag, the earlier entries of a repeated key, a
+tagged CTAP member), and a part nested in another is spelled again with each, so
+the same budget counts what it spells (``Budget.spell``), up to
+``MAX_SPELLING_UNITS``; past it, ``SpellingLimitError``, raised again in the same
+way. ``data.edn``, the whole item spelled once per reading, is not counted
+(``unmetered``): it spells what was counted as it was parsed.
 """
 from __future__ import annotations
 
@@ -34,6 +42,10 @@ import contextvars
 from collections.abc import Iterator
 
 DEFAULT_MAX_ITEMS = 20_000
+# What one request may spell in EDN, in units of about what a byte of a byte string costs to spell
+# (``edn/spell.py``'s weights). Measured: real inputs spell at most 7,168 units, and spelling 16,000,000
+# of the costliest content, text of control characters, takes about 0.25 s (docs/DECODER.md).
+MAX_SPELLING_UNITS = 16_000_000
 
 
 class ItemLimitError(ValueError):
@@ -56,32 +68,55 @@ class ItemLimitError(ValueError):
         )
 
 
-class Budget:
-    """One request's count: how many items it may read, how many it has read, and its first refusal."""
+class SpellingLimitError(ValueError):
+    """More to spell in EDN than the budget allows: the limit, in units of about a byte of a byte string."""
 
-    __slots__ = ("limit", "used", "refusal")
+    def __init__(self, limit: int) -> None:
+        self.limit = limit
+        super().__init__(
+            "Too much to spell in EDN: the codec spells map keys that are arrays, maps or tags, the earlier "
+            "values of repeated keys and tagged CTAP members to name them, at most "
+            f"{limit} units (about a byte of a byte string each) for one request. Send fewer or smaller such "
+            "parts, or nest them less deeply"
+        )
+
+
+class Budget:
+    """One request's counts: the items it may read and the units it may spell, what it has used, its first refusal."""
+
+    __slots__ = ("limit", "used", "spelled", "refusal")
 
     def __init__(self, limit: int) -> None:
         self.limit = limit
         self.used = 0
-        self.refusal: ItemLimitError | None = None
+        self.spelled = 0
+        self.refusal: ValueError | None = None
+
+    def _refuse(self, refusal: ValueError) -> None:
+        if self.refusal is None:
+            self.refusal = refusal
+        raise refusal
 
     def charge(self, offset: int | None, path: str | None) -> None:
         """Count one item, read at ``offset`` and ``path``; past the limit, refuse it there."""
 
         self.used += 1
         if self.used > self.limit:
-            refusal = ItemLimitError(self.limit, offset, path)
-            if self.refusal is None:
-                self.refusal = refusal
-            raise refusal
+            self._refuse(ItemLimitError(self.limit, offset, path))
+
+    def spell(self, units: int) -> None:
+        """Count ``units`` about to be spelled in EDN; past ``MAX_SPELLING_UNITS``, refuse them."""
+
+        self.spelled += units
+        if self.spelled > MAX_SPELLING_UNITS:
+            self._refuse(SpellingLimitError(MAX_SPELLING_UNITS))
 
 
 _CURRENT: contextvars.ContextVar[Budget | None] = contextvars.ContextVar("codec_item_budget", default=None)
 
 
 def current() -> Budget | None:
-    """The budget the reads in progress count against; ``None`` outside the codec's entries."""
+    """The budget the reads and spellings in progress count against; ``None`` outside the codec's entries."""
 
     return _CURRENT.get()
 
@@ -108,7 +143,7 @@ def limit(max_items: int) -> Iterator[Budget]:
 
 @contextlib.contextmanager
 def unmetered() -> Iterator[None]:
-    """Read without counting: for the decoder's checks of its own output, which re-read what was counted."""
+    """Read and spell without counting: for the decoder's own output, which re-reads or spells what was counted."""
 
     token = _CURRENT.set(None)
     try:
