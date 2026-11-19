@@ -24,7 +24,7 @@ from ..mds import entries as mds_entries
 from ..mds import listed_uploads as mds_listed_uploads
 from ..mds import provisioning as mds_provisioning
 from ..mds import uploads as mds_uploads
-from ..storage import github_mirror
+from ..storage import github_mirror, session_metadata
 from ..storage.common import StorageReadError
 from ..webauthn.attestation import certificates as attestation_certificates
 from . import assets, json_body
@@ -305,13 +305,18 @@ def _read_and_save_upload():
         values_left -= uploaded.values if uploaded is not None else 0
         read_files.append((uploaded, refusal))
     errors_by_file = [[refusal] if refusal is not None else [] for _uploaded, refusal in read_files]
+    upload_entries = [entry for uploaded, _refusal in read_files if uploaded is not None for entry in uploaded.entries]
     # Past the namespace's quota nothing is saved or queued (StorageQuotaExceeded: routes/errors.py).
     mds_uploads.refuse_past_quota(
         namespace,
-        [entry for uploaded, _refusal in read_files if uploaded is not None for entry in uploaded.entries],
+        upload_entries,
         request_limits.metadata_quota(current_app.config),
         current_app.config[request_limits.METADATA_ENTRY_LIMIT_KEY],
     )
+    if upload_entries:
+        # Its last access is marked once, before any entry is saved, not with each entry: Cloud
+        # Storage takes about one write a second to one object name.
+        session_metadata.ensure_session(namespace)
 
     saved_items: list[Any] = []
     logged: list[tuple[str, bytes]] = []

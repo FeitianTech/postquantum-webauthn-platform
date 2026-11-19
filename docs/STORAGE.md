@@ -156,7 +156,8 @@ Two cookies, both signed with the app's secret, `HttpOnly`, `SameSite=Lax`, and
   removed whole, on both backends, by one sweep at most every 6 hours
   (`visitor_session.schedule_cleanup`). Its last access is its `.last-access`
   marker's time (the visitor's requests refresh it, at most every 30 minutes; the
-  request that minted a namespace does not, the next one does), else, for one
+  request that minted a namespace does not, the next one does; a metadata upload
+  marks it once, before its entries are saved), else, for one
   written but never marked, its newest object's or file's time. Locally the
   namespace is its folder in each store
   (`config/paths.LOCAL_STORES`): the sweep lists the namespaces of all three and

@@ -245,7 +245,7 @@ def current_id(*, create: bool = False) -> str | None:
     elif create:
         identifier = secrets.token_urlsafe(32)
         # A brand-new namespace has nothing stored yet, so it does not need a
-        # last-access marker until it writes data (writes refresh it themselves).
+        # last-access marker until it writes data (an upload marks it itself).
         g._mds_session_new = identifier
         _set_cookie(identifier)
     else:

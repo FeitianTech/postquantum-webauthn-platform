@@ -169,7 +169,8 @@ def save_session_metadata_item(
     max_bytes: int | None = None,
 ) -> SessionMetadataItem:
     session_id = visitor_session.ensure_id()
-    directory = _session_metadata_directory(session_id, create=True)
+    # The upload marked the namespace once for all its entries (routes/mds.py).
+    directory = _session_metadata_directory(session_id)
 
     # Its size first: an entry past it is refused before fido2 reads it.
     json_payload = stored_json(raw_payload, max_bytes)

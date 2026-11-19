@@ -5,7 +5,8 @@ lock, as GCS does server-side, so threads racing them see exactly one winner.
 ``on_download`` hooks run after a download has read an object: a test uses one
 to have "another instance" write between a request's read and its write.
 ``failing`` maps an object name to the error its downloads raise. Each write
-records when it happened (``updated``, as a reload reads it) and its content type.
+records when it happened (``updated``, as a reload reads it) and its content type,
+and its object's name in ``writes``, in order.
 """
 from __future__ import annotations
 
@@ -38,6 +39,7 @@ class Bucket:
         self.objects: dict[str, tuple[bytes, int]] = {}
         self.next_generation = 1
         self.upload_retries: list[object] = []
+        self.writes: list[str] = []
         self.on_download: list[Callable[[str], None]] = []
         self.failing: dict[str, Exception] = {}
         self.list_calls: list[tuple[str, str | None]] = []
@@ -132,6 +134,7 @@ class Blob:
             self.bucket.objects[self.name] = (bytes(data), self.bucket.next_generation)
             self.bucket.updated[self.name] = datetime.now(timezone.utc)
             self.bucket.content_types[self.name] = content_type
+            self.bucket.writes.append(self.name)
             # As the client does, from the object the upload wrote.
             self.generation = self.bucket.next_generation
             self.bucket.next_generation += 1

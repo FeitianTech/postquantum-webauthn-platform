@@ -106,7 +106,6 @@ def _local_session_directory(session_id: str, *, create: bool = False) -> str | 
         except OSError as exc:
             logger.error("Failed to prepare session metadata directory %s: %s", directory, exc)
             raise
-        _local_touch_last_access(directory)
 
     return directory
 
@@ -165,10 +164,7 @@ def _local_note_activity(session_id: str) -> None:
 
 
 def ensure_session(session_id: str) -> None:
-    if common.using_gcs():
-        touch_last_access(session_id)
-    else:
-        _local_session_directory(session_id, create=True)
+    touch_last_access(session_id)
 
 
 def list_sessions() -> list[str]:
@@ -343,10 +339,12 @@ def read_file(session_id: str, name: str) -> bytes | None:
 
 
 def write_file(session_id: str, name: str, data: bytes, *, content_type: str | None = None) -> None:
+    """Store an upload's file; the namespace's marker is left to its writer (``ensure_session``),
+    since Cloud Storage takes about one write a second to one object name."""
+
     if common.using_gcs():
         blob_name = _session_blob(session_id, name)
         upload_bytes(blob_name, data, content_type=content_type)
-        touch_last_access(session_id)
         return
 
     directory = _local_session_directory(session_id, create=True)
@@ -357,7 +355,6 @@ def write_file(session_id: str, name: str, data: bytes, *, content_type: str | N
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "wb") as handle:
         handle.write(data)
-    _local_note_activity(session_id)
 
 
 def delete_file(session_id: str, name: str, *, missing_ok: bool = True) -> None:

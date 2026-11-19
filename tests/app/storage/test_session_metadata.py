@@ -29,12 +29,12 @@ def bucket(monkeypatch):
     return fake_gcs.install(monkeypatch, session_store)
 
 
-def test_an_upload_is_kept_in_the_namespaces_metadata_folder_and_marks_its_last_access(bucket):
+def test_an_upload_is_kept_in_the_namespaces_metadata_folder_and_leaves_its_marker_to_the_upload(bucket):
     session_store.write_file(SESSION, "entry.json", b"{}", content_type="application/json")
 
     assert bucket.objects[f"{METADATA}/entry.json"][0] == b"{}"
     assert bucket.content_types[f"{METADATA}/entry.json"] == "application/json"
-    assert MARKER in bucket.objects
+    assert MARKER not in bucket.objects
     assert session_store.file_exists(SESSION, "entry.json") is True
     assert session_store.file_exists(SESSION, "missing.json") is False
     assert session_store.read_file(SESSION, "entry.json") == b"{}"
@@ -96,7 +96,7 @@ def test_the_uploads_are_the_metadata_folders_files_without_markers_or_folders(b
 
 def test_deleting_an_upload_keeps_the_namespace_marked(bucket):
     session_store.write_file(SESSION, "entry.json", b"{}")
-    bucket.objects.pop(MARKER)
+    assert MARKER not in bucket.objects
 
     session_store.delete_file(SESSION, "entry.json")
 

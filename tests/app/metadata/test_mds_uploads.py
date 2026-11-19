@@ -53,7 +53,7 @@ def test_an_upload_whose_storage_cannot_be_prepared_fails(storage, in_request, m
     (tmp_path / "a-file").write_text("")
     monkeypatch.setenv("FIDO_SERVER_SESSION_METADATA_DIR", str(tmp_path / "a-file"))
 
-    with pytest.raises(NotADirectoryError):
+    with pytest.raises(RuntimeError, match="Failed to store uploaded metadata"):
         mds_uploads.save_session_metadata_item(STATEMENT)
 
 
