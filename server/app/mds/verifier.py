@@ -15,6 +15,9 @@ when it is first found. The rules are fido2's and the merge's they replace:
   one such AAGUID the first listed (the newer) is kept;
 - the uploads come before the packaged entries, so a key identifier both have
   finds the packaged entry.
+
+A visitor's uploads are indexed the same way, from what ``mds.listed_uploads`` keeps of
+each for its version (``VerifierKeys``), and an upload is read when a lookup finds it.
 """
 from __future__ import annotations
 
@@ -28,14 +31,19 @@ from fido2.mds3 import (
     MdsAttestationVerifier,
     MetadataBlobPayload,
     MetadataBlobPayloadEntry,
-    filter_revoked,
 )
 from fido2.webauthn import Aaguid
 from flask import g, has_request_context
 
 from . import cache as mds_cache
 from . import entries as mds_entries
+from . import listed_uploads
 from . import uploads as mds_uploads
+
+
+def _certificate_key_identifier(der: bytes) -> bytes:
+    certificate = x509.load_der_x509_certificate(der)
+    return x509.SubjectKeyIdentifier.from_public_key(certificate.public_key()).digest
 
 
 def _revoked(raw: Mapping[str, Any]) -> bool:
@@ -134,49 +142,101 @@ class PackagedEntries:
 
 
 class IndexedVerifier(MdsAttestationVerifier):
-    """fido2's verifier over a visitor's uploads, with the packaged entries behind them."""
+    """fido2's verifier over the uploads of the visitor's ``namespace``, the newest first, with
+    the packaged entries behind them. An upload is read when a lookup finds it, once."""
 
-    def __init__(self, packaged: PackagedEntries | None, uploads: Sequence[MetadataBlobPayloadEntry] = ()):
-        kept: list[MetadataBlobPayloadEntry] = []
+    def __init__(
+        self,
+        packaged: PackagedEntries | None,
+        namespace: str = "",
+        uploads: Sequence[listed_uploads.ListedUpload] = (),
+    ):
+        today = datetime.now(timezone.utc).date()
+        super().__init__(MetadataBlobPayload(legal_header="", no=0, next_update=today, entries=()))
+        self.packaged = packaged
+        self._namespace = namespace
+        kept: list[listed_uploads.ListedUpload] = []
         hidden: set[str] = set()
-        for entry in uploads:
-            aaguid = mds_entries._extract_entry_aaguid(entry)
+        for upload in uploads:
+            aaguid = upload.verifier_keys.hides
             if aaguid and aaguid in hidden:
                 continue
             if aaguid:
                 hidden.add(aaguid)
-            kept.append(entry)
-        today = datetime.now(timezone.utc).date()
-        super().__init__(MetadataBlobPayload(legal_header="", no=0, next_update=today, entries=tuple(kept)))
-        self.packaged = packaged
+            kept.append(upload)
         self._hidden = frozenset(hidden)
-        # fido2's tables leave revoked uploads out; the newest of an AAGUID is kept here.
-        self._revoked_uploads: dict[bytes, MetadataBlobPayloadEntry] = {}
-        for entry in kept:
-            if entry.aaguid and not filter_revoked(entry):
-                self._revoked_uploads.setdefault(bytes(entry.aaguid), entry)
+        # As fido2's tables: revoked uploads left out, and of the uploads with one key the last
+        # (the oldest) kept. The newest revoked upload of an AAGUID is found apart.
+        self._live = [upload for upload in kept if not upload.verifier_keys.revoked]
+        self._by_aaguid = {upload.verifier_keys.aaguid: upload for upload in self._live if upload.verifier_keys.aaguid}
+        self._revoked: dict[bytes, listed_uploads.ListedUpload] = {}
+        for upload in kept:
+            if upload.verifier_keys.aaguid and upload.verifier_keys.revoked:
+                self._revoked.setdefault(upload.verifier_keys.aaguid, upload)
+        self._by_key_identifier: dict[bytes, int] = {}
+        self._unindexed: list[int] = []
+        for position, upload in enumerate(self._live):
+            if upload.verifier_keys.key_identifiers is None:
+                self._unindexed.append(position)
+            for identifier in upload.verifier_keys.key_identifiers or ():
+                self._by_key_identifier[identifier] = position
+        self._entries: dict[str, MetadataBlobPayloadEntry | None] = {}
+
+    def _entry(self, upload: listed_uploads.ListedUpload | None) -> MetadataBlobPayloadEntry | None:
+        if upload is None:
+            return None
+        if upload.filename not in self._entries:
+            entry = mds_uploads.read_upload_entry(self._namespace, upload.filename)
+            self._entries[upload.filename] = entry
+            if entry is not None and has_request_context():
+                # Held on ``g``, its id stays valid while the request lasts.
+                g.setdefault("_mds_session_entries", []).append(entry)
+                g.setdefault("_mds_session_entry_ids", set()).add(id(entry))
+        return self._entries[upload.filename]
 
     def find_entry_by_aaguid(self, aaguid: Aaguid) -> MetadataBlobPayloadEntry | None:
         found = self.packaged.by_aaguid(aaguid, self._hidden) if self.packaged is not None else None
-        return found if found is not None else super().find_entry_by_aaguid(aaguid)
+        return found if found is not None else self._entry(self._by_aaguid.get(bytes(aaguid)))
 
     def find_revoked_entry_by_aaguid(self, aaguid: Aaguid) -> MetadataBlobPayloadEntry | None:
         """The revoked entry with ``aaguid``, which ``find_entry_by_aaguid`` never finds: the
         packaged one no upload hides, else a revoked upload's."""
 
         found = self.packaged.revoked_by_aaguid(aaguid, self._hidden) if self.packaged is not None else None
-        return found if found is not None else self._revoked_uploads.get(bytes(aaguid))
+        return found if found is not None else self._entry(self._revoked.get(bytes(aaguid)))
 
     def find_entry_by_chain(self, certificate_chain: Sequence[bytes]) -> MetadataBlobPayloadEntry | None:
+        unindexed: dict[int, set[bytes]] | None = None
         for der in certificate_chain:
-            certificate = x509.load_der_x509_certificate(der)
-            identifier = x509.SubjectKeyIdentifier.from_public_key(certificate.public_key()).digest
+            identifier = _certificate_key_identifier(der)
             found = self.packaged.by_key_identifier(identifier, self._hidden) if self.packaged is not None else None
             if found is None:
-                found = self._ski_table.get(identifier)
+                if unindexed is None:
+                    unindexed = self._unindexed_identifiers(certificate_chain)
+                position = self._by_key_identifier.get(identifier, -1)
+                position = max([position, *(later for later, held in unindexed.items() if identifier in held)])
+                found = self._entry(self._live[position]) if position >= 0 else None
             if found is not None:
                 return found
         return None
+
+    def _unindexed_identifiers(self, certificate_chain: Sequence[bytes]) -> dict[int, set[bytes]]:
+        """Of each upload with more key identifiers than are kept, read again one at a time,
+        those of ``certificate_chain``'s certificates."""
+
+        if not self._unindexed:
+            return {}
+        wanted: set[bytes] = set()
+        for der in certificate_chain:
+            try:
+                wanted.add(_certificate_key_identifier(der))
+            except Exception:  # find_entry_by_chain raises it when it reaches this certificate
+                continue
+        held: dict[int, set[bytes]] = {}
+        for position in self._unindexed:
+            entry = mds_uploads.read_upload_entry(self._namespace, self._live[position].filename)
+            held[position] = wanted.intersection(entry.attestation_certificate_key_identifiers or ()) if entry else set()
+        return held
 
 
 def metadata_entry_trust_anchor_status(entry: Any) -> bool | None:
@@ -190,8 +250,8 @@ def metadata_entry_trust_anchor_status(entry: Any) -> bool | None:
     if entry is None or not isinstance(entry, MetadataBlobPayloadEntry):
         return None
 
-    # Session-uploaded entries are tracked per request (see get_mds_verifier) so
-    # that concurrent requests from other sessions cannot change the outcome.
+    # Session-uploaded entries are tracked per request (see IndexedVerifier._entry)
+    # so that concurrent requests from other sessions cannot change the outcome.
     request_session_ids = (
         getattr(g, "_mds_session_entry_ids", None) if has_request_context() else None
     )
@@ -226,19 +286,7 @@ def get_mds_verifier() -> MdsAttestationVerifier | None:
     """Return an MDS attestation verifier using session metadata when available."""
 
     packaged = _packaged_verifier()
-    session_items = mds_uploads.list_session_metadata_items()
-    session_entries = tuple(
-        entry
-        for entry in (getattr(item, "entry", None) for item in session_items)
-        if entry is not None
-    )
-
-    if has_request_context():
-        # Holding the entry objects on ``g`` keeps their ids valid for the
-        # lifetime of the request.
-        g._mds_session_entries = session_entries
-        g._mds_session_entry_ids = frozenset(id(entry) for entry in session_entries)
-
-    if not session_entries:
+    namespace, uploads = listed_uploads.list_namespace_uploads()
+    if not uploads:
         return packaged
-    return IndexedVerifier(packaged.packaged if packaged is not None else None, session_entries)
+    return IndexedVerifier(packaged.packaged if packaged is not None else None, namespace, uploads)

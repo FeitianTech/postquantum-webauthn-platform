@@ -2,13 +2,15 @@
 
 The verifier finds the entry fido2's ``MdsAttestationVerifier`` over the merged
 metadata (the uploads, then the packaged entries no upload hides) found, parsing
-only the entry found.
+only the entry found, and reading only the upload found.
 """
 from __future__ import annotations
 
 import copy
 import json
+import os
 from datetime import date, datetime
+from pathlib import Path
 
 import pytest
 from cryptography import x509
@@ -22,11 +24,14 @@ from fido2.mds3 import (
 from fido2.webauthn import Aaguid
 from flask import g
 
+from server.app import visitor_session
 from server.app.mds import cache as mds_cache
 from server.app.mds import entries as mds_entries
 from server.app.mds import files as mds_files
+from server.app.mds import listed_uploads
 from server.app.mds import uploads as mds_uploads
 from server.app.mds import verifier as mds_verifier
+from server.app.storage import session_metadata
 from tests.app.metadata.cache_locks import FillingLock
 
 PACKAGED = "f1d0f1d0-0000-4000-8000-000000000001"
@@ -93,8 +98,10 @@ def _packaged(mds_fixture_snapshot) -> list[dict]:
     ]
 
 
-def _uploads() -> list[MetadataBlobPayloadEntry]:
-    raws = [
+def _uploads() -> list[dict]:
+    """The visitor's uploads, the newest first."""
+
+    return [
         {"aaguid": PACKAGED, "metadataStatement": {"description": "upload of the packaged AAGUID", "aaguid": PACKAGED}},
         {"aaguid": OTHER, "metadataStatement": {"description": "upload, first", "aaguid": OTHER}},
         {"aaguid": OTHER, "metadataStatement": {"description": "upload, second", "aaguid": OTHER}},
@@ -108,14 +115,30 @@ def _uploads() -> list[MetadataBlobPayloadEntry]:
             _key_identifier(SHARED_WITH_UPLOAD), _key_identifier(UPLOAD_ONLY),
         ]},
     ]
-    return [mds_entries.build_metadata_entry_components(raw)[0] for raw in raws]
 
 
-def _reference(packaged: list[dict], uploads: list[MetadataBlobPayloadEntry]) -> MdsAttestationVerifier:
+def _store(namespace: str, name: str, data: bytes, age: int) -> None:
+    """``data`` stored as the upload ``name``, written ``age`` seconds before the others' first."""
+
+    session_metadata.write_file(namespace, name, data)
+    os.utime(Path(os.environ["FIDO_SERVER_SESSION_METADATA_DIR"]) / namespace / name, (2_000_000_000 - age,) * 2)
+
+
+def _verifier(monkeypatch, packaged: list[dict] | None, uploads: list[dict] = ()):
+    """``get_mds_verifier`` over ``packaged`` and the visitor's ``uploads``, the first the newest."""
+
+    monkeypatch.setattr(mds_cache, "load_verified_entries", lambda: packaged)
+    namespace = visitor_session.ensure_id()
+    for age, raw in enumerate(uploads):
+        _store(namespace, f"{age:032d}.json", json.dumps(raw).encode(), age)
+    return mds_verifier.get_mds_verifier()
+
+
+def _reference(packaged: list[dict], uploads: list[dict]) -> MdsAttestationVerifier:
     """fido2's verifier over the metadata the verifier used to merge: every packaged entry parsed."""
 
     kept, seen = [], set()
-    for entry in uploads:
+    for entry in (mds_entries.build_metadata_entry_components(raw)[0] for raw in uploads):
         aaguid = mds_entries._extract_entry_aaguid(entry)
         if aaguid and aaguid in seen:
             continue
@@ -132,11 +155,11 @@ def _described(entry) -> str | None:
 
 
 @pytest.mark.parametrize("with_uploads", [False, True])
-def test_every_lookup_finds_what_fido2s_verifier_over_the_merged_metadata_found(mds_fixture_snapshot, with_uploads):
+def test_every_lookup_finds_what_fido2s_verifier_over_the_merged_metadata_found(visitor, monkeypatch, mds_fixture_snapshot, with_uploads):
     packaged = _packaged(mds_fixture_snapshot)
     uploads = _uploads() if with_uploads else []
     reference = _reference(packaged, uploads)
-    indexed = mds_verifier.IndexedVerifier(mds_verifier.PackagedEntries(packaged), uploads)
+    indexed = _verifier(monkeypatch, packaged, uploads)
     aaguids = {raw.get("aaguid") or raw["metadataStatement"].get("aaguid") for raw in packaged} | {OTHER}
 
     for aaguid in sorted(filter(None, aaguids)):
@@ -146,8 +169,8 @@ def test_every_lookup_finds_what_fido2s_verifier_over_the_merged_metadata_found(
         assert _described(indexed.find_entry_by_chain(chain)) == _described(reference.find_entry_by_chain(chain))
 
 
-def test_the_rules_the_lookups_follow(mds_fixture_snapshot):
-    indexed = mds_verifier.IndexedVerifier(mds_verifier.PackagedEntries(_packaged(mds_fixture_snapshot)), _uploads())
+def test_the_rules_the_lookups_follow(visitor, monkeypatch, mds_fixture_snapshot):
+    indexed = _verifier(monkeypatch, _packaged(mds_fixture_snapshot), _uploads())
     by_aaguid = lambda aaguid: _described(indexed.find_entry_by_aaguid(Aaguid.parse(aaguid)))  # noqa: E731
 
     assert by_aaguid(PACKAGED) == "upload of the packaged AAGUID"
@@ -159,9 +182,9 @@ def test_the_rules_the_lookups_follow(mds_fixture_snapshot):
     assert _described(indexed.find_entry_by_chain([UPLOAD_ONLY])) == "upload by key identifier"
 
 
-def test_a_revoked_entry_is_found_apart_by_its_aaguid_and_uploads_hide_it_as_they_hide_the_others(mds_fixture_snapshot):
+def test_a_revoked_entry_is_found_apart_by_its_aaguid_and_uploads_hide_it_as_they_hide_the_others(visitor, monkeypatch, mds_fixture_snapshot):
     packaged = mds_verifier.PackagedEntries(_packaged(mds_fixture_snapshot))
-    with_uploads = mds_verifier.IndexedVerifier(packaged, _uploads())
+    with_uploads = _verifier(monkeypatch, packaged.raw, _uploads())
     revoked = lambda verifier, aaguid: _described(verifier.find_revoked_entry_by_aaguid(Aaguid.parse(aaguid)))  # noqa: E731
 
     assert with_uploads.find_entry_by_aaguid(Aaguid.parse(FIXTURE_REVOKED)) is None
@@ -170,7 +193,8 @@ def test_a_revoked_entry_is_found_apart_by_its_aaguid_and_uploads_hide_it_as_the
     assert revoked(with_uploads, DUPLICATED) == "revoked upload"  # it hides the packaged entries
     assert revoked(with_uploads, PACKAGED) is None
     assert revoked(mds_verifier.IndexedVerifier(packaged), DUPLICATED) is None
-    assert revoked(mds_verifier.IndexedVerifier(None, _uploads()), DUPLICATED) == "revoked upload"
+    monkeypatch.setattr(mds_cache, "load_verified_entries", lambda: None)
+    assert revoked(mds_verifier.get_mds_verifier(), DUPLICATED) == "revoked upload"
 
 
 def test_only_the_entry_found_is_parsed_and_it_is_parsed_once(mds_fixture_snapshot, monkeypatch):
@@ -245,12 +269,107 @@ def test_without_a_snapshot_or_an_upload_there_is_no_verifier(visitor):
     assert mds_verifier.get_mds_verifier() is None
 
 
-def test_the_verifier_holds_the_visitors_uploads_and_never_trusts_them(visitor):
+def test_the_verifier_holds_the_visitors_uploads_it_found_and_never_trusts_them(visitor):
     _upload(OTHER, "Uploaded")
 
-    verifier = mds_verifier.get_mds_verifier()
+    entry = mds_verifier.get_mds_verifier().find_entry_by_aaguid(Aaguid.parse(OTHER))
 
-    (entry,) = g._mds_session_entries
-    assert verifier is not None
+    assert g._mds_session_entries == [entry]
     assert mds_verifier.metadata_entry_trust_anchor_status(entry) is False
     assert mds_verifier.metadata_entry_trust_anchor_status(object()) is None
+
+
+def test_of_uploads_sharing_a_key_identifier_the_oldest_kept_is_found_as_fido2s_table_holds_it(visitor, monkeypatch):
+    shared = _key_identifier(UPLOAD_ONLY)
+    verifier = _verifier(monkeypatch, None, [
+        {"metadataStatement": {"description": "newest"}, "attestationCertificateKeyIdentifiers": [shared]},
+        {"metadataStatement": {"description": "older"}, "attestationCertificateKeyIdentifiers": [shared]},
+        {"metadataStatement": {"description": "oldest, revoked"}, "attestationCertificateKeyIdentifiers": [shared],
+         "statusReports": [{"status": "REVOKED"}]},
+    ])
+
+    assert _described(verifier.find_entry_by_chain([UPLOAD_ONLY])) == "older"
+
+
+def test_an_upload_with_more_key_identifiers_than_are_kept_is_found_by_them_in_its_place(visitor, monkeypatch):
+    many = [f"{number:040x}" for number in range(listed_uploads.KEY_IDENTIFIERS_BOUND)]
+    verifier = _verifier(monkeypatch, None, [
+        {"metadataStatement": {"description": "newest"}, "attestationCertificateKeyIdentifiers": [_key_identifier(UPLOAD_ONLY)]},
+        {"metadataStatement": {"description": "many"}, "attestationCertificateKeyIdentifiers": [*many, _key_identifier(UPLOAD_ONLY)]},
+        {"metadataStatement": {"description": "oldest"}, "attestationCertificateKeyIdentifiers": [_key_identifier(SHARED_WITH_UPLOAD)]},
+    ])
+
+    assert [upload.verifier_keys.key_identifiers is None for upload in listed_uploads.list_uploads()] == [False, True, False]
+    assert _described(verifier.find_entry_by_chain([_certificate(104), UPLOAD_ONLY])) == "many"
+    # A certificate that does not load after the one found is never reached, as before.
+    assert _described(verifier.find_entry_by_chain([UPLOAD_ONLY, b"not a certificate"])) == "many"
+    assert _described(verifier.find_entry_by_chain([SHARED_WITH_UPLOAD])) == "oldest"
+    assert verifier.find_entry_by_chain([_certificate(104)]) is None
+
+
+def test_an_upload_that_does_not_read_is_left_out_and_alone_leaves_the_snapshots_verifier(visitor, monkeypatch, mds_fixture_snapshot):
+    packaged = mds_verifier.get_mds_verifier()
+    namespace = visitor_session.ensure_id()
+    _store(namespace, "broken.json", b"[]", 0)
+
+    assert mds_verifier.get_mds_verifier() is packaged
+    _store(namespace, "read.json", json.dumps(_raw("Uploaded", aaguid=PACKAGED)).encode(), 1)
+    assert _described(mds_verifier.get_mds_verifier().find_entry_by_aaguid(Aaguid.parse(PACKAGED))) == "Uploaded"
+
+
+@pytest.fixture
+def reads(monkeypatch):
+    """The files the store was asked for, by name."""
+
+    names: list[str] = []
+    read = session_metadata.read_file
+
+    def _read(namespace, name):
+        names.append(name)
+        return read(namespace, name)
+
+    monkeypatch.setattr(session_metadata, "read_file", _read)
+    return names
+
+
+def test_a_lookup_in_a_namespace_listed_before_reads_only_the_upload_it_finds(visitor, monkeypatch, reads):
+    _verifier(monkeypatch, None, [
+        _raw("other", aaguid=OTHER),
+        _raw("by key identifier", key_ids=[UPLOAD_ONLY]),
+        *(_raw(f"upload {number}", aaguid=f"0badc0de-0000-4000-8000-{number:012d}") for number in range(5)),
+    ]).find_entry_by_aaguid(Aaguid.parse(OTHER))
+    reads.clear()
+
+    verifier = mds_verifier.get_mds_verifier()
+    assert reads == []
+    assert _described(verifier.find_entry_by_aaguid(Aaguid.parse(OTHER))) == "other"
+    assert _described(verifier.find_entry_by_chain([UPLOAD_ONLY])) == "by key identifier"
+    assert verifier.find_entry_by_aaguid(Aaguid.parse(PACKAGED)) is None
+    assert verifier.find_entry_by_chain([SHARED_WITH_UPLOAD]) is None
+    assert verifier.find_entry_by_aaguid(Aaguid.parse(OTHER)) is verifier.find_entry_by_aaguid(Aaguid.parse(OTHER))
+    assert reads == [f"{0:032d}.json", f"{1:032d}.json"]
+
+
+def test_an_upload_added_written_again_or_deleted_is_what_the_next_lookup_finds(visitor, monkeypatch):
+    namespace = visitor_session.ensure_id()
+    found = lambda: _described(mds_verifier.get_mds_verifier().find_entry_by_aaguid(Aaguid.parse(OTHER)))  # noqa: E731
+    _verifier(monkeypatch, None, [_raw("first", aaguid=OTHER)])
+    assert found() == "first"
+
+    _store(namespace, "added.json", json.dumps(_raw("added", aaguid=OTHER)).encode(), -1)
+    assert found() == "added"
+    _store(namespace, "added.json", json.dumps(_raw("added, then written again", aaguid=OTHER)).encode(), -2)
+    assert found() == "added, then written again"
+    session_metadata.delete_file(namespace, "added.json")
+    assert found() == "first"
+
+
+def test_a_namespace_never_finds_another_namespaces_uploads(visitor, monkeypatch):
+    # One name, one size and one time in each: only the namespace tells them apart.
+    for namespace, description in (("a" * 32, "A's upload"), ("b" * 32, "B's upload")):
+        _store(namespace, "same.json", json.dumps(_raw(description, aaguid=OTHER)).encode(), 0)
+
+    for namespace, description in (("a" * 32, "A's upload"), ("b" * 32, "B's upload"), ("c" * 32, None)) * 2:
+        monkeypatch.setattr(visitor_session, "current_id", lambda namespace=namespace: namespace)
+        verifier = mds_verifier.get_mds_verifier()
+        assert _described(verifier.find_entry_by_aaguid(Aaguid.parse(OTHER)) if verifier else None) == description

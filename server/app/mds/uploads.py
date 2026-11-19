@@ -309,10 +309,15 @@ def load_session_metadata_item(stored_filename: str, session_id: str | None = No
     return _read_item(directory, safe_name, mtime)
 
 
-def _read_item(directory: str, filename: str, mtime: float | None) -> SessionMetadataItem | None:
-    """The upload ``filename`` of the namespace ``directory``, written at ``mtime``, with its
+def read_upload_entry(namespace: str, filename: str) -> MetadataBlobPayloadEntry | None:
+    """The entry of the upload ``filename`` a listing of ``namespace`` named, read without its
     info; None, with a warning, for one that does not read as a metadata entry."""
 
+    components = _read_components(namespace, filename)
+    return components[0] if components is not None else None
+
+
+def _read_components(directory: str, filename: str) -> tuple[MetadataBlobPayloadEntry, str | None, dict[str, Any]] | None:
     try:
         payload_bytes = session_metadata.read_file(directory, filename)
         raw = json.loads(payload_bytes.decode("utf-8")) if payload_bytes else None
@@ -323,7 +328,7 @@ def _read_item(directory: str, filename: str, mtime: float | None) -> SessionMet
         return None
 
     try:
-        entry, legal_header, payload = entries.build_metadata_entry_components(raw)
+        return entries.build_metadata_entry_components(raw)
     except Exception as exc:  # pylint: disable=broad-except
         logger.warning(
             "Failed to parse session metadata entry from %s/%s: %s",
@@ -332,6 +337,16 @@ def _read_item(directory: str, filename: str, mtime: float | None) -> SessionMet
             exc,
         )
         return None
+
+
+def _read_item(directory: str, filename: str, mtime: float | None) -> SessionMetadataItem | None:
+    """The upload ``filename`` of the namespace ``directory``, written at ``mtime``, with its
+    info; None, with a warning, for one that does not read as a metadata entry."""
+
+    components = _read_components(directory, filename)
+    if components is None:
+        return None
+    entry, legal_header, payload = components
 
     info_filename = f"{filename}{_SESSION_METADATA_INFO_SUFFIX}"
     info = _load_session_metadata_info(directory, info_filename)

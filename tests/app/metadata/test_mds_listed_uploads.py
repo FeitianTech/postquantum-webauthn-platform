@@ -195,7 +195,8 @@ def test_a_namespace_at_its_count_quota_of_rows_at_their_bound_is_listed_and_kep
 
 def _kept(name: str, size: int = 1_000) -> listed_uploads.ListedUpload:
     return listed_uploads.ListedUpload(
-        filename=name, mtime=None, item={}, row={"name": "x" * size}, icon_file=None, aaguid_key="", aaid=None
+        filename=name, mtime=None, item={}, row={"name": "x" * size}, icon_file=None, aaguid_key="", aaid=None,
+        verifier_keys=listed_uploads.VerifierKeys(hides=None, aaguid=None, revoked=False, key_identifiers=()),
     )
 
 
@@ -275,8 +276,9 @@ def test_the_heaviest_row_a_statement_can_make_is_cut_to_its_bound():
             "userVerificationDetails": [[{"userVerificationMethod": method}] for method in texts],
         },
     }
+    entry = MetadataBlobPayloadEntry.from_dict(_entry_payload(aaguid="f1d0f1d0-0000-4000-8000-000000000000", description=""))
     item = mds_uploads.SessionMetadataItem(
-        filename="0" * 32 + ".json", payload=payload, legal_header=text, entry=None,
+        filename="0" * 32 + ".json", payload=payload, legal_header=text, entry=entry,
         uploaded_at="2026-01-01T00:00:00+00:00", original_filename=text, mtime=1.0,
     )
 

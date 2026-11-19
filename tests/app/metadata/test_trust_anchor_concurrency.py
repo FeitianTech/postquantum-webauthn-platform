@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+import json
 import threading
 import time
-from types import SimpleNamespace
 
 from fido2.mds3 import MetadataBlobPayloadEntry
 from fido2.webauthn import Aaguid
@@ -12,7 +12,6 @@ from flask import g
 
 from server.app import visitor_session
 from server.app.mds import cache as mds_cache
-from server.app.mds import uploads as mds_uploads
 from server.app.mds import verifier as mds_verifier
 from server.app.storage import session_metadata
 from tests.app.entry_app import entry_app
@@ -46,18 +45,14 @@ def test_unknown_entry_is_never_reported_as_trusted(metadata_state):
     assert mds_verifier.metadata_entry_trust_anchor_status(entry) is None
 
 
-def test_session_entries_stay_untrusted_while_other_sessions_run(monkeypatch, metadata_state):
+def test_session_entries_stay_untrusted_while_other_sessions_run(monkeypatch, metadata_state, session_metadata_dir):
     packaged = [_raw("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")]
-    custom_entry = MetadataBlobPayloadEntry.from_dict(_raw("cccccccc-cccc-cccc-cccc-cccccccccccc"))
+    custom = "cccccccc-cccc-cccc-cccc-cccccccccccc"
+    namespace = "c" * 32
+    session_metadata.write_file(namespace, "custom.json", json.dumps(_raw(custom)).encode())
     monkeypatch.setattr(mds_cache, "load_verified_entries", lambda: packaged)
     monkeypatch.setattr(
-        mds_uploads,
-        "list_session_metadata_items",
-        lambda: (
-            [SimpleNamespace(entry=custom_entry, legal_header="")]
-            if getattr(g, "_test_has_custom_metadata", False)
-            else []
-        ),
+        visitor_session, "current_id", lambda: namespace if getattr(g, "_test_has_custom_metadata", False) else None
     )
 
     app = entry_app()
@@ -73,7 +68,7 @@ def test_session_entries_stay_untrusted_while_other_sessions_run(monkeypatch, me
             for _ in range(iterations):
                 with app.test_request_context("/"):
                     g._test_has_custom_metadata = True
-                    mds_verifier.get_mds_verifier()
+                    custom_entry = mds_verifier.get_mds_verifier().find_entry_by_aaguid(Aaguid.parse(custom))
                     barrier.wait(timeout=5)
                     observed.append(
                         mds_verifier.metadata_entry_trust_anchor_status(custom_entry)

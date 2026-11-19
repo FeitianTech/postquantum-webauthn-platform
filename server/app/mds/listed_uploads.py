@@ -1,5 +1,6 @@
 """Each of a visitor's uploads as their listings show it: its row in the explorer
-(``mds.effective`` lists the rows) and its item in Manage Metadata. Each is worked out once
+(``mds.effective`` lists the rows) and its item in Manage Metadata, and what a registration's
+lookup reads of it (``mds.verifier``). Each is worked out once
 from its statement and kept, by namespace, stored name and version, for every later
 listing: one listing of the namespace (``uploads.list_stored_uploads``) says what was
 written since, and only that is read and parsed again. Kept in memory, per process,
@@ -13,6 +14,9 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
 
+from fido2.mds3 import MetadataBlobPayloadEntry, filter_revoked
+
+from . import entries as mds_entries
 from . import explorer_files
 from . import uploads as mds_uploads
 from .build import build_explorer_entry
@@ -35,6 +39,34 @@ _LIST_BOUND = 16
 _LIST_ITEM_BOUND = 32
 # What a row cut down to the last keeps: what identifies the entry, and what it came from.
 _IDENTIFYING = frozenset({"entryId", "name", "id", "aaguid", "source", "storedFilename"})
+# An upload's attestation key identifiers are kept up to this many, eight times the most a real
+# entry has (8 in MDS no. 302; 1 in the fixture snapshot): with more, a lookup by a chain reads
+# the upload again. As JSON each weighs ``_KEY_IDENTIFIER_BYTES``.
+KEY_IDENTIFIERS_BOUND = 64
+_KEY_IDENTIFIER_BYTES = 44
+
+
+@dataclass(frozen=True)
+class VerifierKeys:
+    """What a registration's lookup reads of an upload (``mds.verifier``), from its entry as
+    fido2 read it: the AAGUID its statement names (``hides``: the packaged entries and older
+    uploads of it), its own AAGUID, whether a status report revokes it, and its attestation
+    key identifiers (None past ``KEY_IDENTIFIERS_BOUND``)."""
+
+    hides: str | None
+    aaguid: bytes | None
+    revoked: bool
+    key_identifiers: tuple[bytes, ...] | None
+
+
+def verifier_keys(entry: MetadataBlobPayloadEntry) -> VerifierKeys:
+    identifiers = tuple(entry.attestation_certificate_key_identifiers or ())
+    return VerifierKeys(
+        hides=mds_entries._extract_entry_aaguid(entry),
+        aaguid=bytes(entry.aaguid) if entry.aaguid else None,
+        revoked=not filter_revoked(entry),
+        key_identifiers=identifiers if len(identifiers) <= KEY_IDENTIFIERS_BOUND else None,
+    )
 
 
 @dataclass(frozen=True)
@@ -42,9 +74,9 @@ class ListedUpload:
     """One upload as its listings show it: its stored name and when it was written; its item
     in Manage Metadata (``uploads.serialize_session_metadata_item``); its row in the explorer
     (``explorer_files.list_row``) at index 0, its icon '' when a file is made of it, whose
-    name is ``icon_file``; and what a lookup by AAGUID or AAID reads of its statement
-    (``statement_fields.lookup_keys``). Every listing shares them: what changes a row
-    changes a copy."""
+    name is ``icon_file``; what a lookup by AAGUID or AAID reads of its statement
+    (``statement_fields.lookup_keys``); and what a registration's lookup reads of its entry.
+    Every listing shares them: what changes a row changes a copy."""
 
     filename: str
     mtime: float | None
@@ -53,6 +85,7 @@ class ListedUpload:
     icon_file: str | None
     aaguid_key: str
     aaid: str | None
+    verifier_keys: VerifierKeys
 
 
 def upload_entry(item: mds_uploads.SessionMetadataItem, *, index: int, include_detail: bool) -> dict[str, Any]:
@@ -171,13 +204,15 @@ def _listed_upload(item: mds_uploads.SessionMetadataItem) -> ListedUpload:
         icon_file=file[0] if file is not None else None,
         aaguid_key=aaguid_key,
         aaid=aaid,
+        verifier_keys=verifier_keys(item.entry),
     )
 
 
 def _weight(upload: ListedUpload | None) -> int:
     if upload is None:
         return _OVERHEAD_BYTES
-    return _OVERHEAD_BYTES + len(json.dumps([upload.row, upload.item]))
+    identifiers = upload.verifier_keys.key_identifiers or ()
+    return _OVERHEAD_BYTES + len(json.dumps([upload.row, upload.item])) + _KEY_IDENTIFIER_BYTES * len(identifiers)
 
 
 _Key = tuple[str, str]
@@ -227,6 +262,12 @@ def list_uploads(session_id: str | None = None) -> list[ListedUpload]:
     lists them (one that does not read is left out), each read and worked out once for its
     version."""
 
+    return list_namespace_uploads(session_id)[1]
+
+
+def list_namespace_uploads(session_id: str | None = None) -> tuple[str, list[ListedUpload]]:
+    """The visitor's namespace ('' without one) and its uploads, as ``list_uploads`` lists them."""
+
     namespace, stored = mds_uploads.list_stored_uploads(session_id)
     listed: list[ListedUpload] = []
     for upload in stored:
@@ -239,4 +280,4 @@ def list_uploads(session_id: str | None = None) -> list[ListedUpload]:
         if kept is not None:
             listed.append(kept)
     listed.sort(key=lambda kept_upload: kept_upload.mtime or 0, reverse=True)
-    return listed
+    return namespace, listed
