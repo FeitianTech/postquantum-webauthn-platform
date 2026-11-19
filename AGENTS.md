@@ -345,9 +345,11 @@ its logic out here first.
   the icons, each entry's detail; kept per snapshot by `cache.load_explorer_files`) and `sets.py`
   (the snapshot in Cloud Storage) without Flask. The runtime: `provisioning.py` (local files,
   Cloud Storage, upstream), `cache.py` (the loaders and their one `SnapshotCache`),
-  `uploads.py` (a visitor's uploaded metadata), `listed_uploads.py` (each upload's explorer row
-  and Manage Metadata item, worked out once and kept in memory by namespace, name and version,
-  within a budget: a listing reads only what was written since), `effective.py` (a visitor's
+  `uploads.py` (a visitor's uploaded metadata), `listed_uploads.py` (each upload's explorer row,
+  Manage Metadata item and lookup keys, worked out when it is saved and kept in its info file
+  under a format, `ROW_FORMAT`, which a change of what is kept bumps; then in memory by
+  namespace, name and version, within a budget: a listing reads only the info files of what
+  was written since, and the upload itself only when its info keeps none of the format), `effective.py` (a visitor's
   uploads as the explorer lists them, `explorer/custom`, and resolve with them in front),
   `verifier.py` (the verified entries indexed from their JSON by fido2's keys, each parsed when
   found, a visitor's uploads in front; a revoked entry is never found, but asked for apart by

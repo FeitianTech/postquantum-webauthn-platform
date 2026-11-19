@@ -13,6 +13,7 @@ from server.app import visitor_session
 from server.app.config import request_limits
 from server.app.mds import effective as mds_effective
 from server.app.mds import entries as mds_entries
+from server.app.mds import listed_uploads
 from server.app.mds import uploads as mds_uploads
 from server.app.routes import assets
 from server.app.routes import mds as mds_routes
@@ -123,6 +124,16 @@ def _uploaded(client, icon=None) -> str:
     )
     assert response.status_code == 200, response.get_json()
     return response.get_json()["items"][0]["source"]["storedFilename"]
+
+
+def test_an_upload_keeps_what_its_listings_show_of_it_beside_it(mds_fixture_snapshot, client):
+    stored = _uploaded(client)
+
+    (namespace,) = session_metadata.list_sessions()
+    info = json.loads(session_metadata.read_file(namespace, f"{stored}.meta.json"))
+    assert info["listed"]["format"] == listed_uploads.STORED_FORMAT
+    assert info["listed"]["stored_bytes"] == len(session_metadata.read_file(namespace, stored))
+    assert info["listed"]["row"]["name"] == "Uploaded"
 
 
 def test_an_uploads_icon_is_its_image_sandboxed_and_kept_for_good(client):
@@ -486,7 +497,7 @@ def test_an_upload_whose_entries_do_not_read_is_refused_with_its_own_sentence_on
     ids=["refused", "value-error"],
 )
 def test_an_upload_keeps_the_entries_it_can_save_and_names_the_others(monkeypatch, two_entry_upload, raised, error):
-    def _save_item(entry_payload, original_filename=None, max_bytes=None):
+    def _save_item(entry_payload, original_filename=None, max_bytes=None, listed=None):
         if entry_payload.get("entry") == 1:
             raise raised
         return {"storedFilename": "stored-2.json", "originalFilename": original_filename}
@@ -522,7 +533,7 @@ def test_an_upload_without_a_file_name_is_named_metadata_json(monkeypatch, visit
     monkeypatch.setattr(
         mds_uploads,
         "save_session_metadata_item",
-        lambda _payload, original_filename=None, max_bytes=None: {"originalFilename": original_filename},
+        lambda _payload, original_filename=None, max_bytes=None, listed=None: {"originalFilename": original_filename},
     )
     monkeypatch.setattr(mds_uploads, "serialize_session_metadata_item", lambda item: item)
     monkeypatch.setattr(mds_effective, "load_custom_entries", lambda: {"meta": {"customEntryCount": 1}, "entries": []})
@@ -560,7 +571,7 @@ def test_a_file_is_queued_for_the_device_log_only_once_one_of_its_entries_saved(
     monkeypatch.setattr(github_mirror, "queue_uploaded_metadata_files", lambda files: queued.append(list(files)))
     monkeypatch.setattr(mds_entries, "expand_metadata_entry_payloads", lambda payload: [payload])
 
-    def _save_item(entry_payload, original_filename=None, max_bytes=None):
+    def _save_item(entry_payload, original_filename=None, max_bytes=None, listed=None):
         if entry_payload.get("refuse"):
             raise mds_entries.MetadataRefused("not kept")
         return {"storedFilename": "stored.json", "originalFilename": original_filename}

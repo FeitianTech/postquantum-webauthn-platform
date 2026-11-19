@@ -256,6 +256,7 @@ def _save_uploaded_file(uploaded: _UploadedFile, saved_items: list[Any], errors:
                 entry_payload,
                 original_filename=display_name,
                 max_bytes=current_app.config[request_limits.METADATA_ENTRY_LIMIT_KEY],
+                listed=mds_listed_uploads.stored_form,
             )
         except mds_entries.MetadataRefused as exc:
             errors.append(f"{display_name}: {exc}")

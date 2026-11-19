@@ -76,12 +76,17 @@ by its statement or its image: the entry page asks `/api/mds/metadata/resolve?en
 for its detail, and its icon is at `/api/mds/metadata/custom/<stored name>/icon`, the
 visitor's own, kept by the browser for good (an upload never changes), one URL for each
 image (the oldest upload's that holds it). An icon no file is made of stays in its row, as
-in the list. The server works out each upload's row and Manage Metadata's item once, from
-its statement, and keeps them in memory by namespace, stored name and version
-(`mds/listed_uploads.py`, within 8 MiB of their JSON): one listing of the namespace says
-which uploads were written since, and only those are read and parsed again. At the quota
-an answer took 4.3 s on a laptop, reading every upload; it takes 30 ms once an instance
-has listed them. A page from an earlier release was sent to the list only by the info
+in the list. The server works out each upload's row, Manage Metadata's item and what a
+registration's lookup reads of it once, when it is saved, and writes them into the info
+file beside it, marked with their format and fido2's version (`mds/listed_uploads.py`). A
+listing reads that info file, not the upload, and keeps what it read in memory by
+namespace, stored name and version (within 20 MiB): one listing of the namespace says which
+uploads were written since, and only those are read again. An upload whose info keeps
+nothing of the current format (saved by an earlier release, or written again after its
+info) is read and parsed instead, and nothing is rewritten. At the quota (2,000 uploads), a
+listing with nothing in memory took about 3 s of CPU on a laptop, parsing every upload; it
+takes about 0.1 s reading their info files, and an answer takes 30 ms once an instance has
+listed them. A registration still reads the entry it finds from the upload itself. A page from an earlier release was sent to the list only by the info
 answer's `snapshotUrl`, which is gone, and asked `/api/mds/metadata/explorer/full` for
 every row: that answers `410` with a sentence telling it to reload.
 

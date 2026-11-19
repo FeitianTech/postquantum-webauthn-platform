@@ -1,12 +1,16 @@
 """Each of a visitor's uploads as their listings show it: its row in the explorer
 (``mds.effective`` lists the rows) and its item in Manage Metadata, and what a registration's
 lookup reads of it (``mds.verifier``). Each is worked out once
-from its statement and kept, by namespace, stored name and version, for every later
-listing: one listing of the namespace (``uploads.list_stored_uploads``) says what was
-written since, and only that is read and parsed again. Kept in memory, per process,
-within a budget; the store stays the record."""
+from its statement when it is saved, and written into the info file beside it
+(``stored_form``); a listing reads it from there, and reads and parses the upload itself
+only when its info keeps none it can use (one saved before, or under another format). What
+was read is kept, by namespace, stored name and version, for every later listing: one
+listing of the namespace (``uploads.list_stored_uploads``) says what was written since, and
+only that is read again. Kept in memory, per process, within a budget; the upload's own
+entry stays the record, and a registration's lookup reads what it finds from there."""
 from __future__ import annotations
 
+import importlib.metadata
 import json
 import threading
 from collections import OrderedDict
@@ -22,13 +26,17 @@ from . import uploads as mds_uploads
 from .build import build_explorer_entry
 from .statement_fields import lookup_keys
 
-# What the kept uploads may weigh, by the JSON of their rows and items (in memory they take
-# about two and a half times that): a namespace at its count quota (2,000 uploads) with every
-# row at ``ROW_BOUND_BYTES``, beside its item, or some 12,000 uploads of the BLOB's own
-# entries. One heavier than an eighth of it would be worked out each time instead.
+# What the kept uploads may weigh: their rows and items by their JSON (in memory they take
+# about two and a half times that), their lookup keys by their size in memory. A namespace at
+# its count quota (2,000 uploads) with every row at ``ROW_BOUND_BYTES`` beside its item and
+# a few key identifiers, or some 12,000 uploads of the BLOB's own entries. One heavier than
+# an eighth of it would be read each time instead.
 BUDGET_BYTES = 20 * 2**20
-# What a kept upload weighs beside its JSON, and one that does not read.
+# What a kept upload weighs beside its JSON, and one that does not read; and what its lookup
+# keys weigh in memory, with each key identifier's.
 _OVERHEAD_BYTES = 256
+_VERIFIER_KEYS_BYTES = 250
+_KEY_IDENTIFIER_BYTES = 61
 # A row or item heavier than this as JSON (about twice the heaviest real metadata gives) is
 # cut down until it fits (``_bounded``); one at or under it is listed exactly as it is. Texts
 # are cut by their weight as JSON (``\uXXXX`` for each character outside ASCII), as the
@@ -41,9 +49,15 @@ _LIST_ITEM_BOUND = 32
 _IDENTIFYING = frozenset({"entryId", "name", "id", "aaguid", "source", "storedFilename"})
 # An upload's attestation key identifiers are kept up to this many, eight times the most a real
 # entry has (8 in MDS no. 302; 1 in the fixture snapshot): with more, a lookup by a chain reads
-# the upload again. As JSON each weighs ``_KEY_IDENTIFIER_BYTES``.
+# the upload again.
 KEY_IDENTIFIERS_BOUND = 64
-_KEY_IDENTIFIER_BYTES = 44
+# The shape of what an upload's info file keeps for its listings (``stored_form``). Bump it when
+# that shape, or what a row, an item or a lookup key holds, changes (a test pins one upload's):
+# an info file of another format is not read, and its upload is read and worked out instead.
+# With it, the explorer's ``DERIVED_FORMAT``, which moves when what it builds of an entry
+# does, and fido2's version, whose reading of an entry gives the lookup keys.
+ROW_FORMAT = 1
+STORED_FORMAT = f"{ROW_FORMAT}.{explorer_files.DERIVED_FORMAT} fido2 {importlib.metadata.version('fido2')}"
 
 
 @dataclass(frozen=True)
@@ -208,11 +222,65 @@ def _listed_upload(item: mds_uploads.SessionMetadataItem) -> ListedUpload:
     )
 
 
+def stored_form(item: mds_uploads.SessionMetadataItem) -> dict[str, Any]:
+    """What a listing keeps of the upload ``item``, as its info file holds it when it is saved
+    (``uploads.save_session_metadata_item``): JSON that ``_kept_from`` reads back as the
+    ``ListedUpload`` worked out from the upload, its bytes as hex."""
+
+    upload = _listed_upload(item)
+    keys = upload.verifier_keys
+    return {
+        "format": STORED_FORMAT,
+        "item": upload.item,
+        "row": upload.row,
+        "icon_file": upload.icon_file,
+        "aaguid_key": upload.aaguid_key,
+        "aaid": upload.aaid,
+        "hides": keys.hides,
+        "aaguid": keys.aaguid.hex() if keys.aaguid is not None else None,
+        "revoked": keys.revoked,
+        "key_identifiers": [key.hex() for key in keys.key_identifiers] if keys.key_identifiers is not None else None,
+    }
+
+
+# What each member of a stored form must be for it to be read (``_kept_from``).
+_OPTIONAL_TEXT = (str, type(None))
+_STORED_TYPES = {
+    "item": dict, "row": dict, "icon_file": _OPTIONAL_TEXT, "aaguid_key": str, "aaid": _OPTIONAL_TEXT,
+    "hides": _OPTIONAL_TEXT, "aaguid": _OPTIONAL_TEXT, "revoked": bool, "key_identifiers": (list, type(None)),
+}
+
+
+def _kept_from(upload: mds_uploads.StoredUpload, stored: dict[str, Any] | None) -> ListedUpload | None:
+    """The upload as its info file keeps it (``stored_form``); None without one of this format
+    that reads as one, and the upload is then read and worked out."""
+
+    if stored is None or stored.get("format") != STORED_FORMAT:
+        return None
+    if not all(key in stored and isinstance(stored[key], types) for key, types in _STORED_TYPES.items()):
+        return None
+    aaguid, identifiers = stored["aaguid"], stored["key_identifiers"]
+    try:
+        keys = VerifierKeys(
+            hides=stored["hides"],
+            aaguid=bytes.fromhex(aaguid) if aaguid is not None else None,
+            revoked=stored["revoked"],
+            key_identifiers=tuple(bytes.fromhex(key) for key in identifiers) if identifiers is not None else None,
+        )
+    except (TypeError, ValueError):
+        return None
+    return ListedUpload(
+        filename=upload.filename, mtime=upload.mtime, item=stored["item"], row=stored["row"],
+        icon_file=stored["icon_file"], aaguid_key=stored["aaguid_key"], aaid=stored["aaid"], verifier_keys=keys,
+    )
+
+
 def _weight(upload: ListedUpload | None) -> int:
     if upload is None:
         return _OVERHEAD_BYTES
     identifiers = upload.verifier_keys.key_identifiers or ()
-    return _OVERHEAD_BYTES + len(json.dumps([upload.row, upload.item])) + _KEY_IDENTIFIER_BYTES * len(identifiers)
+    keys = _VERIFIER_KEYS_BYTES + _KEY_IDENTIFIER_BYTES * len(identifiers)
+    return _OVERHEAD_BYTES + len(json.dumps([upload.row, upload.item])) + keys
 
 
 _Key = tuple[str, str]
@@ -258,9 +326,8 @@ KEPT = KeptUploads()
 
 
 def list_uploads(session_id: str | None = None) -> list[ListedUpload]:
-    """The visitor's uploads, the newest first, as ``uploads.list_session_metadata_items``
-    lists them (one that does not read is left out), each read and worked out once for its
-    version."""
+    """The visitor's uploads, the newest first (one that does not read is left out), each
+    read once for its version: from its info file, else worked out from the upload."""
 
     return list_namespace_uploads(session_id)[1]
 
@@ -274,8 +341,11 @@ def list_namespace_uploads(session_id: str | None = None) -> tuple[str, list[Lis
         key = (namespace, upload.filename)
         found, kept = KEPT.get(key, upload.version)
         if not found:
-            item = mds_uploads.read_stored_upload(namespace, upload)
-            kept = _listed_upload(item) if item is not None else None
+            info = mds_uploads.read_stored_info(namespace, upload)
+            kept = _kept_from(upload, mds_uploads.stored_listing(upload, info))
+            if kept is None:
+                item = mds_uploads.read_stored_upload(namespace, upload, info)
+                kept = _listed_upload(item) if item is not None else None
             KEPT.put(key, upload.version, kept)
         if kept is not None:
             listed.append(kept)

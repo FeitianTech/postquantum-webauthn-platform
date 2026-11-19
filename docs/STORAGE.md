@@ -101,7 +101,9 @@ past one raises `common.StorageQuotaExceeded` before anything is written, and
   is not asked for a credential that could not be kept; its complete refuses one
   that filled meanwhile, with the challenge's trace.
 - Uploaded metadata: 2,000 entries in a namespace (each entry is a file of its own,
-  with an info file beside it that is not counted), and 64 MiB of them. An upload
+  with an info file beside it that is not counted: its names and time, and what the
+  explorer and Manage Metadata list of it, at most about 20 KB, `mds/listed_uploads.py`),
+  and 64 MiB of them. An upload
   whose entries would pass either is refused whole, before any file is saved or
   queued for the credential log (`mds/uploads.refuse_past_quota`). One entry larger
   than 1 MiB once stored is refused alone, in the upload's errors, and not counted.

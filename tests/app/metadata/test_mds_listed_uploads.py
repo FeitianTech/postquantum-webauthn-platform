@@ -1,28 +1,43 @@
-"""``mds.listed_uploads``: each of a visitor's uploads worked out once for its version, so
-that a listing of the namespace reads and parses only what was written since."""
+"""``mds.listed_uploads``: each of a visitor's uploads worked out once, kept in its info file
+when it is saved and in memory for its version, so that a listing of the namespace reads and
+parses only what was written since, and reads no upload whose info keeps it."""
 
 from __future__ import annotations
 
 import base64
+import copy
+import hashlib
 import json
 import os
 from pathlib import Path
 
 import pytest
 from fido2.mds3 import MetadataBlobPayloadEntry
+from hypothesis import HealthCheck, given, reject, settings
+from hypothesis import strategies as st
 
 from server.app import visitor_session
-from server.app.mds import explorer_files, listed_uploads
+from server.app.mds import entries as mds_entries
+from server.app.mds import explorer_files, listed_uploads, verifier
 from server.app.mds import uploads as mds_uploads
 from server.app.storage import session_metadata
 from tests.app.metadata.upload_entries import _entry_payload
+from tests.app.storage import fake_gcs
 
 PNG = b"\x89PNG\r\n\x1a\n" + b"listed icon" * 4
 PNG_ICON = f"data:image/png;base64,{base64.b64encode(PNG).decode()}"
 
 
 def _save(description: str, **fields):
+    """Save an upload as releases before its info kept its listing did."""
+
     return mds_uploads.save_session_metadata_item({"metadataStatement": {"description": description}, **fields})
+
+
+def _save_listed(raw: dict, **options):
+    """Save an upload as the upload route does: its listing kept in its info."""
+
+    return mds_uploads.save_session_metadata_item(raw, listed=listed_uploads.stored_form, **options)
 
 
 def _write(namespace: str, name: str, description: str) -> Path:
@@ -37,9 +52,9 @@ def reads(monkeypatch):
     names: list[str] = []
     read = mds_uploads.read_stored_upload
 
-    def _read(namespace, upload):
+    def _read(namespace, upload, info=None):
         names.append(upload.filename)
-        return read(namespace, upload)
+        return read(namespace, upload, info)
 
     monkeypatch.setattr(mds_uploads, "read_stored_upload", _read)
     return names
@@ -307,3 +322,239 @@ def test_a_row_still_too_heavy_once_its_texts_and_lists_are_cut_keeps_what_ident
         "sourceInfo": {"storedFilename": "kept.json", "originalFilename": ""},
         "transportsList": [], **{f"field{number}": "" for number in range(100)},
     }
+
+
+FIXTURE_ENTRIES = json.loads(
+    (Path(__file__).resolve().parents[2] / "fixtures/mds/snapshot/fido-mds3.verified.json").read_text()
+)["entries"]
+
+
+def _key_identifiers(seed: int, count: int) -> list[str]:
+    return [hashlib.sha1(f"{seed}/{number}".encode()).hexdigest() for number in range(count)]
+
+
+@st.composite
+def _uploaded_statements(draw):
+    """An upload as visitors make them: a fixture entry, or its statement alone, with or
+    without an AAGUID, an icon, key identifiers, a revocation, and fields long enough to be
+    cut down."""
+
+    entry = copy.deepcopy(draw(st.sampled_from(FIXTURE_ENTRIES)))
+    statement = entry["metadataStatement"]
+    if "aaguid" in entry:
+        aaguid = draw(st.one_of(st.none(), st.uuids().map(str)))
+        for holder in (entry, statement):
+            holder.pop("aaguid", None)
+            if aaguid is not None:
+                holder["aaguid"] = aaguid
+    count = draw(st.sampled_from([0, 1, 64, 65]))
+    identifiers = _key_identifiers(draw(st.integers(0, 2**16)), count)
+    for holder in (entry, statement):
+        holder.pop("attestationCertificateKeyIdentifiers", None)
+        if identifiers:
+            holder["attestationCertificateKeyIdentifiers"] = identifiers
+    icon = draw(st.sampled_from([None, "fixture", PNG_ICON, "data:image/bmp;base64,Qk0=", "data:image/bmp;base64," + "Qk0A" * 4_000]))
+    if icon is None:
+        statement.pop("icon", None)
+    elif icon != "fixture":
+        statement["icon"] = icon
+    text = draw(st.text(max_size=12))
+    statement["description"] = text * draw(st.sampled_from([1, 1_000])) or "Unnamed"
+    if draw(st.booleans()):
+        statement["keyProtection"] = [f"key_{number}" for number in range(draw(st.integers(0, 40)))]
+    if draw(st.booleans()):
+        entry["statusReports"] = [*entry.get("statusReports", []), {"status": "REVOKED", "effectiveDate": "2025-06-01"}]
+    if draw(st.booleans()):
+        entry["legalHeader"] = draw(st.text(max_size=8))
+    return statement if draw(st.booleans()) else entry
+
+
+@settings(max_examples=150, suppress_health_check=[HealthCheck.function_scoped_fixture, HealthCheck.too_slow])
+@given(raw=_uploaded_statements(), original_filename=st.one_of(st.none(), st.text(max_size=12)))
+def test_what_an_info_file_keeps_of_an_upload_is_what_is_worked_out_from_it(visitor, raw, original_filename):
+    try:
+        saved = _save_listed(raw, original_filename=original_filename)
+    except mds_entries.MetadataRefused:
+        reject()
+    namespace, stored = mds_uploads.list_stored_uploads()
+    (upload,) = [upload for upload in stored if upload.filename == saved.filename]
+
+    from_info = listed_uploads._kept_from(upload, mds_uploads.stored_listing(upload, mds_uploads.read_stored_info(namespace, upload)))
+    worked_out = listed_uploads._listed_upload(mds_uploads.read_stored_upload(namespace, upload))
+
+    assert from_info == worked_out
+    # Every member in the same order, the bytes as fido2 reads them.
+    assert json.dumps([from_info.item, from_info.row]) == json.dumps([worked_out.item, worked_out.row])
+
+
+def test_the_stored_form_of_an_upload_is_pinned_with_its_format():
+    entry = FIXTURE_ENTRIES[0]
+    components = mds_entries.build_metadata_entry_components(json.loads(mds_uploads.stored_json(entry)))
+    item = mds_uploads.SessionMetadataItem(
+        "0" * 32 + ".json", components[2], components[1], components[0],
+        uploaded_at="2026-01-01T00:00:00+00:00", original_filename="pinned.json", mtime=None,
+    )
+    stored = listed_uploads.stored_form(item)
+    shape = json.dumps({key: value for key, value in stored.items() if key != "format"})
+
+    assert stored["format"] == listed_uploads.STORED_FORMAT
+    assert (listed_uploads.ROW_FORMAT, hashlib.sha256(shape.encode()).hexdigest()) == (
+        1, "4bfd8736932338966ddd0cadb0a76d516d5c3f2a787e6bacc761d06d3b204cba",
+    ), "What an upload's info file keeps of it changed: bump listed_uploads.ROW_FORMAT, then this pin."
+
+
+@pytest.fixture(params=["local", "gcs"])
+def store_calls(request, monkeypatch, visitor):
+    """What the store is asked, on the backend the test runs on: the files read, by name, the
+    entries parsed and the files written or deleted."""
+
+    if request.param == "gcs":
+        fake_gcs.install(monkeypatch, session_metadata)
+    calls = {"read": [], "parsed": 0, "written": 0}
+    read, write, delete, parse = (
+        session_metadata.read_file, session_metadata.write_file, session_metadata.delete_file,
+        mds_entries.build_metadata_entry_components,
+    )
+
+    def _read(namespace, name):
+        calls["read"].append(name)
+        return read(namespace, name)
+
+    def _write(*args, **kwargs):
+        calls["written"] += 1
+        return write(*args, **kwargs)
+
+    def _delete(*args, **kwargs):
+        calls["written"] += 1
+        return delete(*args, **kwargs)
+
+    def _parse(raw):
+        calls["parsed"] += 1
+        return parse(raw)
+
+    monkeypatch.setattr(session_metadata, "read_file", _read)
+    monkeypatch.setattr(session_metadata, "write_file", _write)
+    monkeypatch.setattr(session_metadata, "delete_file", _delete)
+    monkeypatch.setattr(mds_entries, "build_metadata_entry_components", _parse)
+    return calls
+
+
+def _forget(monkeypatch, calls):
+    """Drop what this process keeps of the uploads, and what the store was asked so far."""
+
+    monkeypatch.setattr(listed_uploads, "KEPT", listed_uploads.KeptUploads())
+    calls.update(read=[], parsed=0, written=0)
+
+
+def _aaguid_entry(number: int) -> dict:
+    return _entry_payload(aaguid=f"f1d0f1d0-0000-4000-8000-{number:012d}", description=f"Upload {number}")
+
+
+def test_a_listing_with_nothing_kept_reads_each_uploads_info_alone_and_writes_nothing(store_calls, monkeypatch):
+    saved = [_save_listed(_aaguid_entry(number)) for number in range(12)]
+    by_name = {item.filename: item for item in saved}
+    _forget(monkeypatch, store_calls)
+
+    listed = listed_uploads.list_uploads()
+
+    assert sorted(store_calls["read"]) == sorted(f"{name}.meta.json" for name in by_name)
+    assert (store_calls["parsed"], store_calls["written"]) == (0, 0)
+    item = mds_uploads.load_session_metadata_item
+    assert listed == [listed_uploads._listed_upload(item(upload.filename)) for upload in listed]
+    assert {upload.filename for upload in listed} == set(by_name)
+
+
+def test_a_registrations_first_lookup_reads_the_infos_and_the_one_upload_it_finds(store_calls, monkeypatch):
+    saved = [_save_listed(_aaguid_entry(number)) for number in range(12)]
+    _forget(monkeypatch, store_calls)
+
+    found = verifier.get_mds_verifier().find_entry_by_aaguid(bytes.fromhex("f1d0f1d0000040008000000000000005"))
+
+    assert found.metadata_statement.description == "Upload 5"
+    assert sorted(store_calls["read"]) == sorted([f"{item.filename}.meta.json" for item in saved] + [saved[5].filename])
+    assert (store_calls["parsed"], store_calls["written"]) == (1, 0)
+
+
+def _info_path(filename: str) -> Path:
+    return Path(os.environ["FIDO_SERVER_SESSION_METADATA_DIR"]) / visitor_session.current_id() / f"{filename}.meta.json"
+
+
+def _rewrite_listed(filename: str, change) -> None:
+    path = _info_path(filename)
+    info = json.loads(path.read_text())
+    change(info)
+    path.write_text(json.dumps(info))
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        lambda info: info.pop("listed"),
+        lambda info: info["listed"].update(format="0.0 fido2 0.0"),
+        lambda info: info["listed"].pop("row"),
+        lambda info: info["listed"].update(row="a row"),
+        lambda info: info["listed"].update(aaguid="not hex"),
+        lambda info: info["listed"].update(key_identifiers=[7]),
+        lambda info: info.update(listed=[]),
+    ],
+    ids=["saved-before", "another-format", "partial", "wrong-type", "bad-hex", "bad-identifier", "not-an-object"],
+)
+def test_an_upload_whose_info_keeps_no_listing_it_can_read_is_read_and_listed_as_before(visitor, monkeypatch, reads, change):
+    saved = _save_listed(_aaguid_entry(1))
+    expected = listed_uploads.list_uploads()
+    _rewrite_listed(saved.filename, change)
+    monkeypatch.setattr(listed_uploads, "KEPT", listed_uploads.KeptUploads())
+    reads.clear()
+
+    assert listed_uploads.list_uploads() == expected
+    assert reads == [saved.filename]
+
+
+def test_an_upload_whose_info_does_not_read_is_read_and_listed_without_its_names(visitor, monkeypatch, reads):
+    saved = _save_listed(_aaguid_entry(1), original_filename="named.json")
+    _info_path(saved.filename).write_text('{"listed": {"format"')
+    reads.clear()
+
+    (upload,) = listed_uploads.list_uploads()
+
+    assert upload.item["source"] == {"storedFilename": saved.filename}
+    assert reads == [saved.filename]
+
+
+def test_an_info_file_of_another_upload_is_never_listed_for_this_one(visitor, reads):
+    first, second = _save_listed(_aaguid_entry(1)), _save_listed(_aaguid_entry(2))
+    _info_path(second.filename).write_bytes(_info_path(first.filename).read_bytes())
+    reads.clear()
+
+    rows = {upload.filename: upload.row["name"] for upload in listed_uploads.list_uploads()}
+
+    assert rows == {first.filename: "Upload 1", second.filename: "Upload 2"}
+    assert reads == [second.filename]
+
+
+def test_an_entry_written_again_after_its_info_is_read_again_even_at_its_size(visitor, reads):
+    saved = _save_listed(_aaguid_entry(1))
+    path = _info_path(saved.filename).with_name(saved.filename)
+    path.write_text(path.read_text().replace("Upload 1", "Upload 9"))
+    info_written = _info_path(saved.filename).stat().st_mtime
+    os.utime(path, (info_written + 1, info_written + 1))
+    reads.clear()
+
+    (upload,) = listed_uploads.list_uploads()
+
+    assert upload.row["name"] == "Upload 9"
+    assert reads == [saved.filename]
+
+
+def test_an_entry_of_another_size_than_its_info_keeps_is_read_again(visitor, reads):
+    saved = _save_listed(_aaguid_entry(1))
+    path = _info_path(saved.filename).with_name(saved.filename)
+    info_written = _info_path(saved.filename).stat().st_mtime
+    path.write_text(path.read_text().replace("Upload 1", "Upload 10"))
+    os.utime(path, (info_written - 1, info_written - 1))
+    reads.clear()
+
+    (upload,) = listed_uploads.list_uploads()
+
+    assert upload.row["name"] == "Upload 10"
+    assert reads == [saved.filename]
