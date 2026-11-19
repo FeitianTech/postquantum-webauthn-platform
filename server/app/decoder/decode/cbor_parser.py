@@ -450,9 +450,15 @@ def _map_key(key_node: Mapping[str, Any]) -> Any:
     # part of: named by what and where it is, as a damaged container is.
     if key_equivalence.damaged_string(key_node):
         return values.CborDiagnostic(f"invalid({key_node.get('summary')} at offset {key_node.get('offset')})", "invalid")
-    key = _structure_to_value(key_node)
     node_type = key_node.get("type")
     kind = _KEY_KINDS.get(node_type, node_type) if isinstance(node_type, str) else ""
+    # An array, map or tag key: a key of its own type, spelled in EDN, which
+    # ``json_keys.read_json_key`` can read back. Spelled from its node, never
+    # converted first: converting names every key inside it, at every depth.
+    if node_type != "invalid" and key_node.get("majorType") in (4, 5, 6):
+        # Damaged, it is named by what and where it is: two such keys never share a spelling.
+        return _edn_or(key_node, f"invalid({key_node.get('summary')} at offset {key_node.get('offset')})", kind)
+    key = _structure_to_value(key_node)
     # A NaN key is spelled by its bits: NaNs with different payloads are different keys.
     if isinstance(key, values.CborDiagnostic) and key.diagnostic == "NaN":
         return _edn_or(key_node, "NaN", kind)
@@ -461,11 +467,6 @@ def _map_key(key_node: Mapping[str, Any]) -> Any:
         return values.CborDiagnostic(_diagnostic_value(key_node), kind)
     if isinstance(key, values.CborDiagnostic):
         return values.CborDiagnostic(key.diagnostic, kind)
-    # An array, map or tag key: a key of its own type, spelled in EDN, which
-    # ``json_keys.read_json_key`` can read back.
-    if isinstance(key, (list, dict)):
-        # Damaged, it is named by what and where it is: two such keys never share a spelling.
-        return _edn_or(key_node, f"invalid({key_node.get('summary')} at offset {key_node.get('offset')})", kind)
     return key
 
 

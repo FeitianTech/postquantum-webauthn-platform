@@ -452,6 +452,30 @@ def test_structure_to_value_keeps_an_array_key_as_a_key_of_its_own_type():
     assert decoder_values.stringify_mapping_keys(value) == {"[1, 2]": "value"}
 
 
+def test_a_key_nested_in_keys_is_spelled_without_converting_the_keys_inside_it(monkeypatch):
+    def conversions(depth):
+        data = b"\x85" + b"\xa1\x00\x00" * 5  # [{0: 0}, ...]
+        for _ in range(depth):
+            data = b"\xa1" + data + b"\x00"  # {<the item so far>: 0}
+        node, _, _ = decode_cbor_parser.decode_item(data)
+        calls = []
+        convert = decode_cbor_parser._structure_to_value
+        monkeypatch.setattr(decode_cbor_parser, "_structure_to_value", lambda item: calls.append(item) or convert(item))
+        # Every key named once, as the decoded value and the key-collision check name them.
+        decode_cbor_parser._structure_to_value(node)
+        key = node
+        while key.get("majorType") == 5:
+            key = key["entries"][0]["key"]
+            decode_cbor_parser._map_key(key)
+        monkeypatch.undo()
+        return len(calls)
+
+    # Converting each key's subtree named every key inside it again: depth squared and more.
+    assert conversions(40) <= 4 * conversions(10)
+    spelled = decode_cbor_parser._map_key(decode_cbor_parser.decode_item(bytes.fromhex("a1a10000f6"))[0])
+    assert spelled == decoder_values.CborDiagnostic("{{0: 0}: null}", "map")
+
+
 def test_an_item_of_as_many_items_as_the_budget_is_read_and_one_more_is_refused_where_it_starts():
     data = bytes.fromhex("8400010203")  # [0, 1, 2, 3]: five items
 
