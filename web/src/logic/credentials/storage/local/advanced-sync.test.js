@@ -1,11 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ensureAdvancedCredentialArtifactsSynced, ensureAdvancedCredentialSnapshotsPrefetched } from './advanced-sync.js';
-import { seedUnifiedCredentialRecords } from './storage-core.js';
+import { readUnifiedCredentialRecords, seedUnifiedCredentialRecords } from './storage-core.js';
 import * as artifactsClient from '../artifacts-client.js';
-import { saveAdvancedCredential } from './advanced-credentials.js';
+import { removeAdvancedCredential, saveAdvancedCredential, updateAdvancedCredentialSignCount } from './advanced-credentials.js';
+import { saveSimpleCredential } from './simple-credentials.js';
 
 const SHARED_STORAGE_KEY = 'postquantum-webauthn.credentials';
+const LEGACY_SIMPLE_STORAGE_KEY = 'postquantum-webauthn.simpleCredentials';
 const STORAGE_ID = 'THBi3GyG-MexchMynbz3x5Nv::1a0c4506c00::abb1b052d88044e486bb1446aa6a1e87';
 const PUBLIC_KEY = 'pQECAyYgASFYIDMAqV_ceu7i7Gw9sutq4PjEPKbbjqmToYzZWR03vPwCIlggivkDu6wVP_oBEKxHEVurqEqp4Q7zkRyxRmqawViw2Lg';
 
@@ -185,7 +187,8 @@ describe("stored credentials: artifacts", () => {
   let uploadCredentialArtifact;
   beforeEach(() => {
     window.localStorage.clear();
-    seedUnifiedCredentialRecords([]);
+    // The tests store their records in the browser's storage, which is then the first read.
+    seedUnifiedCredentialRecords(null);
     fetchCredentialArtifactsBulk = vi.spyOn(artifactsClient, 'fetchCredentialArtifactsBulk').mockReset();
     updateCredentialSnapshot = vi.spyOn(artifactsClient, 'updateCredentialSnapshot').mockReset();
     uploadCredentialArtifact = vi.spyOn(artifactsClient, 'uploadCredentialArtifact').mockReset();
@@ -394,5 +397,137 @@ describe("stored credentials: artifacts", () => {
     await expect(ensureAdvancedCredentialSnapshotsPrefetched()).resolves.toBe(false);
     expect(fetchCredentialArtifactsBulk).toHaveBeenCalledWith(['unfetched::storage']);
     expect(JSON.parse(localStorage.getItem(SHARED_STORAGE_KEY))[0].registrationDetailSnapshot).toBeUndefined();
+  });
+});
+
+const ADVANCED_ID = 'THBi3GyG-MexchMynbz3x5NvGe5iGSPJDYpBGvL7i9Y';
+const SIMPLE = { type: 'simple', credentialId: 'c2ltcGxlLWNyZWQ', email: 'user@example.com', publicKey: PUBLIC_KEY };
+
+// A fetch that answers `body` once released, and resolves `out` when the request is sent.
+function holdRequest(body) {
+  let release;
+  let sent;
+  const out = new Promise(resolve => { sent = resolve; });
+  const answer = new Promise(resolve => { release = resolve; });
+  vi.stubGlobal('fetch', vi.fn(() => {
+    sent();
+    return answer.then(() => jsonAnswer(body));
+  }));
+  return { out, release };
+}
+
+function storedIds() {
+  return stored().map(record => record.credentialId);
+}
+
+describe('what the person does while the artifact warm-up uploads', () => {
+  const heavy = () => advanced({ storageId: STORAGE_ID, attestationObject: 'o2NmbXRkbm9uZQ', hasServerArtifact: false });
+
+  it('keeps a credential saved during the upload', async () => {
+    store([heavy()]);
+    const request = holdRequest({ status: 'OK' });
+    const sync = ensureAdvancedCredentialArtifactsSynced();
+    await request.out;
+
+    saveSimpleCredential(SIMPLE);
+    request.release();
+
+    await expect(sync).resolves.toBe(true);
+    expect(storedIds()).toEqual([ADVANCED_ID, SIMPLE.credentialId]);
+    expect(stored()[0].attestationObject).toBeUndefined();
+    expect(stored()[0].hasServerArtifact).toBe(true);
+  });
+
+  it('keeps a sign-in counter written during the upload', async () => {
+    store([heavy()]);
+    const request = holdRequest({ status: 'OK' });
+    const sync = ensureAdvancedCredentialArtifactsSynced();
+    await request.out;
+
+    updateAdvancedCredentialSignCount(ADVANCED_ID, 7, STORAGE_ID);
+    request.release();
+
+    await expect(sync).resolves.toBe(true);
+    expect(stored()[0]).toMatchObject({ signCount: 7, hasServerArtifact: true, localStorageId: STORAGE_ID });
+  });
+
+  it('does not bring back, nor write over, a credential deleted during the upload', async () => {
+    store([heavy(), SIMPLE]);
+    const request = holdRequest({ status: 'OK' });
+    const sync = ensureAdvancedCredentialArtifactsSynced();
+    await request.out;
+
+    removeAdvancedCredential(ADVANCED_ID, STORAGE_ID);
+    const left = window.localStorage.getItem(SHARED_STORAGE_KEY);
+    const setItem = vi.spyOn(window.localStorage, 'setItem');
+    request.release();
+
+    await expect(sync).resolves.toBe(false);
+    expect(setItem).not.toHaveBeenCalled();
+    expect(window.localStorage.getItem(SHARED_STORAGE_KEY)).toBe(left);
+  });
+
+  it('keeps the credentials still under the legacy keys', async () => {
+    store([heavy()]);
+    window.localStorage.setItem(LEGACY_SIMPLE_STORAGE_KEY, JSON.stringify([SIMPLE]));
+    // The list's first read could not move them to the shared key (the storage was full).
+    vi.spyOn(window.localStorage, 'setItem').mockImplementationOnce(() => {
+      throw new DOMException('The quota has been exceeded.', 'QuotaExceededError');
+    });
+    expect(readUnifiedCredentialRecords()).toHaveLength(2);
+    expect(storedIds()).toEqual([ADVANCED_ID]);
+    answerWith({ status: 'OK' });
+
+    await expect(ensureAdvancedCredentialArtifactsSynced()).resolves.toBe(true);
+    expect(storedIds()).toEqual([ADVANCED_ID, SIMPLE.credentialId]);
+    expect(window.localStorage.getItem(LEGACY_SIMPLE_STORAGE_KEY)).toBeNull();
+  });
+});
+
+describe('what the person does while the snapshot warm-up fetches', () => {
+  const missing = () => advanced({ storageId: STORAGE_ID, hasServerArtifact: true });
+  const answer = { artifacts: { [STORAGE_ID]: { registrationDetailSnapshot: SNAPSHOT } } };
+
+  it('keeps a credential saved during the fetch', async () => {
+    store([missing()]);
+    const request = holdRequest(answer);
+    const prefetch = ensureAdvancedCredentialSnapshotsPrefetched();
+    await request.out;
+
+    saveSimpleCredential(SIMPLE);
+    request.release();
+
+    await expect(prefetch).resolves.toBe(true);
+    expect(storedIds()).toEqual([ADVANCED_ID, SIMPLE.credentialId]);
+    expect(stored()[0].registrationDetailSnapshot).toEqual(SNAPSHOT);
+  });
+
+  it('keeps a sign-in counter written during the fetch', async () => {
+    store([missing()]);
+    const request = holdRequest(answer);
+    const prefetch = ensureAdvancedCredentialSnapshotsPrefetched();
+    await request.out;
+
+    updateAdvancedCredentialSignCount(ADVANCED_ID, 7, STORAGE_ID);
+    request.release();
+
+    await expect(prefetch).resolves.toBe(true);
+    expect(stored()[0]).toMatchObject({ signCount: 7, registrationDetailSnapshot: SNAPSHOT });
+  });
+
+  it('does not bring back, nor write over, a credential deleted during the fetch', async () => {
+    store([missing(), SIMPLE]);
+    const request = holdRequest(answer);
+    const prefetch = ensureAdvancedCredentialSnapshotsPrefetched();
+    await request.out;
+
+    removeAdvancedCredential(ADVANCED_ID, STORAGE_ID);
+    const left = window.localStorage.getItem(SHARED_STORAGE_KEY);
+    const setItem = vi.spyOn(window.localStorage, 'setItem');
+    request.release();
+
+    await expect(prefetch).resolves.toBe(false);
+    expect(setItem).not.toHaveBeenCalled();
+    expect(window.localStorage.getItem(SHARED_STORAGE_KEY)).toBe(left);
   });
 });
