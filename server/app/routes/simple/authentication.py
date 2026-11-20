@@ -254,6 +254,9 @@ def authenticate_complete():
     too_large = ceremony_errors.authentication_response_too_large(response)
     if too_large is not None:
         return too_large
+    refused = ceremony_errors.authentication_cbor_refused(response)
+    if refused is not None:
+        return refused
     number = byte_members.number_refusal(AuthenticationResponse, response)
     if number is not None:
         return jsonify({"error": number}), 400

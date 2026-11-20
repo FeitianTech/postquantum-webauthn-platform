@@ -134,11 +134,12 @@ def _begin_payload(options: Any, resident_key_only: bool, hints: list[str]) -> d
 @bp.route("/api/advanced/authenticate/complete", methods=["POST"])
 def advanced_authenticate_complete():
     data = json_body.json_object()
-    # Measured before the ceremony's state is consumed, as a body over the request limit is.
-    too_large = ceremony_errors.authentication_response_too_large(data.get("__assertion_response"))
-    if too_large is not None:
-        return too_large
-    number = byte_members.number_refusal(AuthenticationResponse, data.get("__assertion_response"))
+    # Measured, and its CBOR walked, before the ceremony's state is consumed, as a body over the request limit is.
+    assertion = data.get("__assertion_response")
+    refused = ceremony_errors.authentication_response_too_large(assertion) or ceremony_errors.authentication_cbor_refused(assertion)
+    if refused is not None:
+        return refused
+    number = byte_members.number_refusal(AuthenticationResponse, assertion)
     if number is not None:
         return jsonify({"error": number}), 400
 

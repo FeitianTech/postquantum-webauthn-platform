@@ -9,7 +9,9 @@ the answer is a sentence of the app's own, and the exception is logged at INFO.
 
 A sign-in's credential response over a registration's limit (``config/request_limits.py``) is
 refused before anything reads it: fido2 parses its clientDataJSON, one string in the body,
-which the cap on a body's values does not see.
+which the cap on a body's values does not see. So is a response whose CBOR nests deeper or
+holds more items than any real one (``webauthn/cbor_bounds.py``), which fido2's decoder would
+take seconds or tens of MiB to read.
 """
 from __future__ import annotations
 
@@ -19,6 +21,7 @@ from typing import Any
 from flask import current_app, jsonify, request
 
 from ..config import request_limits
+from ..webauthn import cbor_bounds
 
 logger = logging.getLogger(__name__)
 
@@ -72,3 +75,27 @@ def authentication_response_too_large(response: Any) -> Any | None:
         ),
         413,
     )
+
+
+def _cbor_refusal(ceremony: str, excess: str | None) -> Any | None:
+    if excess is None:
+        return None
+    what = (
+        f"nests its CBOR more than {cbor_bounds.MAX_DEPTH} levels deep"
+        if excess == cbor_bounds.DEPTH
+        else f"holds more than {cbor_bounds.MAX_ITEMS:,} CBOR items"
+    )
+    return jsonify({"error": f"This {ceremony}'s response {what}, far more than any real one, so it was not read."}), 400
+
+
+def registration_cbor_refused(response: Any) -> Any | None:
+    """The 400 for a registration response whose attestation object or authenticator data
+    nests or holds more than ``cbor_bounds`` reads, else None."""
+
+    return _cbor_refusal("registration", cbor_bounds.registration_excess(response))
+
+
+def authentication_cbor_refused(response: Any) -> Any | None:
+    """The 400 for an assertion whose authenticator data nests or holds more than ``cbor_bounds`` reads, else None."""
+
+    return _cbor_refusal("authentication", cbor_bounds.assertion_excess(response))

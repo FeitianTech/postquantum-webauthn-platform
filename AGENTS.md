@@ -406,7 +406,10 @@ its logic out here first.
   `routes/ceremony_errors.py`
   (what a ceremony's complete answers when a response is refused: fido2's own findings, the challenge,
   origin, RP ID hash, UP, UV, signature, as fido2 wrote them, else a sentence of the app's own, the
-  exception logged at INFO; no answer carries an exception's text but the codec's, written to be shown);
+  exception logged at INFO; no answer carries an exception's text but the codec's, written to be shown;
+  and the 400 for a response whose CBOR, the attestation object or the authenticator data's key and
+  extensions, nests deeper than 50 levels or holds more than 400 items, walked before fido2's decoder
+  reads it, `webauthn/cbor_bounds.py`, on both tabs' completes);
   `routes/mds.py` (the MDS routes and certificate decoding; an upload's refusal names its file, with
   `mds/entries.py`'s `MetadataRefused` sentence or a fixed one, a JSON error's line and column);
   `routes/codec.py` (`/api/codec`); `routes/web_export.py` (`/health`,

@@ -231,6 +231,9 @@ def register_complete():
         response.pop("__session_state", None)
 
     # Refused before the ceremony's state is consumed, as a body over its limit is.
+    refused = ceremony_errors.registration_cbor_refused(response)
+    if refused is not None:
+        return refused
     number = byte_members.number_refusal(RegistrationResponse, response)
     if number is not None:
         return jsonify({"error": number}), 400

@@ -5,7 +5,8 @@ resident-key requirement) and ``resolve_state_and_registration_server`` picks th
 ceremony state and RP and has fido2 verify the registration. Both answer 400 for
 a request that cannot go further; the order of their session reads is part of
 the route's behaviour. A credential response over its limit is refused first, with
-a 413. ``attestation_inputs`` reads the attestation and client data only after
+a 413, then one whose CBOR nests or holds more than any real one, with a 400
+(``ceremony_errors``). ``attestation_inputs`` reads the attestation and client data only after
 that: it parses every x5c certificate the response carries.
 """
 from __future__ import annotations
@@ -27,6 +28,7 @@ from ...webauthn.attachments import (
 )
 from ...webauthn.attestation import aaguid as attestation_aaguid
 from ...webauthn.attestation import certificates as attestation_certificates
+from .. import ceremony_errors
 from . import request_members
 
 
@@ -135,6 +137,9 @@ def prepare_register_complete_inputs(
     too_large = _response_too_large(response)
     if too_large is not None:
         return None, too_large
+    refused = ceremony_errors.registration_cbor_refused(response)
+    if refused is not None:
+        return None, refused
     number = byte_members.number_refusal(RegistrationResponse, response)
     if number is not None:
         return None, (jsonify({"error": number}), 400)
