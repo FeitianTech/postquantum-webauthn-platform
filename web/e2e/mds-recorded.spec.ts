@@ -67,6 +67,11 @@ async function shownRows(page: Page, filters: Record<string, readonly string[]>)
     await field.fill(value);
     await field.press('Tab');
   }
+  // The rows follow the filters through React's deferred value, after the typing: the
+  // render that hides them marks each filtered column's header, so read once all are marked.
+  for (const [, label] of Object.values(filters)) {
+    await expect(section.getByRole('columnheader', { name: `${label} (filtered)` })).toBeVisible();
+  }
   return readShownRows(section.locator('tbody'), 'tr[data-entry-id]:not([hidden])', 5);
 }
 
