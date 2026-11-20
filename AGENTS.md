@@ -394,7 +394,7 @@ its logic out here first.
   them (`assertionErrors`), and a warning is the answer's `warnings` in both; an Advanced ceremony is for the RP ID its request names (`rp.id`, `rpId`), else the
   configured one, and its complete for the one its begin kept beside its state (`advanced_rp`,
   `advanced_auth_rp`); `routes/advanced/request_members.py` names the member of the wrong JSON
-  type, 400); `routes/ceremony_session.py` (every begin: refused, the session kept as
+  type, or a registration's `excludeCredentials` past 2,000 entries or `pubKeyCredParams` past 256, 400); `routes/ceremony_session.py` (every begin: refused, the session kept as
   it was, when its cookie would pass `MAX_COOKIE_SIZE`); `routes/json_body.py` (every route's
   JSON body: an object, or read as an empty one, malformed JSON too; RFC 8259's JSON only, so `NaN`,
   `Infinity`, `-Infinity` and a number no double holds are refused, 400 in JSON, the CSP report's

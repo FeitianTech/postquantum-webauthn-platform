@@ -1,28 +1,43 @@
 """The members of an Advanced request's ``publicKey`` that must be of one JSON type.
 
-Each check names the first member that is not the type it must be, in a sentence
-the page shows, before anything reads it.
+Each check names the first member that is not the type it must be, or a registration
+list longer than anything real sends, in a sentence the page shows, before anything reads it.
 """
 from __future__ import annotations
 
 from collections.abc import Mapping
 from typing import Any
 
+from ...webauthn import client_credentials
+
 # Members each ceremony's publicKey must hold as objects, or as lists, when it has them.
 _REGISTRATION_OBJECTS = ("rp", "user", "extensions")
-_REGISTRATION_LISTS = ("excludeCredentials",)
+_REGISTRATION_LISTS = ("excludeCredentials", "pubKeyCredParams")
 _AUTHENTICATION_OBJECTS = ("extensions",)
 _AUTHENTICATION_LISTS = ("allowCredentials",)
 # Members of rp and user that must be text when there.
 _TEXT_MEMBERS = (("rp", "name"), ("user", "name"), ("user", "displayName"))
+# The most algorithms a registration reads: far above the 20 the form offers, so only a
+# request sent by hand meets it. Each entry becomes one of fido2's objects.
+MAX_ALGORITHM_PARAMS = 256
+TOO_MANY_ALGORITHMS = f"pubKeyCredParams lists more than {MAX_ALGORITHM_PARAMS} algorithms. List fewer and try again."
+TOO_MANY_EXCLUDED = (
+    f"excludeCredentials lists more than {client_credentials.MAX_SENT_CREDENTIALS:,} credentials, "
+    "more than a browser keeps. Exclude fewer and try again."
+)
 
 
 def registration_refusal(public_key: Any) -> str | None:
-    """Why ``public_key``, or a member registration's begin and complete read, is not the JSON type it must be; else None."""
+    """Why ``public_key``, or a member registration's begin and complete read, is not the JSON type it
+    must be, or is a list longer than they read; else None."""
 
     if not isinstance(public_key, Mapping):
         return "publicKey must be an object."
-    return _shape_refusal(public_key, _REGISTRATION_OBJECTS, _REGISTRATION_LISTS) or _text_member_refusal(public_key)
+    return (
+        _shape_refusal(public_key, _REGISTRATION_OBJECTS, _REGISTRATION_LISTS)
+        or _text_member_refusal(public_key)
+        or _list_length_refusal(public_key)
+    )
 
 
 def authentication_refusal(public_key: Any) -> str | None:
@@ -52,6 +67,16 @@ def _shape_refusal(public_key: Mapping[str, Any], objects: tuple[str, ...], list
     timeout = public_key.get("timeout")
     if timeout is not None and (isinstance(timeout, bool) or not isinstance(timeout, (int, float))):
         return "timeout must be a number of milliseconds."
+    return None
+
+
+def _list_length_refusal(public_key: Mapping[str, Any]) -> str | None:
+    """Why excludeCredentials or pubKeyCredParams is longer than a registration reads; else None."""
+
+    if client_credentials.too_many(public_key.get("excludeCredentials")):
+        return TOO_MANY_EXCLUDED
+    if len(public_key.get("pubKeyCredParams", ())) > MAX_ALGORITHM_PARAMS:
+        return TOO_MANY_ALGORITHMS
     return None
 
 
