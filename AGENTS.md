@@ -583,9 +583,10 @@ deliberate change (the characterization goldens show what it changes).
   with coverage, build, CSP scan, size budget) in parallel, then Build, Push and Deploy (Cloud
   Run `pqcwebauthn`, `deploy/deploy-revision.sh`: a revision with no traffic, tagged `candidate`,
   `/health`, `/` and `/api/mds/metadata/info` checked at the tag's URL, then all the traffic to
-  it; a failure leaves the traffic where it was, and `tests/app/tooling/test_deploy_revision.py`
-  holds it to that). Playwright runs in GitHub CI only. Keep that gate: it is all that stands
-  between a commit and production.
+  it; a failure leaves the traffic where it was, a build whose commit is no longer main's tip
+  (read from the public repository before it deploys and again before it promotes) leaves it
+  there too, and `tests/app/tooling/test_deploy_revision.py` holds it to that). Playwright runs
+  in GitHub CI only. Keep that gate: it is all that stands between a commit and production.
 - Workflows (`ci-*.yml` run on `pull_request` and on `push` to `main`; `ci-security.yml` also
   weekly, since advisories land without a commit): `ci-python.yml`, `ci-web.yml` (web and the
   Playwright tests), `ci-docker.yml` (builds the image and, with the fixture snapshot, checks it

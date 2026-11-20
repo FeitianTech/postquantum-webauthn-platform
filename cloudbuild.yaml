@@ -6,7 +6,9 @@
 # with deploy/apply-service-config.sh. It deploys the image as a revision that
 # takes no traffic, checks /health, / and /api/mds/metadata/info at its tag's URL,
 # and only then sends it all the traffic (deploy/deploy-revision.sh): whatever
-# fails leaves the traffic on the revision that had it.
+# fails leaves the traffic on the revision that had it. A build whose commit is
+# no longer main's tip, read from REPOSITORY_URL before it deploys and again
+# before it promotes, stops there and leaves the traffic where it is.
 #
 # GitHub Actions and Cloud Build are independent pipelines: a red CI run does
 # not stop a trigger from firing. The test steps below (ruff, the Python suite
@@ -82,6 +84,7 @@ steps:
       - REGION=asia-northeast1
       - COMMIT_SHA=$COMMIT_SHA
       - BUILD_ID=$BUILD_ID
+      - REPOSITORY_URL=https://github.com/FeitianTech/postquantum-webauthn-platform
       - LABELS=managed-by=gcp-cloud-build-deploy-cloud-run,commit-sha=$COMMIT_SHA,gcb-build-id=$BUILD_ID,gcb-trigger-id=$_TRIGGER_ID
 
 images:

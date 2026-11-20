@@ -9,18 +9,26 @@
 # request, and /api/mds/metadata/info waits for the MDS snapshot it provisions),
 # trying each until it passes, PAUSE_SECONDS apart, within one deadline for all.
 #
-# Needs IMAGE, SERVICE, REGION, COMMIT_SHA and BUILD_ID; LABELS is optional.
+# Builds overlap, and one can be retried by hand: so before it deploys and again
+# before it promotes, the script reads main's tip from REPOSITORY_URL. A build
+# whose commit is no longer the tip ends there without error, the traffic left
+# where it is; a tip it cannot read fails the deploy.
+#
+# Needs IMAGE, SERVICE, REGION, COMMIT_SHA, BUILD_ID and REPOSITORY_URL (the
+# public repository on GitHub); LABELS is optional.
 # It calls gcloud, curl and grep, all in the cloud-sdk:slim image (which has no
 # python3 of its own): gcloud's projections read the service.
 set -euo pipefail
 
-: "${IMAGE:?}" "${SERVICE:?}" "${REGION:?}" "${COMMIT_SHA:?}" "${BUILD_ID:?}"
+: "${IMAGE:?}" "${SERVICE:?}" "${REGION:?}" "${COMMIT_SHA:?}" "${BUILD_ID:?}" "${REPOSITORY_URL:?}"
 LABELS="${LABELS:-}"
 TAG=candidate
 DEADLINE_SECONDS=480
 PAUSE_SECONDS=15
 MAX_ATTEMPTS=40
 MAX_REQUEST_SECONDS=120
+TIP_ATTEMPTS=4
+TIP_PAUSE_SECONDS=5
 
 # The revision's own name, so the one checked is the one promoted, whatever
 # another build deploys meanwhile. Cloud Run's names are lower-case.
@@ -41,6 +49,29 @@ tag_names_revision() {
     echo "The tag $TAG names '${found#*,}', not $revision." >&2
     return 1
   fi
+}
+
+# Ends the script unless COMMIT_SHA is main's tip. The tip is read from git's own
+# ref advertisement, which needs no token and is not the REST API's rate limit;
+# its line for main is "<4 hex digits of length><commit> refs/heads/main".
+stop_unless_main_tip() {
+  local attempt=0 tip commit
+  commit="$(printf '%s' "$COMMIT_SHA" | tr '[:upper:]' '[:lower:]')"
+  while :; do
+    attempt=$((attempt + 1))
+    if curl -fsS --max-time 30 -o "$work/refs" "$REPOSITORY_URL.git/info/refs?service=git-upload-pack" &&
+      tip="$(grep -aEo '[0-9a-f]{40} refs/heads/main$' "$work/refs")"; then
+      tip="${tip%% *}"
+      [ "$tip" = "$commit" ] && return 0
+      echo "main is now at $tip, not $commit: this build leaves the traffic where it is, and that commit's build deploys it."
+      exit 0
+    fi
+    if [ "$attempt" -ge "$TIP_ATTEMPTS" ]; then
+      echo "Could not read main's tip from $REPOSITORY_URL after $attempt attempts; the traffic stays where it was." >&2
+      exit 1
+    fi
+    sleep "$TIP_PAUSE_SECONDS"
+  done
 }
 
 body_is_ok() { [ "$(cat "$1")" = ok ]; }
@@ -68,6 +99,7 @@ check() {
   done
 }
 
+stop_unless_main_tip
 echo "Deploying $IMAGE as $revision, tagged $TAG, with no traffic"
 gcloud run services update "$SERVICE" --platform=managed --region="$REGION" --image="$IMAGE" \
   --revision-suffix="$suffix" --no-traffic --tag="$TAG" ${LABELS:+"--labels=$LABELS"} --quiet
@@ -79,8 +111,9 @@ check /health body_is_ok
 check / body_is_html
 check /api/mds/metadata/info body_has_entries
 
-# Another build may have moved the tag while these ran: promote only this one.
+# Another build may have moved the tag, or main, while these ran: promote only this one.
 tag_names_revision
+stop_unless_main_tip
 echo "Sending all traffic to $revision"
 gcloud run services update-traffic "$SERVICE" --platform=managed --region="$REGION" \
   --to-revisions="$revision=100" --quiet

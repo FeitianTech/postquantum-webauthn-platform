@@ -7,8 +7,21 @@ The service runs in `feitian-project`, region `asia-northeast1`, on one vCPU, an
   - `/health`, `/` and `/api/mds/metadata/info` (with its `entryCount`) are checked at the tag's URL, `https://candidate---…`. Each is tried again, 15 s apart, while the revision starts and provisions its MDS snapshot, all within 8 minutes.
   - Only then does the revision get all the traffic (`update-traffic --to-revisions`).
   - Whatever fails leaves the traffic on the revision that had it. The failed revision keeps its tag, without traffic, until the next deploy moves the tag.
+  - Builds can overlap, and one can be retried by hand, so the script reads main's tip from the public repository (git's ref advertisement, no token) before it deploys and again before it promotes. A build whose commit is no longer the tip stops there without error and leaves the traffic where it is; a tip it cannot read after a few tries fails the deploy. If the newer commit's own build then fails, nothing deploys until a later push's build passes. The read needs the repository public at the address `cloudbuild.yaml` gives the script.
   - The build's service account needs nothing more than the deploy did before. `services describe` and `update-traffic` need the same `run.services.get` and `run.services.update` as `services update`, and the tag's URL is public like the service's.
 - **Settings:** concurrency, scaling, secrets and the runtime identity live in [service.yaml](service.yaml). Apply them with [apply-service-config.sh](apply-service-config.sh). The script keeps the image of the revision that serves the traffic. Its new revision takes all the traffic at once, without the deploy's checks.
+
+## Rolling back
+
+List the service's revisions and send all the traffic back to one that served well:
+
+```bash
+gcloud run revisions list --service pqcwebauthn --project feitian-project --region asia-northeast1
+gcloud run services update-traffic pqcwebauthn --project feitian-project --region asia-northeast1 \
+  --to-revisions=pqcwebauthn-<commit>-<build>=100
+```
+
+This holds until the next push to `main`, whose build deploys main's tip again: revert the bad commit on `main` next. A build of an older commit no longer takes the traffic by itself, so roll back with `update-traffic`, never by building an old commit again.
 
 ## One-time setup: secrets and runtime identity
 
