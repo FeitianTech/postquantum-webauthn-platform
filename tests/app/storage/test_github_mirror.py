@@ -463,6 +463,59 @@ def test_a_registration_waits_in_the_outbox_while_github_is_down(monkeypatch, lo
     assert _queued_paths(log_outbox) == []
 
 
+def _named_log_entry(name: str) -> OutboxEntry:
+    return OutboxEntry("registration", f"logs/unknown/{name}.json", f"add: {name}.json (AAGUID=unknown)", b"{}")
+
+
+def _queued_attempts(root) -> dict[str, int]:
+    names = sorted(name for name in os.listdir(root) if name.endswith(".entry"))
+    return {entry.path: entry.attempts for entry in (github_outbox.decode_entry((root / n).read_bytes()) for n in names)}
+
+
+def test_an_entry_github_never_takes_does_not_hold_back_the_ones_behind_it(monkeypatch, log_outbox, caplog):
+    github = fake_github.install(monkeypatch)
+    request = github.request
+
+    def _never_takes_stuck(method, url, body=None):
+        if method == "PUT" and url.endswith("/stuck.json"):
+            raise fake_github.http_error(409, "is at another commit")
+        return request(method, url, body)
+
+    monkeypatch.setattr(github_mirror, "_request", _never_takes_stuck)
+    github_outbox.enqueue([_named_log_entry("stuck")])
+
+    with caplog.at_level(logging.WARNING):
+        for run in range(1, github_outbox.MAX_ATTEMPTS + 1):
+            github_outbox.enqueue([_named_log_entry(f"later{run}")])
+            github_outbox.flush(github_mirror.deliver)
+            # Each run delivers the entry behind the stuck one.
+            assert f"logs/unknown/later{run}.json" in github.files
+            if run < github_outbox.MAX_ATTEMPTS:
+                assert _queued_attempts(log_outbox) == {"logs/unknown/stuck.json": run}
+
+    assert sorted(github.files) == [f"logs/unknown/later{run}.json" for run in range(1, github_outbox.MAX_ATTEMPTS + 1)]
+    assert _queued_paths(log_outbox) == []
+    assert "Dropped logs/unknown/stuck.json from the credential log" in caplog.text
+
+
+@pytest.mark.parametrize("status", [503, 401, 429])
+def test_an_outage_a_bad_token_or_a_rate_limit_drops_nothing(monkeypatch, log_outbox, status):
+    github = fake_github.install(monkeypatch)
+    names = [f"e{index}" for index in range(github_outbox.MAX_UNAVAILABLE_IN_A_ROW + 2)]
+    github_outbox.enqueue([_named_log_entry(name) for name in names])
+    github.fail.extend(fake_github.http_error(status) for _ in range(1_000))
+    runs = github_outbox.MAX_ATTEMPTS + 1
+
+    for _run in range(runs):
+        (log_outbox / ".lease").write_bytes(b"{}")  # The backoff is over.
+        assert github_outbox.flush(github_mirror.deliver).handled == 0
+
+    # Each run stops after a few calls; nothing is counted.
+    assert len(github.calls) == runs * github_outbox.MAX_UNAVAILABLE_IN_A_ROW
+    assert _queued_attempts(log_outbox) == {f"logs/unknown/{name}.json": 0 for name in names}
+    assert json.loads((log_outbox / ".lease").read_bytes())["notBefore"] > 0
+
+
 def test_the_registration_never_waits_for_github(monkeypatch, log_outbox):
     github = fake_github.install(monkeypatch)
     monkeypatch.setattr(github_outbox, "FLUSH_ASYNC", True)
@@ -716,6 +769,20 @@ def test_an_empty_metadata_file_or_none_queues_nothing(monkeypatch, log_outbox):
 
     assert github.calls == []
     assert not log_outbox.exists()
+
+
+def test_a_metadata_file_over_the_cap_is_not_queued_and_is_said_so(monkeypatch, log_outbox, caplog):
+    github = fake_github.install(monkeypatch)
+    cap = github_mirror.MAX_LOGGED_METADATA_BYTES
+
+    with caplog.at_level(logging.WARNING, logger=github_mirror.__name__):
+        github_mirror.queue_uploaded_metadata_files([("at-cap.json", b"a" * cap), ("../over.json", b"o" * (cap + 1))])
+
+    assert sorted(github.files) == ["metadata/at-cap.json"]
+    assert (
+        f"Not copying metadata file over.json to the credential log: it holds {cap + 1:,} bytes, over the 1 MiB copied"
+    ) in caplog.text
+    assert "at-cap.json" not in caplog.text
 
 
 def test_metadata_is_added_to_an_empty_repository(monkeypatch):

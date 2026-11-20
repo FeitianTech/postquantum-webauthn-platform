@@ -172,7 +172,9 @@ Each registration, and each uploaded metadata file, is copied to the owners' cre
 log repository on GitHub (`GITHUB_LOG_REPO_OWNER`/`GITHUB_LOG_REPO_NAME`, by default
 `rainzhang05/CredentialLogs`): a registration as `logs/<aaguid>/<time>_<random>.json` (its
 time, RP ID, AAGUID, MDS device name, attestation object and the four checks), a metadata
-file whole under `metadata/`. The log is on only with a `GITHUB_TOKEN`, and
+file whole under `metadata/`, unless it is over 1 MiB (`MAX_LOGGED_METADATA_BYTES`: a file of
+one statement fits, and a request without a cookie gets a namespace of its own, so the upload
+quotas do not bound what the log keeps), which is not copied, with a warning naming it. The log is on only with a `GITHUB_TOKEN`, and
 `ENABLE_GITHUB_LOGGING=0` turns it off.
 
 No request waits for GitHub. Once a registration's record is saved
@@ -185,12 +187,15 @@ the visitor's error.
 - **Where entries wait.** On Cloud Storage under `github-outbox/` (`entries/<id>`, and a
   `lease` object), outside `user-data/`, so the idle sweep never removes them; locally in
   `FIDO_SERVER_GITHUB_OUTBOX_DIR`, else `instance/github-outbox` (`<id>.entry`, and `.lease`).
-  An entry is a line of JSON (kind, path, commit message) and the file's bytes. Ids begin with
-  the time they were queued, so entries are delivered oldest first.
+  An entry is a line of JSON (kind, path, commit message, and `attempts`, its failed attempts,
+  once it has any: an entry without it has none) and the file's bytes. Ids begin with the time
+  they were queued, so entries are delivered oldest first.
 - **The bound.** 1,000 entries and 256 MiB (`MAX_ENTRIES`, `MAX_BYTES`), counted from one
   listing per request that queues. Past either an entry is dropped with a warning naming its
   path; a listing that fails is warned about and the entry written anyway. Two requests at
-  once can both pass the bound, as with the quotas.
+  once can both pass the bound, as with the quotas. Nothing else limits what uploads without
+  a cookie queue: enough of them, each up to 1 MiB, fill the outbox, and until it drains new
+  entries, registrations too, are not logged; each one delivered adds to the repository.
 - **What delivers them.** `github_outbox.flush`, on a worker thread that requests start
   (`schedule_flush`): one before each request at most every 30 s per process
   (`github_mirror.init_app`), and one at once when a request has queued an entry. On Cloud Run
@@ -215,7 +220,15 @@ the visitor's error.
   other content is kept, and the new file goes beside it as `<name>-<first 12 of its blob
   SHA><extension>`.
 - **Failures.** GitHub, the network or the token unable to take a file (401, 403, 404, 408,
-  409, 429, a 5xx, a timeout, an answer that is not what the mirror reads) leaves the entry
-  and stops the run, and every flusher leaves the outbox for 300 s: one failed call per 5
-  minutes in all while GitHub is down. A file GitHub refuses for good (another 4xx), or that
-  holds the only path left to it, is dropped with a warning; so is an entry that does not read.
+  409, 429, a 5xx, a timeout, an answer that is not what the mirror reads) leaves the entry,
+  and the run goes on to the next, stopping after 3 such in a row
+  (`MAX_UNAVAILABLE_IN_A_ROW`). When a later entry in the same run is delivered, GitHub was
+  working: each entry passed over before it gets a failed attempt, rewritten into its entry
+  under the lease (on Cloud Storage at the generation read), and one at 5 (`MAX_ATTEMPTS`) is
+  dropped with a warning naming its path. It keeps its place, first in the next run. When no
+  later entry is delivered, nothing is counted and every flusher leaves the outbox for 300 s:
+  a full outage, a rate limit or a bad token costs 3 calls per 5 minutes and drops nothing.
+  While GitHub fails only some calls, or takes reads but not writes, an entry can still reach
+  the count; and three entries in a row that it never takes, at the front, hold the rest. A file
+  GitHub refuses for good (another 4xx), or that holds the only path left to it, is dropped
+  with a warning; so is an entry that does not read.

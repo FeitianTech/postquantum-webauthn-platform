@@ -4,8 +4,10 @@ A registration's log entry and an uploaded metadata file are queued here once th
 succeeded (``enqueue``), each with the path it lands at in the repository, fixed then, and
 delivered later by ``flush``. One flusher at a time holds the outbox's lease: GitHub takes new
 files one at a time (its create-file endpoint refuses calls made in parallel), and when it cannot
-take one every flusher backs off together. A delivery made twice finds its file at its path, so
-an entry is delivered at least once and never becomes two files.
+take one a run goes on to the next few: an entry it never takes, though it takes later ones, is
+given up after a few such runs, while an outage gives up nothing and every flusher backs off
+together. A delivery made twice finds its file at its path, so an entry is delivered at least
+once and never becomes two files.
 
 On Cloud Storage the outbox is ``github-outbox/``, outside the visitors' ``user-data/``, which
 the idle sweep removes: each entry ``github-outbox/entries/<id>``, and the lease
@@ -58,6 +60,14 @@ LEASE_SECONDS = 300.0
 LEASE_MARGIN_SECONDS = 60.0
 # How long every flusher leaves the outbox after GitHub could not take a delivery.
 BACKOFF_SECONDS = 300.0
+# How many entries in a row a run tries that GitHub cannot take before it stops: an outage, a
+# rate limit or a bad token costs that many calls, and an entry GitHub never takes does not
+# hold back the ones behind it.
+MAX_UNAVAILABLE_IN_A_ROW = 3
+# An entry GitHub could not take is counted a failed attempt only when it took a later entry in
+# the same run (it was working: the entry is the problem), and given up at this count. Failures
+# with no delivery after them count nothing, or an outage would empty the outbox.
+MAX_ATTEMPTS = 5
 # The most entries one run delivers.
 RUN_LIMIT = 20
 # How often a process starts a run by itself; a kick (an entry just queued) starts one at once.
@@ -73,12 +83,14 @@ _CLOUD_LEASE = "github-outbox/lease"
 
 class OutboxEntry(NamedTuple):
     """A file to copy to the log repository: what it is ("registration" or "metadata"), the path
-    it lands at (fixed when it was queued), its commit message and its bytes."""
+    it lands at (fixed when it was queued), its commit message, its bytes, and its failed
+    attempts so far (``MAX_ATTEMPTS``)."""
 
     kind: str
     path: str
     message: str
     content: bytes
+    attempts: int = 0
 
 
 class Delivery(Enum):
@@ -91,7 +103,8 @@ class Delivery(Enum):
 
 
 class FlushRun(NamedTuple):
-    """What a run did: how many entries it delivered or dropped, and when the outbox may next be tried."""
+    """What a run did: how many entries it delivered or dropped (given up ones too), and when the
+    outbox may next be tried."""
 
     handled: int
     not_before: float
@@ -114,9 +127,12 @@ def outbox_dir() -> str:
 
 
 def encode_entry(entry: OutboxEntry) -> bytes:
-    """An entry as the outbox keeps it: one line of JSON (kind, path, message), then the file's bytes."""
+    """An entry as the outbox keeps it: one line of JSON (kind, path, message, and its failed
+    attempts once it has any), then the file's bytes."""
 
-    header = {"kind": entry.kind, "path": entry.path, "message": entry.message}
+    header: dict[str, str | int] = {"kind": entry.kind, "path": entry.path, "message": entry.message}
+    if entry.attempts:
+        header["attempts"] = entry.attempts
     return json.dumps(header, ensure_ascii=True, separators=(",", ":")).encode("ascii") + b"\n" + entry.content
 
 
@@ -129,7 +145,11 @@ def decode_entry(data: bytes) -> OutboxEntry:
     fields = json.loads(header.decode("ascii"))
     if not isinstance(fields, dict) or not all(isinstance(fields.get(key), str) for key in ("kind", "path", "message")):
         raise ValueError("an outbox entry's header is not one this server writes")
-    return OutboxEntry(fields["kind"], fields["path"], fields["message"], content)
+    # Entries queued before attempts were counted have none.
+    attempts = fields.get("attempts", 0)
+    if type(attempts) is not int or attempts < 0:
+        raise ValueError("an outbox entry's attempts are not a count")
+    return OutboxEntry(fields["kind"], fields["path"], fields["message"], content, attempts)
 
 
 def _new_entry_id() -> str:
@@ -185,12 +205,16 @@ class _LocalOutbox:
         except FileNotFoundError:
             return []
 
-    def read(self, name: str) -> bytes | None:
+    def read(self, name: str) -> tuple[bytes | None, int]:
         try:
             with open(os.path.join(self.root, name), "rb") as handle:
-                return handle.read()
+                return handle.read(), 0
         except FileNotFoundError:
-            return None
+            return None, 0
+
+    def rewrite(self, name: str, data: bytes, _generation: int) -> None:
+        # Under the lease's flock no other flusher reads or removes an entry.
+        common.replace_file(os.path.join(self.root, name), data)
 
     def remove(self, name: str) -> None:
         with contextlib.suppress(FileNotFoundError):
@@ -235,8 +259,13 @@ class _CloudOutbox:
     def names(self) -> list[str]:
         return sorted(cloud.list_blob_names(_CLOUD_ENTRIES))
 
-    def read(self, name: str) -> bytes | None:
-        return cloud.download_bytes(name)
+    def read(self, name: str) -> tuple[bytes | None, int]:
+        return cloud.download_bytes_with_generation(name)
+
+    def rewrite(self, name: str, data: bytes, generation: int) -> None:
+        # Only at the generation read: an entry a run that outlasted its lease removed meanwhile
+        # stays removed.
+        cloud.upload_bytes_if_generation(name, data, generation=generation, content_type="application/octet-stream")
 
     def remove(self, name: str) -> None:
         cloud.delete_blob(name)
@@ -335,14 +364,36 @@ def _delivered(deliver: Callable[[OutboxEntry], Delivery], entry: OutboxEntry) -
         return Delivery.UNAVAILABLE
 
 
+def _count_attempts(backend: _LocalOutbox | _CloudOutbox, passed_over: list[tuple[str, OutboxEntry, int]]) -> int:
+    """A failed attempt for each entry GitHub did not take though it took a later one; an entry
+    at ``MAX_ATTEMPTS`` is removed with a warning. How many were removed."""
+
+    removed = 0
+    for name, entry, generation in passed_over:
+        attempts = entry.attempts + 1
+        if attempts < MAX_ATTEMPTS:
+            logger.info("GitHub took a later entry but not %s (%d of %d attempts)", entry.path, attempts, MAX_ATTEMPTS)
+            backend.rewrite(name, encode_entry(entry._replace(attempts=attempts)), generation)
+            continue
+        logger.warning(
+            "Dropped %s from the credential log: GitHub did not take it in %d runs that delivered later entries",
+            entry.path,
+            attempts,
+        )
+        backend.remove(name)
+        removed += 1
+    return removed
+
+
 def _deliver_due(
     backend: _LocalOutbox | _CloudOutbox, lease: Lease, deliver: Callable[[OutboxEntry], Delivery], limit: int
 ) -> int:
-    handled = 0
+    handled = in_a_row = 0
+    passed_over: list[tuple[str, OutboxEntry, int]] = []
     for name in backend.names():
         if handled >= limit or time.time() > lease.until - LEASE_MARGIN_SECONDS:
             break
-        data = backend.read(name)
+        data, generation = backend.read(name)
         if data is None:
             continue
         try:
@@ -351,11 +402,21 @@ def _deliver_due(
             logger.warning("Removed %s from the credential log outbox: it is not an entry this server reads", name)
             backend.remove(name)
             continue
-        if _delivered(deliver, entry) is Delivery.UNAVAILABLE:
-            lease.not_before = time.time() + BACKOFF_SECONDS
-            break
+        delivery = _delivered(deliver, entry)
+        if delivery is Delivery.UNAVAILABLE:
+            passed_over.append((name, entry, generation))
+            in_a_row += 1
+            if in_a_row >= MAX_UNAVAILABLE_IN_A_ROW:
+                break
+            continue
+        in_a_row = 0
         backend.remove(name)
         handled += 1
+        if delivery is Delivery.DELIVERED:
+            handled += _count_attempts(backend, passed_over)
+            passed_over = []
+    if passed_over:
+        lease.not_before = time.time() + BACKOFF_SECONDS
     return handled
 
 
@@ -364,8 +425,11 @@ def flush(deliver: Callable[[OutboxEntry], Delivery], *, limit: int = RUN_LIMIT)
 
     At most ``limit`` entries, and none started with less than ``LEASE_MARGIN_SECONDS`` of the
     lease left. An entry delivered or dropped is removed; one that does not decode is logged by
-    name and removed. When GitHub cannot take one (``deliver`` answers UNAVAILABLE, or raises),
-    it stays, the run stops, and every flusher leaves the outbox for ``BACKOFF_SECONDS``.
+    name and removed. One GitHub cannot take (``deliver`` answers UNAVAILABLE, or raises) stays,
+    and the run goes on to the next, up to ``MAX_UNAVAILABLE_IN_A_ROW`` in a row. When a later
+    entry is delivered, each passed over before it is counted a failed attempt, kept with it,
+    and given up at ``MAX_ATTEMPTS``; when none is, nothing is counted, and every flusher leaves
+    the outbox for ``BACKOFF_SECONDS``. A passed-over entry keeps its place, first in the next run.
     Without the lease (another flusher holds it, or the outbox is backing off) a run does nothing,
     and with nothing queued it does not take the lease: a listing is all it costs.
     """

@@ -331,7 +331,7 @@ def _read_and_save_upload():
                 logged.append((uploaded.name, uploaded.raw_bytes))
 
     # A file one of whose entries was saved is queued, whole, for the device log (never in this
-    # request's time); a file none of whose entries was saved is not.
+    # request's time); a file none of whose entries was saved is not, nor one over the log's cap.
     github_mirror.queue_uploaded_metadata_files(logged)
     # The upload's bytes and entries go before the answer reads the namespace's rows back.
     del read_files, uploaded, logged

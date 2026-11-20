@@ -34,7 +34,7 @@ from .. import aaguid, encoding
 from ..encoding import encode_base64, encode_base64url
 from ..env_flags import parse_env_flag
 from ..json_values import make_json_safe
-from . import github_outbox
+from . import common, github_outbox
 from .github_outbox import Delivery, OutboxEntry
 
 __all__ = [
@@ -450,6 +450,11 @@ def record_registration_event(event: RegistrationEvent) -> None:
 # Uploaded metadata, one copy per file.
 
 _METADATA_REPO_FOLDER = "metadata"
+# The largest uploaded file copied to the log. A request without a cookie gets a namespace of its
+# own, so the upload quotas bound nothing the outbox and the repository keep; a file of one
+# statement fits, as one stored entry is at most 1 MiB (request_limits), and a bigger file (a
+# whole MDS dump, padding) stays the upload's alone.
+MAX_LOGGED_METADATA_BYTES = 1024 * 1024
 
 
 def _safe_metadata_repo_filename(filename: str) -> str:
@@ -468,7 +473,7 @@ def _metadata_entry(filename: str, content: bytes) -> OutboxEntry:
 
 def queue_uploaded_metadata_files(files: Sequence[tuple[str, bytes]]) -> None:
     """Queue uploaded metadata files, each whole and by its name, for the log repository's
-    ``metadata/`` folder.
+    ``metadata/`` folder; a file over ``MAX_LOGGED_METADATA_BYTES`` is not, with a warning.
 
     The upload route calls it once some entry of each file was saved. The files wait in the
     outbox and a worker delivers them (``github_outbox``): the upload's answer never waits for
@@ -477,7 +482,17 @@ def queue_uploaded_metadata_files(files: Sequence[tuple[str, bytes]]) -> None:
 
     if not is_logging_enabled():
         return
-    entries = [_metadata_entry(name, content) for name, content in files if content]
+    entries = []
+    for name, content in files:
+        if len(content) > MAX_LOGGED_METADATA_BYTES:
+            logger.warning(
+                "Not copying metadata file %s to the credential log: it holds %s, over the %s copied",
+                _safe_metadata_repo_filename(name),
+                common.describe_size(len(content)),
+                common.describe_size(MAX_LOGGED_METADATA_BYTES),
+            )
+        elif content:
+            entries.append(_metadata_entry(name, content))
     if entries and github_outbox.enqueue(entries):
         _start_flush(kick=True)
 

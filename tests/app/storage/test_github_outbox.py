@@ -20,6 +20,19 @@ def _entry(name: str, content: bytes = b"{}") -> OutboxEntry:
     return OutboxEntry("registration", f"logs/unknown/{name}.json", f"add: {name}.json (AAGUID=unknown)", content)
 
 
+def _path(name: str) -> str:
+    return f"logs/unknown/{name}.json"
+
+
+# An entry as this server stored it before it counted attempts, queued before any made now.
+_OLD_FORMAT = b'{"kind":"registration","path":"logs/unknown/old.json","message":"add: old.json (AAGUID=unknown)"}\n{}'
+_OLD_ID = "20251101T000000000000Z-0123abcd"
+
+
+def _attempts(outbox) -> dict[str, int]:
+    return {entry.path: entry.attempts for entry in outbox.entries()}
+
+
 class _Clock:
     """The outbox's time, moved by hand."""
 
@@ -137,6 +150,19 @@ def test_an_entry_reads_back_as_it_was_queued():
     assert github_outbox.decode_entry(data) == entry
 
 
+def test_an_entry_s_failed_attempts_are_kept_in_its_header():
+    entry = _entry("one")._replace(attempts=3)
+
+    data = github_outbox.encode_entry(entry)
+
+    assert data.partition(b"\n")[0].endswith(b',"attempts":3}')
+    assert github_outbox.decode_entry(data) == entry
+
+
+def test_an_entry_queued_before_attempts_were_counted_reads_as_none():
+    assert github_outbox.decode_entry(_OLD_FORMAT).attempts == 0
+
+
 @pytest.mark.parametrize(
     "data",
     [
@@ -146,6 +172,10 @@ def test_an_entry_reads_back_as_it_was_queued():
         b'{"kind": "registration", "path": "logs/x.json"}\n{}',
         b'{"kind": "registration", "path": 3, "message": "m"}\n{}',
         b'{"kind": "r\xc3\xa9", "path": "p", "message": "m"}\n{}',
+        b'{"kind": "registration", "path": "p", "message": "m", "attempts": -1}\n{}',
+        b'{"kind": "registration", "path": "p", "message": "m", "attempts": "2"}\n{}',
+        b'{"kind": "registration", "path": "p", "message": "m", "attempts": 1.5}\n{}',
+        b'{"kind": "registration", "path": "p", "message": "m", "attempts": true}\n{}',
     ],
 )
 def test_anything_else_is_not_an_entry(data):
@@ -217,14 +247,14 @@ def test_a_run_delivers_at_most_its_limit(outbox):
     assert deliverer.paths == [f"logs/unknown/e{index}.json" for index in range(5)]
 
 
-def test_an_entry_github_cannot_take_stays_and_every_flusher_backs_off(outbox, clock):
+def test_entries_github_cannot_take_stay_and_every_flusher_backs_off(outbox, clock):
     github_outbox.enqueue([_entry("one"), _entry("two")])
-    refusing = _Deliverer({"logs/unknown/one.json": Delivery.UNAVAILABLE})
+    refusing = _Deliverer({_path("one"): Delivery.UNAVAILABLE, _path("two"): Delivery.UNAVAILABLE})
 
     run = github_outbox.flush(refusing)
 
     assert run == github_outbox.FlushRun(0, clock.now + github_outbox.BACKOFF_SECONDS)
-    assert refusing.paths == ["logs/unknown/one.json"]
+    assert refusing.paths == ["logs/unknown/one.json", "logs/unknown/two.json"]
     assert [entry.path for entry in outbox.entries()] == ["logs/unknown/one.json", "logs/unknown/two.json"]
 
     clock.now += github_outbox.BACKOFF_SECONDS - 1
@@ -235,6 +265,108 @@ def test_an_entry_github_cannot_take_stays_and_every_flusher_backs_off(outbox, c
     clock.now += 1
     assert github_outbox.flush(waiting).handled == 2
     assert outbox.entries() == []
+
+
+def test_an_entry_github_never_takes_is_given_up_after_runs_that_delivered_a_later_one(outbox, clock, caplog):
+    stuck = _path("stuck")
+    github_outbox.enqueue([_entry("stuck"), _entry("later1")])
+    deliverer = _Deliverer({stuck: Delivery.UNAVAILABLE})
+
+    # GitHub took the entry behind it: the stuck one is counted, and nothing backs off.
+    assert github_outbox.flush(deliverer) == github_outbox.FlushRun(1, 0.0)
+    assert _attempts(outbox) == {stuck: 1}
+
+    # With nothing delivered after it, its failure is not counted, and the outbox backs off.
+    assert github_outbox.flush(deliverer) == github_outbox.FlushRun(0, clock.now + github_outbox.BACKOFF_SECONDS)
+    assert _attempts(outbox) == {stuck: 1}
+    clock.now += github_outbox.BACKOFF_SECONDS
+
+    with caplog.at_level(logging.WARNING, logger=github_outbox.__name__):
+        for attempts in range(2, github_outbox.MAX_ATTEMPTS):
+            github_outbox.enqueue([_entry(f"later{attempts}")])
+            assert github_outbox.flush(deliverer) == github_outbox.FlushRun(1, 0.0)
+            assert _attempts(outbox) == {stuck: attempts}
+        assert "Dropped" not in caplog.text
+
+        github_outbox.enqueue([_entry("last")])
+        assert github_outbox.flush(deliverer) == github_outbox.FlushRun(2, 0.0)
+
+    assert outbox.entries() == []
+    assert [path for path in deliverer.paths if path != stuck] == [
+        _path(name) for name in ["later1", *(f"later{n}" for n in range(2, github_outbox.MAX_ATTEMPTS)), "last"]
+    ]
+    assert (
+        f"Dropped {stuck} from the credential log: GitHub did not take it in {github_outbox.MAX_ATTEMPTS} runs "
+        "that delivered later entries"
+    ) in caplog.text
+
+
+def test_an_outage_counts_nothing_and_drops_nothing_however_many_runs(outbox, clock):
+    github_outbox.enqueue([_entry("one"), _entry("two")])
+    queued = outbox.entries()
+    down = _Deliverer({_path("one"): Delivery.UNAVAILABLE, _path("two"): Delivery.UNAVAILABLE})
+
+    for _run in range(github_outbox.MAX_ATTEMPTS + 1):
+        assert github_outbox.flush(down) == github_outbox.FlushRun(0, clock.now + github_outbox.BACKOFF_SECONDS)
+        clock.now += github_outbox.BACKOFF_SECONDS
+
+    assert outbox.entries() == queued
+    assert _attempts(outbox) == {_path("one"): 0, _path("two"): 0}
+
+
+def test_a_run_stops_after_a_few_entries_in_a_row_github_cannot_take(outbox, clock):
+    in_a_row = [f"down{index}" for index in range(github_outbox.MAX_UNAVAILABLE_IN_A_ROW)]
+    names = ["first", "taken", *in_a_row, "untried"]
+    github_outbox.enqueue([_entry(name) for name in names])
+    deliverer = _Deliverer({_path(name): Delivery.UNAVAILABLE for name in ["first", *in_a_row]})
+
+    run = github_outbox.flush(deliverer)
+
+    assert run == github_outbox.FlushRun(1, clock.now + github_outbox.BACKOFF_SECONDS)
+    assert deliverer.paths == [_path(name) for name in names[:-1]]
+    # Only the entry with a delivery after it is counted.
+    assert _attempts(outbox) == {_path("first"): 1, **{_path(name): 0 for name in [*in_a_row, "untried"]}}
+
+
+def test_an_entry_queued_before_attempts_were_counted_is_delivered_and_counted_from_none(outbox):
+    outbox.put(_OLD_ID, _OLD_FORMAT)
+    outbox.put(_OLD_ID.replace("0123abcd", "4567cdef"), _OLD_FORMAT.replace(b"old.json", b"older.json"))
+    deliverer = _Deliverer({_path("old"): Delivery.UNAVAILABLE})
+
+    assert github_outbox.flush(deliverer).handled == 1
+
+    assert deliverer.paths == [_path("old"), _path("older")]
+    assert _attempts(outbox) == {_path("old"): 1}
+
+    assert github_outbox.flush(_Deliverer()).handled == 1
+    assert outbox.entries() == []
+
+
+def test_an_entry_s_attempts_are_read_from_the_outbox(outbox, caplog):
+    almost = _OLD_FORMAT.replace(b'"}\n', f'","attempts":{github_outbox.MAX_ATTEMPTS - 1}}}\n'.encode())
+    outbox.put(_OLD_ID, almost)
+    github_outbox.enqueue([_entry("later")])
+
+    with caplog.at_level(logging.WARNING, logger=github_outbox.__name__):
+        assert github_outbox.flush(_Deliverer({_path("old"): Delivery.UNAVAILABLE})).handled == 2
+
+    assert outbox.entries() == []
+    assert f"Dropped {_path('old')} from the credential log" in caplog.text
+
+
+def test_counting_an_attempt_leaves_an_entry_removed_meanwhile_removed(bucket_outbox):
+    github_outbox.enqueue([_entry("stuck"), _entry("later")])
+    stuck = bucket_outbox.names()[0]
+    deliverer = _Deliverer({_path("stuck"): Delivery.UNAVAILABLE})
+
+    def _a_late_run_removes_the_stuck_one(entry):
+        if entry.path == _path("later"):
+            bucket_outbox.delete(stuck)
+        return deliverer(entry)
+
+    assert github_outbox.flush(_a_late_run_removes_the_stuck_one).handled == 1
+
+    assert bucket_outbox.entries() == []
 
 
 def test_a_delivery_that_raises_keeps_the_entry_and_backs_off(outbox, caplog):
