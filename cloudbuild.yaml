@@ -15,8 +15,9 @@
 # with its coverage floor, and the UI's checks) are therefore the gate that
 # actually stands between a commit on main and production. They run first
 # and in parallel; Build waits for both, so a failing suite fails the build
-# before an image is ever pushed. The Playwright browser tests run in GitHub CI
-# only (ci-web.yml).
+# before an image is ever pushed. The browser tests (Playwright) and the image
+# check run on GitHub only (ci-web.yml, ci-docker.yml): the GitHub checks step
+# reads their runs for this commit, and Deploy runs only once both succeeded.
 
 steps:
   - name: python:3.12-slim
@@ -73,6 +74,17 @@ steps:
       - push
       - asia-northeast1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/postquantum-webauthn-platform/pqcwebauthn:$COMMIT_SHA
 
+  # Waits up to 10 minutes for GitHub's runs to end, and fails on any that did not
+  # succeed, or that it cannot read (tools/required_checks.py).
+  - name: python:3.12-slim
+    id: GitHub checks
+    entrypoint: python3
+    args: [tools/required_checks.py]
+    env:
+      - COMMIT_SHA=$COMMIT_SHA
+      - REPOSITORY_URL=https://github.com/FeitianTech/postquantum-webauthn-platform
+
+  # No waitFor: it waits for every step above, the GitHub checks too.
   - name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
     id: Deploy
     entrypoint: bash
@@ -98,5 +110,6 @@ options:
   # label that links the Cloud Run service to its trigger; a manual build leaves it empty.
   substitutionOption: ALLOW_LOOSE
 
-# The gate takes about 20 minutes; the deploy's checks up to 8 more.
-timeout: 2100s
+# The gate takes about 20 minutes, the GitHub checks up to 10 more (seconds when
+# GitHub's runs have ended), the deploy's checks up to 8 more.
+timeout: 2700s

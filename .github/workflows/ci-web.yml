@@ -61,8 +61,9 @@ jobs:
 
   # Browser tests: Playwright in Chromium, whose virtual authenticator (the
   # DevTools WebAuthn domain) answers real registrations and authentications,
-  # against Flask serving the export at /, under the strict CSP. Cloud Build's
-  # gate does not run them (cloudbuild.yaml).
+  # against Flask serving the export at /, under the strict CSP. Cloud Build does
+  # not run them, but deploys a commit only once this job and ci-docker.yml's
+  # docker-build passed on it (tools/required_checks.py names this job).
   e2e:
     name: Browser tests (Playwright, virtual authenticator)
     runs-on: ubuntu-latest
