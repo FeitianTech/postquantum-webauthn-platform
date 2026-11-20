@@ -14,10 +14,12 @@ from urllib.error import HTTPError, URLError
 
 import cbor2
 import pytest
+from fido2 import cbor
 
 from server.app.storage import github_mirror, github_outbox
 from server.app.storage.github_mirror import is_logging_enabled
 from server.app.storage.github_outbox import Delivery, OutboxEntry
+from tests.app.security.ceremony_helpers import shared_where_fido2_reads_plain_items
 from tests.app.storage import fake_github
 
 
@@ -500,6 +502,26 @@ def test_a_registration_without_a_token_is_not_logged_and_warns_nothing(monkeypa
     assert [record for record in caplog.records if record.levelno >= logging.WARNING] == []
 
 
+def test_a_registration_s_attestation_object_is_logged_as_fido2_read_it(monkeypatch, log_outbox):
+    github = fake_github.install(monkeypatch)
+    monkeypatch.setattr(github_mirror, "random_shortid", lambda length=8: "abcdef12")
+    auth_data = b"\x01" * 37
+    attestation_object = shared_where_fido2_reads_plain_items(auth_data, levels=12)
+
+    github_mirror.record_registration_event(_registration(attestation_object=attestation_object))
+
+    logged = github.files[_LOGGED_PATH]
+    # Its shared value is not written out: cbor2's reading took 323 KB of JSON.
+    assert len(logged) < 2048
+    assert json.loads(logged)["decoded_attestation_object"] == {
+        "fmt": "none",
+        "attStmt": {},
+        "authData": github_mirror.to_b64url(auth_data),
+        "x": False,
+        "1": github_mirror.to_b64url(cbor.decode(attestation_object)[1]),
+    }
+
+
 def test_a_registration_is_not_logged_while_the_log_is_turned_off(monkeypatch, log_outbox):
     github = fake_github.install(monkeypatch)
     monkeypatch.setenv("ENABLE_GITHUB_LOGGING", "0")
@@ -537,9 +559,14 @@ def test_the_test_run_never_logs_to_github():
     assert is_logging_enabled() is False
 
 
+# A map cut short before its value. (fido2's decoder does not hold a string's length to the
+# bytes there: b"not-cbor" reads as the text "ot-cbor".)
+CUT_SHORT = b"\xa1\x01"
+
+
 @pytest.mark.parametrize(
     "payload",
-    [b"not-cbor", "", None],
+    [CUT_SHORT, "", None],
 )
 def test_safe_cbor_decode_failure(payload):
     assert github_mirror.safe_cbor_decode(payload) == {"error": "decode_failed"}
@@ -624,7 +651,7 @@ def test_build_log_payload_handles_unknown_aaguid_and_decode_failures(monkeypatc
         rp_id="example.com",
         aaguid=None,
         device_name_mds=None,
-        attestation_object=b"not-cbor",
+        attestation_object=CUT_SHORT,
     )
 
     path, payload = github_mirror._build_log_payload(event)

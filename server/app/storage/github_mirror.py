@@ -27,7 +27,7 @@ from urllib import parse as urllib_parse
 from urllib import request as urllib_request
 from zoneinfo import ZoneInfo
 
-import cbor2
+from fido2 import cbor
 from flask import Flask
 
 from .. import aaguid, encoding
@@ -346,7 +346,7 @@ def uuid_bytes_to_str(value: bytes | None) -> str:
 
 
 def safe_cbor_decode(data: bytes | str) -> Mapping[str, Any]:
-    """Decode a CBOR payload into JSON-safe data.
+    """Decode a CBOR payload into JSON-safe data, read by fido2's decoder as the server read it.
 
     On failure a dictionary containing ``{"error": "decode_failed"}`` is returned.
     """
@@ -363,7 +363,7 @@ def safe_cbor_decode(data: bytes | str) -> Mapping[str, Any]:
         return {"error": "decode_failed"}
 
     try:
-        decoded = cbor2.loads(payload)
+        decoded = cbor.decode(payload)
     except Exception:
         return {"error": "decode_failed"}
 

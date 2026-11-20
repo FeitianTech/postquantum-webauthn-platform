@@ -15,6 +15,7 @@ import json
 from collections.abc import Mapping, Sequence
 from typing import Any
 
+import cbor2
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import ec, ed25519
 from fido2 import cbor
@@ -193,6 +194,23 @@ def attestation_object(auth_data: bytes, *, fmt: str = "none", att_stmt: Mapping
     return cbor.encode(
         {"fmt": fmt, "attStmt": dict(att_stmt or {}), "authData": auth_data}
     )
+
+
+def shared_where_fido2_reads_plain_items(auth_data: bytes, *, levels: int) -> bytes:
+    """A "none" attestation object of ``auth_data`` that fido2 and cbor2 read differently.
+
+    After its key "x", fido2 reads the byte 0xfb alone, as false, then the key 1 and a byte
+    string holding the rest. cbor2 reads 0xfb and the eight bytes after it as a double, then
+    the key "y" and a value of ``levels`` levels whose two halves are one shared value (tags
+    28 and 29): 2**levels leaves when written out.
+    """
+
+    shared: Any = "s"
+    for _ in range(levels):
+        shared = [shared, shared]
+    rest = cbor2.dumps("y") + cbor2.dumps(shared, value_sharing=True)
+    members = cbor.encode({"fmt": "none", "attStmt": {}, "authData": auth_data})[1:]
+    return b"\xa5" + members + cbor.encode("x") + b"\xfb\x01\x5a" + (2 + len(rest)).to_bytes(4, "big") + b"\0\0" + rest
 
 
 def packed_statement(
