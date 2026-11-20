@@ -32,9 +32,7 @@ Run these in your own terminal. Secret values are read from stdin and never appe
 ```bash
 PROJECT=feitian-project
 REGION=asia-northeast1
-PROJECT_NUMBER=277359456097
 RUN_SA=pqcwebauthn-run@$PROJECT.iam.gserviceaccount.com
-BUILD_SA=$PROJECT_NUMBER-compute@developer.gserviceaccount.com   # service account the Cloud Build trigger runs as
 
 gcloud services enable secretmanager.googleapis.com --project $PROJECT
 
@@ -59,10 +57,6 @@ for secret in pqcwebauthn-session-key pqcwebauthn-github-token; do
   gcloud secrets add-iam-policy-binding $secret --project $PROJECT \
     --member serviceAccount:$RUN_SA --role roles/secretmanager.secretAccessor
 done
-
-# Allow the build trigger to deploy revisions that run as the runtime identity.
-gcloud iam service-accounts add-iam-policy-binding $RUN_SA --project $PROJECT \
-  --member serviceAccount:$BUILD_SA --role roles/iam.serviceAccountUser
 ```
 
 Then apply the service settings:
@@ -70,6 +64,57 @@ Then apply the service settings:
 ```bash
 ./deploy/apply-service-config.sh
 ```
+
+## One-time setup: the build's own account
+
+The trigger (`postquantum-webauthn-platform`, a first-generation GitHub trigger in `global`) runs, until this is done, as the default compute account, which holds Editor on the project. Its first steps run `npm ci` with install scripts and both test suites: third-party code that can take the account's token. Give the build an account of its own, with only what its steps use:
+
+- Artifact Registry Writer on the `cloud-run-source-deploy` repository: Push writes the image. The role reads and writes; it deletes no image.
+- Cloud Run Developer on the `pqcwebauthn` service alone: Deploy's `services update`, `describe` and `update-traffic`. It cannot change the service's IAM policy, though it could change its other settings or delete it.
+- Service Account User on the runtime account: a revision that runs as `pqcwebauthn-run` needs `iam.serviceAccounts.actAs` on it. This replaces the grant this setup used to give the compute account.
+- Logs Writer on the project, the narrowest place it can be granted: the build logs to Cloud Logging only, one of the two places a build with its own account may log to.
+
+The test steps and the GitHub checks use no Google Cloud right. Google's guide to user-specified accounts names no further role, for the source fetch or anything else, but does not say so outright for a first-generation GitHub trigger: the first build will tell. Setting the account on the trigger needs `iam.serviceAccounts.actAs` on it, which a project owner has. A grant can take a few minutes to apply.
+
+```bash
+PROJECT=feitian-project
+REGION=asia-northeast1
+TRIGGER=340c8d13-cf47-4905-9acb-e85078ec7355   # postquantum-webauthn-platform
+RUN_SA=pqcwebauthn-run@$PROJECT.iam.gserviceaccount.com
+BUILD_SA=pqcwebauthn-build@$PROJECT.iam.gserviceaccount.com
+OLD_BUILD_SA=277359456097-compute@developer.gserviceaccount.com
+
+gcloud iam service-accounts create pqcwebauthn-build --project $PROJECT \
+  --display-name "pqcwebauthn Cloud Build"
+gcloud artifacts repositories add-iam-policy-binding cloud-run-source-deploy \
+  --project $PROJECT --location $REGION \
+  --member serviceAccount:$BUILD_SA --role roles/artifactregistry.writer
+gcloud run services add-iam-policy-binding pqcwebauthn --project $PROJECT --region $REGION \
+  --member serviceAccount:$BUILD_SA --role roles/run.developer
+gcloud iam service-accounts add-iam-policy-binding $RUN_SA --project $PROJECT \
+  --member serviceAccount:$BUILD_SA --role roles/iam.serviceAccountUser
+gcloud projects add-iam-policy-binding $PROJECT --condition=None \
+  --member serviceAccount:$BUILD_SA --role roles/logging.logWriter
+
+# Run the trigger as it: only the trigger's service account changes.
+gcloud builds triggers update github $TRIGGER --project $PROJECT --region global \
+  --service-account projects/$PROJECT/serviceAccounts/$BUILD_SA
+gcloud builds triggers describe $TRIGGER --project $PROJECT --region global \
+  --format 'value(serviceAccount)'
+```
+
+In the console: Cloud Build, Triggers (region `global`), the trigger, Edit, then pick `pqcwebauthn-build` under Service account and save.
+
+The next push's build names `pqcwebauthn-build` as its service account in its details, and deploys as before. A missing right fails the step that needed it, with a permission-denied message naming the permission: Push for Artifact Registry, Deploy for Cloud Run or `iam.serviceAccounts.actAs`; a right this list lacks shows the same way, and one Cloud Build itself needs before any step fails the build as it starts. The traffic stays where it was. Grant what is named, on the resource above, and retry the build. To go back, run the trigger update with `--service-account projects/$PROJECT/serviceAccounts/$OLD_BUILD_SA`, or pick that account in the console.
+
+Once a deploy has passed, remove the old account's grant on the runtime account, with the variables above (going back then needs it again):
+
+```bash
+gcloud iam service-accounts remove-iam-policy-binding $RUN_SA --project $PROJECT \
+  --member serviceAccount:$OLD_BUILD_SA --role roles/iam.serviceAccountUser
+```
+
+The compute account keeps its roles in the project, since other things may use it. What changes is that this build no longer runs as it. Code in the build's steps can still deploy any image to this one service, change its other settings (not its IAM policy) and delete its revisions, and a revision it deploys runs with the runtime account's access to the bucket and the secrets. Beyond that it can only write images to the one repository and write logs.
 
 ## One-time setup: the MDS publisher
 
