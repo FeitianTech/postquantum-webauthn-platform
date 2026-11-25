@@ -30,6 +30,22 @@ def test_keys_keep_their_types_unless_asked_for_strings():
     assert make_json_safe({"nested": {1: b"\x01"}}, string_keys=True) == {"nested": {"1": "AQ"}}
 
 
+def test_writable_keys_writes_as_text_only_the_keys_json_cannot_sort():
+    nested = {"text": {"a": 1}, "numbers": {10: 1, -1: 2, True: 3}, "mixed": {1: 1, "a": 2, False: 3}, "bytes": {b"k": 1}}
+
+    assert make_json_safe(nested, writable_keys=True) == {
+        "text": {"a": 1},
+        "numbers": {10: 1, -1: 2, True: 3},
+        "mixed": {"1": 1, "a": 2, "false": 3},
+        "bytes": {"aw": 1},
+    }
+    assert make_json_safe([{ByteBuffer(b"k"): b"\x01"}], writable_keys=True) == [{"aw": "AQ"}]
+
+
+def test_writable_keys_keeps_the_later_of_two_keys_written_alike():
+    assert make_json_safe({1: "integer", "1": "text"}, writable_keys=True) == {"1": "text"}
+
+
 def test_a_datetime_is_utc_to_the_second_and_a_uuid_its_string():
     timestamp = datetime(2026, 4, 3, 12, 34, 56, 123456, tzinfo=timezone.utc)
     test_uuid = uuid.UUID("7701a390-8b53-4ce0-bf7c-b331569b8d1a")

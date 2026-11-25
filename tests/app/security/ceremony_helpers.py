@@ -35,6 +35,7 @@ FLAG_UV = 0x04
 FLAG_BE = 0x08
 FLAG_BS = 0x10
 FLAG_AT = 0x40
+FLAG_ED = 0x80
 
 
 def b64u(raw: bytes) -> str:
@@ -113,8 +114,11 @@ class Authenticator:
         cose_key_bytes: bytes | None = None,
         user_present: bool = True,
         extra_flags: int = 0,
+        extensions: Mapping[Any, Any] | None = None,
     ) -> bytes:
-        flags = (FLAG_UP if user_present else 0) | extra_flags
+        """authData; with ``extensions``, the ED flag and those extension outputs after the credential."""
+
+        flags = (FLAG_UP if user_present else 0) | extra_flags | (FLAG_ED if extensions is not None else 0)
         if user_verified:
             flags |= FLAG_UV
         if include_credential:
@@ -133,6 +137,8 @@ class Authenticator:
                 + self.credential_id
                 + key_bytes
             )
+        if extensions is not None:
+            data += cbor.encode(dict(extensions))
         return data
 
     def stored_credential_entry(
@@ -245,12 +251,14 @@ def registration_payload(
     attestation_key: ec.EllipticCurvePrivateKey | None = None,
     x5c: Sequence[bytes] = (),
     extra_flags: int = 0,
+    extensions: Mapping[Any, Any] | None = None,
 ) -> dict[str, Any]:
     """Build a complete, genuinely-signed registration response.
 
     ``attestation`` is ``none`` or ``packed`` (``packed_statement``, with
     ``attestation_key`` and ``x5c``); ``extra_flags`` are authData flag bits
-    set beside UP, UV and AT (the backup flags).
+    set beside UP, UV and AT (the backup flags); ``extensions`` the
+    authenticator's extension outputs.
     """
 
     data = client_data(
@@ -258,7 +266,7 @@ def registration_payload(
         cross_origin=cross_origin,
     )
     auth_data = authenticator.authenticator_data(
-        rp_id=rp_id, cose_key_bytes=cose_key_bytes, counter=counter, extra_flags=extra_flags
+        rp_id=rp_id, cose_key_bytes=cose_key_bytes, counter=counter, extra_flags=extra_flags, extensions=extensions
     )
     statement: dict[str, Any] = {}
     if attestation == "packed":

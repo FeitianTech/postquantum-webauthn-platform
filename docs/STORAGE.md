@@ -66,6 +66,9 @@ answer's, which the browser keeps) holds each part once:
   the response's attestation object.
 - The credential's public key, as `publicKey` (the COSE key in base64url, which the
   page sends back to authenticate), with `publicKeyAlgorithm` and `publicKeyType`.
+  A map the authenticator keyed by byte strings, or by text beside integers, has its
+  keys written as text in the Advanced artifact and answer, a byte string as base64url
+  (`json_values.make_json_safe`'s `writable_keys`).
 - The attestation certificates, in `properties.attestationCertificates`; the Advanced
   answer's `relyingParty.attestationCertificates` names them for the page's result.
   Each keeps every value in one form (`webauthn/attestation/certificates._registration_view`):

@@ -12,6 +12,7 @@ from typing import Any
 
 from flask import current_app, jsonify
 
+from ... import json_values
 from ...config import request_limits
 from ...storage import credential_artifacts, github_mirror
 from ...storage.common import StorageQuotaExceeded
@@ -28,7 +29,8 @@ def _store_artifact(
 ) -> tuple[dict[str, Any] | None, str | None, Any]:
     """Store the credential artifact: its record and storage id, or the 500 to answer."""
 
-    artifact_record = json.loads(json.dumps(stored_credential))
+    # An authenticator's map may be keyed by bytes (a COSE key's members): written as text, as in the answer.
+    artifact_record = json.loads(json.dumps(json_values.make_json_safe(stored_credential, writable_keys=True)))
     storage_id_source = (
         artifact_record.get("credentialIdBase64Url")
         or artifact_record.get("credentialIdHex")
@@ -117,4 +119,5 @@ def finalize_registration_completion(
     if warnings:
         response_payload["warnings"] = warnings
 
-    return jsonify(response_payload)
+    # The authenticator's extension outputs are keyed as its CBOR has them, which JSON may not sort.
+    return jsonify(json_values.make_json_safe(response_payload, writable_keys=True))
