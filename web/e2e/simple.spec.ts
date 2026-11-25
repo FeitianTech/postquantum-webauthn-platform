@@ -35,8 +35,9 @@ async function openPage(page: Page, hash = '#simple') {
 async function registerPasskey(page: Page, name: string) {
   await section(page).getByRole('textbox', { name: 'Username' }).fill(name);
   await section(page).getByRole('button', { name: 'Register Passkey' }).click();
-  await expect(page.getByText(/^Registration successful! Algorithm: /)).toBeVisible();
   await expect(rows(page).filter({ hasText: name })).toHaveCount(1);
+  // Its toast comes in the same render as its row, after any earlier one still shown.
+  await expect(page.getByText(/^Registration successful! Algorithm: /).last()).toBeVisible();
 }
 
 async function keep(page: Page, records: object[]) {

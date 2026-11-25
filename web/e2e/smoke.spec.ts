@@ -66,8 +66,13 @@ test.describe('the app shell', () => {
     ['#mds/aaguid:f1d0f1d0-0000-4000-8000-000000000002', 'mds'],
   ] as const) {
     test(`loads /${hash} on its section from the first frame, with no fade or entrance`, async ({ page }) => {
-      await page.route('**/_next/static/**', async (route) => {
-        await new Promise((resolve) => setTimeout(resolve, 600));
+      // The scripts wait until the page has drawn a frame without them, however
+      // slowly this machine draws (the stylesheet, not held, lets it draw).
+      let drawn!: () => void;
+      const firstFrame = new Promise<void>((resolve) => (drawn = resolve));
+      await page.exposeFunction('pqcFirstFrame', () => drawn());
+      await page.route('**/_next/static/chunks/**', async (route) => {
+        await Promise.all([firstFrame, new Promise((resolve) => setTimeout(resolve, 600))]);
         await route.continue();
       });
       await page.addInitScript(() => {
@@ -88,6 +93,7 @@ test.describe('the app shell', () => {
                 )
                 .map((animation) => (animation instanceof CSSTransition ? `transition ${animation.transitionProperty}` : 'section-in')),
             });
+            if (frames.length === 1) void (globalThis as unknown as { pqcFirstFrame: () => Promise<void> }).pqcFirstFrame();
           }
           requestAnimationFrame(record);
         };
@@ -99,10 +105,11 @@ test.describe('the app shell', () => {
       await expect(tab).toHaveAttribute('aria-selected', 'true');
       await highlightSitsOn(page, tab);
       await page.waitForTimeout(700);
+      // Enough frames to see a fade or an entrance, however slowly this machine draws them.
+      await expect.poll(() => page.evaluate(() => (globalThis as unknown as { pqcFrames: unknown[] }).pqcFrames.length), { timeout: 20_000 }).toBeGreaterThan(10);
       const frames = await page.evaluate(() => (globalThis as unknown as { pqcFrames: Array<{ selected: string[]; shown: string[]; moving: string[] }> }).pqcFrames);
 
       // Frames before the scripts, then the section's: never another section, never a fade.
-      expect(frames.length).toBeGreaterThan(10);
       expect(frames[0]).toEqual({ selected: [], shown: [], moving: [] });
       for (const frame of frames) {
         expect(frame.selected.filter((id) => id !== `nav-tab-${section}`)).toEqual([]);
@@ -110,7 +117,7 @@ test.describe('the app shell', () => {
         expect(frame.moving).toEqual([]);
       }
       expect(frames.at(-1)).toEqual({ selected: [`nav-tab-${section}`], shown: [`nav-panel-${section}`], moving: [] });
-      // Requests still held back (a section's chunk, a font) are let go before the page closes.
+      // Requests still held back (a section's chunk) are let go before the page closes.
       await page.unrouteAll({ behavior: 'ignoreErrors' });
     });
   }
