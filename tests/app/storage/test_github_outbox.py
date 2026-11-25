@@ -13,6 +13,7 @@ import pytest
 from server.app.storage import common as storage_common
 from server.app.storage import github_outbox
 from server.app.storage.github_outbox import Delivery, OutboxEntry
+from tests.app.log_lines import FORGED, one_line_naming
 from tests.app.storage import fake_gcs
 
 
@@ -553,6 +554,53 @@ def test_an_entry_that_cannot_be_written_is_dropped_and_the_rest_are_queued(outb
 
     assert [entry.path for entry in outbox.entries()] == ["logs/unknown/two.json"]
     assert "Could not queue logs/unknown/one.json for the credential log: disk full" in caplog.text
+
+
+# A visitor's metadata file, at a path made from the name it was uploaded with.
+_FORGED_ENTRY = OutboxEntry("metadata", f"metadata/{FORGED}", "metadata: add it", b"{}")
+
+
+def test_an_entry_dropped_from_a_full_outbox_is_named_on_one_line(outbox, monkeypatch, caplog):
+    monkeypatch.setattr(github_outbox, "MAX_ENTRIES", 0)
+
+    with caplog.at_level(logging.WARNING, logger=github_outbox.__name__):
+        assert github_outbox.enqueue([_FORGED_ENTRY]) == 0
+
+    one_line_naming(caplog, github_outbox.__name__, _FORGED_ENTRY.path)
+
+
+def test_an_entry_that_cannot_be_written_is_named_on_one_line(outbox, monkeypatch, caplog):
+    def _fails(self, entry_id, data):
+        raise OSError("disk full")
+
+    monkeypatch.setattr(outbox.backend, "write", _fails)
+
+    with caplog.at_level(logging.WARNING, logger=github_outbox.__name__):
+        assert github_outbox.enqueue([_FORGED_ENTRY]) == 0
+
+    one_line_naming(caplog, github_outbox.__name__, _FORGED_ENTRY.path)
+
+
+def test_an_entry_whose_delivery_raises_is_named_on_one_line(outbox, caplog):
+    github_outbox.enqueue([_FORGED_ENTRY])
+
+    def _raises(_entry):
+        raise RuntimeError("the deliverer broke")
+
+    with caplog.at_level(logging.WARNING, logger=github_outbox.__name__):
+        github_outbox.flush(_raises)
+
+    one_line_naming(caplog, github_outbox.__name__, _FORGED_ENTRY.path)
+
+
+def test_an_entry_given_up_is_named_on_one_line(outbox, caplog):
+    github_outbox.enqueue([_FORGED_ENTRY._replace(attempts=github_outbox.MAX_ATTEMPTS - 1), _entry("later")])
+
+    with caplog.at_level(logging.WARNING, logger=github_outbox.__name__):
+        github_outbox.flush(_Deliverer({_FORGED_ENTRY.path: Delivery.UNAVAILABLE}))
+
+    assert outbox.entries() == []
+    one_line_naming(caplog, github_outbox.__name__, _FORGED_ENTRY.path)
 
 
 def test_the_outbox_folder_is_its_setting_else_under_the_instance(monkeypatch):

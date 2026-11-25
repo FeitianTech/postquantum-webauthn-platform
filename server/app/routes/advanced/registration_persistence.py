@@ -12,7 +12,7 @@ from typing import Any
 
 from flask import current_app, jsonify
 
-from ... import json_values
+from ... import json_values, log_text
 from ...config import request_limits
 from ...storage import credential_artifacts, github_mirror
 from ...storage.common import StorageQuotaExceeded
@@ -52,14 +52,14 @@ def _store_artifact(
     except Exception:
         logger.exception(
             "Failed to store advanced credential artifact for user %s",
-            username,
+            log_text.client_text(username),
         )
         return None, None, (jsonify({"error": _ARTIFACT_NOT_STORED}), 500)
 
     if not artifact_stored:
         logger.error(
             "Advanced credential artifact was not stored for user %s",
-            username,
+            log_text.client_text(username),
         )
         return None, None, (jsonify({"error": _ARTIFACT_NOT_STORED}), 500)
     return artifact_record, storage_id, None

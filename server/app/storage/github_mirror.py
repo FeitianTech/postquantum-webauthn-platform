@@ -30,7 +30,7 @@ from zoneinfo import ZoneInfo
 from fido2 import cbor
 from flask import Flask
 
-from .. import aaguid, encoding
+from .. import aaguid, encoding, log_text
 from ..encoding import encode_base64, encode_base64url
 from ..env_flags import parse_env_flag
 from ..json_values import make_json_safe
@@ -223,7 +223,7 @@ def _get_json(path: str, *, missing: Any = None) -> Any:
     try:
         return json.loads(body.decode("utf-8"))
     except ValueError as exc:
-        raise GitHubUnavailable(f"GitHub's answer for {path} is not JSON") from exc
+        raise GitHubUnavailable(f"GitHub's answer for {log_text.client_text(path)} is not JSON") from exc
 
 
 def github_metadata_blobs() -> dict[str, str]:
@@ -441,7 +441,11 @@ def record_registration_event(event: RegistrationEvent) -> None:
     try:
         entry = _registration_entry(event)
     except Exception:
-        logger.warning("Could not build the credential log entry of a registration for %s", event.rp_id, exc_info=True)
+        logger.warning(
+            "Could not build the credential log entry of a registration for %s",
+            log_text.client_text(event.rp_id),
+            exc_info=True,
+        )
         return
     if github_outbox.enqueue([entry]):
         _start_flush(kick=True)
@@ -487,7 +491,7 @@ def queue_uploaded_metadata_files(files: Sequence[tuple[str, bytes]]) -> None:
         if len(content) > MAX_LOGGED_METADATA_BYTES:
             logger.warning(
                 "Not copying metadata file %s to the credential log: it holds %s, over the %s copied",
-                _safe_metadata_repo_filename(name),
+                log_text.client_text(_safe_metadata_repo_filename(name)),
                 common.describe_size(len(content)),
                 common.describe_size(MAX_LOGGED_METADATA_BYTES),
             )
@@ -537,7 +541,7 @@ def _deliver_metadata(entry: OutboxEntry) -> Delivery:
     try:
         _create_metadata_file(name, entry.content, blob_sha, name_taken=name in existing)
     except _PathTaken as exc:
-        logger.warning("Dropped metadata file %s: %s", name, exc)
+        logger.warning("Dropped metadata file %s: %s", log_text.client_text(name), exc)
         return Delivery.DROPPED
     with RECENT_METADATA.lock:
         RECENT_METADATA.delivered[blob_sha] = time.time()
@@ -575,15 +579,17 @@ def deliver(entry: OutboxEntry) -> Delivery:
         return _deliver_log(entry)
     except urllib_error.HTTPError as exc:
         if exc.code in _UNAVAILABLE_STATUSES or exc.code >= 500:
-            logger.warning("GitHub could not take %s now (HTTP %s); it stays queued", entry.path, exc.code)
+            logger.warning("GitHub could not take %s now (HTTP %s); it stays queued", log_text.client_text(entry.path), exc.code)
             return Delivery.UNAVAILABLE
-        logger.warning("GitHub refused %s (HTTP %s): dropped", entry.path, exc.code)
+        logger.warning("GitHub refused %s (HTTP %s): dropped", log_text.client_text(entry.path), exc.code)
         return Delivery.DROPPED
     except (GitHubUnavailable, OSError, http_client.HTTPException) as exc:
-        logger.warning("GitHub could not take %s now; it stays queued: %s", entry.path, exc)
+        logger.warning("GitHub could not take %s now; it stays queued: %s", log_text.client_text(entry.path), exc)
         return Delivery.UNAVAILABLE
     except Exception:
-        logger.warning("Dropped %s from the credential log: it could not be delivered", entry.path, exc_info=True)
+        logger.warning(
+            "Dropped %s from the credential log: it could not be delivered", log_text.client_text(entry.path), exc_info=True
+        )
         return Delivery.DROPPED
 
 
@@ -607,14 +613,14 @@ def _create_metadata_file(name: str, content: bytes, blob_sha: str, *, name_take
         if there == blob_sha:
             return False
         if not there:
-            raise GitHubUnavailable(f"GitHub has a file at metadata/{name} that it does not show yet")
+            raise GitHubUnavailable(f"GitHub has a file at {log_text.client_text(f'metadata/{name}')} that it does not show yet")
     hashed = _hashed_metadata_path(name, blob_sha)
     there = _create_file(hashed, content, f"metadata: add {os.path.basename(hashed)}")
     if there is None:
         return True
     if there in ("", blob_sha):
         return False
-    raise _PathTaken(f"another file is at {hashed}")
+    raise _PathTaken(f"another file is at {log_text.client_text(hashed)}")
 
 
 class _PathTaken(Exception):

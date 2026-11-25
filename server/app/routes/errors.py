@@ -20,6 +20,7 @@ from werkzeug.exceptions import (
     RequestEntityTooLarge,
 )
 
+from .. import log_text
 from ..storage.common import (
     InvalidStorageIdentifier,
     StorageQuotaExceeded,
@@ -45,7 +46,7 @@ def invalid_storage_identifier(exc: InvalidStorageIdentifier):
     # The store refused a caller's name before touching a path (a traversal
     # attempt, say): the request is at fault and there is nothing to debug, so
     # one line in the log and no traceback.
-    logger.warning("Refused a storage name in %s %s: %s", request.method, request.path, exc)
+    logger.warning("Refused a storage name in %s %s: %s", request.method, log_text.client_text(request.path), exc)
     return jsonify({"error": f"Invalid credential name: {exc}."}), 400
 
 
@@ -53,14 +54,14 @@ def storage_read_error(exc: StorageReadError):
     # The store could not be read (an I/O or Cloud Storage error): not the
     # request's fault, and not "nothing stored". One line naming the copy and
     # its cause; the answer names neither.
-    logger.warning("Could not read the store in %s %s: %s (%r)", request.method, request.path, exc, exc.__cause__)
+    logger.warning("Could not read the store in %s %s: %s (%r)", request.method, log_text.client_text(request.path), exc, exc.__cause__)
     return jsonify({"error": "The stored credentials could not be read. Please try again."}), 503
 
 
 def storage_quota_exceeded(exc: StorageQuotaExceeded):
     # A write that would take a visitor's namespace past a quota, refused before
     # anything was written: the visitor's to act on, so its sentence, and one line.
-    logger.warning("Refused a write past a namespace's quota in %s %s: %s", request.method, request.path, exc.sentence)
+    logger.warning("Refused a write past a namespace's quota in %s %s: %s", request.method, log_text.client_text(request.path), exc.sentence)
     return jsonify({"error": exc.sentence}), exc.status
 
 
@@ -74,25 +75,25 @@ def too_large_answer(limit: int | None):
 def request_entity_too_large(exc: RequestEntityTooLarge):
     # A body over the limit config/request_limits.py sets, refused before any
     # route read it.
-    logger.warning("Refused an oversized body in %s %s (%s bytes)", request.method, request.path, request.content_length)
+    logger.warning("Refused an oversized body in %s %s (%s bytes)", request.method, log_text.client_text(request.path), request.content_length)
     return too_large_answer(request.max_content_length)
 
 
 def json_nested_too_deep(exc: json_body.NestedTooDeep):
     # Refused before it was parsed: Python's JSON reader would go as deep as the text.
-    logger.warning("Refused a JSON body nested too deep in %s %s", request.method, request.path)
+    logger.warning("Refused a JSON body nested too deep in %s %s", request.method, log_text.client_text(request.path))
     return jsonify({"error": f"The request body is JSON nested more than {json_body.MAX_DEPTH} deep, deeper than this server reads."}), 400
 
 
 def json_too_many_values(exc: json_body.TooManyValues):
     # Refused before it was parsed: Python's reader keeps every value, 210 MiB of them for 8 MiB of "{},".
-    logger.warning("Refused a JSON body holding too many values in %s %s", request.method, request.path)
+    logger.warning("Refused a JSON body holding too many values in %s %s", request.method, log_text.client_text(request.path))
     return jsonify({"error": f"The request body is JSON holding more than {json_body.MAX_VALUES:,} values, more than this server reads."}), 400
 
 
 def json_large_bodies_busy(exc: json_body.LargeBodiesBusy):
     # Its bytes were read but not parsed: two other large bodies held the places (routes/json_body.py).
-    logger.warning("Refused a large body while others were read in %s %s (%s bytes)", request.method, request.path, request.content_length)
+    logger.warning("Refused a large body while others were read in %s %s (%s bytes)", request.method, log_text.client_text(request.path), request.content_length)
     response = jsonify({"error": "The server is reading other large requests: try again in a few seconds."})
     response.status_code = 503
     response.headers["Retry-After"] = str(json_body.RETRY_AFTER_SECONDS)
@@ -100,7 +101,7 @@ def json_large_bodies_busy(exc: json_body.LargeBodiesBusy):
 
 
 def json_not_strict(exc: json_body.NotStrictJson):
-    logger.warning("Refused a JSON body holding %s in %s %s", exc.text, request.method, request.path)
+    logger.warning("Refused a JSON body holding %s in %s %s", exc.text, request.method, log_text.client_text(request.path))
     return jsonify({"error": exc.sentence}), 400
 
 

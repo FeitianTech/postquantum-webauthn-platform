@@ -2,10 +2,14 @@
 
 from __future__ import annotations
 
+import logging
+from urllib.parse import quote
+
 import pytest
 from flask import abort
 
-from server.app.routes import json_body
+from server.app.routes import errors, json_body
+from tests.app.log_lines import FORGED, one_line_naming
 
 
 def _failing_view():
@@ -99,3 +103,33 @@ def test_the_value_count_refusal_keeps_its_own_sentence(api_client):
 
     assert response.status_code == 400
     assert "more than 100,000 values" in response.get_json()["error"]
+
+
+_ARTIFACT = "/api/advanced/credential-artifacts/"
+# A body each refusal that logs its request's path is given, and how its line starts.
+_REFUSED_BODIES = {
+    "not-strict": (b"[NaN]", "Refused a JSON body holding NaN in PUT "),
+    "nested": (b"[" * (json_body.MAX_DEPTH + 1), "Refused a JSON body nested too deep in PUT "),
+    "too-many-values": (b"[" + b"0," * json_body.MAX_VALUES + b"0]", "Refused a JSON body holding too many values in PUT "),
+    "oversized": (b"[" + b" " * (9 * 1024 * 1024) + b"]", "Refused an oversized body in PUT "),
+}
+
+
+@pytest.mark.parametrize("refusal", sorted(_REFUSED_BODIES))
+def test_a_refused_request_s_path_is_logged_on_one_line_however_it_was_sent(api_client, caplog, refusal):
+    body, start = _REFUSED_BODIES[refusal]
+
+    with caplog.at_level(logging.WARNING, logger=errors.__name__):
+        response = api_client.put(_ARTIFACT + quote(FORGED), data=body, content_type="application/json")
+
+    assert response.status_code in (400, 413)
+    assert one_line_naming(caplog, errors.__name__, _ARTIFACT + FORGED).startswith(f"{start}'{_ARTIFACT}x\\nERROR")
+
+
+def test_a_refused_request_s_ordinary_path_is_logged_as_it_was(api_client, caplog):
+    with caplog.at_level(logging.WARNING, logger=errors.__name__):
+        api_client.put(_ARTIFACT + "abc_123", data=b"[NaN]", content_type="application/json")
+
+    assert [record.getMessage() for record in caplog.records if record.name == errors.__name__] == [
+        f"Refused a JSON body holding NaN in PUT {_ARTIFACT}abc_123"
+    ]

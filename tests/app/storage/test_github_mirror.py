@@ -11,6 +11,7 @@ import types
 import uuid
 from datetime import datetime, timezone
 from urllib.error import HTTPError, URLError
+from urllib.parse import quote
 
 import cbor2
 import pytest
@@ -19,6 +20,8 @@ from fido2 import cbor
 from server.app.storage import github_mirror, github_outbox
 from server.app.storage.github_mirror import is_logging_enabled
 from server.app.storage.github_outbox import Delivery, OutboxEntry
+from tests.app.log_lines import FORGED, one_line_naming
+from tests.app.metadata.upload_entries import minimal_entry
 from tests.app.security.ceremony_helpers import shared_where_fido2_reads_plain_items
 from tests.app.storage import fake_github
 
@@ -783,6 +786,103 @@ def test_a_metadata_file_over_the_cap_is_not_queued_and_is_said_so(monkeypatch, 
         f"Not copying metadata file over.json to the credential log: it holds {cap + 1:,} bytes, over the 1 MiB copied"
     ) in caplog.text
     assert "at-cap.json" not in caplog.text
+
+
+def test_an_uploaded_file_over_the_cap_is_named_on_one_line_however_it_was_named(mds_fixture_snapshot, client, monkeypatch, tmp_path, caplog):
+    github = fake_github.install(monkeypatch)
+    monkeypatch.setenv("FIDO_SERVER_GITHUB_OUTBOX_DIR", str(tmp_path / "outbox"))
+    statement = json.dumps(minimal_entry("Big")).encode()
+    content = statement[:-1] + b" " * github_mirror.MAX_LOGGED_METADATA_BYTES + b"}"
+    # RFC 7578's filename*: a name a browser's form would not send, but any client can.
+    body = (
+        f"--b\r\nContent-Disposition: form-data; name=\"files\"; filename*=UTF-8''{quote(FORGED)}\r\n\r\n".encode()
+        + content
+        + b"\r\n--b--\r\n"
+    )
+
+    with caplog.at_level(logging.WARNING, logger=github_mirror.__name__):
+        response = client.post("/api/mds/metadata/upload", data=body, content_type="multipart/form-data; boundary=b")
+
+    assert response.status_code == 200, response.get_json()
+    assert github.files == {}
+    message = one_line_naming(caplog, github_mirror.__name__, FORGED)
+    assert message.startswith("Not copying metadata file 'x\\nERROR forged line\\r\\x1b[31myyy")
+    assert message.endswith(
+        f"... ({len(FORGED):,} characters) to the credential log: it holds {len(content):,} bytes, over the 1 MiB copied"
+    )
+
+
+def test_a_registration_for_an_rp_id_of_any_text_is_named_on_one_line(monkeypatch, log_outbox, caplog):
+    fake_github.install(monkeypatch)
+
+    with caplog.at_level(logging.WARNING, logger=github_mirror.__name__):
+        github_mirror.record_registration_event(_registration(rp_id=FORGED, attestation_object=None))
+
+    one_line_naming(caplog, github_mirror.__name__, FORGED)
+
+
+@pytest.mark.parametrize(
+    ("error", "delivery"),
+    [
+        (fake_github.http_error(503), Delivery.UNAVAILABLE),
+        (fake_github.http_error(400), Delivery.DROPPED),
+        (URLError("unreachable"), Delivery.UNAVAILABLE),
+        (RuntimeError("the mirror broke"), Delivery.DROPPED),
+    ],
+    ids=["unavailable", "refused", "network", "unexpected"],
+)
+def test_a_file_github_does_not_take_is_named_on_one_line(monkeypatch, caplog, error, delivery):
+    github = fake_github.install(monkeypatch)
+    github.fail.append(error)
+
+    with caplog.at_level(logging.WARNING, logger=github_mirror.__name__):
+        assert _deliver_metadata(FORGED, b'{"entry":1}') is delivery
+
+    one_line_naming(caplog, github_mirror.__name__, f"metadata/{FORGED}")
+
+
+def test_a_file_whose_both_paths_are_taken_is_named_on_one_line(monkeypatch, caplog):
+    github = fake_github.install(monkeypatch)
+    github.files[f"metadata/{FORGED}"] = b'{"entry":1}'
+    hashed = github_mirror._hashed_metadata_path(FORGED, github_mirror.git_blob_sha(b'{"entry":2}'))
+    _after_the_tree_read(monkeypatch, github, {hashed: b"something else"})
+
+    with caplog.at_level(logging.WARNING, logger=github_mirror.__name__):
+        assert _deliver_metadata(FORGED, b'{"entry":2}') is Delivery.DROPPED
+
+    one_line_naming(caplog, github_mirror.__name__, FORGED, hashed)
+
+
+def test_a_file_github_does_not_show_yet_is_named_on_one_line(monkeypatch, caplog):
+    github = fake_github.install(monkeypatch)
+    github.files["metadata/other.json"] = b"{}"
+    _after_the_tree_read(monkeypatch, github, {f"metadata/{FORGED}": b'{"entry":1}'})
+    github.unseen.add(f"metadata/{FORGED}")
+
+    with caplog.at_level(logging.WARNING, logger=github_mirror.__name__):
+        assert _deliver_metadata(FORGED, b'{"entry":2}') is Delivery.UNAVAILABLE
+
+    message = one_line_naming(caplog, github_mirror.__name__, f"metadata/{FORGED}")
+    assert message.endswith("characters) that it does not show yet")
+
+
+def test_a_file_whose_answer_is_not_json_is_named_on_one_line(monkeypatch, caplog):
+    fake_github.install(monkeypatch)
+    answers = [fake_github.http_error(404), fake_github.http_error(422, fake_github.SHA_NOT_SUPPLIED), (200, b"not json")]
+
+    def _request(method, url, body=None):
+        answer = answers.pop(0)
+        if isinstance(answer, BaseException):
+            raise answer
+        return answer
+
+    monkeypatch.setattr(github_mirror, "_request", _request)
+
+    with caplog.at_level(logging.WARNING, logger=github_mirror.__name__):
+        assert _deliver_metadata(FORGED, b'{"entry":1}') is Delivery.UNAVAILABLE
+
+    message = one_line_naming(caplog, github_mirror.__name__, f"metadata/{FORGED}", f"contents/metadata/{FORGED}")
+    assert message.endswith("characters) is not JSON")
 
 
 def test_metadata_is_added_to_an_empty_repository(monkeypatch):

@@ -328,7 +328,9 @@ its logic out here first.
   `origins.determine_expected_origin` through their modules, where tests patch them. Tests reach
   the entry point's app through `tests/app/entry_app.py`.
 - Importing any module but the entry point writes nothing (`test_import_side_effects.py`). Log
-  with `logging.getLogger(__name__)`. On Cloud Run (`K_SERVICE`) the app refuses to start
+  with `logging.getLogger(__name__)`, and text a client chose (a file name, a path, the Advanced
+  tab's free-text username) through `log_text.client_text`, which keeps it on its line, quoted
+  and cut short when not one plain word. On Cloud Run (`K_SERVICE`) the app refuses to start
   without `FIDO_SERVER_SECRET_KEY` or `FIDO_SERVER_SECRET_KEY_FILE`; only local development
   generates `instance/session-secret.key`, and tests never do.
 - `mds/`: the FIDO MDS snapshot. Its `__init__` imports nothing, so the updater takes `trust.py`
@@ -358,7 +360,8 @@ its logic out here first.
   `metadata_entry_revoked`, not a missing entry).
 - Leaves the rest import: `encoding.py` (base64, base64url and hex, written and read strictly),
   `json_values.py` (`make_json_safe`, and `as_bytes`, the one reading of a value as bytes),
-  `aaguid.py` (an AAGUID's GUID spelling), `env_flags.py`, `accept_encoding.py` (whether a request's
+  `aaguid.py` (an AAGUID's GUID spelling), `env_flags.py`, `log_text.py` (a client's text as a
+  log line carries it), `accept_encoding.py` (whether a request's
   Accept-Encoding takes gzip, its weights read as RFC 9110 writes them: what every gzipped answer asks).
 - `visitor_session.py`: the namespace a visitor's uploads and credentials are stored under (its id
   in a signed cookie of its own, never the Flask session; the last-access touch, throttled in

@@ -2,9 +2,13 @@
 
 import hashlib
 import json
+import logging
+
+import pytest
 
 from server.app import visitor_session
 from server.app.config import paths, relying_party
+from server.app.routes.advanced import registration_persistence
 from server.app.storage import credential_artifacts, github_mirror
 from server.app.storage import credentials as storage_credentials
 from server.app.webauthn.attestation import aaguid as attestation_aaguid
@@ -12,6 +16,7 @@ from server.app.webauthn.attestation import certificates as attestation_certific
 from server.app.webauthn.attestation import checks as attestation_checks
 from tests.app.entry_app import entry_app
 from tests.app.fido2_stand_ins import ES256_KEY, CredentialData
+from tests.app.log_lines import FORGED, one_line_naming
 from tests.app.security.ceremony_helpers import b64u
 from tests.app.storage import fake_github
 
@@ -246,3 +251,28 @@ def test_an_advanced_registration_whose_artifact_is_not_stored_is_not_logged(mon
     assert response.status_code == 500
     assert github.files == {}
     assert not (tmp_path / "outbox").exists() or not any((tmp_path / "outbox").glob("*.entry"))
+
+
+def _artifact_store_raises(*_args, **_kwargs):
+    raise RuntimeError("artifact store down")
+
+
+@pytest.mark.parametrize("store", [lambda *_args, **_kwargs: False, _artifact_store_raises], ids=["refused", "raised"])
+def test_an_artifact_not_stored_names_its_user_on_one_line(monkeypatch, caplog, store):
+    credential_id = b"advanced-store-forged-user"
+    rp_id = "example.com"
+    _install_advanced_register_common_monkeypatches(monkeypatch, _FakeAuthData(credential_id=credential_id, rp_id=rp_id), rp_id)
+    monkeypatch.setattr(credential_artifacts, "store_credential_artifact", store)
+    payload = _advanced_register_payload(rp_id, credential_id)
+    payload["publicKey"]["user"]["name"] = FORGED
+
+    with entry_app().test_client() as client:
+        with client.session_transaction() as session_state:
+            session_state["advanced_state"] = {"challenge": "state"}
+            session_state["advanced_rp"] = {"id": rp_id, "name": "Example"}
+            session_state["advanced_register_allowed_attachments"] = ["platform"]
+        with caplog.at_level(logging.ERROR, logger=registration_persistence.__name__):
+            response = client.post("/api/advanced/register/complete", json=payload)
+
+    assert response.status_code == 500
+    one_line_naming(caplog, registration_persistence.__name__, FORGED)

@@ -32,6 +32,7 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import NamedTuple
 
+from .. import log_text
 from ..config.paths import GITHUB_OUTBOX_STORE, store_dir
 from . import cloud, common
 
@@ -344,13 +345,13 @@ def enqueue(entries: Sequence[OutboxEntry]) -> int:
                         "The credential log outbox is full (%s entries, %s): dropped %s",
                         f"{count:,}",
                         common.describe_size(size),
-                        entry.path,
+                        log_text.client_text(entry.path),
                     )
                     continue
                 held = (count + 1, size + len(data))
             backend.write(_new_entry_id(), data)
         except Exception as exc:
-            logger.warning("Could not queue %s for the credential log: %s", entry.path, exc)
+            logger.warning("Could not queue %s for the credential log: %s", log_text.client_text(entry.path), exc)
             continue
         queued += 1
     return queued
@@ -360,7 +361,9 @@ def _delivered(deliver: Callable[[OutboxEntry], Delivery], entry: OutboxEntry) -
     try:
         return deliver(entry)
     except Exception:
-        logger.warning("Could not deliver %s to the credential log; it stays queued", entry.path, exc_info=True)
+        logger.warning(
+            "Could not deliver %s to the credential log; it stays queued", log_text.client_text(entry.path), exc_info=True
+        )
         return Delivery.UNAVAILABLE
 
 
@@ -377,7 +380,7 @@ def _count_attempts(backend: _LocalOutbox | _CloudOutbox, passed_over: list[tupl
             continue
         logger.warning(
             "Dropped %s from the credential log: GitHub did not take it in %d runs that delivered later entries",
-            entry.path,
+            log_text.client_text(entry.path),
             attempts,
         )
         backend.remove(name)
