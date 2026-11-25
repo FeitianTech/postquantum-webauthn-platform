@@ -375,7 +375,9 @@ def _count_attempts(backend: _LocalOutbox | _CloudOutbox, passed_over: list[tupl
     for name, entry, generation in passed_over:
         attempts = entry.attempts + 1
         if attempts < MAX_ATTEMPTS:
-            logger.info("GitHub took a later entry but not %s (%d of %d attempts)", entry.path, attempts, MAX_ATTEMPTS)
+            logger.info(
+                "GitHub took a later entry but not %s (%d of %d attempts)", log_text.client_text(entry.path), attempts, MAX_ATTEMPTS
+            )
             backend.rewrite(name, encode_entry(entry._replace(attempts=attempts)), generation)
             continue
         logger.warning(

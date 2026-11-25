@@ -1296,3 +1296,45 @@ def test_a_flush_that_cannot_start_never_fails_the_request(make_app, monkeypatch
         assert make_app().test_client().get("/health").status_code == 200
 
     assert "Could not start flushing the credential log outbox" in caplog.text
+
+
+def test_a_delivered_file_is_named_on_one_line(monkeypatch, caplog):
+    fake_github.install(monkeypatch)
+
+    with caplog.at_level(logging.INFO, logger=github_mirror.__name__):
+        assert _deliver_metadata(FORGED, b'{"entry":1}') is Delivery.DELIVERED
+
+    message = one_line_naming(caplog, github_mirror.__name__, f"metadata/{FORGED}")
+    assert message.startswith("Delivered ")
+
+
+def test_a_file_already_in_the_log_is_named_on_one_line_with_its_copy(monkeypatch, caplog):
+    github = fake_github.install(monkeypatch)
+    there = "copy\nERROR forged line.json"
+    github.files[f"metadata/{there}"] = b'{"entry":1}'
+
+    with caplog.at_level(logging.INFO, logger=github_mirror.__name__):
+        assert _deliver_metadata(FORGED, b'{"entry":1}') is Delivery.DELIVERED
+
+    message = one_line_naming(caplog, github_mirror.__name__, FORGED, there)
+    assert message.startswith("Skipping upload of metadata file ")
+
+
+def test_an_entry_passed_over_is_named_on_one_line(monkeypatch, log_outbox, caplog):
+    github = fake_github.install(monkeypatch)
+    request = github.request
+
+    def _never_takes_the_forged_file(method, url, body=None):
+        if method == "PUT" and "ERROR" in url:
+            raise fake_github.http_error(409, "is at another commit")
+        return request(method, url, body)
+
+    monkeypatch.setattr(github_mirror, "_request", _never_takes_the_forged_file)
+    github_outbox.enqueue([github_mirror._metadata_entry(FORGED, b'{"entry":1}'), _named_log_entry("later")])
+
+    with caplog.at_level(logging.INFO, logger=github_outbox.__name__):
+        github_outbox.flush(github_mirror.deliver)
+
+    assert "logs/unknown/later.json" in github.files
+    message = one_line_naming(caplog, github_outbox.__name__, f"metadata/{FORGED}")
+    assert message.startswith("GitHub took a later entry but not ")

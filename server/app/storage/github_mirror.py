@@ -534,8 +534,8 @@ def _deliver_metadata(entry: OutboxEntry) -> Delivery:
     if same is not None or _delivered_lately(blob_sha):
         logger.info(
             "Skipping upload of metadata file %s; identical content already present as %s.",
-            name,
-            same or "a file delivered lately",
+            log_text.client_text(name),
+            log_text.client_text(same) if same else "a file delivered lately",
         )
         return Delivery.DELIVERED
     try:
@@ -545,7 +545,7 @@ def _deliver_metadata(entry: OutboxEntry) -> Delivery:
         return Delivery.DROPPED
     with RECENT_METADATA.lock:
         RECENT_METADATA.delivered[blob_sha] = time.time()
-    logger.info("Delivered %s to the credential log", entry.path)
+    logger.info("Delivered %s to the credential log", log_text.client_text(entry.path))
     return Delivery.DELIVERED
 
 

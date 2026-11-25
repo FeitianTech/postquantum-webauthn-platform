@@ -8,6 +8,12 @@ configures no root handler here (``gunicorn.conf.py`` sets no ``logconfig``), so
 without that handler module records would fall through to
 ``logging.lastResort``: unformatted, and WARNING and above only.
 
+The app's loggers log WARNING and above, except the few that hold what an operator
+can learn nowhere else, at INFO: where the MDS snapshot came from and which one an
+instance took (``mds.provisioning``), and the credential log's deliveries
+(``storage.github_mirror``, ``storage.github_outbox``). Their INFO lines fire once an
+instance, a delivery or a flush, never on every request.
+
 fido2's ``Fido2Server`` logs each registered and authenticated credential ID at
 INFO. A credential ID identifies a visitor's authenticator, so ``fido2.server``
 is held at WARNING whatever handler the root logger gets.
@@ -18,10 +24,18 @@ import logging
 
 from flask import Flask
 
+OPERATOR_LOGGERS = (
+    "server.app.mds.provisioning",
+    "server.app.storage.github_mirror",
+    "server.app.storage.github_outbox",
+)
+
 
 def init_app(app: Flask) -> None:
     """Attach Flask's handler to ``app.logger`` before anything logs."""
 
     # Reading the property is what creates the logger and attaches the handler.
     app.logger
+    for name in OPERATOR_LOGGERS:
+        logging.getLogger(name).setLevel(logging.INFO)
     logging.getLogger("fido2.server").setLevel(logging.WARNING)

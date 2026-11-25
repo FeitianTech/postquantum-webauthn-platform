@@ -488,7 +488,10 @@ its logic out here first.
   outputs say, the relying party's view of it and the saved credential record, each in one key
   order for both tabs; the record keeps each part once, its attestation object only in the
   browser's response: docs/STORAGE.md). `config/logs.py` holds `fido2.server`'s logger at WARNING: fido2 logs
-  credential IDs at INFO.
+  credential IDs at INFO; the app logs at WARNING but for `mds/provisioning.py`,
+  `storage/github_mirror.py` and `storage/github_outbox.py`, at INFO (where the MDS snapshot
+  came from, the credential log's deliveries), whose lines write a client's text through
+  `log_text.client_text`.
 - `storage/` (`credentials.py`, `credential_artifacts.py`, `session_metadata.py`,
   `github_mirror.py`, `github_outbox.py`, over `cloud.py`, `common.py` and `record_format.py`):
   every read-modify-write is compare-and-swap; a failed read raises `StorageReadError` (503), never
