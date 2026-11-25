@@ -121,7 +121,7 @@ def test_wrong_signature_with_ordinary_algorithm_is_not_ok():
     assert payload["verified"] is False
 
 
-def test_genuinely_unsupported_algorithm_reports_explicit_non_ok_status():
+def test_genuinely_unsupported_algorithm_reports_explicit_non_ok_status(caplog):
     """An algorithm this server cannot verify is reported, but never as OK.
 
     Here the credential's OWN COSE key declares an algorithm the server has no
@@ -161,6 +161,10 @@ def test_genuinely_unsupported_algorithm_reports_explicit_non_ok_status():
     # The report must make clear that nothing was checked.
     assert "not supported" in payload["error"]
     assert "NOT verified" in payload["error"]
+    # One line for the refusal, as for any other.
+    assert [record.getMessage() for record in caplog.records if record.levelname == "WARNING"] == [
+        "POST /api/advanced/authenticate/complete refused: Signature verification not supported."
+    ]
 
 
 # --------------------------------------------------------------------------

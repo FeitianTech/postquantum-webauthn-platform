@@ -76,7 +76,8 @@ def _verification_failure(exc: Exception, response: Any, lookup: Mapping[bytes, 
         )
 
     if credential_alg is not None and not _server_supports_algorithm(credential_alg):
-        logger.warning(
+        # The refusal's WARNING line is answer_text's; this says which algorithm.
+        logger.info(
             "Assertion uses COSE algorithm %d which this server cannot verify; "
             "no signature verification was performed.",
             credential_alg,

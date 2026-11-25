@@ -406,8 +406,10 @@ its logic out here first.
   and one that waits 2 s for a place answers 503 with `Retry-After`);
   `routes/ceremony_errors.py`
   (what a ceremony's complete answers when a response is refused: fido2's own findings, the challenge,
-  origin, RP ID hash, UP, UV, signature, as fido2 wrote them, else a sentence of the app's own, the
-  exception logged at INFO; no answer carries an exception's text but the codec's, written to be shown;
+  origin, RP ID hash, UP, UV, signature, as fido2 wrote them, else a sentence of the app's own; each
+  refusal one WARNING line, the route and fido2's finding or the exception's type and where it was
+  raised, never its text; what fails after fido2 accepted is not a refusal, but `routes/errors.py`'s
+  500; no answer carries an exception's text but the codec's, written to be shown;
   and the 400 for a response whose CBOR, the attestation object or the authenticator data's key and
   extensions, nests deeper than 50 levels or holds more than 400 items, walked before fido2's decoder
   reads it, `webauthn/cbor_bounds.py`, on both tabs' completes);

@@ -171,7 +171,7 @@ def test_advanced_register_complete_returns_500_when_artifact_store_raises(monke
     assert registration_events == []
 
 
-def test_advanced_register_complete_returns_400_when_add_public_key_material_raises(monkeypatch):
+def test_advanced_register_complete_answers_500_and_stores_nothing_when_add_public_key_material_raises(monkeypatch):
     credential_id = b"advanced-public-key-material-raises"
     rp_id = "example.com"
     auth_data = _FakeAuthData(credential_id=credential_id, rp_id=rp_id)
@@ -210,12 +210,9 @@ def test_advanced_register_complete_returns_400_when_add_public_key_material_rai
             assert "advanced_rp" not in session_state
             assert "advanced_register_allowed_attachments" not in session_state
 
-    assert response.status_code == 400
-    assert response.get_json() == {
-        "error": "The registration could not be completed.",
-        "challengeSource": "server-session",
-        "challengeStatus": "expired",
-    }
+    # A failure of the app's own after fido2 accepted the response, not a refusal (routes/errors.py).
+    assert response.status_code == 500
+    assert response.get_json() == {"error": "The server failed while handling this request."}
     assert artifact_store_calls == []
     assert registration_events == []
 

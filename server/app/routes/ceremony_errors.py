@@ -5,7 +5,9 @@ data's type or origin, the challenge, the RP ID hash, the user present and verif
 flags, the signature, the credential. Those are answered as fido2 wrote them
 (``FIDO2_FINDINGS``, fido2 2.2.1's). Any other exception's text was written for whoever
 reads the code (fido2's parsers name their classes and arguments, a store its paths):
-the answer is a sentence of the app's own, and the exception is logged at INFO.
+the answer is a sentence of the app's own. Each refusal is one WARNING line naming the
+route and its cause: fido2's finding, else the exception's type and where it was raised,
+never its text, which may carry what the client sent.
 
 A sign-in's credential response over a registration's limit (``config/request_limits.py``) is
 refused before anything reads it: fido2 parses its clientDataJSON, one string in the body,
@@ -45,13 +47,23 @@ REGISTRATION_FAILED = "The registration could not be completed."
 AUTHENTICATION_FAILED = "The authentication could not be completed."
 
 
-def answer_text(exc: Exception, sentence: str) -> str:
-    """fido2's finding when ``exc`` is one, else ``sentence``, with ``exc`` logged at INFO."""
+def _raised_where(exc: Exception) -> str:
+    """``exc``'s type, and the module and line of its innermost frame when it was raised."""
 
-    if isinstance(exc, (ValueError, NotImplementedError)) and str(exc) in FIDO2_FINDINGS:
-        return str(exc)
-    logger.info("%s %s: %s", request.method, request.path, sentence, exc_info=exc)
-    return sentence
+    tb = exc.__traceback__
+    while tb is not None and tb.tb_next is not None:
+        tb = tb.tb_next
+    if tb is None:
+        return type(exc).__name__
+    return f"{type(exc).__name__} at {tb.tb_frame.f_globals.get('__name__')}:{tb.tb_lineno}"
+
+
+def answer_text(exc: Exception, sentence: str) -> str:
+    """fido2's finding when ``exc`` is one, else ``sentence``; the refusal logged in one WARNING line."""
+
+    finding = isinstance(exc, (ValueError, NotImplementedError)) and str(exc) in FIDO2_FINDINGS
+    logger.warning("%s %s refused: %s", request.method, request.path, str(exc) if finding else _raised_where(exc))
+    return str(exc) if finding else sentence
 
 
 def authentication_response_too_large(response: Any) -> Any | None:

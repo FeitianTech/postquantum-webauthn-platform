@@ -10,6 +10,8 @@ from fido2 import cbor
 from server.app import visitor_session
 from server.app.config import relying_party, request_limits
 from server.app.routes.advanced import algorithms as advanced_algorithms
+from server.app.routes.advanced import registration_attestation, registration_record
+from server.app.storage.common import StorageReadError
 from server.app.webauthn import cose_algorithms
 from server.app.webauthn.attestation import certificates as attestation_certificates
 from tests.app.entry_app import entry_app
@@ -56,6 +58,35 @@ def test_requested_extensions_that_are_no_object_fail_the_registration(own_store
     assert response.status_code == 400
     assert response.get_json()["error"]
     assert response.get_json()["challengeStatus"] == "fresh"
+
+
+def test_a_failure_of_the_apps_own_after_fido2_accepted_answers_500_and_logs_its_traceback(
+    make_app, own_stores, monkeypatch, caplog
+):
+    failure = RuntimeError("the record could not be built")
+
+    def _fails(**_kwargs):
+        raise failure
+
+    monkeypatch.setattr(registration_record, "build_debug_info", _fails)
+
+    response = register(make_app({"PROPAGATE_EXCEPTIONS": False}).test_client())
+
+    assert response.status_code == 500
+    assert response.get_json() == {"error": "The server failed while handling this request."}
+    assert [record.exc_info[1] for record in caplog.records if record.levelname == "ERROR"] == [failure]
+
+
+def test_a_store_that_cannot_be_read_after_fido2_accepted_answers_503(own_stores, monkeypatch):
+    def _unreadable(**_kwargs):
+        raise StorageReadError("the visitor's uploads could not be read")
+
+    monkeypatch.setattr(registration_attestation, "check_attestation", _unreadable)
+
+    response = register(entry_app().test_client())
+
+    assert response.status_code == 503
+    assert response.get_json() == {"error": "The stored credentials could not be read. Please try again."}
 
 
 def test_a_4096_byte_excluded_id_still_fits_the_session_cookie(own_stores):

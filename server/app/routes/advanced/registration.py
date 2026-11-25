@@ -60,14 +60,15 @@ def _register_complete(data: Mapping[str, Any], session_state: Any, state_trace:
             response=response if isinstance(response, Mapping) else {},
             session_state=session_state,
         )
-        if state_error is not None:
-            return _with_challenge_source(state_error, state_trace)
-        # Read only now: the attestation's certificates are parsed for a ceremony fido2 accepted.
-        prepared = {**prepared, **registration_inputs.attestation_inputs(response)}
-        return _record_verified_registration(prepared, state_ctx, state_trace)
     except Exception as exc:
         error = ceremony_errors.answer_text(exc, ceremony_errors.REGISTRATION_FAILED)
         return jsonify({"error": error, **state_trace}), 400
+    if state_error is not None:
+        return _with_challenge_source(state_error, state_trace)
+    # Read only now: the attestation's certificates are parsed for a ceremony fido2 accepted.
+    # What fails from here is the app's own, answered and logged by routes/errors.py.
+    prepared = {**prepared, **registration_inputs.attestation_inputs(response)}
+    return _record_verified_registration(prepared, state_ctx, state_trace)
 
 
 def _record_verified_registration(

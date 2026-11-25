@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+
 import pytest
 from fido2.webauthn import RegistrationResponse
 
@@ -27,7 +29,9 @@ def test_a_key_fido2_cannot_verify_with_is_answered_as_fido2_wrote_it(request_co
     assert ceremony_errors.answer_text(exc, SENTENCE) == "Signature verification not supported."
 
 
-def test_a_response_fido2_cannot_parse_is_answered_with_a_sentence_and_logged_at_info(request_context, caplog):
+def test_a_response_fido2_cannot_parse_is_answered_with_a_sentence_and_logged_as_its_type_and_place(
+    request_context, caplog
+):
     with pytest.raises(TypeError) as raised:
         RegistrationResponse.from_dict({})
 
@@ -36,7 +40,25 @@ def test_a_response_fido2_cannot_parse_is_answered_with_a_sentence_and_logged_at
 
     assert text == "The registration could not be completed."
     assert "required keyword-only" in str(raised.value)
-    assert [(record.levelname, record.exc_info[1]) for record in caplog.records] == [("INFO", raised.value)]
+    [record] = caplog.records
+    assert (record.levelname, record.exc_info) == ("WARNING", None)
+    assert re.fullmatch(r"POST /api/register/complete refused: TypeError at fido2\.[\w.]+:\d+", record.getMessage())
+
+
+def test_a_refusal_logs_no_text_its_exception_carries(request_context, caplog):
+    with caplog.at_level("INFO", logger=ceremony_errors.__name__):
+        ceremony_errors.answer_text(ValueError("written by a client: MARKER-7f3a"), SENTENCE)
+
+    assert [record.getMessage() for record in caplog.records] == ["POST /api/register/complete refused: ValueError"]
+
+
+def test_fido2s_finding_is_logged_as_the_refusals_cause(request_context, caplog):
+    with caplog.at_level("INFO", logger=ceremony_errors.__name__):
+        ceremony_errors.answer_text(ValueError("Wrong challenge in response."), SENTENCE)
+
+    assert [(record.levelname, record.getMessage()) for record in caplog.records] == [
+        ("WARNING", "POST /api/register/complete refused: Wrong challenge in response.")
+    ]
 
 
 @pytest.mark.parametrize(
