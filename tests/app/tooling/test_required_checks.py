@@ -56,13 +56,15 @@ class _Response(io.BytesIO):
 
 class _GitHub:
     """Answers each request with the next answer: a JSON body, raw bytes, a status
-    with its body, or an exception; the last one repeats."""
+    with its body, or an exception; the last one repeats, up to more requests than
+    the script's deadline allows, so a loop that never ends fails its test."""
 
     def __init__(self, *answers):
         self.answers, self.requests = list(answers), []
 
     def urlopen(self, request, timeout):
         self.requests.append(request)
+        assert len(self.requests) <= 50, "the script read GitHub past its deadline"
         answer = self.answers[min(len(self.requests), len(self.answers)) - 1]
         if isinstance(answer, BaseException):
             raise answer
@@ -148,6 +150,15 @@ def test_a_run_in_progress_is_read_again_until_it_succeeds(monkeypatch):
 
     assert code == 0
     assert len(requests) == 3
+
+
+def test_each_waiting_line_reaches_the_log_as_it_is_written(monkeypatch):
+    running = _answer(_run(BROWSER, status="in_progress", run_id=1), _run(IMAGE, run_id=2))
+    printed = []
+    monkeypatch.setattr("builtins.print", lambda *args, **kwargs: printed.append((args, kwargs)))
+
+    assert _check(monkeypatch, running, PASSED)[0] == 0
+    assert [kwargs.get("flush") for args, kwargs in printed if args[0].startswith("Waiting")] == [True]
 
 
 def test_a_run_still_in_progress_at_the_deadline_deploys_nothing(monkeypatch, capsys):

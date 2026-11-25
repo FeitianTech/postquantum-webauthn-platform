@@ -109,7 +109,7 @@ def main() -> int:
             print(f"After {DEADLINE_SECONDS // 60} minutes, still waiting for {commit}'s checks ({said}): "
                   "nothing is deployed. Once both jobs have passed on GitHub, retry this build.", file=sys.stderr)
             return 1
-        print(f"Waiting for GitHub ({said})")
+        print(f"Waiting for GitHub ({said})", flush=True)
         sleep(PAUSE_SECONDS)
 
 

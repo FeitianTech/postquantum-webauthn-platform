@@ -238,6 +238,17 @@ def test_a_tip_that_cannot_be_read_fails_the_deploy_and_leaves_the_traffic(tmp_p
     assert not (state / "promoted").exists()
 
 
+def test_a_tip_unreadable_once_the_revision_is_checked_moves_no_traffic(tmp_path):
+    result, state = _deploy(tmp_path, MAIN_TIPS=f"{COMMIT},fail")
+
+    calls = _calls(state)
+    assert result.returncode == 1
+    assert calls[1].startswith("gcloud run services update pqcwebauthn ")
+    assert calls[-4:] == [REFS] * 4
+    assert f"Could not read main's tip from {REPOSITORY_URL} after 4 attempts" in result.stderr
+    assert not any(call.startswith("gcloud run services update-traffic") for call in calls)
+
+
 def test_a_tip_read_after_failed_tries_lets_the_deploy_go_on(tmp_path):
     result, state = _deploy(tmp_path, MAIN_TIPS=f"fail,html,{COMMIT}")
 
