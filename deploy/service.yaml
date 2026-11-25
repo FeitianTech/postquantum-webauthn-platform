@@ -26,10 +26,10 @@ spec:
         # gen1 starts small containers faster; revisit with a tagged gen2 revision.
         run.googleapis.com/execution-environment: gen1
         run.googleapis.com/startup-cpu-boost: "true"
-        # Request-based billing: CPU is only allocated while serving requests.
+        # Request-based billing: CPU is only allocated while serving requests and probes.
         run.googleapis.com/cpu-throttling: "true"
-        # No instance is kept between visits: an idle one is not billed, and a
-        # visit after a quiet spell meets a cold start.
+        # No instance is kept between visits: an idle one is billed only for its
+        # liveness probes, and a visit after a quiet spell meets a cold start.
         autoscaling.knative.dev/minScale: "0"
         autoscaling.knative.dev/maxScale: "10"
     spec:
@@ -54,6 +54,19 @@ spec:
             timeoutSeconds: 240
             periodSeconds: 240
             failureThreshold: 1
+          # /health needs one free thread of the 16: four misses in a row, two
+          # minutes, mean none has freed up, and Cloud Run kills the instance (its
+          # requests in flight answer 503) and starts another. A busy instance
+          # answers within seconds. The delay lets a slow start provision its MDS
+          # snapshot. Each probe is billed for its own CPU and memory, which is little.
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 300
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 4
           env:
             # Passkeys belong to webauthndev.com: a ceremony from any other origin,
             # the run.app URL among them, is refused.

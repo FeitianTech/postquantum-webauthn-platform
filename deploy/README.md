@@ -1,6 +1,6 @@
 # Deploying pqcwebauthn on Cloud Run
 
-The service runs in `feitian-project`, region `asia-northeast1`, on one vCPU, and keeps no instance warm (`minScale` 0): an idle instance costs nothing.
+The service runs in `feitian-project`, region `asia-northeast1`, on one vCPU, and keeps no instance warm (`minScale` 0): an idle instance costs only its liveness probes.
 
 - **Code:** every push to `main` triggers Cloud Build ([cloudbuild.yaml](../cloudbuild.yaml)), which builds the image and updates only the service's image, through [deploy-revision.sh](deploy-revision.sh):
   - Before anything is deployed, the `GitHub checks` step ([required_checks.py](../tools/required_checks.py)) reads the commit's check runs from GitHub's API, without a token (60 requests an hour for one address). It goes on only when GitHub Actions' latest runs of the browser tests (`Browser tests (Playwright, virtual authenticator)`) and the image check (`docker-build`) both succeeded. It waits up to 10 minutes for runs that have not ended. A run that failed, was cancelled or was skipped, a run never reported, and an answer it cannot read after three tries (GitHub's rate limit included) fail the build, and nothing is deployed. There is no bypass in the pipeline.
@@ -11,7 +11,7 @@ The service runs in `feitian-project`, region `asia-northeast1`, on one vCPU, an
   - Whatever fails leaves the traffic on the revision that had it. The failed revision keeps its tag, without traffic, until the next deploy moves the tag.
   - Builds can overlap, and one can be retried by hand, so the script reads main's tip from the public repository (git's ref advertisement, no token) before it deploys and again before it promotes. A build whose commit is no longer the tip stops there without error and leaves the traffic where it is; a tip it cannot read after a few tries fails the deploy. If the newer commit's own build then fails, nothing deploys until a later push's build passes. The read needs the repository public at the address `cloudbuild.yaml` gives the script.
   - The build's service account needs nothing more than the deploy did before. `services describe` and `update-traffic` need the same `run.services.get` and `run.services.update` as `services update`, and the tag's URL is public like the service's.
-- **Settings:** concurrency, scaling, secrets and the runtime identity live in [service.yaml](service.yaml). Apply them with [apply-service-config.sh](apply-service-config.sh). The script keeps the image of the revision that serves the traffic. Its new revision takes all the traffic at once, without the deploy's checks.
+- **Settings:** concurrency, scaling, secrets and the runtime identity live in [service.yaml](service.yaml). Apply them with [apply-service-config.sh](apply-service-config.sh). The script keeps the image of the revision that serves the traffic. Its new revision takes all the traffic at once, without the deploy's checks. A liveness probe on `/health` replaces an instance that has not answered for two minutes, from five minutes after it starts, so that a slow start can provision its MDS snapshot: Cloud Run kills it, ending its requests in flight with 503, and starts another.
 
 ## Rolling back
 
