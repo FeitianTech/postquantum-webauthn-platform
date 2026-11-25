@@ -113,12 +113,9 @@ export function removeSimpleCredential(credentialId, email) {
     });
 
     const changed = filteredSimple.length !== simpleStored.length;
-    if (changed) {
-        persistCredentialPartitions(filteredSimple, advancedStored, {
-            prepareAdvancedCredentialForStorage,
-        });
-    }
-    return changed;
+    return changed && persistCredentialPartitions(filteredSimple, advancedStored, {
+        prepareAdvancedCredentialForStorage,
+    });
 }
 
 export function updateSimpleCredentialSignCount(email, credentialId, signCount) {
@@ -153,13 +150,9 @@ export function updateSimpleCredentialSignCount(email, credentialId, signCount) 
         return clone;
     });
 
-    if (updated) {
-        persistCredentialPartitions(updatedSimple, updatedAdvanced, {
-            prepareAdvancedCredentialForStorage,
-        });
-    }
-
-    return updated;
+    return updated && persistCredentialPartitions(updatedSimple, updatedAdvanced, {
+        prepareAdvancedCredentialForStorage,
+    });
 }
 
 export function prepareCredentialsForServer(credentials) {

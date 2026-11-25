@@ -1,4 +1,5 @@
 import type { MdsSnapshot } from '@/logic/mds/explorer/loading.js';
+import { FailedResponseError } from '@/logic/shared/failed-response.js';
 import {
   CHOOSE_METADATA_FILES,
   type CustomItem,
@@ -59,8 +60,9 @@ export function useCustomMetadata({
   const refresh = useCallback(async () => {
     try {
       setItems((await requestCustomMetadataList()).map(describeCustomMetadataItem));
-    } catch {
-      // The list shown stays as it was.
+    } catch (error) {
+      // The list shown stays as it was; a failed answer says why.
+      if (error instanceof FailedResponseError) setMessage({ text: error.message, variant: 'error' });
     }
   }, []);
 

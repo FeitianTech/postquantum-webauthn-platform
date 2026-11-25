@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { FailedResponseError } from '../../shared/failed-response.js';
+
 import {
   CUSTOM_METADATA_DELETE_PATH,
   CUSTOM_METADATA_LIST_PATH,
@@ -209,10 +211,17 @@ describe('Manage Trusted Metadata: the list', () => {
   });
 
   it('shows none when the answer holds none', async () => {
-    globalThis.fetch = vi.fn(async () => answer({ items: [] }, { ok: false, status: 500 }));
-    await expect(requestCustomMetadataList({ path: '/x' })).resolves.toEqual([]);
     globalThis.fetch = vi.fn(async () => answer({ items: 'no' }));
-    await expect(requestCustomMetadataList()).resolves.toEqual([]);
+    await expect(requestCustomMetadataList({ path: '/x' })).resolves.toEqual([]);
+  });
+
+  it('says the server failed rather than that there are none', async () => {
+    globalThis.fetch = vi.fn(async () => answer({ items: [] }, { ok: false, status: 503 }));
+    const failure = requestCustomMetadataList();
+    await expect(failure).rejects.toBeInstanceOf(FailedResponseError);
+    await expect(failure).rejects.toThrow(
+      'Failed to load the uploaded metadata files: The server is unavailable. Try again in a moment.',
+    );
   });
 
   it('describes an uploaded file', () => {

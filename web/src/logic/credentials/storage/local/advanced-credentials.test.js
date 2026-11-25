@@ -163,6 +163,14 @@ describe('removeAdvancedCredential', () => {
     expect(removeAdvancedCredential('', null)).toBe(false);
     expect(stored()).toHaveLength(1);
   });
+
+  it('says it was not removed when the browser refuses the write', () => {
+    store([storedAdvanced(CREDENTIAL_ID, 'mine')]);
+    limitStorageTo(0);
+
+    expect(removeAdvancedCredential(CREDENTIAL_ID)).toBe(false);
+    expect(stored()).toHaveLength(1);
+  });
 });
 
 
@@ -200,6 +208,14 @@ describe('updateAdvancedCredentialSignCount', () => {
 
     expect(updateAdvancedCredentialSignCount(CREDENTIAL_ID, 6)).toBe(false);
     expect(stored()[0].signCount).toBe(5);
+  });
+
+  it('says it was not updated when the browser refuses the write', () => {
+    store([storedAdvanced(CREDENTIAL_ID, 'mine', { signCount: 3 })]);
+    limitStorageTo(0);
+
+    expect(updateAdvancedCredentialSignCount(CREDENTIAL_ID, 4)).toBe(false);
+    expect(stored()[0].signCount).toBe(3);
   });
 });
 

@@ -129,10 +129,7 @@ export function removeAdvancedCredential(credentialId, storageId = null) {
         return normaliseAdvancedCredentialId(record) !== id;
     });
     const changed = filteredAdvanced.length !== advancedRecords.length;
-    if (changed) {
-        persistCredentialPartitions(simpleRecords, filteredAdvanced, { prepareAdvancedCredentialForStorage });
-    }
-    return changed;
+    return changed && persistCredentialPartitions(simpleRecords, filteredAdvanced, { prepareAdvancedCredentialForStorage });
 }
 
 /**
@@ -175,11 +172,7 @@ export function updateAdvancedCredentialSignCount(credentialId, signCount, stora
         return clone;
     });
 
-    if (updated) {
-        persistCredentialPartitions(updatedSimple, updatedAdvanced, { prepareAdvancedCredentialForStorage });
-    }
-
-    return updated;
+    return updated && persistCredentialPartitions(updatedSimple, updatedAdvanced, { prepareAdvancedCredentialForStorage });
 }
 
 /**

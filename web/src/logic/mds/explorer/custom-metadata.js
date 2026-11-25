@@ -1,6 +1,7 @@
 // Manage Trusted Metadata's requests and everything it says, and the session's
 // uploads merged with the packaged list. No DOM.
 import { aaguidGuid } from '../../shared/aaguid.js';
+import { FailedResponseError, readFailedResponse } from '../../shared/failed-response.js';
 import { CUSTOM_METADATA_DELETE_PATH, CUSTOM_METADATA_LIST_PATH, CUSTOM_METADATA_UPLOAD_PATH } from '../constants.js';
 
 /** @import { MdsEntry, MdsSnapshot } from './loading.js' */
@@ -73,6 +74,7 @@ export const CHOOSE_METADATA_FILES = 'Please choose one or more JSON files.';
 export const UPLOADING_METADATA = 'Uploading metadata…';
 export const UPLOAD_METADATA_FAILED = 'Failed to upload metadata files.';
 export const DELETE_METADATA_FAILED = 'Failed to delete metadata file.';
+export const LIST_METADATA_FAILED = 'Failed to load the uploaded metadata files';
 
 // What the page says while an upload runs, in order, and how it ends.
 export const UPLOAD_PROGRESS = {
@@ -259,13 +261,17 @@ export function describeCustomMetadataItem(item) {
     return { name, storedFilename, deleteLabel: `Delete ${name}`, details: details.join(' · ') };
 }
 
-// The files uploaded in this session (GET /api/mds/metadata/custom), newest first.
+// The files uploaded in this session (GET /api/mds/metadata/custom), newest first;
+// a failed answer throws a FailedResponseError that says why.
 /**
  * @param {{ signal?: AbortSignal, path?: string }} [options]
  * @returns {Promise<unknown[]>}
  */
 export async function requestCustomMetadataList({ signal, path = CUSTOM_METADATA_LIST_PATH } = {}) {
     const response = await fetch(path, { cache: 'no-store', signal });
+    if (!response.ok) {
+        throw new FailedResponseError(await readFailedResponse(response), LIST_METADATA_FAILED);
+    }
     const payload = await readCustomMetadataAnswer(response);
-    return response.ok && Array.isArray(payload?.items) ? payload.items : [];
+    return Array.isArray(payload?.items) ? payload.items : [];
 }

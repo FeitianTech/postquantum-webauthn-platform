@@ -190,6 +190,19 @@ describe('removing a simple credential', () => {
 
     expect(removeSimpleCredential(ES256_ID, 'user@example.com')).toBe(false);
   });
+
+  it('says it was not removed when the browser refuses the write', () => {
+    store([ES256]);
+    const setItem = vi.spyOn(window.localStorage, 'setItem').mockImplementation(() => {
+      throw new DOMException('full', 'QuotaExceededError');
+    });
+    try {
+      expect(removeSimpleCredential(ES256_ID)).toBe(false);
+    } finally {
+      setItem.mockRestore();
+    }
+    expect(stored().map(record => record.credentialIdBase64Url)).toEqual([ES256_ID]);
+  });
 });
 
 describe('updating a simple credential\'s signature counter', () => {
@@ -242,6 +255,18 @@ describe('updating a simple credential\'s signature counter', () => {
 
     const advanced = stored().filter(record => record.type === 'advanced');
     expect(advanced.map(record => record.signCount)).toEqual([ADVANCED.signCount, undefined]);
+  });
+  it('says it was not updated when the browser refuses the write', () => {
+    store([ES256]);
+    const setItem = vi.spyOn(window.localStorage, 'setItem').mockImplementation(() => {
+      throw new DOMException('full', 'QuotaExceededError');
+    });
+    try {
+      expect(updateSimpleCredentialSignCount('', ES256_ID, ES256.signCount + 1)).toBe(false);
+    } finally {
+      setItem.mockRestore();
+    }
+    expect(stored()[0].signCount).toBe(ES256.signCount);
   });
 });
 

@@ -116,6 +116,22 @@ describe('Manage Trusted Metadata', () => {
     expect(within(panel).getAllByRole('button', { name: /^Delete / })).toHaveLength(1);
   });
 
+  it('keeps the list shown and says the server failed when it answers an error', async () => {
+    let answer = () => json({ items: [ITEM] });
+    await renderSection({ '/api/mds/metadata/custom': () => answer() });
+    let panel = await openDialog();
+    expect(await within(panel).findByText('custom-metadata.json')).toBeInTheDocument();
+
+    await userEvent.keyboard('{Escape}');
+    answer = () => json({ error: 'The stored credentials could not be read. Please try again.' }, 503);
+    panel = await openDialog();
+    await waitFor(() => expect(message()).toHaveTextContent(
+      'Failed to load the uploaded metadata files: The stored credentials could not be read. Please try again.',
+    ));
+    expect(message()).toHaveAttribute('data-variant', 'error');
+    expect(within(panel).getByText('custom-metadata.json')).toBeInTheDocument();
+  });
+
   it('keeps the list shown when it cannot be had', async () => {
     await renderSection({ '/api/mds/metadata/custom': () => Promise.reject(new TypeError('offline')) });
     const panel = await openDialog();
