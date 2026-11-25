@@ -9,7 +9,7 @@ import pytest
 from server.app import visitor_session
 from server.app.config import paths, relying_party
 from server.app.routes.advanced import registration_persistence
-from server.app.storage import credential_artifacts, github_mirror
+from server.app.storage import credential_artifacts, github_mirror, github_outbox
 from server.app.storage import credentials as storage_credentials
 from server.app.webauthn.attestation import aaguid as attestation_aaguid
 from server.app.webauthn.attestation import certificates as attestation_certificates
@@ -240,6 +240,20 @@ def test_an_advanced_registration_is_logged_once_its_artifact_is_stored(monkeypa
     [path] = github.files
     assert path.startswith("logs/") and path.endswith(".json")
     assert json.loads(github.files[path])["rp_id"] == "localhost"
+
+
+def test_an_advanced_registration_past_the_log_s_budget_is_answered_and_stored_as_before(monkeypatch, tmp_path):
+    github = _logged_registrations(monkeypatch, tmp_path)
+    monkeypatch.setattr(github_outbox, "REGISTRATIONS_A_DAY", 0)
+
+    response = register(entry_app().test_client())
+
+    assert response.status_code == 200, response.get_json()
+    assert response.get_json()["status"] == "OK"
+    assert any(path.is_file() and path.suffix == ".json" for path in (tmp_path / paths.ARTIFACT_STORE[1]).rglob("*"))
+    # Its entry was queued and then dropped by the flush, before GitHub was asked.
+    assert github.calls == []
+    assert not any((tmp_path / "outbox").glob("*.entry"))
 
 
 def test_an_advanced_registration_whose_artifact_is_not_stored_is_not_logged(monkeypatch, tmp_path):

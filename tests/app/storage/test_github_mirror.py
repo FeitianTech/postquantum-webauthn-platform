@@ -860,6 +860,17 @@ def test_a_registration_is_queued_when_the_day_s_metadata_budget_is_spent(monkey
     assert [path.split("/")[0] for path in github.files] == ["logs"]
 
 
+def test_uploaded_metadata_is_delivered_when_the_day_s_registration_budget_is_spent(monkeypatch, log_outbox):
+    github = fake_github.install(monkeypatch)
+    monkeypatch.setattr(github_outbox, "REGISTRATIONS_A_DAY", 0)
+
+    github_mirror.record_registration_event(_registration())
+    github_mirror.queue_uploaded_metadata_files([("one.json", b"1")])
+
+    assert github.files == {"metadata/one.json": b"1"}
+    assert _queued_paths(log_outbox) == []
+
+
 def test_an_upload_past_the_log_s_budget_is_saved_and_named_on_one_line(mds_fixture_snapshot, client, monkeypatch, tmp_path, caplog):
     github = fake_github.install(monkeypatch)
     monkeypatch.setenv("FIDO_SERVER_GITHUB_OUTBOX_DIR", str(tmp_path / "outbox"))

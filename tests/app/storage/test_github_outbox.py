@@ -7,6 +7,8 @@ import logging
 import os
 import threading
 import types
+from collections.abc import Callable
+from typing import NamedTuple
 
 import pytest
 
@@ -77,13 +79,18 @@ class _LocalView:
     def is_empty(self) -> bool:
         return not self.root.exists()
 
-    def budget(self) -> bytes | None:
-        path = self.root / ".metadata-budget"
+    def budget(self, name: str = "metadata-budget") -> bytes | None:
+        path = self.root / f".{name}"
         return path.read_bytes() if path.exists() else None
 
-    def put_budget(self, data: bytes) -> None:
+    def put_budget(self, data: bytes, name: str = "metadata-budget") -> None:
         self.root.mkdir(parents=True, exist_ok=True)
-        (self.root / ".metadata-budget").write_bytes(data)
+        (self.root / f".{name}").write_bytes(data)
+
+    def break_budget(self, name: str) -> None:
+        """Make the budget unreadable: a folder where its file goes."""
+
+        (self.root / f".{name}").mkdir(parents=True)
 
 
 class _CloudView:
@@ -109,11 +116,14 @@ class _CloudView:
     def is_empty(self) -> bool:
         return not self.bucket.objects
 
-    def budget(self) -> bytes | None:
-        return self.bucket.objects.get(_BUDGET, (None, 0))[0]
+    def budget(self, name: str = "metadata-budget") -> bytes | None:
+        return self.bucket.objects.get(f"github-outbox/{name}", (None, 0))[0]
 
-    def put_budget(self, data: bytes) -> None:
-        self.bucket.put(_BUDGET, data)
+    def put_budget(self, data: bytes, name: str = "metadata-budget") -> None:
+        self.bucket.put(f"github-outbox/{name}", data)
+
+    def break_budget(self, name: str) -> None:
+        self.bucket.failing[f"github-outbox/{name}"] = fake_gcs.ServiceUnavailable("the bucket is unavailable")
 
 
 def _local_view(monkeypatch, tmp_path) -> _LocalView:
@@ -634,6 +644,32 @@ def small_budget(monkeypatch):
     monkeypatch.setattr(github_outbox, "METADATA_BYTES_A_DAY", 100)
 
 
+class _Budget(NamedTuple):
+    """A day's budget: its object's name, and how a test takes it."""
+
+    name: str
+    take: Callable[[list[int]], list[bool]]
+
+
+def _take_registration_budget(sizes: list[int]) -> list[bool]:
+    return github_outbox._take_budget(
+        "registration-budget", github_outbox.REGISTRATIONS_A_DAY, github_outbox.REGISTRATION_BYTES_A_DAY, sizes
+    )
+
+
+@pytest.fixture(params=["metadata", "registration"])
+def small_budgets(request, monkeypatch):
+    """Each day's budget of 3 files and 100 bytes in turn: the metadata's and the registrations'."""
+
+    monkeypatch.setattr(github_outbox, "METADATA_FILES_A_DAY", 3)
+    monkeypatch.setattr(github_outbox, "METADATA_BYTES_A_DAY", 100)
+    monkeypatch.setattr(github_outbox, "REGISTRATIONS_A_DAY", 3)
+    monkeypatch.setattr(github_outbox, "REGISTRATION_BYTES_A_DAY", 100)
+    if request.param == "metadata":
+        return _Budget("metadata-budget", github_outbox.take_metadata_budget)
+    return _Budget("registration-budget", _take_registration_budget)
+
+
 def test_the_metadata_budget_takes_files_until_the_day_s_files_or_bytes_run_out(outbox, clock, small_budget):
     assert github_outbox.take_metadata_budget([40, 40, 30, 10]) == [True, True, False, True]
     assert github_outbox.take_metadata_budget([1]) == [False]
@@ -671,14 +707,14 @@ def test_a_metadata_budget_that_does_not_read_or_names_another_day_is_empty(outb
     assert json.loads(outbox.budget()) == {"day": _DAY, "files": 1, "bytes": 5}
 
 
-def test_two_requests_at_once_take_the_last_of_the_metadata_budget_once(outbox, clock, small_budget):
-    outbox.put_budget(_budget_of(2, 0))
+def test_two_requests_at_once_take_the_last_of_a_budget_once(outbox, clock, small_budgets):
+    outbox.put_budget(_budget_of(2, 0), small_budgets.name)
     start = threading.Barrier(2)
     results = []
 
     def _take() -> None:
         start.wait()
-        results.append(github_outbox.take_metadata_budget([1]))
+        results.append(small_budgets.take([1]))
 
     workers = [threading.Thread(target=_take) for _ in range(2)]
     for worker in workers:
@@ -687,7 +723,7 @@ def test_two_requests_at_once_take_the_last_of_the_metadata_budget_once(outbox, 
         worker.join()
 
     assert sorted(results) == [[False], [True]]
-    assert json.loads(outbox.budget()) == {"day": _DAY, "files": 3, "bytes": 1}
+    assert json.loads(outbox.budget(small_budgets.name)) == {"day": _DAY, "files": 3, "bytes": 1}
 
 
 def test_a_spent_metadata_budget_is_not_written_again(bucket_outbox, clock, small_budget):
@@ -699,38 +735,40 @@ def test_a_spent_metadata_budget_is_not_written_again(bucket_outbox, clock, smal
     assert bucket_outbox.bucket.writes == writes == [_BUDGET]
 
 
-def test_a_metadata_budget_another_instance_wrote_first_is_read_again(bucket_outbox, clock, small_budget):
+def test_a_budget_another_instance_wrote_first_is_read_again(bucket_outbox, clock, small_budgets):
     bucket = bucket_outbox.bucket
-    bucket.put(_BUDGET, _budget_of(1, 10))
+    stored = f"github-outbox/{small_budgets.name}"
+    bucket.put(stored, _budget_of(1, 10))
 
     def _another_instance_takes_one(name: str) -> None:
-        if name == _BUDGET:
+        if name == stored:
             bucket.on_download.remove(_another_instance_takes_one)
-            bucket.put(_BUDGET, _budget_of(2, 20))
+            bucket.put(stored, _budget_of(2, 20))
 
     bucket.on_download.append(_another_instance_takes_one)
 
-    assert github_outbox.take_metadata_budget([5, 5]) == [True, False]
-    assert json.loads(bucket_outbox.budget()) == {"day": _DAY, "files": 3, "bytes": 25}
+    assert small_budgets.take([5, 5]) == [True, False]
+    assert json.loads(bucket_outbox.budget(small_budgets.name)) == {"day": _DAY, "files": 3, "bytes": 25}
 
 
-def test_a_metadata_budget_others_always_write_first_raises_after_its_tries(bucket_outbox, clock, small_budget):
+def test_a_budget_others_always_write_first_raises_after_its_tries(bucket_outbox, clock, small_budgets):
     bucket = bucket_outbox.bucket
-    bucket.put(_BUDGET, _budget_of(0, 0))
-    bucket.on_download.append(lambda name: bucket.put(_BUDGET, _budget_of(0, 0)))
+    stored = f"github-outbox/{small_budgets.name}"
+    bucket.put(stored, _budget_of(0, 0))
+    bucket.on_download.append(lambda name: bucket.put(stored, _budget_of(0, 0)))
 
     with pytest.raises(RuntimeError, match="wrote it first 5 times in a row"):
-        github_outbox.take_metadata_budget([1])
+        small_budgets.take([1])
 
-    assert [name for name, _options in bucket.download_options] == [_BUDGET] * github_outbox.BUDGET_TRIES
-    assert _BUDGET not in bucket.writes
+    assert [name for name, _options in bucket.download_options] == [stored] * github_outbox.BUDGET_TRIES
+    assert stored not in bucket.writes
 
 
-def test_a_metadata_budget_that_cannot_be_read_raises(bucket_outbox, clock):
-    bucket_outbox.bucket.failing[_BUDGET] = fake_gcs.ServiceUnavailable("the bucket is unavailable")
+def test_a_budget_that_cannot_be_read_raises(bucket_outbox, clock, small_budgets):
+    bucket_outbox.break_budget(small_budgets.name)
 
     with pytest.raises(fake_gcs.ServiceUnavailable):
-        github_outbox.take_metadata_budget([1])
+        small_budgets.take([1])
 
 
 def test_the_metadata_budget_is_one_object_beside_the_outbox_s_entries(bucket_outbox, clock):
@@ -745,6 +783,188 @@ def test_the_local_metadata_budget_is_a_file_of_the_outbox_folder_ignored_by_git
 
     assert sorted(os.listdir(local_outbox.root)) == [".gitignore", ".metadata-budget", ".metadata-budget.lock"]
     assert "*" in (local_outbox.root / ".gitignore").read_text().splitlines()
+
+
+# The registrations' budget, which the flusher applies: checked before a delivery, counted after one.
+_REGISTRATION_BUDGET = "registration-budget"
+_METADATA_ENTRY = OutboxEntry("metadata", "metadata/a.json", "metadata: add a.json", b"{}")
+
+
+@pytest.fixture
+def small_registration_budget(monkeypatch):
+    """A day's registration budget of 3 entries and 100 bytes."""
+
+    monkeypatch.setattr(github_outbox, "REGISTRATIONS_A_DAY", 3)
+    monkeypatch.setattr(github_outbox, "REGISTRATION_BYTES_A_DAY", 100)
+
+
+def _counted(outbox) -> dict:
+    return json.loads(outbox.budget(_REGISTRATION_BUDGET))
+
+
+def _warnings(caplog) -> list[str]:
+    return [record.getMessage() for record in caplog.records if record.name == github_outbox.__name__]
+
+
+def test_an_outage_spends_nothing_of_the_registration_budget(outbox, clock, small_registration_budget):
+    names = ["one", "two", "three"]
+    github_outbox.enqueue([_entry(name) for name in names])
+    down = _Deliverer({_path(name): Delivery.UNAVAILABLE for name in names})
+
+    for _ in range(3):
+        assert github_outbox.flush(down).handled == 0
+        clock.now += github_outbox.BACKOFF_SECONDS
+
+    assert outbox.budget(_REGISTRATION_BUDGET) is None
+    assert _attempts(outbox) == {_path(name): 0 for name in names}
+
+    up = _Deliverer()
+    assert github_outbox.flush(up).handled == 3
+
+    assert up.paths == [_path(name) for name in names]
+    assert outbox.names() == []
+    assert _counted(outbox) == {"day": _DAY, "files": 3, "bytes": 6}
+
+
+def test_a_registration_past_the_day_s_count_is_dropped_before_github_is_asked(outbox, clock, monkeypatch, caplog):
+    monkeypatch.setattr(github_outbox, "REGISTRATIONS_A_DAY", 1)
+    github_outbox.enqueue([_entry("one"), _entry("two")])
+    deliverer = _Deliverer()
+
+    with caplog.at_level(logging.WARNING, logger=github_outbox.__name__):
+        assert github_outbox.flush(deliverer).handled == 2
+
+    assert deliverer.paths == [_path("one")]
+    assert outbox.names() == []
+    assert _counted(outbox) == {"day": _DAY, "files": 1, "bytes": 2}
+    assert _warnings(caplog) == [
+        "Dropped logs/unknown/two.json from the credential log: today's budget of 1 registrations and 64 MiB has no"
+        " room for it; it starts again at 00:00 UTC"
+    ]
+
+
+def test_a_registration_past_the_day_s_bytes_is_dropped_before_github_is_asked(outbox, clock, small_registration_budget):
+    github_outbox.enqueue([_entry("big", b"x" * 60), _entry("bigger", b"x" * 50), _entry("small", b"x" * 40)])
+    deliverer = _Deliverer()
+
+    assert github_outbox.flush(deliverer).handled == 3
+
+    assert deliverer.paths == [_path("big"), _path("small")]
+    assert outbox.names() == []
+    assert _counted(outbox) == {"day": _DAY, "files": 2, "bytes": 100}
+
+
+def test_metadata_entries_are_delivered_while_the_registration_budget_is_spent(outbox, clock, small_registration_budget):
+    outbox.put_budget(_budget_of(3, 6), _REGISTRATION_BUDGET)
+    github_outbox.enqueue([_entry("one"), _METADATA_ENTRY, _entry("two")])
+    deliverer = _Deliverer()
+
+    assert github_outbox.flush(deliverer).handled == 3
+
+    assert deliverer.paths == [_METADATA_ENTRY.path]
+    assert _counted(outbox) == {"day": _DAY, "files": 3, "bytes": 6}
+    assert outbox.budget() is None
+
+
+def test_the_registration_budget_starts_again_the_next_day(outbox, clock, small_registration_budget):
+    outbox.put_budget(_budget_of(3, 6), _REGISTRATION_BUDGET)
+    github_outbox.enqueue([_entry("one")])
+    deliverer = _Deliverer()
+
+    assert github_outbox.flush(deliverer).handled == 1
+    assert deliverer.paths == []
+
+    clock.now += 24 * 60 * 60
+    github_outbox.enqueue([_entry("two")])
+
+    assert github_outbox.flush(deliverer).handled == 1
+    assert deliverer.paths == [_path("two")]
+    assert _counted(outbox) == {"day": "1970-01-13", "files": 1, "bytes": 2}
+
+
+def test_registrations_stay_queued_and_every_flusher_backs_off_while_their_budget_cannot_be_read(outbox, clock):
+    outbox.break_budget(_REGISTRATION_BUDGET)
+    github_outbox.enqueue([_entry("one"), _entry("two")])
+    deliverer = _Deliverer()
+
+    run = github_outbox.flush(deliverer)
+
+    assert run == github_outbox.FlushRun(0, clock.now + github_outbox.BACKOFF_SECONDS)
+    assert deliverer.paths == []
+    assert _attempts(outbox) == {_path("one"): 0, _path("two"): 0}
+
+
+def test_registrations_whose_budget_cannot_be_read_are_passed_over_when_metadata_after_them_is_delivered(outbox, clock):
+    outbox.break_budget(_REGISTRATION_BUDGET)
+    github_outbox.enqueue([_entry("one"), _METADATA_ENTRY])
+    deliverer = _Deliverer()
+
+    assert github_outbox.flush(deliverer).handled == 1
+
+    assert deliverer.paths == [_METADATA_ENTRY.path]
+    assert _attempts(outbox) == {_path("one"): 1}
+
+
+def test_a_delivered_registration_that_cannot_be_counted_is_removed_with_a_warning(outbox, clock, monkeypatch, caplog):
+    def _cannot_write(self, name, change):
+        raise OSError("the budget cannot be written")
+
+    monkeypatch.setattr(outbox.backend, "update_budget", _cannot_write)
+    github_outbox.enqueue([_entry("one")])
+    deliverer = _Deliverer()
+
+    with caplog.at_level(logging.WARNING, logger=github_outbox.__name__):
+        assert github_outbox.flush(deliverer).handled == 1
+
+    assert deliverer.paths == [_path("one")]
+    assert outbox.names() == []
+    assert _warnings(caplog) == [
+        "Delivered logs/unknown/one.json to the credential log but could not count it in today's registration budget:"
+        " the budget cannot be written"
+    ]
+
+
+def test_a_registration_dropped_past_its_budget_counts_no_attempt_on_entries_before_it(outbox, clock, small_registration_budget):
+    outbox.put_budget(_budget_of(3, 6), _REGISTRATION_BUDGET)
+    github_outbox.enqueue([_METADATA_ENTRY, _entry("one")])
+    deliverer = _Deliverer({_METADATA_ENTRY.path: Delivery.UNAVAILABLE})
+
+    assert github_outbox.flush(deliverer).handled == 1
+
+    assert deliverer.paths == [_METADATA_ENTRY.path]
+    assert outbox.entries() == [_METADATA_ENTRY]
+
+
+def test_the_registration_budget_is_one_object_beside_the_outbox_s_entries(bucket_outbox, clock):
+    github_outbox.enqueue([_entry("one")])
+    github_outbox.flush(_Deliverer())
+
+    assert bucket_outbox.bucket.content_types["github-outbox/registration-budget"] == "application/json"
+    assert sorted(bucket_outbox.bucket.objects) == ["github-outbox/lease", "github-outbox/registration-budget"]
+
+
+def test_the_local_registration_budget_is_a_file_of_the_outbox_folder_written_once_one_is_delivered(local_outbox, clock):
+    github_outbox.enqueue([_entry("one")])
+    github_outbox.flush(_Deliverer({_path("one"): Delivery.UNAVAILABLE}))
+
+    assert ".registration-budget" not in os.listdir(local_outbox.root)
+
+    clock.now += github_outbox.BACKOFF_SECONDS
+    github_outbox.flush(_Deliverer())
+
+    assert sorted(os.listdir(local_outbox.root)) == [
+        ".gitignore", ".lease", ".registration-budget", ".registration-budget.lock"
+    ]
+
+
+def test_an_entry_dropped_past_the_registration_budget_is_named_on_one_line(outbox, clock, monkeypatch, caplog):
+    monkeypatch.setattr(github_outbox, "REGISTRATIONS_A_DAY", 0)
+    github_outbox.enqueue([_FORGED_ENTRY._replace(kind="registration")])
+
+    with caplog.at_level(logging.WARNING, logger=github_outbox.__name__):
+        assert github_outbox.flush(_Deliverer()).handled == 1
+
+    one_line_naming(caplog, github_outbox.__name__, _FORGED_ENTRY.path)
 
 
 def test_the_outbox_folder_is_its_setting_else_under_the_instance(monkeypatch):
@@ -839,9 +1059,11 @@ def test_a_lease_that_cannot_be_given_back_lapses_by_itself(bucket_outbox, monke
     writes = []
 
     def _second_write_fails(*args, **kwargs):
-        writes.append(args)
-        if len(writes) == 2:
-            raise OSError("bucket unavailable")
+        # The lease's writes only: the delivered registration's count is written between them.
+        if args[0] == "github-outbox/lease":
+            writes.append(args)
+            if len(writes) == 2:
+                raise OSError("bucket unavailable")
         return upload(*args, **kwargs)
 
     monkeypatch.setattr(github_outbox.cloud, "upload_bytes_at_generation", _second_write_fails)

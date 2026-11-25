@@ -178,12 +178,17 @@ time, RP ID, AAGUID, MDS device name, attestation object and the four checks), a
 file whole under `metadata/`, unless it is over 1 MiB (`MAX_LOGGED_METADATA_BYTES`: a file of
 one statement fits, and a request without a cookie gets a namespace of its own, so the upload
 quotas do not bound what the log keeps), which is not copied, with a warning naming it. At most
-50 metadata files and 8 MiB of them are copied a day (UTC), counted when they are queued, in one
-object beside the outbox written by compare-and-swap (`github_outbox.take_metadata_budget`): past
-it, or while the budget cannot be read or written, an upload's files are not copied, with one
-warning, and the upload goes on. The budget is one for all visitors, so whoever spends it keeps
-that day's later uploads out of the log; the uploads themselves are unaffected. The log is on only
-with a `GITHUB_TOKEN`, and `ENABLE_GITHUB_LOGGING=0` turns it off.
+50 metadata files and 8 MiB of them are copied a day (UTC), counted when they are queued, and at
+most 1,000 registrations and 64 MiB of them, counted when they are delivered, each in one object
+beside the outbox written by compare-and-swap (`github_outbox.take_metadata_budget`;
+`github_outbox._delivered`). Past its budget, or while the budget cannot be read or written, an
+upload's files are not queued, with one warning, and the upload goes on. Past its budget a
+registration's entry is dropped from the outbox before GitHub is asked, with a warning naming it;
+while the budget cannot be read, the entry stays queued, as one GitHub cannot take does, and a
+delivery whose count cannot be written is warned about. Each budget is one for all visitors, so
+whoever spends it keeps that day's later uploads or registrations out of the log until 00:00 UTC;
+what visitors save is unaffected. The log is on only with a
+`GITHUB_TOKEN`, and `ENABLE_GITHUB_LOGGING=0` turns it off.
 
 No request waits for GitHub. Once a registration's record is saved
 (`record_registration_event`), or once an uploaded file has an entry saved
@@ -193,9 +198,10 @@ not copied), the file is written to an **outbox** with the path it lands at, fix
 the visitor's error.
 
 - **Where entries wait.** On Cloud Storage under `github-outbox/` (`entries/<id>`, a `lease`
-  object and the `metadata-budget`), outside `user-data/`, so the idle sweep never removes them;
-  locally in `FIDO_SERVER_GITHUB_OUTBOX_DIR`, else `instance/github-outbox` (`<id>.entry`,
-  `.lease` and `.metadata-budget`).
+  object, the `metadata-budget` and the `registration-budget`), outside `user-data/`, so the idle
+  sweep never removes them; locally in `FIDO_SERVER_GITHUB_OUTBOX_DIR`, else
+  `instance/github-outbox` (`<id>.entry`, `.lease`, `.metadata-budget` and
+  `.registration-budget`).
   An entry is a line of JSON (kind, path, commit message, and `attempts`, its failed attempts,
   once it has any: an entry without it has none) and the file's bytes. Ids begin with the time
   they were queued, so entries are delivered oldest first.
@@ -204,7 +210,10 @@ the visitor's error.
   path; a listing that fails is warned about and the entry written anyway. Two requests at
   once can both pass the bound, as with the quotas. Uploads queue at most the day's metadata
   budget, 50 entries and 8 MiB of file content, so while the outbox drains they cannot fill it
-  ahead of registrations, and they add at most 50 files a day to the repository.
+  ahead of registrations. Registrations are bounded only by this bound when they are queued, and
+  past their budget dropped as their turn comes, without a GitHub call: a flood of registrations
+  can keep the outbox full, and later entries out of it, while it lasts. The budgets let the log
+  grow by about 1,050 files a day at most.
 - **What delivers them.** `github_outbox.flush`, on a worker thread that requests start
   (`schedule_flush`): one before each request at most every 30 s per process
   (`github_mirror.init_app`), and one at once when a request has queued an entry. On Cloud Run

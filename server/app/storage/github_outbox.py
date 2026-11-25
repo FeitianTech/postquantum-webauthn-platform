@@ -14,9 +14,10 @@ the idle sweep removes: each entry ``github-outbox/entries/<id>``, and the lease
 ``github-outbox/lease``, written only at the generation it was read at, as the stores write.
 Locally it is a folder (``FIDO_SERVER_GITHUB_OUTBOX_DIR``, else ``instance/github-outbox``): each
 entry ``<id>.entry``, and the lease an ``flock`` on ``.lease``. Either lease also keeps when the
-outbox may next be tried. Beside them, the day's budget of uploaded metadata queued
-(``take_metadata_budget``): ``github-outbox/metadata-budget``, or ``.metadata-budget``, written by
-compare-and-swap. docs/STORAGE.md has the rules.
+outbox may next be tried. Beside them, the day's budgets, written by compare-and-swap: of uploaded
+metadata queued (``take_metadata_budget``), ``github-outbox/metadata-budget`` or ``.metadata-budget``,
+and of registrations delivered (``_delivered``), ``github-outbox/registration-budget`` or
+``.registration-budget``. docs/STORAGE.md has the rules.
 """
 from __future__ import annotations
 
@@ -62,6 +63,10 @@ MAX_BYTES = 256 * 1024 * 1024
 # cookie gets a namespace of its own, so the upload quotas bound nothing the log keeps.
 METADATA_FILES_A_DAY = 50
 METADATA_BYTES_A_DAY = 8 * 1024 * 1024
+# The registrations delivered in a day (UTC), for all visitors together, counted only when
+# delivered: an outage spends nothing, and one past it is dropped before GitHub is asked.
+REGISTRATIONS_A_DAY = 1_000
+REGISTRATION_BYTES_A_DAY = 64 * 1024 * 1024
 # How many times a request reads the budget again when another request wrote it first.
 BUDGET_TRIES = 5
 # How long a run holds the lease, and how much of it must be left to start a delivery: a run
@@ -89,8 +94,8 @@ _LOCAL_SUFFIX = ".entry"
 _LOCAL_LEASE = ".lease"
 _CLOUD_ENTRIES = "github-outbox/entries/"
 _CLOUD_LEASE = "github-outbox/lease"
-_LOCAL_BUDGET = ".metadata-budget"
-_CLOUD_BUDGET = "github-outbox/metadata-budget"
+_METADATA_BUDGET = "metadata-budget"
+_REGISTRATION_BUDGET = "registration-budget"
 
 
 class OutboxEntry(NamedTuple):
@@ -207,6 +212,8 @@ def _budget_used(data: bytes | None, day: str) -> tuple[int, int]:
 class _LocalOutbox:
     """The outbox in a local folder; its lease an ``flock``, which a stopped process gives up."""
 
+    budget_prefix = "."
+
     def __init__(self, root: str) -> None:
         self.root = root
 
@@ -247,11 +254,11 @@ class _LocalOutbox:
         with contextlib.suppress(FileNotFoundError):
             os.remove(os.path.join(self.root, name))
 
-    def update_budget(self, change: Callable[[bytes | None], bytes | None]) -> bool:
+    def update_budget(self, name: str, change: Callable[[bytes | None], bytes | None]) -> bool:
         common.make_store_directory(self.root, self.root)
-        path = os.path.join(self.root, _LOCAL_BUDGET)
+        path = os.path.join(self.root, self.budget_prefix + name)
         with common.file_lock(path):
-            written = change(self.read(_LOCAL_BUDGET)[0])
+            written = change(self.read(self.budget_prefix + name)[0])
             if written is not None:
                 common.replace_file(path, written)
         return True
@@ -285,6 +292,8 @@ class _LocalOutbox:
 class _CloudOutbox:
     """The outbox in the bucket; its lease an object written only at the generation it was read at."""
 
+    budget_prefix = "github-outbox/"
+
     def held(self) -> tuple[int, int]:
         stats = cloud.list_blob_stats(_CLOUD_ENTRIES)
         return len(stats), sum(stat.size for stat in stats)
@@ -306,13 +315,15 @@ class _CloudOutbox:
     def remove(self, name: str) -> None:
         cloud.delete_blob(name)
 
-    def update_budget(self, change: Callable[[bytes | None], bytes | None]) -> bool:
+    def update_budget(self, name: str, change: Callable[[bytes | None], bytes | None]) -> bool:
         # False when another request wrote the budget after it was read here.
-        data, generation = self.read(_CLOUD_BUDGET)
+        data, generation = self.read(self.budget_prefix + name)
         written = change(data)
         if written is None:
             return True
-        return cloud.upload_bytes_if_generation(_CLOUD_BUDGET, written, generation=generation, content_type="application/json")
+        return cloud.upload_bytes_if_generation(
+            self.budget_prefix + name, written, generation=generation, content_type="application/json"
+        )
 
     @contextlib.contextmanager
     def lease(self, now: float) -> Iterator[Lease]:
@@ -401,23 +412,30 @@ def enqueue(entries: Sequence[OutboxEntry]) -> int:
 
 
 def take_metadata_budget(sizes: Sequence[int]) -> list[bool]:
-    """Take today's (UTC) budget for uploaded metadata files of these sizes, in order: which it took.
+    """Take today's (UTC) budget for uploaded metadata files of these sizes, in order: which it took
+    (``METADATA_FILES_A_DAY``, ``METADATA_BYTES_A_DAY``; ``_take_budget``)."""
 
-    A file is taken while the day's files and bytes stay within ``METADATA_FILES_A_DAY`` and
-    ``METADATA_BYTES_A_DAY``; one that does not fit is not, and a smaller one after it may be. A
-    budget that takes none is not written. Read and written by compare-and-swap, and read again
+    return _take_budget(_METADATA_BUDGET, METADATA_FILES_A_DAY, METADATA_BYTES_A_DAY, sizes)
+
+
+def _take_budget(name: str, most_files: int, most_bytes: int, sizes: Sequence[int]) -> list[bool]:
+    """Take today's (UTC) budget ``name`` for files of these sizes, in order: which it took.
+
+    A file is taken while the day's files and bytes stay within ``most_files`` and ``most_bytes``;
+    one that does not fit is not, and a smaller one after it may be. A budget that takes none is
+    not written. Read and written by compare-and-swap, and read again
     when another request wrote first, up to ``BUDGET_TRIES`` times; raises when it cannot be read
     or written, or past those tries.
     """
 
-    day = datetime.fromtimestamp(time.time(), timezone.utc).date().isoformat()
+    day = _today()
     taken: list[bool] = []
 
     def change(data: bytes | None) -> bytes | None:
         taken.clear()
         files, size = _budget_used(data, day)
         for item in sizes:
-            fits = files < METADATA_FILES_A_DAY and size + item <= METADATA_BYTES_A_DAY
+            fits = files < most_files and size + item <= most_bytes
             if fits:
                 files, size = files + 1, size + item
             taken.append(fits)
@@ -425,19 +443,55 @@ def take_metadata_budget(sizes: Sequence[int]) -> list[bool]:
 
     backend = _backend()
     for _ in range(BUDGET_TRIES):
-        if backend.update_budget(change):
+        if backend.update_budget(name, change):
             return taken
     raise RuntimeError(f"other requests wrote it first {BUDGET_TRIES} times in a row")
 
 
+def _today() -> str:
+    return datetime.fromtimestamp(time.time(), timezone.utc).date().isoformat()
+
+
+def _registration_fits(size: int) -> bool:
+    """Whether today's registration budget has room for an entry of ``size``; read only, and raises
+    when it cannot be read."""
+
+    backend = _backend()
+    files, used = _budget_used(backend.read(backend.budget_prefix + _REGISTRATION_BUDGET)[0], _today())
+    return files < REGISTRATIONS_A_DAY and used + size <= REGISTRATION_BYTES_A_DAY
+
+
 def _delivered(deliver: Callable[[OutboxEntry], Delivery], entry: OutboxEntry) -> Delivery:
+    """``deliver``'s answer; a registration past today's budget is dropped before it, and one delivered
+    is counted after it. Raising (the budget unreadable too) is UNAVAILABLE: the entry stays."""
+
+    registration = entry.kind == "registration"
     try:
-        return deliver(entry)
+        if registration and not _registration_fits(len(entry.content)):
+            logger.warning(
+                "Dropped %s from the credential log: today's budget of %s registrations and %s has no room for it;"
+                " it starts again at 00:00 UTC",
+                log_text.client_text(entry.path),
+                f"{REGISTRATIONS_A_DAY:,}",
+                common.describe_size(REGISTRATION_BYTES_A_DAY),
+            )
+            return Delivery.DROPPED
+        delivery = deliver(entry)
     except Exception:
         logger.warning(
             "Could not deliver %s to the credential log; it stays queued", log_text.client_text(entry.path), exc_info=True
         )
         return Delivery.UNAVAILABLE
+    if registration and delivery is Delivery.DELIVERED:
+        try:
+            _take_budget(_REGISTRATION_BUDGET, REGISTRATIONS_A_DAY, REGISTRATION_BYTES_A_DAY, [len(entry.content)])
+        except Exception as exc:
+            logger.warning(
+                "Delivered %s to the credential log but could not count it in today's registration budget: %s",
+                log_text.client_text(entry.path),
+                exc,
+            )
+    return delivery
 
 
 def _count_attempts(backend: _LocalOutbox | _CloudOutbox, passed_over: list[tuple[str, OutboxEntry, int]]) -> int:

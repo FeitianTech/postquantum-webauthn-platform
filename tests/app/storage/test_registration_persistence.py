@@ -6,7 +6,7 @@ import json
 
 from server.app.config import paths
 from server.app.storage import common as storage_common
-from server.app.storage import credentials, github_mirror
+from server.app.storage import credentials, github_mirror, github_outbox
 from tests.app.entry_app import entry_app
 from tests.app.security import ceremony_helpers as ceremony
 from tests.app.storage import fake_github
@@ -81,6 +81,22 @@ def test_a_simple_registration_is_logged_once_its_record_is_saved(monkeypatch, t
     logged = json.loads(github.files[path])
     assert logged["rp_id"] == "localhost"
     assert [logged[check] for check in ("signature_valid", "root_valid", "rp_id_hash_valid", "aaguid_match")] != [None] * 4
+
+
+def test_a_simple_registration_past_the_log_s_budget_is_answered_and_saved_as_before(monkeypatch, tmp_path):
+    github = _logged_registrations(monkeypatch, tmp_path)
+    monkeypatch.setattr(github_outbox, "REGISTRATIONS_A_DAY", 0)
+    client = entry_app().test_client()
+    authenticator = ceremony.Authenticator()
+
+    ceremony.register_simple(client, authenticator)
+
+    # Its entry was queued and then dropped by the flush, before GitHub was asked.
+    assert github.calls == []
+    assert not any((tmp_path / "outbox").glob("*.entry"))
+    assert not (tmp_path / "outbox" / ".registration-budget").exists()
+    signed_in = ceremony.authenticate_simple(client, authenticator, counter=1)
+    assert signed_in.status_code == 200, signed_in.get_json()
 
 
 def test_a_simple_registration_whose_record_is_not_saved_is_not_logged(monkeypatch, tmp_path):
