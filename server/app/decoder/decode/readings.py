@@ -205,7 +205,7 @@ def _is_json_text(data: bytes) -> bool:
 def _is_der_certificate(data: bytes) -> bool:
     try:
         x509.load_der_x509_certificate(data)
-    except ValueError:
+    except (ValueError, x509.InvalidVersion):
         return False
     return True
 

@@ -26,5 +26,5 @@ def summarize(der: Any) -> dict[str, Any]:
             "notValidAfter": certificate.not_valid_after_utc.isoformat(),
             "sha256": certificate.fingerprint(hashes.SHA256()).hex(),
         }
-    except (TypeError, ValueError) as exc:
+    except (TypeError, ValueError, x509.InvalidVersion) as exc:
         return {"error": f"not an X.509 certificate: {exc}"}

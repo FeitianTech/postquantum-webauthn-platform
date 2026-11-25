@@ -34,6 +34,12 @@ def test_a_certificate_is_summarised_by_its_names_validity_and_digest():
             "not an X.509 certificate: oid must be X500_UNIQUE_IDENTIFIER",
             id="unreadable-subject",
         ),
+        # A version field of 0x38 in place of 2 (v3): cryptography raises InvalidVersion, no ValueError.
+        pytest.param(
+            CERTIFICATE.replace(bytes.fromhex("a003020102"), bytes.fromhex("a003020138"), 1),
+            "not an X.509 certificate: 56 is not a valid X509 version",
+            id="invalid-version",
+        ),
         pytest.param("text", "a certificate in x5c is a byte string of DER; this is not", id="no-bytes"),
     ],
 )

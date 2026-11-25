@@ -182,7 +182,7 @@ def _key_kind(der: bytes) -> str:
     try:
         certificate = x509.load_der_x509_certificate(der)
         key = certificate.public_key()
-    except ValueError:
+    except (ValueError, x509.InvalidVersion):
         return "unreadable"
     except UnsupportedAlgorithm:
         oid = certificate.public_key_algorithm_oid.dotted_string

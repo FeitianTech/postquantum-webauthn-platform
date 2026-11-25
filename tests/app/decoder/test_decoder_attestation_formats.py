@@ -341,3 +341,18 @@ def test_a_certificate_malformed_past_its_load_is_shown_as_unreadable(client, le
     assert response.status_code == 200
     (certificate,) = response.get_json()["data"]["attestationStatementDecoded"]["fields"]["x5c"]["certificates"]
     assert certificate["error"].startswith("not an X.509 certificate: error parsing asn1 value")
+
+
+@pytest.mark.parametrize("fmt", ["packed", "fido-u2f", "android-key", "apple"])
+def test_a_certificate_whose_version_cryptography_refuses_is_shown_as_unreadable(client, fmt):
+    leaf = material.certificate(material.ec_key("invalid-version").public_key(), common_name="Leaf", serial=0x5E)
+    # A version field of 0x38 in place of 2 (v3): cryptography raises InvalidVersion, no ValueError.
+    invalid = leaf.replace(bytes.fromhex("a003020102"), bytes.fromhex("a003020138"), 1)
+    statement = {"alg": -7, "sig": b"\x30\x00", "x5c": [invalid]}
+    payload = cbor2.dumps({"fmt": fmt, "attStmt": statement, "authData": PACKED_AUTH_DATA})
+
+    response = client.post("/api/codec", json={"payload": payload.hex()})
+
+    assert response.status_code == 200
+    (certificate,) = response.get_json()["data"]["attestationStatementDecoded"]["fields"]["x5c"]["certificates"]
+    assert certificate["error"] == "not an X.509 certificate: 56 is not a valid X509 version"

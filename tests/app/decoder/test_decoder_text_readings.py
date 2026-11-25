@@ -73,3 +73,14 @@ def test_a_der_certificate_sent_as_base64url_is_the_certificate_it_holds():
     assert answer["type"] == "X.509 certificate"
     assert answer["data"]["raw"] == GSR2_DER.hex()
     assert answer["data"]["parsedX5c"]["subject"] == decode_payload_text(_pem(GSR2_DER))["data"]["parsedX5c"]["subject"]
+
+
+@pytest.mark.parametrize("spelling", [bytes.hex, lambda der: base64.b64encode(der).decode()], ids=["hex", "base64"])
+def test_a_der_certificate_whose_version_cryptography_refuses_is_not_read_as_a_certificate(spelling):
+    # A version field of 0x38 in place of 2 (v3): cryptography raises InvalidVersion, no ValueError.
+    der = GSR2_DER.replace(bytes.fromhex("a003020102"), bytes.fromhex("a003020138"), 1)
+    unreadable = GSR2_DER[:-1]
+
+    answer = decode_payload_text(spelling(der))
+
+    assert answer["type"] == decode_payload_text(spelling(unreadable))["type"] != "X.509 certificate"

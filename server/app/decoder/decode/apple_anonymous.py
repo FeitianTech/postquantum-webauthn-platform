@@ -27,7 +27,7 @@ class _NonceExtension:
 def read_certificate(der: bytes) -> dict[str, Any]:
     try:
         certificate = x509.load_der_x509_certificate(der)
-    except ValueError as exc:
+    except (ValueError, x509.InvalidVersion) as exc:
         return {"error": f"credCert is not DER X.509: {exc}"}
     try:
         extension = certificate.extensions.get_extension_for_oid(x509.ObjectIdentifier(NONCE_OID))
