@@ -29,4 +29,11 @@ describe('a section\'s panel while its chunk loads', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Try again' }));
     expect(onRetry).toHaveBeenCalledTimes(1);
   });
+  it('says the section could not be shown when it threw while rendering, and offers Reload', () => {
+    render(<SectionPlaceholder id="codec" active failed="render" />);
+
+    expect(screen.getByRole('tabpanel')).toHaveAttribute('aria-busy', 'false');
+    expect(screen.getByRole('alert')).toHaveTextContent('This section could not be shown. Reload the page to try again.');
+    expect(screen.getByRole('button', { name: 'Reload' })).toBeVisible();
+  });
 });

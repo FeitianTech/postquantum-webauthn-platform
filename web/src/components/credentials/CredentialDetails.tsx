@@ -1,5 +1,6 @@
 import { type ComponentProps, useEffect, useState } from 'react';
 
+import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { lazyModule, useLazyModule, whenInteractive } from '@/lib/lazyModule';
 
 // The credential details dialog (its levels, the registration's views, the
@@ -13,5 +14,9 @@ export function CredentialDetails(props: Props) {
   const [interactive, setInteractive] = useState(false);
   useEffect(() => whenInteractive(() => setInteractive(true)), []);
   const { module } = useLazyModule(DIALOG, interactive, props.route.path[0] === 'credential');
-  return module ? <module.CredentialDetailDialog {...props} /> : null;
+  return module ? (
+    <ErrorBoundary>
+      <module.CredentialDetailDialog {...props} />
+    </ErrorBoundary>
+  ) : null;
 }

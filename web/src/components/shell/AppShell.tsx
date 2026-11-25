@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { type ReactNode, useEffect, useState } from 'react';
 
 import type { CopyResult } from '@/components/analyze-browser/AnalyzeBrowserDialog';
 import { SavedCredentialsProvider } from '@/components/credentials/useSavedCredentials';
 import { useBrowserAnalysis } from '@/components/analyze-browser/useBrowserAnalysis';
 import { SimpleSection } from '@/components/simple/SimpleSection';
+import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { type LazyModule, lazyModule, useLazyModule, whenInteractive } from '@/lib/lazyModule';
 import { SECTIONS, type SectionId } from '@/lib/sections';
 import { useIsomorphicLayoutEffect } from '@/lib/useIsomorphicLayoutEffect';
@@ -52,6 +53,13 @@ export function AppShell() {
   const [copy, setCopy] = useState<CopyResult | null>(null);
   // What is open belongs to the section shown; the others see nothing open.
   const routeOf = (id: SectionId) => (id === section ? route : CLOSED_ROUTE);
+  // A section that throws while rendering says so in its panel; the header and
+  // the other sections keep working.
+  const guarded = (id: SectionId, node: ReactNode) => (
+    <ErrorBoundary key={id} fallback={<SectionPlaceholder id={id} active={id === section} failed="render" />}>
+      {node}
+    </ErrorBoundary>
+  );
 
   return (
     <SectionNavigationProvider value={go}>
@@ -60,42 +68,40 @@ export function AppShell() {
         <main className="mx-auto w-full max-w-page flex-1 px-4 pt-10 pb-16 sm:px-6 sm:pt-14 lg:px-8">
           <SavedCredentialsProvider>
             {SECTIONS.map((option) =>
-              option.id === 'simple' ? (
-                <SimpleSection key={option.id} active={option.id === section} route={routeOf('simple')} />
+              guarded(option.id, option.id === 'simple' ? (
+                <SimpleSection active={option.id === section} route={routeOf('simple')} />
               ) : option.id === 'advanced' ? (
                 advanced.module ? (
-                  <advanced.module.AdvancedSection
-                    key={option.id}
-                    active={option.id === section}
-                    route={routeOf('advanced')}
-                  />
+                  <advanced.module.AdvancedSection active={option.id === section} route={routeOf('advanced')} />
                 ) : (
-                  <SectionPlaceholder key={option.id} id="advanced" active={option.id === section} failed={advanced.failed} onRetry={advanced.retry} />
+                  <SectionPlaceholder id="advanced" active={option.id === section} failed={advanced.failed} onRetry={advanced.retry} />
                 )
               ) : option.id === 'codec' ? (
                 codec.module ? (
-                  <codec.module.CodecSection key={option.id} active={option.id === section} route={routeOf('codec')} />
+                  <codec.module.CodecSection active={option.id === section} route={routeOf('codec')} />
                 ) : (
-                  <SectionPlaceholder key={option.id} id="codec" active={option.id === section} failed={codec.failed} onRetry={codec.retry} />
+                  <SectionPlaceholder id="codec" active={option.id === section} failed={codec.failed} onRetry={codec.retry} />
                 )
               ) : mds.module ? (
-                <mds.module.MdsSection key={option.id} active={option.id === section} route={routeOf('mds')} />
+                <mds.module.MdsSection active={option.id === section} route={routeOf('mds')} />
               ) : (
-                <SectionPlaceholder key={option.id} id="mds" active={option.id === section} failed={mds.failed} onRetry={mds.retry} />
-              ),
+                <SectionPlaceholder id="mds" active={option.id === section} failed={mds.failed} onRetry={mds.retry} />
+              )),
             )}
           </SavedCredentialsProvider>
         </main>
         <Footer />
         {panel.module ? (
-          <panel.module.AnalyzeBrowserDialog
-            open={browser.open}
-            onClose={browser.close}
-            analysis={browser.analysis}
-            returnFocusTo={browser.returnFocusTo}
-            copy={copy}
-            onCopied={setCopy}
-          />
+          <ErrorBoundary>
+            <panel.module.AnalyzeBrowserDialog
+              open={browser.open}
+              onClose={browser.close}
+              analysis={browser.analysis}
+              returnFocusTo={browser.returnFocusTo}
+              copy={copy}
+              onCopied={setCopy}
+            />
+          </ErrorBoundary>
         ) : null}
       </div>
     </SectionNavigationProvider>

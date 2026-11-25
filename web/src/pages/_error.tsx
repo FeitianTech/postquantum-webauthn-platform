@@ -5,7 +5,8 @@ import { ErrorPage } from '@/components/ErrorPage';
 type Props = { statusCode: number };
 
 // Rendered in the browser when a page throws, in place of Next's default, whose
-// inline styles the CSP would block.
+// inline styles the CSP would block. In the browser there is no status code:
+// that is an error, not a missing page.
 function AppError({ statusCode }: Props) {
   return statusCode === 404 ? (
     <ErrorPage title="Page not found" message="There is no page at this address." />
@@ -15,7 +16,7 @@ function AppError({ statusCode }: Props) {
 }
 
 AppError.getInitialProps = ({ res, err }: NextPageContext): Props => ({
-  statusCode: res?.statusCode ?? err?.statusCode ?? 404,
+  statusCode: res?.statusCode ?? err?.statusCode ?? 500,
 });
 
 export default AppError;

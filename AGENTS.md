@@ -73,7 +73,10 @@ the CSP and the source rules.
 - `src/components/shell/`: the header (title, the four sections, Analyze Browser, GitHub;
   the phone menu sheet below 900 px; it measures itself into `--header-height`), the footer
   (its year kept by `tools/update_footer_year.py`), and `AppShell`, which gives the route only
-  to the section shown (the others get `CLOSED_ROUTE`). Simple is in the page's chunk; Advanced,
+  to the section shown (the others get `CLOSED_ROUTE`) and keeps each section, the credential
+  details dialog and the Analyze Browser panel in an error boundary (`ui/ErrorBoundary.tsx`): one
+  that throws while rendering says so in its place, with Reload, and the rest keeps working.
+  Simple is in the page's chunk; Advanced,
   Codec, MDS and the Analyze Browser panel are chunks of their own (`import()` through
   `lib/lazyModule.ts`): the section the URL names loads at once, behind a `SectionPlaceholder`
   panel, and the rest once the first view is interactive, each then mounted, hidden. So is the

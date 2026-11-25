@@ -1,9 +1,42 @@
 import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
+import type { ComponentType } from 'react';
+
 import { renderApp } from '@/test/app';
-import { keepRecords } from '@/test/credentials';
+import { DETAIL_SCENARIO, keepRecords, savedRecord } from '@/test/credentials';
 import { SNAPSHOT_URL, fixtureRoutes, stubFetch } from '@/test/mds';
+
+// The Codec, the credential details dialog and the Analyze Browser panel, each
+// throwing while rendering once a test names it in `broken`.
+const { broken, breakable } = vi.hoisted(() => {
+  const broken = new Set<string>();
+  function breakable<P extends object>(name: string, Real: ComponentType<P>) {
+    return function Breakable(props: P) {
+      if (broken.has(name)) throw new Error(`${name} broke`);
+      return <Real {...props} />;
+    };
+  }
+  return { broken, breakable };
+});
+vi.mock('@/components/codec/CodecSection', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/components/codec/CodecSection')>();
+  return { ...actual, CodecSection: breakable('codec', actual.CodecSection) };
+});
+vi.mock('@/components/credentials/CredentialDetailDialog', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/components/credentials/CredentialDetailDialog')>();
+  return { ...actual, CredentialDetailDialog: breakable('details', actual.CredentialDetailDialog) };
+});
+vi.mock('@/components/analyze-browser/AnalyzeBrowserDialog', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/components/analyze-browser/AnalyzeBrowserDialog')>();
+  return { ...actual, AnalyzeBrowserDialog: breakable('panel', actual.AnalyzeBrowserDialog) };
+});
+
+/** Expects React to have logged the one render error it caught, `name`'s, and nothing else. */
+function expectOneCaughtError(logged: { mock: { calls: unknown[][] } }, name: string) {
+  expect(logged.mock.calls).toHaveLength(1);
+  expect(logged.mock.calls[0]).toContainEqual(new Error(`${name} broke`));
+}
 
 beforeEach(() => {
   // The MDS section loads the fixture snapshot when it is first shown.
@@ -12,6 +45,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  broken.clear();
 });
 
 describe('the app shell', () => {
@@ -248,5 +282,56 @@ describe('the app shell', () => {
     await waitFor(() => expect(screen.getByRole('tabpanel', { name: 'Simple Authentication' })).toBeVisible());
     expect(window.location.hash).toBe('');
     keepRecords();
+  });
+  it('shows a section that throws while rendering as a notice with Reload, while the header and the others work', async () => {
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => {});
+    broken.add('codec');
+    renderApp('#codec');
+
+    // Its panel, in place of the one the chunk's placeholder was.
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('This section could not be shown. Reload the page to try again.');
+    expect(screen.getByRole('tabpanel', { name: 'Codec' })).toContainElement(alert);
+    expect(within(alert).getByRole('button', { name: 'Reload' })).toBeVisible();
+    expectOneCaughtError(logged, 'codec');
+
+    await userEvent.click(screen.getByRole('tab', { name: 'Simple Authentication' }));
+    expect(screen.getByRole('tabpanel', { name: 'Simple Authentication' })).toHaveTextContent('Register and authenticate with passkeys using default presets.');
+    await userEvent.click(screen.getByRole('tab', { name: 'FIDO MDS Authenticators' }));
+    expect(await screen.findByRole('table', { name: 'FIDO MDS authenticators' })).toBeVisible();
+    await userEvent.click(screen.getByRole('tab', { name: 'Codec' }));
+    expect(screen.getByRole('tabpanel', { name: 'Codec' })).toHaveTextContent('This section could not be shown.');
+    logged.mockRestore();
+  });
+
+  it('shows the credential details that throw while rendering as a notice, and keeps the section', async () => {
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => {});
+    broken.add('details');
+    const record = savedRecord(DETAIL_SCENARIO);
+    keepRecords([record]);
+    renderApp(`#simple/credential/id:${record.credentialIdBase64Url}`);
+
+    const panel = screen.getByRole('tabpanel', { name: 'Simple Authentication' });
+    expect(await within(panel).findByRole('alert')).toHaveTextContent('This part could not be shown. Reload the page to try again.');
+    expect(within(panel).getByRole('button', { name: 'Reload' })).toBeVisible();
+    expect(within(panel).getByRole('heading', { level: 2, name: 'Simple Authentication' })).toBeVisible();
+    expectOneCaughtError(logged, 'details');
+    await userEvent.click(screen.getByRole('tab', { name: 'Codec' }));
+    expect(await screen.findByRole('heading', { level: 2, name: 'Codec' })).toBeVisible();
+    keepRecords();
+    logged.mockRestore();
+  });
+
+  it('shows the Analyze Browser panel that throws while rendering as a notice, and keeps the page', async () => {
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => {});
+    broken.add('panel');
+    renderApp();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Analyze Browser' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('This part could not be shown. Reload the page to try again.');
+    expectOneCaughtError(logged, 'panel');
+    await userEvent.click(screen.getByRole('tab', { name: 'Codec' }));
+    expect(await screen.findByRole('heading', { level: 2, name: 'Codec' })).toBeVisible();
+    logged.mockRestore();
   });
 });
