@@ -18,6 +18,7 @@ from collections.abc import Callable, Mapping
 from typing import Any
 
 from cryptography import x509
+from cryptography.exceptions import UnsupportedAlgorithm
 from cryptography.hazmat.primitives.asymmetric import ec
 
 from ...webauthn import pqc
@@ -179,9 +180,13 @@ def _fido_u2f(att_stmt: Mapping[Any, Any], _auth_data: Any) -> dict[str, Any]:
 
 def _key_kind(der: bytes) -> str:
     try:
-        key = x509.load_der_x509_certificate(der).public_key()
+        certificate = x509.load_der_x509_certificate(der)
+        key = certificate.public_key()
     except ValueError:
         return "unreadable"
+    except UnsupportedAlgorithm:
+        oid = certificate.public_key_algorithm_oid.dotted_string
+        return f"{oid}, a key algorithm the Codec cannot read (section 8.6 requires an EC P-256 key; shown, not judged)"
     if isinstance(key, ec.EllipticCurvePublicKey):
         return f"EC {key.curve.name} (section 8.6 requires P-256; shown, not judged)"
     return f"{type(key).__name__} (section 8.6 requires an EC P-256 key; shown, not judged)"

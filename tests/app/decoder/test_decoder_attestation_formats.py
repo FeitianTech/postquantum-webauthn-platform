@@ -148,6 +148,21 @@ def test_fido_u2f_names_a_certificate_key_that_is_not_p256_or_cannot_be_read():
     assert unreadable["fields"]["x5c"]["certificates"][0]["error"].startswith("not an X.509 certificate: ")
 
 
+def test_fido_u2f_names_a_certificate_key_of_an_algorithm_it_cannot_read(client):
+    leaf = material.certificate(material.ec_key("u2f-unknown-key").public_key(), common_name="U2F", serial=9)
+    # id-ecPublicKey (1.2.840.10045.2.1) declared as 1.2.840.10045.2.9, which cryptography does not know.
+    unknown = leaf.replace(bytes.fromhex("06072a8648ce3d0201"), bytes.fromhex("06072a8648ce3d0209"))
+    auth_data = bytes(32) + b"\x01" + bytes(4)
+    payload = cbor2.dumps({"fmt": "fido-u2f", "attStmt": {"sig": b"\x00", "x5c": [unknown]}, "authData": auth_data})
+
+    response = client.post("/api/codec", json={"payload": payload.hex(), "mode": "decode"})
+
+    assert response.status_code == 200
+    assert response.get_json()["data"]["attestationStatementDecoded"]["fields"]["attestnCertKey"] == (
+        "1.2.840.10045.2.9, a key algorithm the Codec cannot read (section 8.6 requires an EC P-256 key; shown, not judged)"
+    )
+
+
 def test_a_tpm_statement_holding_only_its_version_names_what_it_lacks():
     statement = _statement(attestation_object("tpm", {"ver": "2.0"}, bytes(32) + b"\x01" + bytes(4)))
 

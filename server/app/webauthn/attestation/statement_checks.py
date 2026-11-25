@@ -11,11 +11,19 @@ from ...mds import verifier as mds_verifier
 from . import classical, error_codes, trust
 
 
+def format_name(fmt: Any) -> str:
+    """An attestation object's fmt as text: fido2 keeps any CBOR value there, and one that
+    is not text names no format, so it is named by its type, never by what it holds."""
+
+    return fmt if isinstance(fmt, str) else f"({type(fmt).__name__})"
+
+
 def resolve_signature_validation(
     attestation_object: Any,
     client_data_hash: bytes,
 ) -> dict[str, Any]:
-    attestation_format_value = (attestation_object.fmt or "").lower()
+    fmt = format_name(attestation_object.fmt)
+    attestation_format_value = fmt.lower()
     attestation_result = None
     attestation_errors: list[str] = []
 
@@ -23,7 +31,7 @@ def resolve_signature_validation(
         signature_valid = None
     else:
         try:
-            attestation_cls = Attestation.for_type(attestation_object.fmt)
+            attestation_cls = Attestation.for_type(fmt)
             attestation_instance = attestation_cls()
             attestation_result = attestation_instance.verify(
                 attestation_object.att_stmt,

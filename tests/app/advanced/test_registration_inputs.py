@@ -63,6 +63,22 @@ def test_an_authenticator_selection_that_is_no_object_asks_for_no_resident_key(o
     assert properties["residentKeyRequired"] is False
 
 
+def test_client_extension_results_of_null_are_read_as_none_sent(own_stores):
+    client = entry_app().test_client()
+    begin = client.post("/api/advanced/register/begin", json={"publicKey": advanced_public_key_options(challenge=b"\x74" * 32)})
+    challenge = unb64u(begin.get_json()["publicKey"]["challenge"])
+    credential = {**registration_payload(Authenticator(), challenge=challenge), "clientExtensionResults": None}
+
+    response = client.post(
+        "/api/advanced/register/complete",
+        json={"publicKey": advanced_public_key_options(challenge=challenge), "__credential_response": credential},
+        headers={"Origin": ORIGIN},
+    )
+
+    assert response.status_code == 200, response.get_json()
+    assert response.get_json()["storedCredential"]["properties"]["largeBlobClientOutput"] == {}
+
+
 def test_a_state_whose_relying_party_is_gone_from_the_session_is_not_found():
     client = entry_app().test_client()
     begin = client.post("/api/advanced/register/begin", json={"publicKey": advanced_public_key_options(challenge=b"\x73" * 32)})

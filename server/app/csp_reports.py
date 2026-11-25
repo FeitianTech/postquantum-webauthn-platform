@@ -31,7 +31,7 @@ import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
-from urllib.parse import urlsplit
+from urllib.parse import SplitResult, urlsplit
 
 logger = logging.getLogger(__name__)
 
@@ -54,6 +54,14 @@ def _clean(text: str) -> str:
     return _UNPRINTABLE.sub("?", text)[:FIELD_LIMIT] or "-"
 
 
+def _split(url: str) -> SplitResult | None:
+    try:
+        return urlsplit(url)
+    except ValueError:
+        # Text urlsplit refuses (an unbalanced bracket in the host): nothing to read.
+        return None
+
+
 def _directive(value: Any) -> str:
     # CSP2's violated-directive carries its sources too ("script-src 'self'").
     words = value.split() if isinstance(value, str) else []
@@ -71,7 +79,9 @@ def _blocked(value: Any, sample: Any) -> str:
             if sink:
                 return _clean(f"{value}({sink})")
         return _clean(value)
-    parts = urlsplit(value)
+    parts = _split(value)
+    if parts is None:
+        return "-"
     if parts.scheme in ("http", "https") and parts.hostname:
         host = parts.netloc.rpartition("@")[2]
         return _clean(f"{parts.scheme}://{host}{parts.path}")
@@ -82,7 +92,9 @@ def _blocked(value: Any, sample: Any) -> str:
 def _path(value: Any) -> str:
     if not isinstance(value, str) or not value.strip():
         return "-"
-    parts = urlsplit(value.strip())
+    parts = _split(value.strip())
+    if parts is None:
+        return "-"
     if parts.scheme in ("http", "https"):
         return _clean(parts.path or "/")
     # about:blank (the MDS raw-data popup) and the like.

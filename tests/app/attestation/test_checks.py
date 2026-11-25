@@ -226,6 +226,28 @@ def test_an_unknown_format_is_not_checked_and_says_only_that_it_is_unsupported(m
     assert result["errors"] == ['unsupported_attestation: Attestation format "vendor-unknown" is not supported']
 
 
+@pytest.mark.parametrize(("fmt", "named"), [(7, "(int)"), ({"none": 1}, "(dict)"), (True, "(bool)"), (b"none", "(bytes)")])
+def test_a_format_that_is_not_text_is_unsupported_and_named_by_its_type(monkeypatch, fmt, named):
+    challenge = b"challenge"
+    rp_id = "example.com"
+    auth_data = AuthData(rp_id=rp_id, flags=AuthData.FLAG.UP | AuthData.FLAG.UV | AuthData.FLAG.AT)
+    client_data = ClientData(challenge=challenge, origin="https://example.com")
+    attestation_object = SimpleNamespace(fmt=fmt, auth_data=auth_data, att_stmt={})
+    registration = fido2_stand_ins.registration(attestation_object, client_data)
+    monkeypatch.setattr(RegistrationResponse, "from_dict", lambda _value: registration)
+
+    result = _perform_checks(
+        response={"raw": "value"},
+        state={"challenge": b64u(challenge), "user_verification": "required"},
+        public_key_options={"pubKeyCredParams": [{"alg": -7}]},
+        rp_id=rp_id,
+    )
+
+    assert result["attestation_format"] == named
+    assert result["signature_valid"] is None
+    assert result["errors"] == [f'unsupported_attestation: Attestation format "{named}" is not supported']
+
+
 def test_perform_attestation_checks_warns_when_metadata_verifier_unavailable(monkeypatch):
     challenge = b"metadata-unavailable"
     rp_id = "example.com"

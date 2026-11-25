@@ -145,6 +145,19 @@ def test_each_field_is_cut_to_one_printable_token(client, lines, field, value, e
     assert len(line) < 3 * csp_reports.FIELD_LIMIT + 60
 
 
+def test_a_url_that_cannot_be_split_is_logged_as_a_dash(client, lines):
+    report_uri = {"csp-report": {"effective-directive": "img-src", "blocked-uri": "http://[::1/x.png",
+                                 "document-uri": "https://[example.test/"}}
+    report_to = [{"type": "csp-violation", "body": {"effectiveDirective": "img-src", "blockedURL": "https://example]/",
+                                                   "documentURL": "http://[/"}}]
+
+    first = post(client, report_uri)
+    second = post(client, report_to, content_type="application/reports+json")
+
+    assert (first.status_code, second.status_code) == (204, 204)
+    assert lines() == ["CSP violation: directive=img-src blocked=- path=-"] * 2
+
+
 def test_a_csp2_violated_directive_is_cut_to_its_name(client, lines):
     body = {"csp-report": {"violated-directive": "script-src 'self'", "blocked-uri": "eval",
                            "document-uri": "http://localhost:5000/"}}

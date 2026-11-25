@@ -136,6 +136,18 @@ def test_a_credential_whose_algorithm_was_not_offered_is_refused(credential_stor
     assert list((tmp_path / "credentials").rglob("*.json")) == []
 
 
+def test_client_extension_results_of_null_are_read_as_none_sent(credential_store):
+    client = entry_app().test_client()
+    begin = client.post(f"/api/register/begin?email={EMAIL}", json={"credentials": []})
+    challenge = unb64u(begin.get_json()["publicKey"]["challenge"])
+    credential = {**registration_payload(Authenticator(), challenge=challenge), "clientExtensionResults": None}
+
+    complete = client.post(f"/api/register/complete?email={EMAIL}", json=credential, headers={"Origin": ORIGIN})
+
+    assert complete.status_code == 200, complete.get_json()
+    assert complete.get_json()["storedCredential"]["properties"]["largeBlobClientOutput"] == {}
+
+
 def test_a_new_visitors_begin_mints_the_namespace_its_complete_stores_under(credential_store):
     client = entry_app().test_client()
     begin = client.post(f"/api/register/begin?email={EMAIL}", json={"credentials": []})

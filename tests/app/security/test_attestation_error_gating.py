@@ -13,6 +13,7 @@ import json
 import uuid
 
 from cryptography.hazmat.primitives.asymmetric import ec
+from fido2 import cbor
 
 from server.app.mds import verifier as mds_verifier
 from tests.app.characterization import material
@@ -23,6 +24,7 @@ from .ceremony_helpers import (
     ORIGIN,
     Authenticator,
     advanced_public_key_options,
+    b64u,
     complete_simple_registration,
     registration_payload,
     unb64u,
@@ -357,3 +359,49 @@ def test_an_authenticator_whose_only_mds_entry_is_revoked_is_a_simple_warning_sa
         "Revoked",
         "FIDO Certified L1 • Fixture Revoked Key • (FIDO20020230110005)",
     )
+
+
+def _with_format(payload: dict, fmt: object) -> dict:
+    """``payload`` with its attestation object's fmt replaced by ``fmt``."""
+
+    statement = cbor.decode(unb64u(payload["response"]["attestationObject"]))
+    payload["response"]["attestationObject"] = b64u(cbor.encode({**statement, "fmt": fmt}))
+    return payload
+
+
+def test_a_simple_registration_whose_format_is_not_text_is_refused_as_unsupported(simple_storage):
+    client = entry_app().test_client()
+    begin = client.post("/api/register/begin?email=user@example.com", json={"credentials": []})
+    challenge = unb64u(begin.get_json()["publicKey"]["challenge"])
+
+    response = client.post(
+        "/api/register/complete?email=user@example.com",
+        json=_with_format(registration_payload(Authenticator(), challenge=challenge), 7),
+        headers={"Origin": ORIGIN},
+    )
+
+    assert response.status_code == 400
+    assert response.get_json()["attestationErrors"] == ['unsupported_attestation: Attestation format "(int)" is not supported']
+    assert simple_storage == {}
+
+
+def test_an_advanced_registration_whose_format_is_not_text_completes_and_reports_it(advanced_storage):
+    client = entry_app().test_client()
+    begin = client.post("/api/advanced/register/begin", json={"publicKey": advanced_public_key_options(challenge=b"\x52" * 32)})
+    server_challenge = unb64u(begin.get_json()["publicKey"]["challenge"])
+
+    complete = client.post(
+        "/api/advanced/register/complete",
+        json={
+            "publicKey": advanced_public_key_options(challenge=server_challenge),
+            "__credential_response": _with_format(
+                registration_payload(Authenticator(), challenge=server_challenge), {"fmt": "none"}
+            ),
+        },
+        headers={"Origin": ORIGIN},
+    )
+
+    assert complete.status_code == 200, complete.get_json()
+    payload = complete.get_json()
+    assert payload["attestationErrors"] == ['unsupported_attestation: Attestation format "(dict)" is not supported']
+    assert payload["attestationFormat"] == "(dict)"

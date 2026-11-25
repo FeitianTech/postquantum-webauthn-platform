@@ -20,6 +20,7 @@ from . import (
     certificate_public_keys,
     certificate_summary,
     formatting,
+    statement_checks,
 )
 from .constants import (
     EXTENSION_DISPLAY_METADATA,
@@ -407,7 +408,7 @@ def extract_attestation_details(
         return _no_attestation_details()
 
     attestation_object = registration.response.attestation_object
-    attestation_format = getattr(attestation_object, "fmt", None) or "none"
+    attestation_format = statement_checks.format_name(attestation_object.fmt) or "none"
     return (
         attestation_format,
         registration.response.client_data.b64,

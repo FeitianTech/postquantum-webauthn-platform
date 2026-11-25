@@ -83,10 +83,10 @@ def attestation_inputs(response: Any) -> dict[str, Any]:
 
     attestation_object_b64 = credential_response.get("attestationObject")
     client_data_json_b64 = credential_response.get("clientDataJSON")
-    client_extension_results = (
-        parsed_extension_results
-        if parsed_extension_results
-        else (response.get("clientExtensionResults", {}) if isinstance(response, dict) else {})
+    # A member that is not an object (null included) is read as no extension results.
+    sent_extension_results = response.get("clientExtensionResults") if isinstance(response, dict) else None
+    client_extension_results = parsed_extension_results or (
+        sent_extension_results if isinstance(sent_extension_results, Mapping) else {}
     )
 
     return {

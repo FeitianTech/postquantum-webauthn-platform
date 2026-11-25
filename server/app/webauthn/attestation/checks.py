@@ -63,7 +63,7 @@ def perform_attestation_checks(
 
     client_data = registration.response.client_data
     attestation_object = registration.response.attestation_object
-    results["attestation_format"] = attestation_object.fmt
+    results["attestation_format"] = statement_checks.format_name(attestation_object.fmt)
     # The authenticator data the caller already holds, else the attestation object's.
     auth_data_obj = auth_data if isinstance(auth_data, AuthenticatorData) else attestation_object.auth_data
 
