@@ -12,6 +12,7 @@ import {
 } from '../shared/native-json.js';
 import { FailedResponseError, readFailedResponse } from '../shared/failed-response.js';
 import { answerFindings, hasFindings } from '../shared/registration-findings.js';
+import { securityErrorText } from '../shared/security-error.js';
 import {
     getSimpleCredentialsForEmail,
     prepareCredentialsForServer,
@@ -104,7 +105,6 @@ export function refusedRegistrationResult(error) {
 
 const ERROR_NAME_TEXT = {
     NotAllowedError: 'User cancelled or authenticator not available',
-    SecurityError: 'Security error - check your connection and try again',
     NotSupportedError: 'WebAuthn is not supported in this browser',
 };
 
@@ -126,6 +126,9 @@ export function ceremonyErrorText(error, ceremony) {
     const name = error?.name;
     if (name === 'InvalidStateError') {
         return INVALID_STATE_TEXT[ceremony];
+    }
+    if (name === 'SecurityError') {
+        return securityErrorText(error);
     }
     if (Object.hasOwn(ERROR_NAME_TEXT, name)) {
         return ERROR_NAME_TEXT[name];

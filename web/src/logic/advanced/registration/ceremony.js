@@ -8,6 +8,7 @@ import { createCredential, parseCreationOptions, requireNativeJson } from '../..
 import { bufferSourceToUint8Array, bytesToHex } from '../../shared/bytes.js';
 import { FailedResponseError, readFailedResponse } from '../../shared/failed-response.js';
 import { answerFindings } from '../../shared/registration-findings.js';
+import { securityErrorText } from '../../shared/security-error.js';
 /** @import { CeremonyResultInput } from '../../shared/ceremony-result.js' */
 /** @import { SavedCredential } from '../../credentials/saved-list.js' */
 
@@ -66,7 +67,6 @@ const AUTHENTICATOR_ERROR_NAMES = new Set([
 const REGISTRATION_ERROR_TEXT = {
     NotAllowedError: 'User cancelled or authenticator not available',
     InvalidStateError: 'Authenticator is already registered for this account',
-    SecurityError: 'Security error - check your connection and try again',
 };
 
 /**
@@ -148,6 +148,8 @@ export function advancedRegistrationFailureText(error, context = {}) {
         : String(error);
     if (Object.hasOwn(REGISTRATION_ERROR_TEXT, errorName)) {
         errorMessage = REGISTRATION_ERROR_TEXT[errorName];
+    } else if (errorName === 'SecurityError') {
+        errorMessage = securityErrorText(error);
     }
 
     // Only a refusal from the authenticator can be about what it supports; a

@@ -8,6 +8,7 @@ import { prepareAdvancedCredentialsForServer } from '../../credentials/storage/l
 import { getAssertion, parseRequestOptions, requireNativeJson } from '../../shared/native-json.js';
 import { FailedResponseError, readFailedResponse } from '../../shared/failed-response.js';
 import { answerFindings } from '../../shared/registration-findings.js';
+import { securityErrorText } from '../../shared/security-error.js';
 import { ADVANCED_CEREMONY_TEXT } from '../registration/ceremony.js';
 
 /** @import { CeremonyResultInput } from '../../shared/ceremony-result.js' */
@@ -40,7 +41,6 @@ export const ADVANCED_ASSERTION_TEXT = {
 const AUTHENTICATION_ERROR_TEXT = {
     NotAllowedError: 'User cancelled or no compatible authenticator detected',
     InvalidStateError: 'Invalid authenticator state - please try again',
-    SecurityError: 'Security error - check your connection and try again',
 };
 
 /**
@@ -49,9 +49,12 @@ const AUTHENTICATION_ERROR_TEXT = {
  * @returns {string}
  */
 export function advancedAuthenticationFailureText(error) {
-    const message = Object.hasOwn(AUTHENTICATION_ERROR_TEXT, error.name)
-        ? AUTHENTICATION_ERROR_TEXT[error.name]
-        : error.message;
+    let message = error.message;
+    if (Object.hasOwn(AUTHENTICATION_ERROR_TEXT, error.name)) {
+        message = AUTHENTICATION_ERROR_TEXT[error.name];
+    } else if (error.name === 'SecurityError') {
+        message = securityErrorText(error);
+    }
     return `Advanced authentication failed: ${message}`;
 }
 

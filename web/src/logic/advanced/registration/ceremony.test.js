@@ -337,7 +337,7 @@ describe('advancedRegistrationFailureText', () => {
     ]).toEqual([
       'Credential registration failed: User cancelled or authenticator not available',
       'Credential registration failed: Authenticator is already registered for this account',
-      'Credential registration failed: Security error - check your connection and try again',
+      'Credential registration failed: The browser refused the RP ID for this page: This is an invalid domain.',
     ]);
   });
 
@@ -349,7 +349,7 @@ describe('advancedRegistrationFailureText', () => {
 
   it('says nothing of what the authenticator supports when the refusal was not the authenticator\'s', () => {
     expect(advancedRegistrationFailureText(new DOMException('This is an invalid domain.', 'SecurityError'), context)).toBe(
-      'Credential registration failed: Security error - check your connection and try again',
+      'Credential registration failed: The browser refused the RP ID for this page: This is an invalid domain.',
     );
     const failure = new FailedResponseError({ text: 'Username is required in user.name' });
     expect(advancedRegistrationFailureText(failure, context)).toBe('Credential registration failed: Username is required in user.name');

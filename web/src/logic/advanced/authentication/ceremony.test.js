@@ -91,8 +91,8 @@ describe('the request', () => {
     expect(advancedAuthenticationFailureText(named('InvalidStateError'))).toBe(
       'Advanced authentication failed: Invalid authenticator state - please try again',
     );
-    expect(advancedAuthenticationFailureText(named('SecurityError'))).toBe(
-      'Advanced authentication failed: Security error - check your connection and try again',
+    expect(advancedAuthenticationFailureText(new DOMException('The operation is insecure.', 'SecurityError'))).toBe(
+      'Advanced authentication failed: The browser refused the RP ID for this page: The operation is insecure.',
     );
     expect(advancedAuthenticationFailureText(new Error('odd'))).toBe('Advanced authentication failed: odd');
   });

@@ -288,7 +288,7 @@ describe('keeping a registration', () => {
 describe('what a failed ceremony says', () => {
   it('names the browser\'s refusals', () => {
     expect(ceremonyErrorText({ name: 'NotAllowedError' }, 'registration')).toBe('User cancelled or authenticator not available');
-    expect(ceremonyErrorText({ name: 'SecurityError' }, 'authentication')).toBe('Security error - check your connection and try again');
+    expect(ceremonyErrorText({ name: 'SecurityError' }, 'authentication')).toBe('The browser refused the RP ID for this page');
     expect(ceremonyErrorText({ name: 'NotSupportedError' }, 'registration')).toBe('WebAuthn is not supported in this browser');
   });
 
