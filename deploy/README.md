@@ -25,6 +25,80 @@ gcloud run services update-traffic pqcwebauthn --project feitian-project --regio
 
 This holds until the next push to `main`, whose build deploys main's tip again: revert the bad commit on `main` next. A build of an older commit no longer takes the traffic by itself, so roll back with `update-traffic`, never by building an old commit again.
 
+## When production misbehaves
+
+The service's logs are in Cloud Logging (in the console: Cloud Run, `pqcwebauthn`, Logs). Cloud Run logs each request, a 5xx as `ERROR`; the app writes its own lines to stderr as `[time] LEVEL in module: message`: a refused ceremony is one `WARNING` line, the app's own failure a 500 with an `ERROR in app: Exception on <path> [<method>]` traceback, and where the MDS snapshot came from and the credential log's deliveries are `INFO` lines. A build's log prefixes each line with its step (`Step #5 - "Deploy"`); Deploy's lines say which check did not pass, or that main moved on.
+
+```bash
+gcloud logging read 'resource.type="cloud_run_revision" AND resource.labels.service_name="pqcwebauthn" AND (httpRequest.status>=500 OR log_id("run.googleapis.com/stderr"))' \
+  --project feitian-project --freshness=1h --limit 100 --format='value(timestamp,httpRequest.status,httpRequest.requestUrl,textPayload)'
+gcloud builds list --project feitian-project --region global --limit 5
+gcloud builds log <build> --project feitian-project --region global
+```
+
+To undo a bad deploy, see [Rolling back](#rolling-back). To run again what failed for no fault of the commit, rerun the GitHub job, then build main's tip again:
+
+```bash
+gh run list --repo FeitianTech/postquantum-webauthn-platform --commit <full sha>
+gh run rerun <run> --repo FeitianTech/postquantum-webauthn-platform --failed
+gcloud builds triggers run 340c8d13-cf47-4905-9acb-e85078ec7355 --project feitian-project --region global --branch main
+```
+
+Run these once, in your own terminal, so that an e-mail reaches the maintainer when the site is down or erroring, a build fails, or the month's spending passes half the budget, all of it, or is forecast to. By Google's pricing pages the three alert conditions cost at most about US$1.25 a month, and the uptime checks stay within their free allowance. Their two requests a minute keep an instance warm, so the cold starts [Measuring cold starts](#measuring-cold-starts) describes after a quiet spell become rare.
+
+```bash
+PROJECT=feitian-project
+ALERT_EMAIL=maintainer@example.com   # set these two first
+BUDGET=20                            # a month, in the billing account's currency
+BILLING_ACCOUNT=$(gcloud billing projects describe $PROJECT --format 'value(billingAccountName)')
+
+gcloud services enable monitoring.googleapis.com pubsub.googleapis.com billingbudgets.googleapis.com --project $PROJECT
+CHANNEL=$(gcloud beta monitoring channels create --project $PROJECT --display-name "pqcwebauthn maintainer" \
+  --type email --channel-labels email_address=$ALERT_EMAIL --format 'value(name)')
+
+# Every 5 minutes from six regions; the MDS answer must list entries, as the deploy's check does.
+gcloud monitoring uptime create "webauthndev.com /" --project $PROJECT --protocol https --validate-ssl true \
+  --resource-labels host=webauthndev.com,project_id=$PROJECT --path / --period 5
+gcloud monitoring uptime create "webauthndev.com MDS" --project $PROJECT --protocol https --validate-ssl true \
+  --resource-labels host=webauthndev.com,project_id=$PROJECT --path /api/mds/metadata/info --period 5 \
+  --matcher-type matches-regex --matcher-content '"entryCount": *[1-9]'
+
+# Down: a check failing from more than one region for 10 minutes.
+gcloud monitoring policies create --project $PROJECT --display-name "pqcwebauthn down" --notification-channels $CHANNEL \
+  --condition-filter 'metric.type="monitoring.googleapis.com/uptime_check/check_passed" AND resource.type="uptime_url" AND resource.label.host="webauthndev.com"' \
+  --aggregation '{"alignmentPeriod": "1200s", "perSeriesAligner": "ALIGN_NEXT_OLDER", "crossSeriesReducer": "REDUCE_COUNT_FALSE", "groupByFields": ["metric.label.check_id"]}' \
+  --if '> 1' --duration 600s --combiner OR --condition-display-name "Uptime check failing"
+
+# Erroring: five 5xx answers within 10 minutes (one stray 500 is not enough). Once they stop it
+# closes by itself, which can take 45 minutes or more.
+gcloud monitoring policies create --project $PROJECT --display-name "pqcwebauthn 5xx" --notification-channels $CHANNEL \
+  --condition-filter 'metric.type="run.googleapis.com/request_count" AND resource.type="cloud_run_revision" AND resource.label.service_name="pqcwebauthn" AND metric.label.response_code_class="5xx"' \
+  --aggregation '{"alignmentPeriod": "600s", "perSeriesAligner": "ALIGN_SUM", "crossSeriesReducer": "REDUCE_SUM"}' \
+  --if '> 4' --duration 0s --combiner OR --condition-display-name "5xx answers" \
+  --policy '{"alertStrategy": {"autoClose": "1800s"}}'
+
+# A failed build: Cloud Build's documentation says it publishes each build's status to the topic
+# cloud-builds, which must exist (if it does already, that command's error is harmless). The
+# subscription holds a failure, unread, for 10 minutes, and the alert fires on it. A build whose
+# GitHub runs a newer push cancelled fails at its GitHub checks step (see the first part), so it
+# sends this notice too.
+gcloud pubsub topics create cloud-builds --project $PROJECT
+gcloud pubsub subscriptions create build-failures --project $PROJECT --topic cloud-builds \
+  --message-filter 'attributes.status = "FAILURE" OR attributes.status = "INTERNAL_ERROR" OR attributes.status = "TIMEOUT"' \
+  --message-retention-duration 10m --expiration-period never
+gcloud monitoring policies create --project $PROJECT --display-name "pqcwebauthn build failed" --notification-channels $CHANNEL \
+  --condition-filter 'metric.type="pubsub.googleapis.com/subscription/num_undelivered_messages" AND resource.type="pubsub_subscription" AND resource.label.subscription_id="build-failures"' \
+  --aggregation '{"alignmentPeriod": "60s", "perSeriesAligner": "ALIGN_MAX"}' --if '> 0' --duration 0s \
+  --combiner OR --condition-display-name "Failed build unread" --policy '{"alertStrategy": {"autoClose": "1800s"}}'
+
+# Needs Billing Account Administrator or Billing Account Costs Manager on the billing account.
+gcloud billing budgets create --billing-account $BILLING_ACCOUNT --display-name pqcwebauthn \
+  --budget-amount $BUDGET --filter-projects projects/$PROJECT --notifications-rule-monitoring-notification-channels $CHANNEL \
+  --threshold-rule percent=0.5 --threshold-rule percent=1.0 --threshold-rule percent=1.0,basis=forecasted-spend
+```
+
+`gcloud monitoring uptime list-configs --project $PROJECT` lists the checks, whose results the console shows after a few minutes, and `gcloud pubsub topics publish cloud-builds --project $PROJECT --attribute status=FAILURE --message test` should send the build alert's e-mail within about five minutes; the first real failed build shows that Cloud Build publishes there. Each has a `delete` command beside its `create` (`gcloud monitoring policies list` and `gcloud billing budgets list --billing-account $BILLING_ACCOUNT` give the names).
+
 ## One-time setup: secrets and runtime identity
 
 Run these in your own terminal. Secret values are read from stdin and never appear in files or shell history.
