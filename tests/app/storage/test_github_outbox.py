@@ -77,6 +77,14 @@ class _LocalView:
     def is_empty(self) -> bool:
         return not self.root.exists()
 
+    def budget(self) -> bytes | None:
+        path = self.root / ".metadata-budget"
+        return path.read_bytes() if path.exists() else None
+
+    def put_budget(self, data: bytes) -> None:
+        self.root.mkdir(parents=True, exist_ok=True)
+        (self.root / ".metadata-budget").write_bytes(data)
+
 
 class _CloudView:
     """The outbox in the fake bucket as a test looks at it."""
@@ -100,6 +108,12 @@ class _CloudView:
 
     def is_empty(self) -> bool:
         return not self.bucket.objects
+
+    def budget(self) -> bytes | None:
+        return self.bucket.objects.get(_BUDGET, (None, 0))[0]
+
+    def put_budget(self, data: bytes) -> None:
+        self.bucket.put(_BUDGET, data)
 
 
 def _local_view(monkeypatch, tmp_path) -> _LocalView:
@@ -601,6 +615,136 @@ def test_an_entry_given_up_is_named_on_one_line(outbox, caplog):
 
     assert outbox.entries() == []
     one_line_naming(caplog, github_outbox.__name__, _FORGED_ENTRY.path)
+
+
+# The bucket's budget object, and the day the clock fixture's time falls on (UTC).
+_BUDGET = "github-outbox/metadata-budget"
+_DAY = "1970-01-12"
+
+
+def _budget_of(files: int, size: int, day: str = _DAY) -> bytes:
+    return json.dumps({"day": day, "files": files, "bytes": size}).encode()
+
+
+@pytest.fixture
+def small_budget(monkeypatch):
+    """A day's metadata budget of 3 files and 100 bytes."""
+
+    monkeypatch.setattr(github_outbox, "METADATA_FILES_A_DAY", 3)
+    monkeypatch.setattr(github_outbox, "METADATA_BYTES_A_DAY", 100)
+
+
+def test_the_metadata_budget_takes_files_until_the_day_s_files_or_bytes_run_out(outbox, clock, small_budget):
+    assert github_outbox.take_metadata_budget([40, 40, 30, 10]) == [True, True, False, True]
+    assert github_outbox.take_metadata_budget([1]) == [False]
+
+    assert json.loads(outbox.budget()) == {"day": _DAY, "files": 3, "bytes": 90}
+    assert outbox.names() == []
+
+
+def test_the_metadata_budget_starts_again_the_next_day(outbox, clock, small_budget):
+    assert github_outbox.take_metadata_budget([100, 1]) == [True, False]
+
+    clock.now += 24 * 60 * 60
+
+    assert github_outbox.take_metadata_budget([1]) == [True]
+    assert json.loads(outbox.budget()) == {"day": "1970-01-13", "files": 1, "bytes": 1}
+
+
+@pytest.mark.parametrize(
+    "stored",
+    [
+        b"not json",
+        b"\xff",
+        b"[1]",
+        _budget_of(3, 90, day="1970-01-11"),
+        b'{"day": "1970-01-12", "files": true, "bytes": 0}',
+        b'{"day": "1970-01-12", "files": "3", "bytes": 0}',
+        b'{"day": "1970-01-12", "files": -1, "bytes": 0}',
+        b'{"day": "1970-01-12", "files": 3}',
+    ],
+)
+def test_a_metadata_budget_that_does_not_read_or_names_another_day_is_empty(outbox, clock, small_budget, stored):
+    outbox.put_budget(stored)
+
+    assert github_outbox.take_metadata_budget([5]) == [True]
+    assert json.loads(outbox.budget()) == {"day": _DAY, "files": 1, "bytes": 5}
+
+
+def test_two_requests_at_once_take_the_last_of_the_metadata_budget_once(outbox, clock, small_budget):
+    outbox.put_budget(_budget_of(2, 0))
+    start = threading.Barrier(2)
+    results = []
+
+    def _take() -> None:
+        start.wait()
+        results.append(github_outbox.take_metadata_budget([1]))
+
+    workers = [threading.Thread(target=_take) for _ in range(2)]
+    for worker in workers:
+        worker.start()
+    for worker in workers:
+        worker.join()
+
+    assert sorted(results) == [[False], [True]]
+    assert json.loads(outbox.budget()) == {"day": _DAY, "files": 3, "bytes": 1}
+
+
+def test_a_spent_metadata_budget_is_not_written_again(bucket_outbox, clock, small_budget):
+    github_outbox.take_metadata_budget([100])
+    writes = list(bucket_outbox.bucket.writes)
+
+    assert github_outbox.take_metadata_budget([1, 1]) == [False, False]
+
+    assert bucket_outbox.bucket.writes == writes == [_BUDGET]
+
+
+def test_a_metadata_budget_another_instance_wrote_first_is_read_again(bucket_outbox, clock, small_budget):
+    bucket = bucket_outbox.bucket
+    bucket.put(_BUDGET, _budget_of(1, 10))
+
+    def _another_instance_takes_one(name: str) -> None:
+        if name == _BUDGET:
+            bucket.on_download.remove(_another_instance_takes_one)
+            bucket.put(_BUDGET, _budget_of(2, 20))
+
+    bucket.on_download.append(_another_instance_takes_one)
+
+    assert github_outbox.take_metadata_budget([5, 5]) == [True, False]
+    assert json.loads(bucket_outbox.budget()) == {"day": _DAY, "files": 3, "bytes": 25}
+
+
+def test_a_metadata_budget_others_always_write_first_raises_after_its_tries(bucket_outbox, clock, small_budget):
+    bucket = bucket_outbox.bucket
+    bucket.put(_BUDGET, _budget_of(0, 0))
+    bucket.on_download.append(lambda name: bucket.put(_BUDGET, _budget_of(0, 0)))
+
+    with pytest.raises(RuntimeError, match="wrote it first 5 times in a row"):
+        github_outbox.take_metadata_budget([1])
+
+    assert [name for name, _options in bucket.download_options] == [_BUDGET] * github_outbox.BUDGET_TRIES
+    assert _BUDGET not in bucket.writes
+
+
+def test_a_metadata_budget_that_cannot_be_read_raises(bucket_outbox, clock):
+    bucket_outbox.bucket.failing[_BUDGET] = fake_gcs.ServiceUnavailable("the bucket is unavailable")
+
+    with pytest.raises(fake_gcs.ServiceUnavailable):
+        github_outbox.take_metadata_budget([1])
+
+
+def test_the_metadata_budget_is_one_object_beside_the_outbox_s_entries(bucket_outbox, clock):
+    github_outbox.take_metadata_budget([1])
+
+    assert bucket_outbox.bucket.content_types == {_BUDGET: "application/json"}
+    assert bucket_outbox.names() == []
+
+
+def test_the_local_metadata_budget_is_a_file_of_the_outbox_folder_ignored_by_git(local_outbox, clock):
+    github_outbox.take_metadata_budget([1])
+
+    assert sorted(os.listdir(local_outbox.root)) == [".gitignore", ".metadata-budget", ".metadata-budget.lock"]
+    assert "*" in (local_outbox.root / ".gitignore").read_text().splitlines()
 
 
 def test_the_outbox_folder_is_its_setting_else_under_the_instance(monkeypatch):

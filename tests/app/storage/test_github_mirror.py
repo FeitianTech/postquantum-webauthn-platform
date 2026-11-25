@@ -812,6 +812,74 @@ def test_an_uploaded_file_over_the_cap_is_named_on_one_line_however_it_was_named
     )
 
 
+def test_uploaded_metadata_past_the_day_s_budget_is_not_queued_and_is_said_so(monkeypatch, log_outbox, caplog):
+    github = fake_github.install(monkeypatch)
+    monkeypatch.setattr(github_outbox, "METADATA_FILES_A_DAY", 1)
+
+    with caplog.at_level(logging.WARNING, logger=github_mirror.__name__):
+        github_mirror.queue_uploaded_metadata_files([("one.json", b"1"), ("two.json", b"2"), ("three.json", b"3")])
+        github_mirror.queue_uploaded_metadata_files([("four.json", b"4")])
+
+    assert github.files == {"metadata/one.json": b"1"}
+    assert _queued_paths(log_outbox) == []
+    assert [record.getMessage() for record in caplog.records if record.name == github_mirror.__name__] == [
+        "Not copying metadata file two.json to the credential log (left out of this upload: 2): today's budget of 1"
+        " files and 8 MiB has no room for it; it starts again at 00:00 UTC",
+        "Not copying metadata file four.json to the credential log (left out of this upload: 1): today's budget of 1"
+        " files and 8 MiB has no room for it; it starts again at 00:00 UTC",
+    ]
+
+
+def test_no_metadata_is_copied_while_its_budget_cannot_be_read_or_written(monkeypatch, log_outbox, caplog):
+    github = fake_github.install(monkeypatch)
+
+    def _unavailable(sizes):
+        raise OSError("the bucket is unavailable")
+
+    monkeypatch.setattr(github_outbox, "take_metadata_budget", _unavailable)
+
+    with caplog.at_level(logging.WARNING, logger=github_mirror.__name__):
+        github_mirror.queue_uploaded_metadata_files([("one.json", b"1"), ("two.json", b"2")])
+
+    assert github.calls == []
+    assert _queued_paths(log_outbox) == []
+    assert (
+        "Could not read or write the credential log's daily metadata budget, so none of this upload's metadata is"
+        " copied (left out: 2):"
+        " the bucket is unavailable"
+    ) in caplog.text
+
+
+def test_a_registration_is_queued_when_the_day_s_metadata_budget_is_spent(monkeypatch, log_outbox):
+    github = fake_github.install(monkeypatch)
+    monkeypatch.setattr(github_outbox, "METADATA_FILES_A_DAY", 0)
+
+    github_mirror.queue_uploaded_metadata_files([("one.json", b"1")])
+    github_mirror.record_registration_event(_registration())
+
+    assert [path.split("/")[0] for path in github.files] == ["logs"]
+
+
+def test_an_upload_past_the_log_s_budget_is_saved_and_named_on_one_line(mds_fixture_snapshot, client, monkeypatch, tmp_path, caplog):
+    github = fake_github.install(monkeypatch)
+    monkeypatch.setenv("FIDO_SERVER_GITHUB_OUTBOX_DIR", str(tmp_path / "outbox"))
+    monkeypatch.setattr(github_outbox, "METADATA_FILES_A_DAY", 0)
+    body = (
+        f"--b\r\nContent-Disposition: form-data; name=\"files\"; filename*=UTF-8''{quote(FORGED)}\r\n\r\n".encode()
+        + json.dumps(minimal_entry("Past the budget")).encode()
+        + b"\r\n--b--\r\n"
+    )
+
+    with caplog.at_level(logging.WARNING, logger=github_mirror.__name__):
+        response = client.post("/api/mds/metadata/upload", data=body, content_type="multipart/form-data; boundary=b")
+
+    assert response.status_code == 200, response.get_json()
+    assert len(response.get_json()["items"]) == 1
+    assert github.files == {}
+    message = one_line_naming(caplog, github_mirror.__name__, FORGED)
+    assert message.startswith("Not copying metadata file 'x\\nERROR forged line\\r\\x1b[31myyy")
+
+
 def test_a_registration_for_an_rp_id_of_any_text_is_named_on_one_line(monkeypatch, log_outbox, caplog):
     fake_github.install(monkeypatch)
 

@@ -477,7 +477,9 @@ def _metadata_entry(filename: str, content: bytes) -> OutboxEntry:
 
 def queue_uploaded_metadata_files(files: Sequence[tuple[str, bytes]]) -> None:
     """Queue uploaded metadata files, each whole and by its name, for the log repository's
-    ``metadata/`` folder; a file over ``MAX_LOGGED_METADATA_BYTES`` is not, with a warning.
+    ``metadata/`` folder; a file over ``MAX_LOGGED_METADATA_BYTES`` is not, with a warning, nor
+    one past the day's budget (``github_outbox.take_metadata_budget``), nor any while the budget
+    cannot be read or written.
 
     The upload route calls it once some entry of each file was saved. The files wait in the
     outbox and a worker delivers them (``github_outbox``): the upload's answer never waits for
@@ -497,6 +499,29 @@ def queue_uploaded_metadata_files(files: Sequence[tuple[str, bytes]]) -> None:
             )
         elif content:
             entries.append(_metadata_entry(name, content))
+    if not entries:
+        return
+    try:
+        taken = github_outbox.take_metadata_budget([len(entry.content) for entry in entries])
+    except Exception as exc:
+        logger.warning(
+            "Could not read or write the credential log's daily metadata budget, so none of this upload's metadata is"
+            " copied (left out: %d): %s",
+            len(entries),
+            exc,
+        )
+        return
+    past = [entry for entry, fits in zip(entries, taken, strict=True) if not fits]
+    if past:
+        logger.warning(
+            "Not copying metadata file %s to the credential log (left out of this upload: %d): today's budget of %d"
+            " files and %s has no room for it; it starts again at 00:00 UTC",
+            log_text.client_text(posixpath.basename(past[0].path)),
+            len(past),
+            github_outbox.METADATA_FILES_A_DAY,
+            common.describe_size(github_outbox.METADATA_BYTES_A_DAY),
+        )
+    entries = [entry for entry, fits in zip(entries, taken, strict=True) if fits]
     if entries and github_outbox.enqueue(entries):
         _start_flush(kick=True)
 

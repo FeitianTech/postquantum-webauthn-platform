@@ -177,8 +177,13 @@ log repository on GitHub (`GITHUB_LOG_REPO_OWNER`/`GITHUB_LOG_REPO_NAME`, by def
 time, RP ID, AAGUID, MDS device name, attestation object and the four checks), a metadata
 file whole under `metadata/`, unless it is over 1 MiB (`MAX_LOGGED_METADATA_BYTES`: a file of
 one statement fits, and a request without a cookie gets a namespace of its own, so the upload
-quotas do not bound what the log keeps), which is not copied, with a warning naming it. The log is on only with a `GITHUB_TOKEN`, and
-`ENABLE_GITHUB_LOGGING=0` turns it off.
+quotas do not bound what the log keeps), which is not copied, with a warning naming it. At most
+50 metadata files and 8 MiB of them are copied a day (UTC), counted when they are queued, in one
+object beside the outbox written by compare-and-swap (`github_outbox.take_metadata_budget`): past
+it, or while the budget cannot be read or written, an upload's files are not copied, with one
+warning, and the upload goes on. The budget is one for all visitors, so whoever spends it keeps
+that day's later uploads out of the log; the uploads themselves are unaffected. The log is on only
+with a `GITHUB_TOKEN`, and `ENABLE_GITHUB_LOGGING=0` turns it off.
 
 No request waits for GitHub. Once a registration's record is saved
 (`record_registration_event`), or once an uploaded file has an entry saved
@@ -187,18 +192,19 @@ not copied), the file is written to an **outbox** with the path it lands at, fix
 (`github_outbox.enqueue`), and the request goes on: whatever fails there is a warning, never
 the visitor's error.
 
-- **Where entries wait.** On Cloud Storage under `github-outbox/` (`entries/<id>`, and a
-  `lease` object), outside `user-data/`, so the idle sweep never removes them; locally in
-  `FIDO_SERVER_GITHUB_OUTBOX_DIR`, else `instance/github-outbox` (`<id>.entry`, and `.lease`).
+- **Where entries wait.** On Cloud Storage under `github-outbox/` (`entries/<id>`, a `lease`
+  object and the `metadata-budget`), outside `user-data/`, so the idle sweep never removes them;
+  locally in `FIDO_SERVER_GITHUB_OUTBOX_DIR`, else `instance/github-outbox` (`<id>.entry`,
+  `.lease` and `.metadata-budget`).
   An entry is a line of JSON (kind, path, commit message, and `attempts`, its failed attempts,
   once it has any: an entry without it has none) and the file's bytes. Ids begin with the time
   they were queued, so entries are delivered oldest first.
 - **The bound.** 1,000 entries and 256 MiB (`MAX_ENTRIES`, `MAX_BYTES`), counted from one
   listing per request that queues. Past either an entry is dropped with a warning naming its
   path; a listing that fails is warned about and the entry written anyway. Two requests at
-  once can both pass the bound, as with the quotas. Nothing else limits what uploads without
-  a cookie queue: enough of them, each up to 1 MiB, fill the outbox, and until it drains new
-  entries, registrations too, are not logged; each one delivered adds to the repository.
+  once can both pass the bound, as with the quotas. Uploads queue at most the day's metadata
+  budget, 50 entries and 8 MiB of file content, so while the outbox drains they cannot fill it
+  ahead of registrations, and they add at most 50 files a day to the repository.
 - **What delivers them.** `github_outbox.flush`, on a worker thread that requests start
   (`schedule_flush`): one before each request at most every 30 s per process
   (`github_mirror.init_app`), and one at once when a request has queued an entry. On Cloud Run

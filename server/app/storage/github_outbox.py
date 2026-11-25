@@ -14,7 +14,9 @@ the idle sweep removes: each entry ``github-outbox/entries/<id>``, and the lease
 ``github-outbox/lease``, written only at the generation it was read at, as the stores write.
 Locally it is a folder (``FIDO_SERVER_GITHUB_OUTBOX_DIR``, else ``instance/github-outbox``): each
 entry ``<id>.entry``, and the lease an ``flock`` on ``.lease``. Either lease also keeps when the
-outbox may next be tried. docs/STORAGE.md has the rules.
+outbox may next be tried. Beside them, the day's budget of uploaded metadata queued
+(``take_metadata_budget``): ``github-outbox/metadata-budget``, or ``.metadata-budget``, written by
+compare-and-swap. docs/STORAGE.md has the rules.
 """
 from __future__ import annotations
 
@@ -50,11 +52,18 @@ __all__ = [
     "flush",
     "outbox_dir",
     "schedule_flush",
+    "take_metadata_budget",
 ]
 
 # The outbox's bound: an entry past either is dropped with a warning.
 MAX_ENTRIES = 1_000
 MAX_BYTES = 256 * 1024 * 1024
+# The uploaded metadata queued in a day (UTC), for all visitors together: a request without a
+# cookie gets a namespace of its own, so the upload quotas bound nothing the log keeps.
+METADATA_FILES_A_DAY = 50
+METADATA_BYTES_A_DAY = 8 * 1024 * 1024
+# How many times a request reads the budget again when another request wrote it first.
+BUDGET_TRIES = 5
 # How long a run holds the lease, and how much of it must be left to start a delivery: a run
 # that stalled past its lease (a throttled CPU) starts nothing another flusher may be doing.
 LEASE_SECONDS = 300.0
@@ -80,6 +89,8 @@ _LOCAL_SUFFIX = ".entry"
 _LOCAL_LEASE = ".lease"
 _CLOUD_ENTRIES = "github-outbox/entries/"
 _CLOUD_LEASE = "github-outbox/lease"
+_LOCAL_BUDGET = ".metadata-budget"
+_CLOUD_BUDGET = "github-outbox/metadata-budget"
 
 
 class OutboxEntry(NamedTuple):
@@ -178,6 +189,21 @@ def _lease_bytes(until: float, not_before: float) -> bytes:
     return json.dumps({"until": until, "notBefore": not_before}).encode("ascii")
 
 
+def _budget_used(data: bytes | None, day: str) -> tuple[int, int]:
+    """The files and bytes the budget holds for ``day``; none for one absent, unreadable or another day's."""
+
+    try:
+        state = json.loads(data or b"{}")
+    except ValueError:
+        return 0, 0
+    if not isinstance(state, dict) or state.get("day") != day:
+        return 0, 0
+    files, size = state.get("files"), state.get("bytes")
+    if type(files) is not int or type(size) is not int or files < 0 or size < 0:
+        return 0, 0
+    return files, size
+
+
 class _LocalOutbox:
     """The outbox in a local folder; its lease an ``flock``, which a stopped process gives up."""
 
@@ -220,6 +246,15 @@ class _LocalOutbox:
     def remove(self, name: str) -> None:
         with contextlib.suppress(FileNotFoundError):
             os.remove(os.path.join(self.root, name))
+
+    def update_budget(self, change: Callable[[bytes | None], bytes | None]) -> bool:
+        common.make_store_directory(self.root, self.root)
+        path = os.path.join(self.root, _LOCAL_BUDGET)
+        with common.file_lock(path):
+            written = change(self.read(_LOCAL_BUDGET)[0])
+            if written is not None:
+                common.replace_file(path, written)
+        return True
 
     @contextlib.contextmanager
     def lease(self, now: float) -> Iterator[Lease]:
@@ -270,6 +305,14 @@ class _CloudOutbox:
 
     def remove(self, name: str) -> None:
         cloud.delete_blob(name)
+
+    def update_budget(self, change: Callable[[bytes | None], bytes | None]) -> bool:
+        # False when another request wrote the budget after it was read here.
+        data, generation = self.read(_CLOUD_BUDGET)
+        written = change(data)
+        if written is None:
+            return True
+        return cloud.upload_bytes_if_generation(_CLOUD_BUDGET, written, generation=generation, content_type="application/json")
 
     @contextlib.contextmanager
     def lease(self, now: float) -> Iterator[Lease]:
@@ -355,6 +398,36 @@ def enqueue(entries: Sequence[OutboxEntry]) -> int:
             continue
         queued += 1
     return queued
+
+
+def take_metadata_budget(sizes: Sequence[int]) -> list[bool]:
+    """Take today's (UTC) budget for uploaded metadata files of these sizes, in order: which it took.
+
+    A file is taken while the day's files and bytes stay within ``METADATA_FILES_A_DAY`` and
+    ``METADATA_BYTES_A_DAY``; one that does not fit is not, and a smaller one after it may be. A
+    budget that takes none is not written. Read and written by compare-and-swap, and read again
+    when another request wrote first, up to ``BUDGET_TRIES`` times; raises when it cannot be read
+    or written, or past those tries.
+    """
+
+    day = datetime.fromtimestamp(time.time(), timezone.utc).date().isoformat()
+    taken: list[bool] = []
+
+    def change(data: bytes | None) -> bytes | None:
+        taken.clear()
+        files, size = _budget_used(data, day)
+        for item in sizes:
+            fits = files < METADATA_FILES_A_DAY and size + item <= METADATA_BYTES_A_DAY
+            if fits:
+                files, size = files + 1, size + item
+            taken.append(fits)
+        return json.dumps({"day": day, "files": files, "bytes": size}).encode("ascii") if any(taken) else None
+
+    backend = _backend()
+    for _ in range(BUDGET_TRIES):
+        if backend.update_budget(change):
+            return taken
+    raise RuntimeError(f"other requests wrote it first {BUDGET_TRIES} times in a row")
 
 
 def _delivered(deliver: Callable[[OutboxEntry], Delivery], entry: OutboxEntry) -> Delivery:
