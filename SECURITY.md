@@ -15,4 +15,4 @@ and authenticator were used when that matters.
 Test only with credentials, uploads and accounts of your own, never with another
 visitor's data, and do nothing that degrades the live site for others (no load,
 denial-of-service or high-volume automated testing). Run anything heavier against a
-local copy, started as [AGENTS.md](AGENTS.md) describes.
+local copy, started as the README's [Run it locally](README.md#run-it-locally) describes.
