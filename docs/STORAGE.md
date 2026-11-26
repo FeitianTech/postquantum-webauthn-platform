@@ -179,13 +179,15 @@ file whole under `metadata/`, unless it is over 1 MiB (`MAX_LOGGED_METADATA_BYTE
 one statement fits, and a request without a cookie gets a namespace of its own, so the upload
 quotas do not bound what the log keeps), which is not copied, with a warning naming it. At most
 50 metadata files and 8 MiB of them are copied a day (UTC), counted when they are queued, and at
-most 1,000 registrations and 64 MiB of them, counted when they are delivered, each in one object
-beside the outbox written by compare-and-swap (`github_outbox.take_metadata_budget`;
-`github_outbox._delivered`). Past its budget, or while the budget cannot be read or written, an
-upload's files are not queued, with one warning, and the upload goes on. Past its budget a
-registration's entry is dropped from the outbox before GitHub is asked, with a warning naming it;
-while the budget cannot be read, the entry stays queued, as one GitHub cannot take does, and a
-delivery whose count cannot be written is warned about. Each budget is one for all visitors, so
+most 1,000 registrations and 64 MiB of them, counted when they are written (one found at its
+path from an earlier delivery is not counted), each in one object beside the outbox
+written by compare-and-swap (`github_outbox.take_metadata_budget`; `github_outbox._delivered`).
+Past its budget, or while the budget cannot be read or written, an upload's files are not
+queued, with one warning, and the upload goes on. Past its budget a registration's entry is
+dropped from the outbox before GitHub is asked, with a warning naming it; while the budget
+cannot be read, the entry stays queued, as one GitHub cannot take does, but never gets a failed
+attempt (GitHub was not asked), and a delivery whose count cannot be written is warned about.
+Each budget is one for all visitors, so
 whoever spends it keeps that day's later uploads or registrations out of the log until 00:00 UTC;
 what visitors save is unaffected. The log is on only with a
 `GITHUB_TOKEN`, and `ENABLE_GITHUB_LOGGING=0` turns it off.
@@ -230,23 +232,24 @@ the visitor's error.
   in parallel), and one holder makes "this content is there already" safe to check.
 - **Delivery** (`github_mirror.deliver`). A file is created, never replaced. When GitHub says
   a file is at the path already, its blob SHA is read: the same content is an earlier delivery
-  that landed, and counts as delivered; so a delivery made twice (a run that stalled past its
-  lease, a removal that failed after a landing) never becomes two files. The fixed path is the
-  guarantee, not the lease. A metadata file whose content is anywhere in `metadata/` is not
-  copied again: the folder is read through the git trees API (the root's listing names its
-  tree), which lists all of it, where the contents API stops at 1,000 entries. A name holding
+  that landed: the entry is removed, but it is no sign that GitHub takes writes (below); so a
+  delivery made twice (a run that stalled past its lease, a removal that failed after a landing)
+  never becomes two files. The fixed path is the guarantee, not the lease. A metadata file whose
+  content is anywhere in `metadata/` is not copied again, and is removed the same way: the
+  folder is read through the git trees API (the root's listing names its tree), which lists all
+  of it, where the contents API stops at 1,000 entries. A name holding
   other content is kept, and the new file goes beside it as `<name>-<first 12 of its blob
   SHA><extension>`.
 - **Failures.** GitHub, the network or the token unable to take a file (401, 403, 404, 408,
-  409, 429, a 5xx, a timeout, an answer that is not what the mirror reads) leaves the entry,
-  and the run goes on to the next, stopping after 3 such in a row
-  (`MAX_UNAVAILABLE_IN_A_ROW`). When a later entry in the same run is delivered, GitHub was
-  working: each entry passed over before it gets a failed attempt, rewritten into its entry
-  under the lease (on Cloud Storage at the generation read), and one at 5 (`MAX_ATTEMPTS`) is
-  dropped with a warning naming its path. It keeps its place, first in the next run. When no
-  later entry is delivered, nothing is counted and every flusher leaves the outbox for 300 s:
-  a full outage, a rate limit or a bad token costs 3 calls per 5 minutes and drops nothing.
-  While GitHub fails only some calls, or takes reads but not writes, an entry can still reach
-  the count; and three entries in a row that it never takes, at the front, hold the rest. A file
-  GitHub refuses for good (another 4xx), or that holds the only path left to it, is dropped
-  with a warning; so is an entry that does not read.
+  409, 429, a 5xx, a timeout, an answer that is not what the mirror reads) leaves the entry, and
+  the run goes on to the next, stopping after 3 such in a row (`MAX_UNAVAILABLE_IN_A_ROW`). When
+  a later entry in the same run is written (a file created now, not one found there already),
+  GitHub was working: each entry passed over before it gets a failed attempt, rewritten into its
+  entry under the lease (on Cloud Storage at the generation read), and one at 5 (`MAX_ATTEMPTS`)
+  is dropped with a warning naming its path. It keeps its place, first in the next run. When no
+  later entry is written, nothing is counted and every flusher leaves the outbox for 300 s: a
+  full outage, a rate limit or a bad token costs 3 calls per 5 minutes and drops nothing. While
+  GitHub fails only some calls, an entry can still reach the count; and three entries in a row
+  that it never takes, at the front, hold the rest. A file GitHub refuses for good (another
+  4xx), or that holds the only path left to it, is dropped with a warning; so is an entry that
+  does not read.

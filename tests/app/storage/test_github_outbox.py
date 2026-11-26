@@ -326,6 +326,25 @@ def test_an_entry_github_never_takes_is_given_up_after_runs_that_delivered_a_lat
     ) in caplog.text
 
 
+def test_an_entry_found_at_its_path_already_is_removed_but_counts_no_attempt_on_entries_before_it(outbox, clock):
+    github_outbox.enqueue([_entry("one"), _entry("two")])
+    deliverer = _Deliverer({_path("one"): Delivery.UNAVAILABLE, _path("two"): Delivery.FOUND})
+
+    # Found by reads alone, it is no sign that GitHub takes writes: the outbox backs off.
+    assert github_outbox.flush(deliverer) == github_outbox.FlushRun(1, clock.now + github_outbox.BACKOFF_SECONDS)
+
+    assert _attempts(outbox) == {_path("one"): 0}
+
+
+def test_entries_passed_over_before_one_found_are_counted_when_a_later_one_is_delivered(outbox, clock):
+    github_outbox.enqueue([_entry("one"), _entry("two"), _entry("three")])
+    deliverer = _Deliverer({_path("one"): Delivery.UNAVAILABLE, _path("two"): Delivery.FOUND})
+
+    assert github_outbox.flush(deliverer) == github_outbox.FlushRun(2, 0.0)
+
+    assert _attempts(outbox) == {_path("one"): 1}
+
+
 def test_an_outage_counts_nothing_and_drops_nothing_however_many_runs(outbox, clock):
     github_outbox.enqueue([_entry("one"), _entry("two")])
     queued = outbox.entries()
@@ -894,15 +913,41 @@ def test_registrations_stay_queued_and_every_flusher_backs_off_while_their_budge
     assert _attempts(outbox) == {_path("one"): 0, _path("two"): 0}
 
 
-def test_registrations_whose_budget_cannot_be_read_are_passed_over_when_metadata_after_them_is_delivered(outbox, clock):
+def test_registrations_whose_budget_cannot_be_read_get_no_failed_attempt_when_metadata_after_them_is_delivered(
+    outbox, clock, caplog
+):
     outbox.break_budget(_REGISTRATION_BUDGET)
     github_outbox.enqueue([_entry("one"), _METADATA_ENTRY])
     deliverer = _Deliverer()
 
-    assert github_outbox.flush(deliverer).handled == 1
+    with caplog.at_level(logging.WARNING, logger=github_outbox.__name__):
+        assert github_outbox.flush(deliverer).handled == 1
 
     assert deliverer.paths == [_METADATA_ENTRY.path]
-    assert _attempts(outbox) == {_path("one"): 1}
+    assert _attempts(outbox) == {_path("one"): 0}
+    assert _warnings(caplog) == ["Could not read today's registration budget; logs/unknown/one.json stays queued"]
+
+
+def test_a_run_stops_after_a_few_registrations_in_a_row_whose_budget_cannot_be_read(outbox, clock):
+    outbox.break_budget(_REGISTRATION_BUDGET)
+    names = [f"r{index}" for index in range(github_outbox.MAX_UNAVAILABLE_IN_A_ROW)]
+    github_outbox.enqueue([*(_entry(name) for name in names), _METADATA_ENTRY])
+    deliverer = _Deliverer()
+
+    assert github_outbox.flush(deliverer) == github_outbox.FlushRun(0, clock.now + github_outbox.BACKOFF_SECONDS)
+
+    assert deliverer.paths == []
+    assert _attempts(outbox) == {**{_path(name): 0 for name in names}, _METADATA_ENTRY.path: 0}
+
+
+@pytest.mark.parametrize("delivery", [Delivery.FOUND, Delivery.DROPPED])
+def test_a_registration_found_already_or_refused_is_not_counted_in_the_budget(outbox, clock, delivery):
+    github_outbox.enqueue([_entry("one")])
+
+    assert github_outbox.flush(_Deliverer({_path("one"): delivery})).handled == 1
+
+    assert outbox.names() == []
+    assert outbox.budget(_REGISTRATION_BUDGET) is None
 
 
 def test_a_delivered_registration_that_cannot_be_counted_is_removed_with_a_warning(outbox, clock, monkeypatch, caplog):

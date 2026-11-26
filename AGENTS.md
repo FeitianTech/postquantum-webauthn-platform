@@ -501,8 +501,8 @@ its logic out here first.
   a shorter list; a write past a namespace's quota raises `StorageQuotaExceeded` (409 for a count,
   413 for bytes), and a begin refuses a namespace already full, before the authenticator is asked.
   The credential log on GitHub (on only with `GITHUB_TOKEN`): a saved registration's file, at most
-  1,000 and 64 MiB delivered a day for all visitors (`github-outbox/registration-budget`, counted on
-  delivery, one past it dropped before GitHub is asked), and an uploaded metadata file of at most
+  1,000 and 64 MiB delivered a day for all visitors (`github-outbox/registration-budget`, counted when
+  written, one past it dropped before GitHub is asked), and an uploaded metadata file of at most
   1 MiB once one of its entries saved, within a daily budget of 50 such files and 8 MiB for all
   visitors (`github-outbox/metadata-budget`, counted when queued; both compare-and-swap), is
   queued in an outbox (`github-outbox/` in

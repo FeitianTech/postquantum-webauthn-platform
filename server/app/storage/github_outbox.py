@@ -111,12 +111,17 @@ class OutboxEntry(NamedTuple):
 
 
 class Delivery(Enum):
-    """What became of an entry: delivered (or found at its path already), dropped for good, or
-    not taken now, GitHub being unavailable: it stays, and every flusher backs off."""
+    """What became of an entry: delivered (a file written now), found (there from an earlier
+    delivery: removed as delivered, but no sign that GitHub takes writes), dropped for good, or
+    not taken now, GitHub being unavailable: it stays, and every flusher backs off. UNTRIED is the
+    outbox's own: a registration whose budget could not be read, which stays as an unavailable
+    one does, GitHub not asked."""
 
     DELIVERED = "delivered"
+    FOUND = "found"
     DROPPED = "dropped"
     UNAVAILABLE = "unavailable"
+    UNTRIED = "untried"
 
 
 class FlushRun(NamedTuple):
@@ -463,11 +468,19 @@ def _registration_fits(size: int) -> bool:
 
 def _delivered(deliver: Callable[[OutboxEntry], Delivery], entry: OutboxEntry) -> Delivery:
     """``deliver``'s answer; a registration past today's budget is dropped before it, and one delivered
-    is counted after it. Raising (the budget unreadable too) is UNAVAILABLE: the entry stays."""
+    is counted after it. Raising is UNAVAILABLE: the entry stays; and one whose budget cannot be
+    read is UNTRIED."""
 
     registration = entry.kind == "registration"
     try:
-        if registration and not _registration_fits(len(entry.content)):
+        fits = not registration or _registration_fits(len(entry.content))
+    except Exception:
+        logger.warning(
+            "Could not read today's registration budget; %s stays queued", log_text.client_text(entry.path), exc_info=True
+        )
+        return Delivery.UNTRIED
+    try:
+        if not fits:
             logger.warning(
                 "Dropped %s from the credential log: today's budget of %s registrations and %s has no room for it;"
                 " it starts again at 00:00 UTC",
@@ -494,12 +507,17 @@ def _delivered(deliver: Callable[[OutboxEntry], Delivery], entry: OutboxEntry) -
     return delivery
 
 
-def _count_attempts(backend: _LocalOutbox | _CloudOutbox, passed_over: list[tuple[str, OutboxEntry, int]]) -> int:
-    """A failed attempt for each entry GitHub did not take though it took a later one; an entry
-    at ``MAX_ATTEMPTS`` is removed with a warning. How many were removed."""
+def _count_attempts(
+    backend: _LocalOutbox | _CloudOutbox, passed_over: list[tuple[str, OutboxEntry, int, Delivery]]
+) -> int:
+    """A failed attempt for each entry GitHub did not take though it took a later one (not for
+    one it was not asked for, UNTRIED); an entry at ``MAX_ATTEMPTS`` is removed with a warning.
+    How many were removed."""
 
     removed = 0
-    for name, entry, generation in passed_over:
+    for name, entry, generation, delivery in passed_over:
+        if delivery is Delivery.UNTRIED:
+            continue
         attempts = entry.attempts + 1
         if attempts < MAX_ATTEMPTS:
             logger.info(
@@ -521,7 +539,7 @@ def _deliver_due(
     backend: _LocalOutbox | _CloudOutbox, lease: Lease, deliver: Callable[[OutboxEntry], Delivery], limit: int
 ) -> int:
     handled = in_a_row = 0
-    passed_over: list[tuple[str, OutboxEntry, int]] = []
+    passed_over: list[tuple[str, OutboxEntry, int, Delivery]] = []
     for name in backend.names():
         if handled >= limit or time.time() > lease.until - LEASE_MARGIN_SECONDS:
             break
@@ -535,8 +553,8 @@ def _deliver_due(
             backend.remove(name)
             continue
         delivery = _delivered(deliver, entry)
-        if delivery is Delivery.UNAVAILABLE:
-            passed_over.append((name, entry, generation))
+        if delivery in (Delivery.UNAVAILABLE, Delivery.UNTRIED):
+            passed_over.append((name, entry, generation, delivery))
             in_a_row += 1
             if in_a_row >= MAX_UNAVAILABLE_IN_A_ROW:
                 break
@@ -556,10 +574,11 @@ def flush(deliver: Callable[[OutboxEntry], Delivery], *, limit: int = RUN_LIMIT)
     """One run: take the outbox's lease, deliver its entries oldest first, and give the lease back.
 
     At most ``limit`` entries, and none started with less than ``LEASE_MARGIN_SECONDS`` of the
-    lease left. An entry delivered or dropped is removed; one that does not decode is logged by
-    name and removed. One GitHub cannot take (``deliver`` answers UNAVAILABLE, or raises) stays,
-    and the run goes on to the next, up to ``MAX_UNAVAILABLE_IN_A_ROW`` in a row. When a later
-    entry is delivered, each passed over before it is counted a failed attempt, kept with it,
+    lease left. An entry delivered, found or dropped is removed; one that does not decode is logged
+    by name and removed. One GitHub cannot take (``deliver`` answers UNAVAILABLE, or raises) stays,
+    as an UNTRIED one does, and the run goes on to the next, up to ``MAX_UNAVAILABLE_IN_A_ROW`` in a
+    row. When a later entry is delivered (written now: one FOUND is no sign GitHub takes writes),
+    each passed over before it but an UNTRIED one is counted a failed attempt, kept with it,
     and given up at ``MAX_ATTEMPTS``; when none is, nothing is counted, and every flusher leaves
     the outbox for ``BACKOFF_SECONDS``. A passed-over entry keeps its place, first in the next run.
     Without the lease (another flusher holds it, or the outbox is backing off) a run does nothing,

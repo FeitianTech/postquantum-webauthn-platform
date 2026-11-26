@@ -562,16 +562,16 @@ def _deliver_metadata(entry: OutboxEntry) -> Delivery:
             log_text.client_text(name),
             log_text.client_text(same) if same else "a file delivered lately",
         )
-        return Delivery.DELIVERED
+        return Delivery.FOUND
     try:
-        _create_metadata_file(name, entry.content, blob_sha, name_taken=name in existing)
+        created = _create_metadata_file(name, entry.content, blob_sha, name_taken=name in existing)
     except _PathTaken as exc:
         logger.warning("Dropped metadata file %s: %s", log_text.client_text(name), exc)
         return Delivery.DROPPED
     with RECENT_METADATA.lock:
         RECENT_METADATA.delivered[blob_sha] = time.time()
     logger.info("Delivered %s to the credential log", log_text.client_text(entry.path))
-    return Delivery.DELIVERED
+    return Delivery.DELIVERED if created else Delivery.FOUND
 
 
 def _deliver_log(entry: OutboxEntry) -> Delivery:
@@ -582,7 +582,7 @@ def _deliver_log(entry: OutboxEntry) -> Delivery:
         logger.warning("Dropped %s: the log repository holds another file at its path", entry.path)
         return Delivery.DROPPED
     logger.info("Delivered %s to the credential log", entry.path)
-    return Delivery.DELIVERED
+    return Delivery.DELIVERED if there is None else Delivery.FOUND
 
 
 # GitHub's answers that say it cannot take a file now: the token, its scope or the repository
@@ -593,7 +593,8 @@ _UNAVAILABLE_STATUSES = frozenset({401, 403, 404, 408, 409, 429})
 def deliver(entry: OutboxEntry) -> Delivery:
     """Copy one queued entry to its path in the log repository (``github_outbox.flush`` calls it).
 
-    DELIVERED when it is there, put now or found from an earlier delivery; UNAVAILABLE when
+    DELIVERED when it is put there now; FOUND when it is there from an earlier delivery, or its
+    content is in ``metadata/`` already (no write was made); UNAVAILABLE when
     GitHub, the network or the token cannot take it now (it stays queued); DROPPED when GitHub
     refuses it for good, or it cannot be read. Never raises.
     """
