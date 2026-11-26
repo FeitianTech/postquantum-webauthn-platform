@@ -21,26 +21,24 @@ function placeAt(button: HTMLElement, offset: number) {
   if (scroller) scroller.scrollTop += offsetIn(button, scroller) - offset;
 }
 
-// How long the button is kept at its place while the level's late parts arrive.
-const KEEP_MS = 1000;
-// What the person does to move the view themselves.
-const MOVES = ['wheel', 'touchmove', 'keydown', 'pointerdown'];
+// What the person does to move the view themselves, anywhere in the page (a key
+// that moves the focus, a drag of the scrollbar), or to change its size.
+const MOVES = ['wheel', 'touchmove', 'keydown', 'pointerdown', 'resize'];
 
-// Puts `button` back at its place, and keeps it there while the parts of its
+// Puts `button` back at its place, and keeps it there whenever the parts of its
 // level that arrive later (a chunk's list, a value measured) change the level's
-// size: for a moment, or until the person moves the view.
+// size, however late they come on a slow device: until the person moves the
+// view or the window, or leaves the level (another level, the details closed).
 function keepAt(button: HTMLElement, offset: number) {
   placeAt(button, offset);
-  const scroller = button.closest<HTMLElement>('[data-overlay-scroll]')!;
-  const observer = new ResizeObserver(() => placeAt(button, offset));
+  const observer = new ResizeObserver(() => (button.isConnected && !button.closest('[hidden]') ? placeAt(button, offset) : stop()));
   const moved = new AbortController();
   const stop = () => {
     observer.disconnect();
     moved.abort();
   };
   observer.observe(button.closest<HTMLElement>('[data-level]')!);
-  for (const type of MOVES) scroller.addEventListener(type, stop, { signal: moved.signal, passive: true });
-  setTimeout(stop, KEEP_MS);
+  for (const type of MOVES) window.addEventListener(type, stop, { signal: moved.signal, passive: true, capture: true });
 }
 
 // Back from the Codec reopens the details at the level a part left from (its

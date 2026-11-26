@@ -138,11 +138,25 @@ test.describe('a saved credential\'s details', () => {
     await decodeObject.scrollIntoViewIfNeeded();
     const scroller = dialog(page).locator('[data-overlay-scroll]');
     expect(await scroller.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
-    // Where the button sits in the dialog's view, which Back finds again.
+    // Where the button sits in the dialog's view, which Back finds again: in the
+    // view's own pixels, since the dialog is scaled while it opens, and as the
+    // click lands, since the click may scroll the button into view again.
     const place = () =>
-      decodeObject.evaluate((button) => Math.round(button.getBoundingClientRect().top - button.closest('[data-overlay-scroll]')!.getBoundingClientRect().top));
-    const left = await place();
+      decodeObject.evaluate((button) => {
+        const view = button.closest('[data-overlay-scroll]') as HTMLElement;
+        const box = view.getBoundingClientRect();
+        return Math.round((button.getBoundingClientRect().top - box.top) / (box.height / view.offsetHeight));
+      });
+    await decodeObject.evaluate((button) => {
+      const view = button.closest('[data-overlay-scroll]') as HTMLElement;
+      const keep = () => {
+        const box = view.getBoundingClientRect();
+        (window as unknown as { e2eLeft: number }).e2eLeft = Math.round((button.getBoundingClientRect().top - box.top) / (box.height / view.offsetHeight));
+      };
+      button.addEventListener('click', keep, { capture: true, once: true });
+    });
     await decodeObject.click();
+    const left = await page.evaluate(() => (window as unknown as { e2eLeft: number }).e2eLeft);
 
     await expect(page).toHaveURL(/\/#codec$/);
     const decoding = page.getByRole('tabpanel', { name: 'Codec' }).locator('#codec-mode-panel-decode');

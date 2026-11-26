@@ -28,6 +28,8 @@ async function register(page: Page) {
   await section(page).getByRole('button', { name: 'Create Credential' }).click();
   await expect(page.getByText(/^Advanced registration successful! Algorithm: /)).toBeVisible();
   await expect(page.getByRole('heading', { level: 2, name: 'Registration Details' })).toBeVisible();
+  // The details take Escape from when they hold the focus, a moment after they show.
+  await expect(dialog(page).and(page.locator(':focus-within'))).toBeVisible();
 }
 
 async function box(locator: Locator) {
