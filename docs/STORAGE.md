@@ -1,10 +1,7 @@
 # Storage
 
-`server/app/storage/` keeps what the app persists: `credentials.py` (credential
-records), `record_format.py` (the JSON envelope), `credential_artifacts.py`,
-`session_metadata.py` (visitors' uploads), `cloud.py` (Cloud Storage), `common.py`,
-`github_mirror.py` (the copy of registrations and uploads kept on GitHub) and
-`github_outbox.py` (what waits to be copied there). These are its rules. Read them before changing `server/app/storage`; `AGENTS.md` keeps only a summary.
+The rules of what the app persists (`server/app/storage/`), the visitor's namespace it is kept
+under and the credential log. Read them before changing `server/app/storage`.
 
 ## Compare-and-swap
 
@@ -21,8 +18,6 @@ that cannot be read (an I/O or Cloud Storage error) raises `common.StorageReadEr
 never a shorter list; `routes/errors.py` answers 503. Content that does not decode
 is logged by file or object name (never its content) and skipped.
 
-## A copy that does not decode
-
 `read_for_update` refuses a copy it cannot decode
 (`credentials.CredentialsUndecodable`) rather than let the save replace it unread.
 
@@ -31,11 +26,9 @@ is logged by file or object name (never its content) and skipped.
 A Simple registration keeps, in its username's list, only what the counter check
 reads (`routes/simple/stored_sign_count.counter_record`): the credential's ID and
 its signature counter, with its registration's time and user handle. The browser
-keeps the registration itself; nothing on the server read the rest back, and it
-made a record of 72 KB to 1 MB for one ML-DSA-87 registration, rewritten whole at
-every registration and authentication. A record an earlier version stored whole
-is read the same way and brought to that form the next time its list is written;
-one whose credential ID cannot be read is kept as it is.
+keeps the registration itself, and nothing on the server reads the rest back. A record
+an earlier version stored whole is read the same way and brought to that form the next
+time its list is written; one whose credential ID cannot be read is kept as it is.
 
 Deleting a saved Simple credential in the page deletes its record too
 (`DELETE /api/simple/credentials/<credentialId>?email=<username>`,
@@ -47,12 +40,11 @@ too), answering `deleted`, `absent` or `failed` as the artifact DELETE does.
 
 Credential artifacts (`server/app/storage/credential_artifacts.py`) are kept per session
 on both backends (locally `<artifact dir>/<session>/`) and merge the same way:
-conditional on the generation on GCS, under the record's `flock` locally. Their
-reads keep the same three cases: an artifact that cannot be read raises
-`StorageReadError` (503), one that does not decode is logged by name and treated
-as absent. A merge that cannot read the record, or whose record does not decode,
-refuses rather than overwrite it, and one whose write raised is re-read: it counts
-as stored if the record holds every merged value.
+conditional on the generation on GCS, under the record's `flock` locally. Their reads
+tell the same three cases apart; an artifact that does not decode is treated as absent.
+A merge that cannot read the record, or whose record does not decode, refuses rather
+than overwrite it, and one whose write raised is re-read: it counts as stored if the
+record holds every merged value.
 
 ## What a registration keeps
 
@@ -84,10 +76,7 @@ answer's, which the browser keeps) holds each part once:
   each null when no entry matched. A record from an earlier release keeps neither, and
   the page shows nothing for them.
 
-One ML-DSA-87 registration with a leaf, intermediate and root certificate stored a
-992 KB artifact and answered 568 KB (Simple: 515 KB) when each part was kept in
-several spellings, up to four times; it stores 160 KB and answers 109 KB (Simple:
-176 KB). Artifacts and records stored before keep their copies as they are, and the
+Artifacts and records stored before this rule keep their copies as they are, and the
 page still reads them.
 
 ## Quotas
@@ -103,31 +92,32 @@ past one raises `common.StorageQuotaExceeded` before anything is written, and
   registration's begin refuses a namespace they already fill, so the authenticator
   is not asked for a credential that could not be kept; its complete refuses one
   that filled meanwhile, with the challenge's trace.
-- Uploaded metadata: 2,000 entries in a namespace (each entry is a file of its own,
-  with an info file beside it that is not counted: its names and time, and what the
-  explorer and Manage Metadata list of it, at most about 20 KB, `mds/listed_uploads.py`),
-  and 64 MiB of them. An upload
-  whose entries would pass either is refused whole, before any file is saved or
-  queued for the credential log (`mds/uploads.refuse_past_quota`). One entry larger
-  than 1 MiB once stored is refused alone, in the upload's errors, and not counted.
-- Simple credentials: 100 in one username's list. The registration's begin refuses
-  a full list before the authenticator is asked, and its complete checks the list
-  its compare-and-swap would replace, so that count is exact.
+- Uploaded metadata: 2,000 entries in a namespace, and 64 MiB of them. Each entry is a
+  file of its own; the info file beside it (its names and time, and what the explorer
+  and Manage Metadata list of it, at most about 20 KB, `mds/listed_uploads.py`) is not
+  counted. An upload whose entries would pass either is refused whole, before any file
+  is saved or queued for the credential log (`mds/uploads.refuse_past_quota`). One entry
+  larger than 1 MiB once stored is refused alone, in the upload's errors, and not
+  counted. The files of one upload hold at most 200,000 JSON values together
+  (`request_limits.MAX_METADATA_UPLOAD_VALUES`, not a setting), counted before they are
+  parsed: the file that passes it is refused in the upload's errors.
+- Simple credentials: 100 in one username's list. The route answers the 409 itself,
+  nothing is raised (`routes/simple/registration_persistence.py`): the registration's
+  begin refuses a full list before the authenticator is asked, and its complete checks
+  the list its compare-and-swap would replace, so that count is exact.
 
 The counts and sizes come from a listing of the namespace's objects
 (`cloud.list_blob_stats`; a scandir locally, which leaves `.lock` and `.tmp` files
-out), and so do the times of the uploads a listing names (`session_metadata.file_stats`).
-A store that cannot be listed raises `StorageReadError` (503). Two writes at
-once in one namespace can both pass the check, so a namespace can go past a limit
-by the writes in flight; each write is still compare-and-swap where it was.
+out), and so do the times of the uploads a listing names (`session_metadata.file_stats`);
+a listing that fails is the `StorageReadError` above. Two writes at once in one
+namespace can both pass the check, so a namespace can go past a limit by the writes in
+flight; each write is still compare-and-swap where it was.
 
-## Listings
+## Listings and names
 
 Listings stay inside what they need: `session_metadata.list_sessions` reads session
-names as prefixes (`cloud.list_prefixes`), so a flat object is not a session.
-`tests/app/storage/fake_gcs.py` records each listing's prefix and delimiter.
-
-## Names
+names as prefixes (`cloud.list_prefixes`), so a flat object is not a session
+(`tests/app/storage/fake_gcs.py` records each listing's prefix and delimiter).
 
 A name the store refuses raises `common.InvalidStorageIdentifier`, a `ValueError`
 that `routes/errors.py` answers with 400 and no traceback.
@@ -155,19 +145,19 @@ Two cookies, both signed with the app's secret, `HttpOnly`, `SameSite=Lax`, and
   `user-data/<namespace>/<store>/`. A route that stores something for the visitor
   mints it (`visitor_session.ensure_id`), and so does the Simple registration's
   begin, whose user handle is derived from it (`routes/simple/account.py`); a route
-  that only reads mints none. A namespace holds nothing until a store writes in it,
-  so one minted by a begin that goes no further stores nothing. It lasts a year and
-  is signed again once a day old. A namespace idle for 14 days is
-  removed whole, on both backends, by one sweep at most every 6 hours
-  (`visitor_session.schedule_cleanup`). Its last access is its `.last-access`
-  marker's time (the visitor's requests refresh it, at most every 30 minutes; the
-  request that minted a namespace does not, the next one does; a metadata upload
-  marks it once, before its entries are saved), else, for one
-  written but never marked, its newest object's or file's time. Locally the
-  namespace is its folder in each store
-  (`config/paths.LOCAL_STORES`): the sweep lists the namespaces of all three and
-  removes all three folders. Deleting a visitor's last upload leaves the namespace,
-  its marker with it, for the sweep.
+  that only reads mints none. A namespace holds nothing until a store writes in it.
+  The cookie lasts a year and is signed again once a day old. A namespace idle for 14
+  days is removed whole, on both backends, by one sweep at most every 6 hours
+  (`visitor_session.schedule_cleanup`).
+  Its last access is its `.last-access` marker's time (the visitor's requests refresh
+  it, at most every 30 minutes; the request that minted a namespace does not, the next
+  one does; a metadata upload marks it once, before its entries are saved), else, for
+  one written but never marked, its newest object's or file's time. Locally the
+  namespace is its folder in each store (`config/paths.LOCAL_STORES`): the sweep lists
+  the namespaces of all three and removes all three folders. Deleting a visitor's last
+  upload leaves the namespace, its marker with it, for the sweep.
+
+## Soft delete
 
 On Cloud Storage the bucket keeps each object deleted or overwritten for 7 days (soft delete, a
 bucket setting): within them the maintainer can restore what a visitor deleted, what the sweep
@@ -182,22 +172,23 @@ Each registration, and each uploaded metadata file, is copied to the owners' cre
 log repository on GitHub (`GITHUB_LOG_REPO_OWNER`/`GITHUB_LOG_REPO_NAME`, by default
 `rainzhang05/CredentialLogs`): a registration as `logs/<aaguid>/<time>_<random>.json` (its
 time, RP ID, AAGUID, MDS device name, attestation object and the four checks), a metadata
-file whole under `metadata/`, unless it is over 1 MiB (`MAX_LOGGED_METADATA_BYTES`: a file of
-one statement fits, and a request without a cookie gets a namespace of its own, so the upload
-quotas do not bound what the log keeps), which is not copied, with a warning naming it. At most
-50 metadata files and 8 MiB of them are copied a day (UTC), counted when they are queued, and at
-most 1,000 registrations and 64 MiB of them, counted when they are written (one found at its
-path from an earlier delivery is not counted), each in one object beside the outbox
-written by compare-and-swap (`github_outbox.take_metadata_budget`; `github_outbox._delivered`).
-An upload's files past its budget are not queued, nor any of them while the budget cannot be read
-or written, with one warning, and the upload goes on. Past its budget a registration's entry is
-dropped from the outbox before GitHub is asked, with a warning naming it; while the budget
-cannot be read, the entry stays queued, as one GitHub cannot take does, but never gets a failed
-attempt (GitHub was not asked), and a delivery whose count cannot be written is warned about.
-Each budget is one for all visitors, so
-whoever spends it keeps that day's later uploads or registrations out of the log until 00:00 UTC;
-what visitors save is unaffected. The log is on only with a
-`GITHUB_TOKEN`, and `ENABLE_GITHUB_LOGGING=0` turns it off.
+file whole under `metadata/`. A metadata file over 1 MiB (`MAX_LOGGED_METADATA_BYTES`: a file
+of one statement fits, and a request without a cookie gets a namespace of its own, so the
+upload quotas do not bound what the log keeps) is not copied, with a warning naming it. The
+log is on only with a `GITHUB_TOKEN`, and `ENABLE_GITHUB_LOGGING=0` turns it off.
+
+Each day (UTC) at most 50 metadata files and 8 MiB of them are copied, counted when queued,
+and at most 1,000 registrations and 64 MiB of them, counted when written (one found at its
+path from an earlier delivery is not), each budget in one object beside the outbox written
+by compare-and-swap (`github_outbox.take_metadata_budget`; `github_outbox._delivered`).
+An upload's files past its budget are not queued, nor any of them while the budget cannot
+be read or written, with one warning, and the upload goes on. Past its budget a
+registration's entry is dropped from the outbox before GitHub is asked, with a warning naming
+it; while the budget cannot be read, the entry stays queued, as one GitHub cannot take does,
+but never gets a failed attempt (GitHub was not asked), and a delivery whose count cannot be
+written is warned about. Each budget is one for all visitors, so whoever spends it keeps that
+day's later uploads or registrations out of the log until 00:00 UTC; what visitors save is
+unaffected.
 
 No request waits for GitHub. Once a registration's record is saved
 (`record_registration_event`), or once an uploaded file has an entry saved
@@ -210,28 +201,27 @@ the visitor's error.
   object, the `metadata-budget` and the `registration-budget`), outside `user-data/`, so the idle
   sweep never removes them; locally in `FIDO_SERVER_GITHUB_OUTBOX_DIR`, else
   `instance/github-outbox` (`<id>.entry`, `.lease`, `.metadata-budget` and
-  `.registration-budget`).
-  An entry is a line of JSON (kind, path, commit message, and `attempts`, its failed attempts,
-  once it has any: an entry without it has none) and the file's bytes. Ids begin with the time
-  they were queued, so entries are delivered oldest first.
+  `.registration-budget`). An entry is a line of JSON (kind, path, commit message, and
+  `attempts`, its failed attempts, once it has any: an entry without it has none) and the
+  file's bytes. Ids begin with the time they were queued, so entries are delivered oldest
+  first.
 - **The bound.** 1,000 entries and 256 MiB (`MAX_ENTRIES`, `MAX_BYTES`), counted from one
   listing per request that queues. Past either an entry is dropped with a warning naming its
   path; a listing that fails is warned about and the entry written anyway. Two requests at
   once can both pass the bound, as with the quotas. Uploads queue at most the day's metadata
-  budget, 50 entries and 8 MiB of file content, so while the outbox drains they cannot fill it
-  ahead of registrations. Registrations are bounded only by this bound when they are queued, and
-  past their budget dropped as their turn comes, without a GitHub call: a flood of registrations
-  can keep the outbox full, and later entries out of it, while it lasts. The budgets let the log
-  grow by about 1,050 files a day at most.
+  budget, so while the outbox drains they cannot fill it ahead of registrations.
+  Registrations are bounded only by this bound when they are queued, and past their budget
+  dropped as their turn comes, without a GitHub call: a flood of registrations can keep the
+  outbox full, and later entries out of it, while it lasts. The budgets let the log grow by
+  about 1,050 files a day at most.
 - **What delivers them.** `github_outbox.flush`, on a worker thread that requests start
-  (`schedule_flush`): one before a request at most every 30 s per process, or every 10 minutes
-  while its last run found the outbox empty (`github_mirror.init_app`), and one at once when a
-  request has queued an entry, so entries another process queued and never delivered wait up to
-  10 minutes for an idle one. On Cloud Run
-  a run has CPU only while some request is being served, so it goes on through the requests
-  that follow; one that stalls resumes at the next, and an instance that is stopped leaves its
-  entries for the next instance's first request. A run delivers at most 20 entries; one that
-  finds nothing queued stops at that listing and takes no lease.
+  (`schedule_flush`, `github_mirror.init_app`): one before a request at most every 30 s per
+  process (every 10 minutes while its last run found the outbox empty), and one at once when a
+  request has queued an entry; so an entry another process queued and never delivered waits up
+  to 10 minutes for an idle one. On Cloud Run a run has CPU only while a request is served: one
+  that stalls resumes with the requests that follow, and a stopped instance leaves its entries
+  to the next instance's first request. A run delivers at most 20 entries; one that finds
+  nothing queued stops at that listing and takes no lease.
 - **One flusher at a time.** A run holds the outbox's lease for 300 s: on Cloud Storage the
   `lease` object, written only at the generation it was read at (as the stores write), so of
   two instances taking it one wins, and one past its time is taken over; locally an `flock` on
@@ -241,14 +231,13 @@ the visitor's error.
   in parallel), and one holder makes "this content is there already" safe to check.
 - **Delivery** (`github_mirror.deliver`). A file is created, never replaced. When GitHub says
   a file is at the path already, its blob SHA is read: the same content is an earlier delivery
-  that landed: the entry is removed, but it is no sign that GitHub takes writes (below); so a
-  delivery made twice (a run that stalled past its lease, a removal that failed after a landing)
-  never becomes two files. The fixed path is the guarantee, not the lease. A metadata file whose
+  that landed, and the entry is removed (no sign that GitHub takes writes, below), so a delivery
+  made twice (a run that stalled past its lease, a removal that failed after a landing) never
+  becomes two files. The fixed path is the guarantee, not the lease. A metadata file whose
   content is anywhere in `metadata/` is not copied again, and is removed the same way: the
   folder is read through the git trees API (the root's listing names its tree), which lists all
-  of it, where the contents API stops at 1,000 entries. A name holding
-  other content is kept, and the new file goes beside it as `<name>-<first 12 of its blob
-  SHA><extension>`.
+  of it, where the contents API stops at 1,000 entries. A name holding other content is kept,
+  and the new file goes beside it as `<name>-<first 12 of its blob SHA><extension>`.
 - **Failures.** GitHub, the network or the token unable to take a file (401, 403, 404, 408,
   409, 429, a 5xx, a timeout, an answer that is not what the mirror reads) leaves the entry, and
   the run goes on to the next, stopping after 3 such in a row (`MAX_UNAVAILABLE_IN_A_ROW`). When

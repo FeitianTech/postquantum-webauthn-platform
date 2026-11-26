@@ -1,28 +1,24 @@
 # The FIDO MDS snapshot
 
-The MDS explorer is backed by a generated snapshot of the FIDO Alliance
-metadata service: seven files totalling about 34 MB (no. 302, 538 entries), produced
-together by `tools/update_mds_snapshot.py`.
+The MDS explorer, and the metadata a registration is checked against, come from a
+generated snapshot of the FIDO Alliance metadata service: seven files, a few tens of
+megabytes in all, produced together by `tools/update_mds_snapshot.py`.
 
-| File | Size | Read by |
-| --- | --- | --- |
-| `blob.jwt` | 11 MB | the server's provisioning, which verifies the copy it downloads and derives the other files from it and the verified meta (below); the updater, to tell whether the BLOB changed |
-| `fido-mds3.verified.json` | 9.1 MB | the server, as the base metadata payload: the BLOB's payload as the BLOB has it, once verified |
-| `fido-mds3.explorer.json` | 6.0 MB | the server, for the explorer's summary: its meta, and the whole file only when that meta does not describe the verified snapshot |
-| `fido-mds3.explorer.full.json` | 7.8 MB | the server, which derives what browsers load from it (below) |
-| `*.meta.json` (three files) | ~1 KB | the freshness check, the serial a running instance and the updater compare, and the explorer's status line |
+| File | Read by |
+| --- | --- |
+| `blob.jwt` | the server's provisioning, which verifies the copy it downloads and derives the other files from it and the verified meta (below); the updater, to tell whether the BLOB changed |
+| `fido-mds3.verified.json` | the server, as the base metadata payload: the BLOB's payload as the BLOB has it, once verified |
+| `fido-mds3.explorer.json` | the server, for the explorer's summary: its meta, and the whole file only when that meta does not describe the verified snapshot |
+| `fido-mds3.explorer.full.json` | the server, which derives what browsers load from it (below) |
+| `*.meta.json` (three files) | the freshness check, the serial a running instance and the updater compare, and the explorer's status line |
 
-All seven live in one directory: `instance/mds-snapshot/`, unless
-`FIDO_SERVER_MDS_SNAPSHOT_DIR` names another (see "Where the files are").
-**None of them is tracked in git** and none is baked into the container image.
-
-## Why they are not in git
-
-The files change whenever the FIDO Alliance publishes a new BLOB. Tracked, each
-refresh would add about 34 MB to the repository's history and invalidate an image
-layer; so they are provisioned at runtime instead (below), and each snapshot's entry
-details are served under URLs of their own (the list keeps one URL, revalidated by its
-ETag).
+All seven live in one directory (see "Where the files are"). **None of them is tracked in
+git** and none is baked into the container image: they change whenever the FIDO Alliance
+publishes a new BLOB, and tracked, each refresh would add tens of megabytes to the
+repository's history and invalidate an image layer. `.dockerignore` keeps them out of the
+build context, so the image is the same whether or not the developer has a local snapshot;
+the image carries `tools/update_mds_snapshot.py`, which tier 3 runs. The files are
+provisioned at runtime instead (below).
 
 ## Where the files are
 
@@ -44,15 +40,14 @@ served by `server/app/routes/assets.py`), so the sets in Cloud Storage and their
 seven files are exactly what they were:
 
 - **The list**, `/assets/mds/fido-mds3.explorer.list.json`: every entry with what the
-  table shows, filters and sorts by, without its detail or where it came from (about
-  760 KB, 70 KB gzipped, for 538 entries). One URL, `no-cache`, with an ETag naming the
-  version and the encoding, so the page fetches it without asking anything first (and
-  without the session's cookie) and a revisit costs a 304. The page fetches it once its
-  first view is interactive, and at once when the URL opens `#mds`.
-- **The icons**, `/assets/mds/icons/<digest>.<png|svg|…>`: each distinct image once (129
-  for 538 entries), named by its SHA-256 (the first 128 bits), so immutable; served
-  with a sandboxing CSP of their own. The table loads them lazily, as rows scroll into
-  view.
+  table shows, filters and sorts by, without its detail or where it came from. One URL,
+  `no-cache`, with an ETag naming the version and the encoding, so the page fetches it
+  without asking anything first (and without the session's cookie) and a revisit costs a
+  304. The page fetches it once its first view is interactive, and at once when the URL
+  opens `#mds`.
+- **The icons**, `/assets/mds/icons/<digest>.<png|svg|…>`: each distinct image once,
+  named by its SHA-256 (the first 128 bits), so immutable; served with a sandboxing CSP
+  of their own. The table loads them lazily, as rows scroll into view.
 - **Each entry's detail**, `/assets/mds/entries/<entryId>?v=<version>`: the entry as the
   full snapshot holds it; the entry page reads it when it opens (and falls back to
   `/api/mds/metadata/resolve`). Immutable at the version its URL names, where the
@@ -73,32 +68,29 @@ upload has: an upload hides the packaged entry with its AAGUID. An upload and a 
 answer the session's rows as `custom`, which the page merges with the list it holds. An
 upload's row has the list's shape, so these answers grow by a row for each upload, never
 by its statement or its image: the entry page asks `/api/mds/metadata/resolve?entryId=`
-for its detail, and its icon is at `/api/mds/metadata/custom/<stored name>/icon`, the
-visitor's own, kept by the browser for good (an upload never changes), one URL for each
-image (the oldest upload's that holds it). An icon no file is made of stays in its row, as
-in the list. The server works out each upload's row, Manage Metadata's item and what a
-registration's lookup reads of it once, when it is saved, and writes them into the info
-file beside it, marked with their format and fido2's version (`mds/listed_uploads.py`). A
-listing reads that info file, not the upload, and keeps what it read in memory by
-namespace, stored name and version (within 20 MiB): one listing of the namespace says which
-uploads were written since, and only those are read again. An upload whose info keeps
-nothing of the current format (saved by an earlier release, or written again after its
-info) is read and parsed instead, and nothing is rewritten. At the quota (2,000 uploads), a
-listing with nothing in memory took about 3 s of CPU on a laptop, parsing every upload; it
-takes about 0.1 s reading their info files, and an answer takes 30 ms once an instance has
-listed them. A registration still reads the entry it finds from the upload itself. A page from an earlier release was sent to the list only by the info
-answer's `snapshotUrl`, which is gone, and asked `/api/mds/metadata/explorer/full` for
-every row: that answers `410` with a sentence telling it to reload.
+for its detail, and its icon is at `/api/mds/metadata/custom/<stored name>/icon`, kept by
+the browser for good (an upload never changes), one URL for each image (the oldest
+upload's that holds it); an icon no file is made of stays in its row, as in the list.
+
+Each upload's row, Manage Metadata's item and what a registration's lookup reads of it are
+worked out once, when it is saved, and written into the info file beside it under a format;
+a listing reads that info file, not the upload, and keeps what it read in memory, per
+process, within a budget (`mds/listed_uploads.py` has the rules). An upload whose info
+keeps none of the current format (its rows' format and fido2's version: saved by an earlier
+release, or written again after its info) is read and parsed instead, and nothing is
+rewritten. A registration still reads the entry it finds from the upload itself.
+`/api/mds/metadata/explorer/full`, which an earlier release's page asks for every row,
+answers `410` with a sentence telling it to reload.
 
 No route serves a snapshot file, at `/assets/mds/` or at the site's root: the seven
-names, and the `.gz` copy earlier releases wrote beside the full one, are refused there
-(the site's root is the UI's export).
+names, and the full file's old `.gz` name, are refused there (the site's root is the UI's
+export).
 
-The tests use `FIDO_SERVER_MDS_SNAPSHOT_DIR` to keep off a developer's real snapshot:
-`tests/conftest.py` points every test at an empty directory of the run's, and a test
-that needs a snapshot points it at a copy of `tests/fixtures/mds/snapshot` (a small
-synthetic snapshot built by `tests/app/metadata/mds_fixture.py` with the updater's own
-code). The browser tests' Flask (`web/e2e/serve-flask.mjs`) serves such a copy too.
+Tests keep off a developer's real snapshot: `tests/conftest.py` points
+`FIDO_SERVER_MDS_SNAPSHOT_DIR` at an empty directory of the run's, and a test that needs a
+snapshot, like the browser tests' Flask (`web/e2e/serve-flask.mjs`), uses a copy of
+`tests/fixtures/mds/snapshot` (a small synthetic snapshot built by
+`tests/app/metadata/mds_fixture.py` with the updater's own code).
 
 ## How the snapshot reaches the application
 
@@ -117,49 +109,45 @@ credential's AAGUID up and record what they found for good) call
 `ensure_snapshot_available()` first (`waits_for_the_snapshot` in `server/app/mds/provisioning.py`):
 on a cold instance they wait for the provisioning under way instead of answering
 meanwhile as if there were no snapshot, and after the first attempt they return at
-once. From Cloud Storage that wait is the download of the BLOB and its meta (10.6 MB
-for no. 288) and about 0.7 s of CPU to verify the BLOB and derive the other five files
-(measured on no. 288 with the download taken out; Cloud Run's CPU may be slower). It
-has no bound of its own: after the service's request timeout (300 s,
+once. From Cloud Storage that wait is the download of the BLOB and its meta and about a
+second of CPU (more on a slow instance) to verify the BLOB and derive the other five
+files. It has no bound of its own: after the service's request timeout (300 s,
 `deploy/service.yaml`) Cloud Run answers the client 504, but the request's thread waits
-on until the provisioning ends. The pages are static (the UI's export) and never wait,
-so a cold instance's first page is not held; the explorer asks the info route, which
-waits.
+on until the provisioning ends.
+The pages are static (the UI's export) and never wait, so a cold instance's first page
+is not held; the explorer asks the info route, which waits.
 
 1. **Local files.** When all seven files are on disk they are used unchanged. No
    network. If one is missing, the tiers below write the whole set. The one
    exception is the explorer's full snapshot of another `derivedFormat` (its meta
-   names the `explorer_files.DERIVED_FORMAT` of the code that derived it): an earlier
-   release's rows would otherwise be served under this code's version, so the server
-   derives them again from the verified payload, as it does for a full file whose meta
-   does not describe the verified snapshot, until the updater, or a newer set from the
-   bucket, rewrites the file. What it derives keeps the snapshot's generation time, and
-   so the version the updater's file would have: every instance derives the same URLs.
+   names the `explorer_files.DERIVED_FORMAT` of the code that derived it), whose rows
+   would otherwise be served under this code's version: the server derives them again
+   from the verified payload, as it does for a full file whose meta does not describe the
+   verified snapshot, until the updater, or a newer set from the bucket, rewrites the
+   file. What it derives keeps the snapshot's generation time, so every instance derives
+   the URLs the updater's file would give.
 2. **Cloud Storage.** With `FIDO_SERVER_GCS_ENABLED` set, the set the bucket's
    pointer names (below) is taken from `gs://$FIDO_SERVER_GCS_BUCKET/mds/` (the
    prefix is `FIDO_SERVER_MDS_GCS_PREFIX`, default `mds`): its BLOB and the verified
    payload's meta are downloaded at once, each checked against the pointer's SHA-256
    and size; the BLOB is verified against the pinned root at the time the meta says it
-   was fetched (`mds/blob.py`), without its signing chain's CRLs (the updater checked
-   them before it published the set: "Revocation" below), its signed `no` must be the
-   meta's and the pointer's, and the other five files are derived from the two with the
-   updater's own code
-   (`mds/snapshot.py`'s `derive`), the payload derived being the file the pointer
-   names. Without a usable pointer, or when its set cannot be read and verified,
-   provisioning goes on to the upstream refresh. This is the production path: the
-   Cloud Run service account already has access to the `pqcwebauthn` bucket, so no
-   new credentials are involved.
-3. **Upstream refresh.** As a last resort the packaged updater downloads the
-   BLOB from `https://mds3.fidoalliance.org/` and verifies it against the
-   GlobalSign R46 trust root pinned in the source, and its signing chain against the
-   chain's CRLs, before writing anything: a CRL it cannot get fails the refresh, as
-   it fails a run by hand (below). The result is then published to Cloud Storage as
-   a set, so the next cold start stops at tier 2.
+   was fetched (`mds/blob.py`), without its signing chain's CRLs ("Revocation" below),
+   its signed `no` must be the meta's and the pointer's, and the other five files are
+   derived from the two with the updater's own code (`mds/snapshot.py`'s `derive`), the
+   payload derived being the file the pointer names. Without a usable pointer, or when
+   its set cannot be read and verified, provisioning goes on to the upstream refresh.
+   This is the production path: the Cloud Run service account already has access to the
+   `pqcwebauthn` bucket, so no new credentials are involved.
+3. **Upstream refresh.** As a last resort the packaged updater downloads the BLOB from
+   `https://mds3.fidoalliance.org/` and verifies it as any run of the updater does (its
+   chain to the GlobalSign R46 trust root pinned in the source, and the chain's CRLs:
+   "Revocation" below) before writing anything. The result is then published to Cloud
+   Storage as a set, so the next cold start stops at tier 2.
 
 Tier 3 is controlled by `FIDO_SERVER_MDS_FETCH_UPSTREAM`. It defaults to the
 Cloud Storage setting: **on** in a deployed service, which can repopulate its
 own bucket, and **off** locally, so a first request never silently blocks on a
-11 MB download.
+download from upstream.
 
 Whatever writes the snapshot (the Cloud Storage tier, a running instance taking a
 newer set, the updater) writes each file whole, through a temporary file renamed over
@@ -187,8 +175,8 @@ and the next check tries again.
 The application still starts and serves. `/health` and `/` work; `explorer/custom`
 answers `200` with the session's uploads and no packaged entry, the list's URL answers
 `404`, and the explorer shows the session's uploads alone, or no entries (it says the
-packaged metadata is unavailable).
-The updater (below) fills it.
+packaged metadata is unavailable). This is the documented fallback, not a bug. The
+updater (below) fills it.
 
 ## Working locally without Cloud Storage
 
@@ -225,7 +213,7 @@ snapshot as immutable sets and a pointer:
   the object its writer read (its generation), and only forward: a snapshot whose
   serial is not above the pointer's is not published, so a run that finds no new
   BLOB publishes nothing and the explorer's files keep their version (one below the
-  pointer's fails the run: the FIDO Alliance's serials only go up).
+  pointer's fails the run, as the next section says).
 - **Two writers at once** leave one pointer: the other's conditional write fails, it
   deletes the set it wrote, and the updater tries again, three tries in all, in case
   the winner's snapshot is older than its own; after a third loss it publishes nothing
@@ -259,26 +247,24 @@ with a `::warning::` annotation on the run.
 ### Revocation
 
 Verifying the BLOB includes its signing chain's revocation, as MDS3 asks
-(`server/app/mds/revocation.py`, which `mds/blob.py`'s `verify_blob` runs when the
+(`server/app/mds/revocation.py`, which says what makes a CRL usable: the issuer's,
+current and complete for the certificate; `mds/blob.py`'s `verify_blob` runs it when the
 updater gives it its download, `_fetch_crl`). Each certificate on the path to the pinned
-root but the root, which is the pin, names where its issuer publishes the CRL that
-covers it: in the real chain, the signing certificate and its CA. The R3
-cross-certificate the BLOB carries past the root is not on the path, so its CRL is never
-fetched. The updater fetches each CRL there, over plain HTTP as CAs publish them (HTTPS
-too, when a point names it; a CRL is signed), each read waiting at most 30 s, and at
-most 16 MiB. The CRL must be the issuer's, signed with its key; current, its
-`thisUpdate` passed and its `nextUpdate` not; and complete for the certificate: not a
-delta CRL, nor one limited to some reasons, other kinds of certificate or another
-distribution point. A certificate it lists fails the run (`::error::`, exit 1), with
-nothing written or published.
+root, the root aside (it is the pin), names the distribution points where its issuer
+publishes the CRL that covers it: in the real chain, the signing certificate and its CA. The
+R3 cross-certificate the BLOB carries past the root is not on the path, so its CRL is never
+fetched. The updater fetches each CRL over plain HTTP as CAs publish them (HTTPS too, when a
+point names it; a CRL is signed), each read waiting at most 30 s, and at most 16 MiB. A
+certificate a CRL lists fails the run (`::error::`, exit 1), with nothing written or
+published.
 
 The check fails closed. A certificate for which no such CRL can be had from any of its
 points (each unreachable, unreadable, out of date or not such a CRL), or which names no
 point to fetch one from, fails the run the same way, with an `::error::` line of its own.
-A failed run costs only time: production keeps the snapshot it has, the next run tries
-again twelve hours later, and `ci-scheduled-runs.yml` flags the failed workflow
-meanwhile. A run that went on without the CRLs would let whoever can block or replay a
-plain-HTTP fetch hide the very revocation the check is for.
+A failed run costs only time: production keeps the snapshot it has, the next scheduled run
+tries again, and `ci-scheduled-runs.yml` flags the failed workflow meanwhile. A run that
+went on without the CRLs would let whoever can block or replay a plain-HTTP fetch hide the
+very revocation the check is for.
 
 A set taken from the bucket is not checked again: a cold start (tier 2) and a running
 instance taking a newer set verify the BLOB's chain and signature at the time it was
@@ -290,14 +276,6 @@ newer BLOB, signed by a certificate no CRL lists, is published.
 
 `.github/workflows/update-fido-mds.yml` runs this twice a day, so a new BLOB reaches
 the bucket within about twelve hours of the FIDO Alliance publishing it, and running
-instances within fifteen minutes after that. The workflow signs in to Google through
-Workload Identity Federation (no key is stored in GitHub): the pool accepts only this
-repository's `main` branch, and the `mds-publisher` account it acts as may write only
-under `mds/` in the bucket (`deploy/README.md` has the set-up).
-
-## The container image
-
-`.dockerignore` keeps the snapshot out of the build context, so the image is
-identical whether or not the developer has a local snapshot, and a refresh
-never invalidates a layer. The image does carry
-`tools/update_mds_snapshot.py`, which is what tier 3 runs.
+instances within fifteen minutes after that. It signs in to Google through Workload
+Identity Federation, with no key stored in GitHub (set-up: `deploy/README.md`, "One-time
+setup: the MDS publisher").

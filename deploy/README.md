@@ -2,16 +2,13 @@
 
 The service runs in `feitian-project`, region `asia-northeast1`, on one vCPU, and keeps no instance warm (`minScale` 0): an idle instance costs only its liveness probes.
 
-- **Code:** every push to `main` triggers Cloud Build ([cloudbuild.yaml](../cloudbuild.yaml)), which builds the image and updates only the service's image, through [deploy-revision.sh](deploy-revision.sh):
-  - Before anything is deployed, the `GitHub checks` step ([required_checks.py](../tools/required_checks.py)) reads the commit's check runs from GitHub's API, without a token (60 requests an hour for one address). It goes on only when GitHub Actions' latest runs of the browser tests (`Browser tests (Playwright, virtual authenticator)`) and the image check (`docker-build`) both succeeded. It waits up to 10 minutes for runs that have not ended. A run that failed, was cancelled or was skipped, a run never reported, and an answer it cannot read after three tries (GitHub's rate limit included) fail the build, and nothing is deployed. There is no bypass in the pipeline.
-  - When a browser test failed for no fault of the commit, run the job again on GitHub, then retry the build in Cloud Build: it deploys, since its commit is still main's tip. A push made while the previous commit's GitHub runs are still going cancels them: that commit's build then fails this way, and the newer one deploys.
-  - The new revision takes no traffic at first. It is tagged `candidate` and named for the commit and the build.
-  - `/health`, `/` and `/api/mds/metadata/info` (with its `entryCount`) are checked at the tag's URL, `https://candidate---…`. Each is tried again, 15 s apart, while the revision starts and provisions its MDS snapshot, all within 8 minutes.
-  - Only then does the revision get all the traffic (`update-traffic --to-revisions`).
+- **Code:** every push to `main` triggers Cloud Build ([cloudbuild.yaml](../cloudbuild.yaml)), which runs its own test gate, builds the image and updates only the service's image, through [deploy-revision.sh](deploy-revision.sh):
+  - Before anything is deployed, the `GitHub checks` step ([required_checks.py](../tools/required_checks.py)) reads the commit's check runs from GitHub's API without a token (60 requests an hour for one address), and goes on only when GitHub Actions' latest runs of the browser tests (`Browser tests (Playwright, virtual authenticator)`) and the image check (`docker-build`) both succeeded. It waits up to 10 minutes for runs not ended. A run that failed, was cancelled or was skipped, a run never reported, and an answer it cannot read after three tries (GitHub's rate limit included) fail the build, and nothing is deployed. There is no bypass in the pipeline.
+  - A push made while the previous commit's GitHub runs are still going cancels them: that commit's build then fails this way, and the newer one deploys. A browser test that failed for no fault of the commit is run again as [When production misbehaves](#when-production-misbehaves) says.
+  - The new revision, named for the commit and the build, takes no traffic at first and is tagged `candidate`. `/health`, `/` and `/api/mds/metadata/info` (with its `entryCount`) are checked at the tag's URL, `https://candidate---…`, which is public like the service's: each is tried again, 15 s apart, while the revision starts and provisions its MDS snapshot, all within 8 minutes. Only then does the revision get all the traffic (`update-traffic --to-revisions`).
   - Whatever fails leaves the traffic on the revision that had it. The failed revision keeps its tag, without traffic, until the next deploy moves the tag.
-  - Builds can overlap, and one can be retried by hand, so the script reads main's tip from the public repository (git's ref advertisement, no token) before it deploys and again before it promotes. A build whose commit is no longer the tip stops there without error and leaves the traffic where it is; a tip it cannot read after a few tries fails the deploy. If the newer commit's own build then fails, nothing deploys until a later push's build passes. The read needs the repository public at the address `cloudbuild.yaml` gives the script.
-  - The build's service account needs nothing more than the deploy did before. `services describe` and `update-traffic` need the same `run.services.get` and `run.services.update` as `services update`, and the tag's URL is public like the service's.
-- **Settings:** concurrency, scaling, secrets and the runtime identity live in [service.yaml](service.yaml). Apply them with [apply-service-config.sh](apply-service-config.sh). The script keeps the image of the revision that serves the traffic. Its new revision takes all the traffic at once, without the deploy's checks. A liveness probe on `/health` replaces an instance that has not answered for two minutes, from five minutes after it starts, so that a slow start can provision its MDS snapshot: Cloud Run kills it, ending its requests in flight with 503, and starts another.
+  - Builds can overlap, and one can be retried by hand, so the script reads main's tip from the public repository (git's ref advertisement, no token) before it deploys and again before it promotes. A build whose commit is no longer the tip stops there without error and leaves the traffic where it is (if the newer commit's own build then fails, nothing deploys until a later push's build passes); a tip it cannot read after a few tries fails the deploy. The read needs the repository public at the address `cloudbuild.yaml` gives the script.
+- **Settings:** concurrency, scaling, secrets and the runtime identity live in [service.yaml](service.yaml). Apply them with [apply-service-config.sh](apply-service-config.sh), which keeps the image of the revision that serves the traffic; its new revision takes all the traffic at once, without the deploy's checks. A liveness probe on `/health` replaces an instance that has not answered for two minutes, from five minutes after it starts, so that a slow start can provision its MDS snapshot: Cloud Run kills it, ending its requests in flight with 503, and starts another.
 
 ## Rolling back
 
@@ -44,7 +41,7 @@ gh run rerun <run> --repo FeitianTech/postquantum-webauthn-platform --failed
 gcloud builds triggers run 340c8d13-cf47-4905-9acb-e85078ec7355 --project feitian-project --region global --branch main
 ```
 
-Run these once, in your own terminal, so that an e-mail reaches the maintainer when the site is down or erroring, a build fails, or the month's spending passes half the budget, all of it, or is forecast to. By Google's pricing pages the three alert conditions cost at most about US$1.25 a month, and the uptime checks stay within their free allowance. Their two requests a minute keep an instance warm, so the cold starts [Measuring cold starts](#measuring-cold-starts) describes after a quiet spell become rare.
+Run these once, in your own terminal, so that an e-mail reaches the maintainer when the site is down or erroring, a build fails, or the month's spending passes half the budget, all of it, or is forecast to. The three alert conditions cost little (about US$1.25 a month at most, by Google's pricing pages), and the uptime checks stay within their free allowance; their two requests a minute keep an instance warm, so the cold starts after a quiet spell ([Measuring cold starts](#measuring-cold-starts)) become rare.
 
 ```bash
 PROJECT=feitian-project
@@ -267,11 +264,11 @@ the worker gives back the memory of a burst of large requests) for itself, and
 | `FIDO_SERVER_MAX_CODEC_REQUEST_BYTES` | 1 MiB | The largest `/api/codec` request; larger answers 413 |
 | `FIDO_SERVER_MAX_CODEC_ITEMS` | `20000` | The most items `/api/codec` reads for one request (`server/app/decoder/item_budget.py`); past it the input is refused, 422 |
 | `FIDO_SERVER_MAX_REGISTRATION_RESPONSE_BYTES` | 256 KiB | The largest credential response a registration or a sign-in completes with (a Simple registration's whole body, a Simple sign-in's `credential`, an Advanced complete's `__credential_response` or `__assertion_response`; the saved credentials a sign-in sends beside it are not counted); larger answers 413 |
-| `FIDO_SERVER_MAX_STORED_ARTIFACTS` | `1000` | The most credential artifacts one visitor's namespace keeps; a new one past it answers 409 |
-| `FIDO_SERVER_MAX_STORED_ARTIFACT_BYTES` | 256 MiB | The most bytes of them; a write past it answers 413 |
-| `FIDO_SERVER_MAX_STORED_METADATA_ENTRIES` | `2000` | The most uploaded metadata entries one visitor's namespace keeps; an upload past it answers 409 |
-| `FIDO_SERVER_MAX_STORED_METADATA_BYTES` | 64 MiB | The most bytes of them; an upload past it answers 413 |
-| `FIDO_SERVER_MAX_SIMPLE_CREDENTIALS_PER_USERNAME` | `100` | The most Simple credentials one username's list keeps; a registration past it answers 409 |
+| `FIDO_SERVER_MAX_STORED_ARTIFACTS` | `1000` | The most credential artifacts one visitor's namespace keeps ([Quotas](../docs/STORAGE.md#quotas): 409 past a count, 413 past bytes) |
+| `FIDO_SERVER_MAX_STORED_ARTIFACT_BYTES` | 256 MiB | The most bytes of them |
+| `FIDO_SERVER_MAX_STORED_METADATA_ENTRIES` | `2000` | The most uploaded metadata entries one visitor's namespace keeps |
+| `FIDO_SERVER_MAX_STORED_METADATA_BYTES` | 64 MiB | The most bytes of them |
+| `FIDO_SERVER_MAX_SIMPLE_CREDENTIALS_PER_USERNAME` | `100` | The most Simple credentials one username's list keeps |
 | `FIDO_SERVER_GCS_ENABLED` | off | Keep the stores and the MDS snapshot in Cloud Storage |
 | `FIDO_SERVER_GCS_BUCKET` | none | The bucket; Cloud Storage is used only when it is set too |
 | `FIDO_SERVER_GCS_PROJECT` | the credentials' | The Cloud Storage client's project |
@@ -290,11 +287,6 @@ the worker gives back the memory of a burst of large requests) for itself, and
 | `GITHUB_HTTP_TIMEOUT_SECONDS` | `4` | Each GitHub request's timeout, in the worker that delivers the log's outbox (no request waits for GitHub) |
 | `FIDO_SERVER_GITHUB_OUTBOX_DIR` | `instance/github-outbox` | Where the log's entries wait for delivery without Cloud Storage; with it they wait under `github-outbox/` in the bucket ([STORAGE.md](../docs/STORAGE.md#the-credential-log)) |
 
-`FIDO_SERVER_CONTENT_SECURITY_POLICY_REPORT_ONLY` and `FIDO_SERVER_REPORTING_ENDPOINTS`
-are no longer read: Trusted Types are part of the enforced policy, and the reporting
-endpoint is the one the policy names. Nor is `GITHUB_LOG_ASYNC`: no request uploads to
-GitHub, and the log's entries wait in an outbox that a worker delivers.
-
 ## Measuring cold starts
 
 ```bash
@@ -307,7 +299,7 @@ gcloud logging read 'resource.type="cloud_run_revision" AND resource.labels.serv
   --project feitian-project --freshness=1d --limit 100 --format='table(timestamp,httpRequest.requestUrl,httpRequest.latency)'
 ```
 
-With no instance kept warm, a visitor meets a cold start after a quiet spell, when traffic needs a second instance, or on a new revision's first request. A request's time to first byte:
+A visitor meets a cold start after a quiet spell, when traffic needs a second instance, or on a new revision's first request. A request's time to first byte:
 
 ```bash
 curl -so /dev/null -w 'ttfb=%{time_starttransfer}s total=%{time_total}s\n' https://pqcwebauthn-277359456097.asia-northeast1.run.app/
