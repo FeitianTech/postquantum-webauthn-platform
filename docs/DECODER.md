@@ -3,13 +3,12 @@
 `server/app/decoder/` is the codec behind the Codec section, the credential
 details and `/api/codec`: `decode/` reads what it is given and shows what it holds, `encode/`
 writes a value back. These are its rules. Read them before changing anything
-under `server/app/decoder`; `AGENTS.md` keeps only a summary.
+under `server/app/decoder`.
 
 ## What the decoder shows
 
-The decoder shows what was sent: it never synthesizes or drops a field (the old
-"repair" code did, for a set of corrupt captures), and bytes after the top-level
-item are reported, never decoded or dropped.
+The decoder shows what was sent: it never synthesizes or drops a field, and bytes
+after the top-level item are reported, never decoded or dropped.
 
 Interpretation sits beside the decoded value, never in place of it:
 `decode/interpretations.py` adds `data.extensionsDecoded` (`decode/extensions.py`,
@@ -161,12 +160,12 @@ JSON input is read by `decode/json_input.py`, which reports a key given twice in
 one object as `duplicate-json-key` (the path, the value kept and the values
 dropped; no offset, which the JSON reader cannot give); the encoder refuses such
 input and points at EDN, which can express it. A JSON path spells a key longer
-than 32 characters by its first 29 and `...`, as a CBOR path does, a finding's
-path longer than 256 characters is cut in its middle (its start and end kept,
-`...` between), and a value kept or dropped whose JSON spelling passes 256
-characters is given as that spelling's first 253 and `...`. The encoder shows the JSON it was
-given back with its keys as written (`decode/json_keys.as_written` marks them
-`JsonLabel`), so its own output can be pasted back in.
+than 32 characters by its first 29 and `...`, as a CBOR path does, and is cut as a
+CBOR path is past 256 characters (Findings); a value kept or dropped whose JSON
+spelling passes 256 characters is given as that spelling's first 253 and `...`. The
+encoder shows the JSON it was given back with its keys as written
+(`decode/json_keys.as_written` marks them `JsonLabel`), so its own output can be
+pasted back in.
 
 `NaN`, `Infinity` and `-Infinity` are not JSON (RFC 8259), though Python's reader
 takes them. Read strictly, input holding one is refused with a 422 naming the
@@ -180,9 +179,8 @@ request asks: such a part is shown as its text with why it is not JSON (the form
 is retired). The encoder, which reads no JSON leniently, refuses such input with
 the offset and path counted in the input as sent, and points at EDN, which writes
 them; the metadata upload refuses it. No answer may hold a bare `NaN`: Flask's JSON
-provider would write it, and the answer would not be JSON.
-`tests/app/core/test_codec_answers_are_json.py` parses every decoder and encoder
-answer over the corpus with a reader that refuses them.
+provider would write it, and the answer would not be JSON
+(`tests/app/core/test_codec_answers_are_json.py` checks every answer over the corpus).
 
 A number with a fraction or an exponent beyond the range of a double (`1e400`) is
 JSON, but Python's reader makes it an infinity (RFC 8259 section 6 lets a reader
@@ -199,11 +197,9 @@ Nor may an answer hold a value only Flask's provider can write. A value JSON has
 no spelling for (`undefined`, a simple value, a NaN or an infinity) is
 `{"diagnostic": "simple(1)"}` wherever an answer holds it, as `decodedValue`
 writes it: authenticator data's extensions and credential public key too, which
-`values.json_ready`, the decoder answer's last pass, spells. The same test
-writes each answer `decode_payload_text` and `encode_payload_text` return with
-`json.dumps` alone (`allow_nan=False`) and requires it to be the route's answer,
-over the corpus and over the inputs that are not one item
-(`codec_corpus.payloads()`).
+`values.json_ready`, the decoder answer's last pass, spells: each answer
+`decode_payload_text` and `encode_payload_text` return, written with `json.dumps`
+alone (`allow_nan=False`), is the route's answer (the same test checks).
 
 JSON is read at most 64 deep, as CBOR and EDN are (RFC 8259 section 9 lets a
 parser limit how deep it reads): a value nested deeper is refused with a 422
@@ -217,16 +213,10 @@ goes until Python's stack runs out; that too is refused at the first value past
 
 `/api/codec` reads a body of at most 1 MiB (`config/request_limits.py`,
 `FIDO_SERVER_MAX_CODEC_REQUEST_BYTES`), set on the request before anything reads
-it; a larger one is answered 413 in JSON. Every other route takes 8 MiB, the
-metadata upload 16 MiB, and a registration's credential response 256 KiB. The
-codec's largest real input, an ML-DSA-87 attestation object with its full chain
-as hex, is about 60 KB.
-
-The request's own body is read by `routes/json_body.py` before the codec sees it:
-one holding `NaN`, an infinity or a number no double holds, or nested more than 64
-deep, is answered 400 in JSON, and so is one that is not JSON, an empty `payload`,
-an encode without a `format`, or a `lenient` that is not a boolean. Only the
-`payload` text itself is the codec's to refuse, with a 422.
+it; a larger one is answered 413 in JSON. The body itself is read by
+`routes/json_body.py`, every route's reader: a body it refuses is a 400 in JSON, as
+are an empty `payload`, an encode without a `format` and a `lenient` that is not a
+boolean. Only the `payload` text itself is the codec's to refuse, with a 422.
 
 One decode or one encode reads at most 20,000 items (`decoder/item_budget.py`,
 `FIDO_SERVER_MAX_CODEC_ITEMS`): every CBOR item `decode/cbor_parser` builds
@@ -258,24 +248,17 @@ is spelled again with each level, so one request spells at most 16,000,000 units
 back: a byte of a byte string 1, a character of text 32, an item 256. `data.edn`,
 spelled once per reading, is not counted: the item count bounds it. Past it the
 input is refused, 422, with `item_budget.SpellingLimitError`, raised again in the
-same way. Real inputs spell at most 7,168 units, a flat map of 600 two-item array
-keys 1.8 million; a text of more than 500,000 characters is refused where it must
-be spelled to name it (inside a key that is an array, map or tag, which is spelled
-about four times, more than about 125,000), and so is a key repeated 60 deep
-around more than about 235,000 bytes. The 1 MiB towers of repeated or nested keys
-that took 17 to 38 s are refused in about 1 s or less and 100 MB; the costliest
-request the budget answers, a 1 MiB CTAP message with a tagged text of control
-characters, takes 1.2 s and 35 MB, as before (its spelling about 0.25 s).
+same way.
 
-Measured when the limits were set (on an M5, idle and under load): the largest
-input in the corpus and the goldens reads 143 items, a getInfo holding every
-CTAP 2.2 member 1,888, a makeCredential request excluding 64 credentials 3,114.
-At 20,000 the costliest request, lenient input that writes a finding for each
-item, takes 0.2 to 0.4 s and about 30 MB; well-formed CBOR takes under 0.2 s and
-5 MB. A 1,000,000-item array, which took 8.7 s and 465 MB, is refused in under
-0.1 s and 9 MB, and at the route by its size, before it is read. What the item
-count does not bound, the body limit does: a 1 MiB PEM bundle of about 2,100
-certificates takes 0.34 s and 39 MB.
+Both limits sit far above what real inputs need, and bound what the costliest
+request costs: real inputs read at most a few thousand items (a getInfo holding
+every CTAP 2.2 member, a makeCredential request excluding 64 credentials) and
+spell at most several thousand units, while at the item limit the costliest
+request, lenient input that writes a finding for each item, takes a fraction of a
+second and some tens of MB, and spelling a whole budget of the costliest content,
+text of control characters, a fraction of a second. What the item count does not
+bound, the body limit does: the costliest request the limits let through, a 1 MiB
+CTAP message holding such text, takes about a second.
 
 ## The EDN view and EDN input
 
@@ -305,14 +288,9 @@ deliberate departure from the EDN draft, which reads such an integer as a bignum
 write the tag, `2(h'...')`.
 
 Decode then encode of `data.edn` gives back the input's bytes:
-`tests/app/decoder/test_edn_round_trip.py` proves it with Hypothesis over
-generated items (`tests/app/cbor_items.py`: every head width, chunked and
-zero-chunk strings, duplicate keys, nested tags, raw-bit floats) and over every
-CBOR input in the goldens and fixtures (`tests/app/codec_corpus.py`), at the
-module and at the API. Hypothesis writes `.hypothesis/` in the working directory
-whatever its `database` setting, so `tests/conftest.py` points
-`HYPOTHESIS_STORAGE_DIRECTORY` at a temporary directory and loads a derandomized
-profile with no example database.
+`tests/app/decoder/test_edn_round_trip.py` proves it, at the module and at the API,
+over generated items (`tests/app/cbor_items.py`) and every CBOR input in the
+goldens and fixtures (`tests/app/codec_corpus.py`).
 
 ## CTAP messages
 
@@ -385,13 +363,11 @@ view, still goes through its own builders (`encode/ctap_numeric.py`,
 `encode/ctap_encode.py`), which pick a message from the members present and add
 a command or status byte.
 
-Decode, view, encode gives back the input's bytes:
+Decode, view, encode gives back the input's bytes, and exactly the messages not
+in canonical form or read past damage are refused:
 `tests/app/encoder/test_ctap_view_round_trip.py` proves it through `/api/codec`,
-with both formats, over generated messages of every kind
-(`tests/app/ctap_messages.py`, written by a canonical writer of the test's own,
-with and without a CTAP byte and trailing bytes) and over every CTAP message the
-repository holds (`codec_corpus.ctap_messages()`), where exactly the messages
-not in canonical form or read past damage are refused.
+with both formats, over generated messages (`tests/app/ctap_messages.py`) and every
+CTAP message the repository holds.
 
 The encoder refuses a decoded-JSON member it cannot rebuild rather than dropping
 it.
@@ -405,20 +381,11 @@ serialise encoder output with cbor2. Every CBOR head either writes goes through
 
 ## Where new code goes
 
-`decode/ctap.py`, `decode/text.py` and `decode/answer.py` are under the module size limit now;
-keep them there by putting new code in a module named for what it does, as
-`ctap_prefix.py` (the command or status byte), `ctap_classify.py` (a map's CTAP
-shape), `ctap_message_view.py` (the views), `ctap_auth_data.py`,
-`ctap_self_check.py`, `readings.py` (the binary readings), `binary_text.py` (text read as bytes),
-`pem.py` (a certificate given whole), `attestation_object.py`,
-`credential_json.py` (a PublicKeyCredential, client data or other JSON),
-`findings.py` (collecting and ordering findings), `authenticator_data.py`,
-`json_input.py`, `edn_view.py`, `key_equivalence.py`, `ctap_conformance.py`,
-`answer_auth_data.py` (the answer's authenticator data view) and `answer_bytes.py`
-(the bytes the answer reads back from a reading's entries) are. `text.py` imports the readers and none imports it back: nothing in
-`server/app` imports in a cycle (`tests/app/tooling/test_import_cycles.py`).
-Spelling shared by both
-sides lives in `server/app/decoder/` itself (`view_spelling.py`, `ctap_message.py`,
-`cbor_canonical.py`, `cbor_head.py`, `ctap2_order.py`), since `decode/` never
-imports `encode/`; so does `item_budget.py`, which both sides and `edn/` count
-their reads against.
+New code goes in a module named for what it does (`decode/ctap_prefix.py`, the
+command or status byte; `decode/ctap_classify.py`, a map's CTAP shape), so that
+`decode/ctap.py`, `decode/text.py` and `decode/answer.py` stay under the module size
+limit. `text.py` imports the readers and none imports it back. Spelling shared by
+both sides lives in `server/app/decoder/` itself (`view_spelling.py`,
+`ctap_message.py`, `cbor_canonical.py`, `cbor_head.py`, `ctap2_order.py`), since
+`decode/` never imports `encode/`; so does `item_budget.py`, which both sides and
+`edn/` count their reads against.

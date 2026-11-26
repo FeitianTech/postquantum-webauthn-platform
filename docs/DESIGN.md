@@ -30,9 +30,8 @@ the page in a real browser.
 - The tokens are in `web/src/styles/globals.css` (`@theme`): Tailwind's palette, type
   scale, radii and shadows are cleared first, so only named tokens exist.
 - One component per job, with the same height, radius, padding and label placement
-  everywhere; a field row always has its label in the same place. Switches for single
-  booleans, toggle chips for sets. Long values are never cut off silently: they are
-  truncated with a way to see all and a copy button.
+  everywhere. Switches for single booleans, toggle chips for sets. Long values are
+  never cut off silently: they are truncated with a way to see all and a copy button.
 
 ## Focus
 
@@ -91,13 +90,13 @@ the page in a real browser.
 
 - A control that opens another section (a saved credential's FIDO MDS, Decode in
   Codec, an MDS entry's Try in Advanced) is a secondary button. It pushes a history
-  entry, so Back returns to the place it left. The focus goes back to that control
-  when the page still holds it; the credential details, which a dialog remounts, put
+  entry, so Back returns to the place it left, and the focus goes back to that control
+  when the page still holds it. The credential details, which a dialog remounts, put
   their Decode in Codec button back themselves, where it was in the level's view. An
   MDS entry is not kept while its section is hidden: Back from Try in Advanced shows
-  it again as it arrives, its heading taking the focus. Details over an entry come
-  back with it, and find their place as the others do; their × gives the focus to
-  the credential's button under the entry's header, else to the entry's heading.
+  it again as it arrives, its heading focused. Details over an entry come back with
+  it and find their place the same way; their × gives the focus to the credential's
+  button under the entry's header, else to the entry's heading.
 - What a control hands the section it opens (a payload for the Codec, an MDS
   statement's settings for the Advanced registration) goes through the section
   router, never the URL: the hash names the section alone.
@@ -109,11 +108,11 @@ the page in a real browser.
   (`server/app/config/security_headers.py`); Trusted Types are enforced
   (`require-trusted-types-for 'script'`), and only Next's two policies may be made
   (`trusted-types nextjs nextjs#bundler`). Violations reach `/api/csp-report`.
-- Every answer is `Cross-Origin-Opener-Policy: same-origin` (a page shares no
-  window group with another site's, which keeps no handle on it) and
-  `Cross-Origin-Resource-Policy: same-origin` (no other site loads what this one
-  answers). The page keeps no handle on a window it opens (the GitHub link is
-  `noopener`) and loads nothing from another origin, so neither changes what it does.
+- Every answer is `Cross-Origin-Opener-Policy: same-origin` (a page shares no window
+  group with another site's) and `Cross-Origin-Resource-Policy: same-origin` (no other
+  site loads what this one answers). The page keeps no handle on a window it opens
+  (the GitHub link is `noopener`) and loads nothing from another origin, so neither
+  changes what it does.
 - So in `web/src` (`tests/app/tooling/test_web_source_rules.py` holds it): no `style`
   prop (the export would render a style attribute; set `element.style` through a ref),
   no `<style>` or `<script>` element, no `next/script`, no `next/link` (links are plain
@@ -121,8 +120,6 @@ the page in a real browser.
   nothing written to `window`, and no `Suspense` on the server-rendered path (React
   would put an inline script in the export). `web/scripts/check-export-csp.mjs` scans
   the export for anything that would still slip through.
-- The logic in `web/src/logic` is imported, never copied into a component (neither its
-  exports nor its sentences), and touches no DOM.
 - Overlays stack (each layer's z-index is its depth; only the top one handles Escape
   and Tab; the ones under it are inert; focus returns layer by layer). A question
   before something that cannot be undone is `ConfirmDialog`, never the browser's
@@ -132,16 +129,14 @@ the page in a real browser.
 
 - **The export** (`web/out`): three pages (`index`, `404`, `500`) and
   `/_next/static/`. The page's own chunk holds the shell and the Simple tab; the other
-  sections, the credential details, the Analyze Browser panel and the attestation findings'
-  list (with their sentences in English and 中文) are chunks of their own, fetched once the
-  first view is interactive (the section the URL names at once, the findings list once a
-  result has findings), and only Geist is preloaded. Flask's `web_export` blueprint serves it at `/`:
-  HTML `no-cache`; `/_next/static/` immutable for a year, gzipped from the build's
-  `.gz` copies; the export's 404 page for an unknown path. No Node runs in production.
-- **Flask** answers everything with a static segment first: `/health`, `/api/…` (every
-  error in JSON, `{"error": sentence}`: a path no API route holds is a 404 whatever
-  the method, `server/app/routes/errors.py`), `/assets/mds/…` (the MDS explorer's
-  list, its icons and each entry's detail, derived from the snapshot:
-  docs/MDS_SNAPSHOT.md; no snapshot file). The export's files and `/assets/` never set
+  sections, the credential details, the Analyze Browser panel and the attestation
+  findings' list (with its sentences in English and 中文) are chunks of their own,
+  fetched once the first view is interactive (the section the URL names, and the
+  findings list when a result has findings, at once). Flask's `web_export` blueprint
+  serves it at `/`: HTML `no-cache`; `/_next/static/` immutable for a year, gzipped from
+  the build's `.gz` copies; the export's 404 page for an unknown path.
+- **Flask** answers everything with a static segment first: `/health`, `/api/…`
+  (errors in JSON: `server/app/routes/errors.py`) and `/assets/mds/…` (the MDS
+  explorer's files: docs/MDS_SNAPSHOT.md). The export's files and `/assets/` never set
   the session's cookie, and the page fetches the MDS list without it: an answer
   landing after a ceremony's begin cannot put back the session from before it.
