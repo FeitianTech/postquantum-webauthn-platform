@@ -25,9 +25,9 @@ of a credential holds, post-quantum (ML-DSA) credentials included.
 * **Analyze Browser**: what this browser says about WebAuthn, and where each
   answer came from.
 
-Registrations offer ML-DSA-44, ML-DSA-65 and ML-DSA-87 (FIPS 204) first, then
-EdDSA, ES256, RS256 and ES384. Flask serves the API and a Next.js static export
-of the UI. [docs/FEATURES.md](docs/FEATURES.md) describes each section.
+Registrations offer the post-quantum ML-DSA-44, ML-DSA-65 and ML-DSA-87 (FIPS 204)
+ahead of the classical algorithms. Flask serves the API and a Next.js static
+export of the UI. [docs/FEATURES.md](docs/FEATURES.md) describes each section.
 
 ## Run it locally
 

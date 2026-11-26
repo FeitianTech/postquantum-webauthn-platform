@@ -86,11 +86,8 @@ No route serves a snapshot file, at `/assets/mds/` or at the site's root: the se
 names, and the full file's old `.gz` name, are refused there (the site's root is the UI's
 export).
 
-Tests keep off a developer's real snapshot: `tests/conftest.py` points
-`FIDO_SERVER_MDS_SNAPSHOT_DIR` at an empty directory of the run's, and a test that needs a
-snapshot, like the browser tests' Flask (`web/e2e/serve-flask.mjs`), uses a copy of
-`tests/fixtures/mds/snapshot` (a small synthetic snapshot built by
-`tests/app/metadata/mds_fixture.py` with the updater's own code).
+Tests keep off a developer's real snapshot and use a copy of the small synthetic one in
+`tests/fixtures/mds/snapshot` (AGENTS.md, "Testing").
 
 ## How the snapshot reaches the application
 
