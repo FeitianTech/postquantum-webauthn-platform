@@ -1,6 +1,8 @@
 # AGENTS.md
 
-A quick orientation for coding agents working in this repository.
+A FIDO2/WebAuthn test platform (what the site does: `README.md`, `docs/FEATURES.md`). Flask serves
+the API and the UI, `web/`, a Next.js static export served at `/`; no Node runs in production. The
+server uses python-fido2 from PyPI (`fido2`, pinned exactly); what it adds lives in `server/app`.
 
 ## Commits
 
@@ -15,14 +17,22 @@ Every commit, whoever makes it:
   briefs, reviews or verifications, and nothing else that shows how the team
   organises its work.
 
-## What this repository is
+## Before you change anything
 
-A FIDO2/WebAuthn test platform and developer tool: simple and advanced registration and
-authentication, post-quantum (ML-DSA) credentials, credential inspection and attestation
-decoding, a FIDO MDS explorer, and a CBOR/CTAP codec. Flask serves the API and the UI; the
-UI is `web/`, a Next.js static export Flask serves at `/`. No Node runs in production.
-The server uses python-fido2 from PyPI (`fido2`, pinned exactly); what it adds to fido2 lives
-in `server/app` (see "Backend").
+Find which section or route owns the behaviour, whether the saved credentials are involved,
+whether the server already returns what the page needs, and the smallest test that proves the
+change. Prefer focused fixes; when you add a response field, change the page's handling and at
+least one app test with it.
+
+Read first:
+
+- `docs/DESIGN.md` before changing anything under `web/`.
+- `docs/STORAGE.md` before `server/app/storage`, the visitor's namespace or the credential log.
+- `docs/DECODER.md` before `server/app/decoder`.
+- `docs/MDS_SNAPSHOT.md` before `server/app/mds` or anything that provisions or publishes the
+  snapshot.
+- `deploy/README.md` before changing the deploy (`cloudbuild.yaml`, `deploy/`) or a setting the
+  server reads: its "Environment variables" table lists every one, size limits included.
 
 ## Layout
 
@@ -39,142 +49,81 @@ in `server/app` (see "Backend").
   image build), `commit_messages.py` (the commit message check), `required_checks.py` (Cloud
   Build's wait for GitHub's browser tests and image check), `update_footer_year.py`,
   `subset_geist.sh` (Geist's two faces in `web/src/fonts`, with fonttools through `uvx`).
-- `docs/`: `DESIGN.md` (the UI's design, security and serving rules), `DECODER.md`,
-  `STORAGE.md`, `MDS_SNAPSHOT.md`.
+- `docs/`: `FEATURES.md`, `DESIGN.md`, `DECODER.md`, `STORAGE.md`, `MDS_SNAPSHOT.md`.
 - `Dockerfile`, `cloudbuild.yaml` (the deploy gate), `deploy/` (Cloud Run service config,
   the checked deploy), `.github/` (workflows, the bot PR action).
-- `LICENSE`: Apache 2.0, FEITIAN Technologies Co., Ltd. Third-party material keeps its own
-  licence beside it: the Geist font (`web/src/fonts/OFL.txt`), python-fido2's test vectors (in
-  `tests/app/python_fido2_vectors.py`).
+- `LICENSE` (Apache 2.0). Third-party material keeps its own licence beside it: the Geist font
+  (`web/src/fonts/OFL.txt`), python-fido2's test vectors (in `tests/app/python_fido2_vectors.py`).
 
 ## The UI (`web/`)
 
-**Read `docs/DESIGN.md` before changing anything under `web/`**: light only, no grey
-components, no focus effect on text fields, the section slide, the MDS page's structure,
-the CSP and the source rules.
-
 - `src/pages/`: `index.tsx` (the app shell), `404.tsx`, `500.tsx`, `_error.tsx` (Next's own
-  error pages use style attributes the CSP refuses), `_app.tsx` (Geist and Geist Mono via
-  `next/font/local`: Geist as two faces of one family, the Latin one preloaded and the rest by
-  `unicode-range`, cut from the `geist` package's file into `src/fonts` by
-  `tools/subset_geist.sh`; Geist Mono the package's own file, not preloaded; on a wrapper
-  holding `#app-root` and `#overlay-root`, so portalled overlays get them), `_document.tsx`.
-- `src/styles/globals.css`: the design tokens (`@theme`, Tailwind's defaults cleared first);
-  text fields carry `data-text-field`. `@source not` keeps Tailwind out of `src/logic` and
-  `src/test/logic`.
-- `src/components/ui/`: the primitives (Button, IconButton, text fields, Select, Switch,
-  ToggleChip, SegmentedControl, Badge, StatusChip, Overlay with Dialog / Drawer / Sheet,
-  Toast, InfoPopover, LanguageToggle (English or 中文, for text in both), the table
-  primitives, MonoValue, CodeBlock, KeyValueGrid, ConfirmDialog, FieldRow, BackButton,
-  OverlayHeader with `back`). Overlays stack: a module-level list of
-  open layers, z-index by depth, only the top one handling Escape and Tab, focus returned
-  layer by layer. `SegmentedControl` moves its highlight through the CSSOM from a ref;
-  `MonoValue` measures overflow as if its "Show all" were not there, again when fonts load.
-- `src/components/shell/`: the header (title, the four sections, Analyze Browser, GitHub;
-  the phone menu sheet below 900 px; it measures itself into `--header-height`), the footer
-  (its year kept by `tools/update_footer_year.py`), and `AppShell`, which gives the route only
-  to the section shown (the others get `CLOSED_ROUTE`) and keeps each section, the credential
-  details dialog and the Analyze Browser panel in an error boundary (`ui/ErrorBoundary.tsx`): one
-  that throws while rendering says so in its place, with Reload, and the rest keeps working.
-  Simple is in the page's chunk; Advanced,
-  Codec, MDS and the Analyze Browser panel are chunks of their own (`import()` through
-  `lib/lazyModule.ts`): the section the URL names loads at once, behind a `SectionPlaceholder`
-  panel, and the rest once the first view is interactive, each then mounted, hidden. So is the
-  attestation findings' list with its sentences (`components/ceremony/FindingsList.tsx`, loaded
-  by `AttestationFindings.tsx`, which the result panel always holds: ahead once the first view
-  is interactive, at once when a result has findings).
+  error pages use style attributes the CSP refuses), `_app.tsx` (the fonts, on a wrapper holding
+  `#app-root` and `#overlay-root`, so portalled overlays get them), `_document.tsx`.
+- `src/styles/globals.css`: the design tokens. `@source not` keeps Tailwind out of `src/logic`
+  and `src/test/logic`.
+- `src/components/ui/`: the primitives (controls, text fields, `Overlay` with Dialog / Drawer /
+  Sheet, `Toast`, `ConfirmDialog`, `MonoValue`, the table primitives, `ErrorBoundary`, …): use
+  them rather than a new control.
+- `src/components/shell/`: the header (it measures itself into `--header-height`), the footer
+  (its year kept by `tools/update_footer_year.py`), and `AppShell`: it gives the route only to
+  the section shown (the others get `CLOSED_ROUTE`), keeps each section, the credential details
+  and the Analyze Browser panel in an error boundary, and loads the lazy chunks through
+  `lib/lazyModule.ts` (which chunk loads when: docs/DESIGN.md, "What serves what").
 - `src/lib/`: `sections.ts` (`SECTIONS`, `NAV_ID`, `APP_TITLE`, which is also the relying
-  party's name; `routeFromHash` / `hashPath`), `useSection.ts` (the section in the hash with
-  `replaceState`; what is open inside one as segments after it, e.g.
-  `#mds/<entryId>/certificate/<n>`; `open` pushes so Back closes one level; `close` goes back
-  one (or, when nothing was pushed, replaces the hash with the parent's); `replace` rewrites the
-  hash in place; `closeAll` goes back as many levels as the page opened: the pushed state's
-  `pqcOpened`, which counts across sections, so `closeAll` takes at most the levels its caller
-  opened (the details dialog passes its own); `useSectionNavigation()` gives a section
-  `GoToSection(section, path, handoff)`, which opens another section, pushing,
-  and gives it `route.handoff` until the next move (what the URL does not carry, so a payload
-  is never in a link or the history), and Back to the entry it left gives the focus back to
-  the control that left, when the page still holds it (an MDS entry, remounted, focuses its
-  heading); it
-  tells Next's router, `beforePopState`, to leave Back to the page while the path stays),
-  `entrance.ts` (entrances only for what the person brings up: what mounts already shown
-  enters only once the page has left its first URL), `lazyModule.ts` (a chunk loaded once,
-  `useLazyModule`: ahead, or at once when needed, a failed load tried again when next
-  needed; `whenInteractive`), `download.ts`, `useOverlayRoot.ts`.
-- Sections:
+  party's name; `routeFromHash` / `hashPath`), `useSection.ts` (the section and what is open
+  inside it, in the hash: `open` pushes, `close`, `replace`, `closeAll`;
+  `useSectionNavigation()`'s `GoToSection(section, path, handoff)` hands another section
+  `route.handoff`, what the URL must not carry), `entrance.ts`, `lazyModule.ts`, `download.ts`,
+  `useOverlayRoot.ts`.
+- Sections (`src/components/`):
   - `simple/` and `credentials/`: the Simple tab, and the saved credentials both tabs share
-    (`SavedCredentialsProvider` at the shell's level; it follows another tab's change through
-    the storage event). `CredentialDetailDialog` (a chunk of its own, loaded by
-    `CredentialDetails` when it is asked for or once the page is interactive) has four levels,
-    each a pushed history entry:
-    `#<section>/credential/<key>`, `…/registration`, `…/registration/certificate/<n>`,
-    `…/registration/authenticator-data` (over an MDS entry, `#mds/<entryId>/credential/<key>…`);
-    a level the credential lacks is corrected upward. The
-    registration's level opens on the attestation's findings in words, when the record keeps any.
-    Each part a level shows (the response, its client data, the attestation object, the
-    authenticator data, a certificate whose DER the record keeps) has "Decode in Codec"
-    (`components/codec/DecodeInCodec.tsx`), and Back from the Codec finds the level as it was
-    left, the button focused (`detail/useReturnFromCodec.ts`, which keeps the place outside the
-    dialog: over an MDS entry the dialog is mounted again).
-  - `advanced/`: the Advanced tab. Registration and Authentication segments, both mounted,
-    each a form beside its JSON editor. `requestEditor.ts`: the editor's text is the request;
-    a form change rewrites in the text only what it changed (`followForm`), an edit the form
-    can follow updates the form at once. `useAdvancedRequest` / `useAuthenticationRequest`
-    hold each request; `useRegistrationCeremony` / `useAuthenticationCeremony` run them and keep
-    the browser's response, whose parts `ResponseParts` opens in the Codec under the result;
-    a registration another section hands it (`route.handoff`, an MDS statement's settings)
-    shows Registration, each setting set with the form's own setter (`useRegistrationHandoff`);
-    `fieldText.ts` is the only copy of the form's labels, options, errors and info popups
-    (English and 中文).
-  - `codec/`: Decode / Encode. A payload another section hands it (`route.handoff`) is shown in
-    Decode, in its input, and decoded; `#codec` opens nothing inside it, so a path after it is
-    corrected away. Its tests render real answers from `src/test/codec-answers.json`,
-    which `tests/app/tooling/test_web_codec_answers.py` keeps equal to what `/api/codec`
-    answers (`CODEC_ANSWERS_WRITE=1` rewrites it).
-  - `mds/`: the explorer (the table's rows are grids on one column template set through the
-    CSSOM, `--mds-columns`, with `content-visibility: auto`), the filter bar, an entry and its
-    certificates (`EntryRouter`; `CondensedBar` portalled into the overlay root, since an
-    entering section is a transform), the saved credentials with the entry's AAGUID under its
-    header (`EntrySavedCredentials`), a saved credential's details over an entry (the same
-    dialog, given the route under the entry, `routeUnderEntry.ts`; it offers no FIDO MDS over
-    the credential's own entry), Try in Advanced in the entry's header (when its statement
-    says what the Advanced registration can take, `statement-settings.js`: it hands the
-    settings to Advanced; Back shows the entry again, which a hidden section does not keep,
-    its heading focused), Manage Metadata, and `entryLink.ts`, how a saved
-    credential opens `#mds/aaguid:<aaguid>`.
+    (`SavedCredentialsProvider`, at the shell's level). `CredentialDetailDialog` has four
+    levels, each a pushed history entry: `#<section>/credential/<key>`, `…/registration`,
+    `…/registration/certificate/<n>`, `…/registration/authenticator-data` (over an MDS entry,
+    `#mds/<entryId>/credential/<key>…`); a level the credential lacks is corrected upward. Each
+    part a level shows has "Decode in Codec" (`components/codec/DecodeInCodec.tsx`), and Back
+    from the Codec finds the level as it was left (`detail/useReturnFromCodec.ts`).
+  - `advanced/`: Registration and Authentication segments, both mounted, each a form beside its
+    JSON editor. `requestEditor.ts`: the editor's text is the request, and a form change
+    rewrites in it only what it changed (`followForm`). `useRegistrationHandoff` sets an MDS
+    statement's settings with the form's own setters. `fieldText.ts` is the only copy of the
+    form's labels, options, errors and info popups (English and 中文).
+  - `codec/`: Decode / Encode; a payload handed to it is decoded in Decode. Its tests render real
+    answers from `src/test/codec-answers.json`, which `tests/app/tooling/test_web_codec_answers.py`
+    keeps equal to what `/api/codec` answers (`CODEC_ANSWERS_WRITE=1` rewrites it).
+  - `mds/`: the explorer, an entry and its certificates (`EntryRouter`; `CondensedBar` is
+    portalled into the overlay root, since an entering section is a transform), the details
+    dialog over an entry (`routeUnderEntry.ts`), Try in Advanced, Manage Metadata, and
+    `entryLink.ts` (`#mds/aaguid:<aaguid>`).
   - `analyze-browser/`: the Analyze Browser panel.
-- Tests: vitest with two projects (`web/vitest.config.mts`): `components`
-  (`src/**/*.test.{ts,tsx}` and `scripts/**/*.test.ts`, Testing Library, `src/test/setup.ts`:
-  queries wait up to 30 s, for the deploy gate's load) and `logic`
-  (`src/logic/**/*.test.js`, `src/test/logic/setup.js`: a fresh storage, `fetch` mock and
-  document per test). Helpers are in `src/test/` (`app.tsx`'s `renderApp`, the one way a test
-  renders the whole app: it imports every lazy chunk first, so a file's first test does not
-  load them (`test_web_source_rules.py` holds every `AppShell` test to it); `credentials.ts` keeps records in the
-  storage, `fetch.ts` answers `fetch` by path, `mds.ts` like Flask serving the fixture: its
-  list and details from `src/test/mds-files.json`, which `tests/app/tooling/test_web_mds_files.py`
-  keeps equal to what the server serves (`MDS_FILES_WRITE=1` rewrites it),
-  `advanced.tsx`) and `src/test/logic/` (the real ceremonies from the characterization
-  goldens, `repo-file.js` for files under the repository). The `@test-fixtures` alias is
-  `tests/fixtures`.
+- Tests: vitest with two projects (`web/vitest.config.mts`): `components` (Testing Library;
+  `src/test/setup.ts` makes queries wait up to 30 s, for the deploy gate's load) and `logic`
+  (`src/test/logic/setup.js`: a fresh storage, `fetch` mock and document per test). Helpers are in
+  `src/test/`: `app.tsx`'s `renderApp` is the one way a test renders the whole app (it imports
+  every lazy chunk first; `test_web_source_rules.py` holds every `AppShell` test to it);
+  `credentials.ts` keeps records in the storage, `fetch.ts` answers `fetch` by path, `mds.ts`
+  serves the fixture as Flask does, from `src/test/mds-files.json`, which
+  `tests/app/tooling/test_web_mds_files.py` keeps equal to what the server serves
+  (`MDS_FILES_WRITE=1` rewrites it), `advanced.tsx`. `src/test/logic/` holds the real ceremonies
+  from the characterization goldens and `repo-file.js` for files under the repository. The
+  `@test-fixtures` alias is `tests/fixtures`.
 - `e2e/` (Playwright, Chromium): `serve-flask.mjs` starts Flask with every store in a
-  temporary directory and a copy of the MDS fixture as its snapshot;
-  `virtual-authenticator.ts` adds a CTAP2 authenticator through the DevTools WebAuthn
-  domain; `fixtures.ts` fails a test on any console error, page error or CSP report;
-  `design-rules.ts` finds grey fills. The `*-recorded` specs compare a page's words with a
-  recording in `e2e/recorded/` (`recorded-words.ts`, `recorded.ts`): a recording is never
-  edited, and an intended change is an expected difference with its reason (the user name
+  temporary directory and a copy of the MDS fixture as its snapshot; `virtual-authenticator.ts`
+  adds a CTAP2 authenticator through the DevTools WebAuthn domain; `fixtures.ts` fails a test on
+  any console error, page error or CSP report; `design-rules.ts` finds grey fills. The
+  `*-recorded` specs compare a page's words with a recording in `e2e/recorded/`: a recording is
+  never edited, and an intended change is an expected difference with its reason (the user name
   `paritycheck` is data inside a recording). `stored-records.spec.ts` loads what an earlier
   release stored in visitors' browsers. Every section is mounted once its chunk has arrived,
   and both Advanced segments with it: scope a query to its tabpanel
   (`#advanced-ceremony-panel-<segment>`), and wait for a section's content, not its panel
   (the placeholder answers to the same name).
-- `scripts/check-export-csp.mjs` scans every exported HTML file; `scripts/check-size-budget.mjs`
-  holds each page's first-load JS, each named chunk and the chunks no page names, raw and
-  gzipped, to its budget (`npm run check:size`, after the build, in CI and Cloud Build's gate);
-  `scripts/dev-csp.mjs` is the
-  CSP `npm run dev` sends (Flask's, plus the two allowances the dev server needs);
-  `scripts/code-size.mjs` holds `src` (tests and `src/test` aside) to no function over 120
-  lines and no module over 400, with no exceptions (`code-size.test.ts` runs it in `npm test`).
+- `scripts/`: `check-export-csp.mjs` scans every exported HTML file; `check-size-budget.mjs`
+  holds the build's chunks, raw and gzipped, to their budgets; `dev-csp.mjs` is the CSP
+  `npm run dev` sends (Flask's, plus the two allowances the dev server needs); `code-size.mjs`
+  holds `src` (tests and `src/test` aside) to no function over 120 lines and no module over 400,
+  with no exceptions (`code-size.test.ts` runs it in `npm test`).
 
 Running it (Node 22, in `web/`): `npm ci`; `npm run dev` (at `http://localhost:3000/`, proxying
 `/api` and `/assets/mds` to `FLASK_URL`, default `http://localhost:8000`; ceremonies need
@@ -200,102 +149,53 @@ and components `import type` it from there. Components call the logic by its own
 nothing between (no `model.ts`), and never copy its exports or sentences. A new surface splits
 its logic out here first.
 
-- `credentials/storage/local/`, `credentials/storage/records.js` (all of them in order): the
-  saved credentials, one `localStorage` array visitors' browsers already hold, each kind's
-  reads and writes in its own module. It reads no page; the first read is
-  cached until another tab changes it (`followStoredCredentialChanges`); tests seed it with
-  `seedUnifiedCredentialRecords`. `local/record-migration.js` brings records saved by earlier
-  versions to today's format as they are read: when a stored format changes, add a step there
-  with an old-format fixture in `src/test/logic/credentials/storage/`. A Simple username is
-  `local/simple-credentials.js`'s `simpleUsername`: trimmed as the server trims it, then compared
-  exactly, so "Alice" and "alice" are two accounts, as on the server. Each read and write takes
-  the storage inside its try: storage the browser blocks reads as none, and a write it refuses
-  (blocked or full) gives false (`persistStoredCredentials`; a save gives `null`). Both tabs'
-  registrations keep the record before they say anything, and say in place (the result panel's
-  "This browser" row) when the browser would not keep it.
-- `simple/ceremony.js`: the Simple tab's two ceremonies (requests, every step's sentence); a
-  registration sends what the browser keeps of the username's passkeys, which begin excludes.
-- `advanced/`: the Advanced tab. `registration/` and `authentication/` each hold their
-  request (`request.js`: defaults, build, read back, the form's rules), its validation and
-  its ceremony (`ceremony.js`), with Allow Credentials' choices and extension availability
-  under `authentication/` (an authentication offers and sends every saved credential, the
-  Simple tab's too: `prepareAdvancedCredentialsForServer`, each with its user handle in hex,
-  `userHandleHex`, and like the Simple tab's the BE its registration had, `backupEligible`:
-  `credentials/record-fields.js`' `registeredBackupEligible`, from the authenticator data's hex
-  a Simple record keeps, an Advanced record's in its snapshot), and the form's algorithms under
-  `registration/` (`algorithm-options.js`: the preferred ones first, in the servers' order,
-  ticked by default),
-  and what an MDS statement says it can take (`statement-settings.js`: getInfo's algorithms,
-  else the statement's by their FIDO registry names; user verification; the attachment; FIDO2
-  and U2F only) with the form's changes for it (`statement-changes.js`, which drops a hint the
-  attachment contradicts);
-  `editor/` the editor's model and keys, `request-patch.js`
-  (`followForm`) and what both requests' validation shares; `hints.js`,
-  `fake-credentials.js` and `hex-input.js` serve both forms; `response-parts.js` gives the parts
-  of a ceremony's response the Codec reads (no signature alone: the decoder has no reading for
-  one).
-- `credentials/`: the saved list (`saved-list.js`: the records, each row, the warm-up),
-  deletion (`delete-flow.js`, through the list's report: from the server's storage first, an
-  Advanced credential's artifact or a Simple one's record (`storage/simple-records-client.js`, both
-  answers read by `storage/deletion-request.js`), then from this browser; each one gone is then
-  signalled to the browser where it has the Signal API, `deletion-signal.js`:
-  signalUnknownCredential with the RP ID whose SHA-256 the record keeps (its rpIdHash), else the
-  page's host, and the question says so; never on a server's answer that a credential is unknown,
-  since a credential this browser lacks may be another browser's), the algorithm tag, whether a credential
-  is discoverable (`resident-key.js`: credProps.rk as the browser reported it, else unknown; a
-  stored `residentKey` is never read, since earlier versions derived it from BE or the request),
-  hydration from a server artifact (`hydrate.js`), a certificate's text (`certificates/text.js`: the
-  summary a record from an earlier release kept, else the server's summary written from the fields a
-  registration keeps), and (`registration/`, `certificates/`, `detail/`) a
-  credential's details and registration view as data (`registration/view.js` composes the view
-  from `registration/describe.js`'s parts and `registration/relying-party.js`'s copy of the
-  relying party), which `detail/compose.js` composes into a registration state of its own, with
-  the record's attestation findings (`detail/findings.js`: its checks, else its summary, as any
-  release kept them), the parts the Codec decodes (`detail/codec-payloads.js`: only values
-  kept whole, never the copies earlier releases cut short in a snapshot's state), and under the
-  four checks of Properties what FIDO's metadata said of the authenticator (`detail/sections.js`:
-  the MDS status and certification the record keeps, nothing for a record that keeps none). Registration snapshots (`schemaVersion` 2) hold the
-  registration as data, never markup, and its certificates without their DER; older composed HTML is never read.
-- `credentials/aaguid-credentials.js`: the saved rows an MDS entry lists, their AAGUID read as
-  the entry's by `aaguidHex` on both sides.
-- `codec/`: the Codec's requests, results and values. `mds/`: the MDS
-  explorer's loading (the list fetched ahead, without the cookie: `prefetchExplorerList`; the
-  session's own rows from `explorer/custom`, merged with it by `mergeCustomEntries`: an upload
-  hides the packaged entry with its AAGUID), filters,
-  sort, columns, rows, entry (its detail from the file its row names, else resolve:
-  `requestEntryDetail`), certificate, raw view and Manage Metadata (the server builds each row:
-  `mds/build.py`'s `build_explorer_entry`, and the list's: `mds/explorer_files.py`).
-- `browser/`: the Analyze Browser's facts. It reports what the browser says and where
-  each answer came from, or that it cannot know; it never guesses. Web pages cannot ask
-  which transports a browser supports: do not add WebUSB/WebHID/Bluetooth/Serial checks. The
-  identity cases are real user-agent strings with Client Hints in
-  `src/test/logic/browser/identity-matrix.js`; add a browser there.
+- `credentials/storage/` (`records.js`, `local/`): the saved credentials, one `localStorage`
+  array visitors' browsers already hold. Its first read is cached until another tab changes it;
+  tests seed it with `seedUnifiedCredentialRecords`. `local/record-migration.js` brings records
+  saved by earlier versions to today's format as they are read: when a stored format changes,
+  add a step there with an old-format fixture in `src/test/logic/credentials/storage/`. A Simple
+  username is `local/simple-credentials.js`'s `simpleUsername`: trimmed as the server trims it,
+  then compared exactly, so "Alice" and "alice" are two accounts, on both sides
+  (`tests/fixtures/simple-usernames.json`).
+- `simple/ceremony.js`: the Simple tab's two ceremonies, their requests and every step's sentence.
+- `advanced/`: `registration/` and `authentication/` (each its `request.js`, validation and
+  `ceremony.js`; `registration/` also `statement-settings.js` and `statement-changes.js`, what
+  an MDS statement says a registration can take), `editor/` (the editor's model and keys;
+  `request-patch.js`, `followForm`), and `response-parts.js` (what of a response the Codec
+  reads). An authentication offers and sends every saved credential, the Simple tab's too
+  (`prepareAdvancedCredentialsForServer`).
+- `credentials/`: the saved list, deletion (`delete-flow.js`: from the server's storage first,
+  then from this browser), `deletion-signal.js`, `resident-key.js`, and a credential's details
+  and registration view as data (`registration/`, `certificates/`, `detail/`). Signal a
+  credential as unknown only after its deletion here, never on a server's answer that it is
+  unknown (one this browser lacks may be another browser's). A stored `residentKey` is never
+  read (earlier versions derived it from BE or the request). Registration snapshots
+  (`schemaVersion` 2) hold the registration as data, never markup, and its certificates without
+  their DER; older composed HTML is never read.
+- `codec/`: the Codec's requests, results and values. `mds/`: the explorer's loading, filters,
+  sort, columns, rows, entry, certificate and Manage Metadata (the server builds each row:
+  `mds/build.py`, and the list: `mds/explorer_files.py`).
+- `browser/`: the Analyze Browser's facts. It reports what the browser says and where each answer
+  came from, or that it cannot know; it never guesses. Web pages cannot ask which transports a
+  browser supports: do not add WebUSB/WebHID/Bluetooth/Serial checks. The identity cases are real
+  user-agent strings with Client Hints in `src/test/logic/browser/identity-matrix.js`; add a
+  browser there.
 - `shared/failed-response.js`: the one reader of a failed response (`readFailedResponse`,
-  `FailedResponseError`): the server's `error`, the codec's `offset` and `path`, what to do for
-  a 400, 409, 413 or 503. Never show a raw response body.
-- `shared/ceremony-result.js`: the result panel's signature counter and challenge sentences,
-  the Advanced authentication's User handle row (the answer's `userHandleStatus`), and a
-  ceremony's findings, which the panel lists (amber on an error).
-- `shared/registration-findings.js`: where a ceremony's findings are in the server's answer
-  (`answerFindings`: a registration's `attestationErrors`, an authentication's
-  `assertionErrors`, and `warnings`; a refused Simple registration's or sign-in's body too),
-  each a code or a code and its reason after `: `.
-- `shared/attestation-findings.js`: the one table of the findings' sentences, code to English
-  and 中文 (`FINDING_SENTENCES`, its codes held to `tests/fixtures/attestation-finding-codes.json`),
-  and a finding in words (`describeFindings`): its reason after the sentence, a code the table
-  does not know as sent. Only the findings list's chunk imports it.
-- `shared/aaguid.js`: an AAGUID's two readings: `aaguidHex` (any spelling a record or the
-  server holds, as hex) and `aaguidGuid` (the dashed GUID, as the server's
-  `format_guid_candidate` builds an MDS entry's id).
+  `FailedResponseError`). Never show a raw response body.
+- `shared/ceremony-result.js` (the result panel's sentences) and `shared/registration-findings.js`
+  (`answerFindings`: where an answer holds a ceremony's findings).
+- `shared/attestation-findings.js`: the one table of the findings' sentences, English and 中文
+  (`FINDING_SENTENCES`, its codes held to `tests/fixtures/attestation-finding-codes.json`). Only
+  the findings list's chunk imports it.
+- `shared/aaguid.js`: `aaguidHex` (any spelling as hex) and `aaguidGuid` (the dashed GUID).
 - `shared/base64.js`: bytes on the wire are unpadded base64url; a field named for base64
   (`derBase64`, …) is standard base64. Decode with the strict `base64UrlToBytes` /
   `base64ToBytes`; `forgivingBase64ToBytes` only for typed text. No `atob`.
-- `shared/native-json.js`: the browser's own WebAuthn JSON
-  (`PublicKeyCredential.parseCreationOptionsFromJSON` / `parseRequestOptionsFromJSON`,
-  `credential.toJSON()`; Chrome and Edge 129, Firefox 119, Safari 18.4). A begin answer's
-  `publicKey` goes to the browser's parser as the server wrote it, and the credential's own JSON
-  to the server; nothing is converted or merged on the way. A browser without the methods runs
-  no ceremony: `UPDATE_BROWSER_TEXT` (`components/ceremony/UpdateBrowserNotice.tsx`).
+- `shared/native-json.js`: the browser's own WebAuthn JSON (`parseCreationOptionsFromJSON` /
+  `parseRequestOptionsFromJSON`, `credential.toJSON()`). A begin answer's `publicKey` goes to the
+  browser's parser as the server wrote it, and the credential's own JSON to the server; nothing
+  is converted or merged on the way. A browser without the methods runs no ceremony:
+  `UPDATE_BROWSER_TEXT` (`components/ceremony/UpdateBrowserNotice.tsx`).
 
 ## Backend (`server/app`)
 
@@ -303,235 +203,96 @@ Running it (Python 3.12+, at the root): `uv sync --locked`, then
 `ENABLE_GITHUB_LOGGING=0 uv run flask --app server.app.app run --port 8000` serves the API and
 the export in `web/out` (after `npm run build`) at `http://localhost:8000/`, where `npm run dev`'s
 `FLASK_URL` finds it; open `localhost`, not `127.0.0.1`, which is no RP ID. A first run writes
-`instance/session-secret.key`, and the stores fill `instance/` as you use them; without a snapshot
-(`python tools/update_mds_snapshot.py`) the explorer lists only your uploads.
-`ENABLE_GITHUB_LOGGING=0` keeps a `GITHUB_TOKEN` in your shell from copying your registrations and
-uploads to the credential log.
+`instance/session-secret.key`, and the stores fill `instance/` as you use them; the explorer's
+entries need a snapshot ("The FIDO MDS snapshot", below). `ENABLE_GITHUB_LOGGING=0` keeps a
+`GITHUB_TOKEN` in your shell from copying your registrations and uploads to the credential log.
 
 - `app.py`: the WSGI entry point, `server.app.app:app = create_app()`, in a checkout and in the
-  image alike (the Dockerfile copies `server/app` to `/app/server/app`). No `server.X` import
-  fallbacks.
+  image alike. No `server.X` import fallbacks.
 - `factory.py`: `create_app(config=None)`: the `config_from_env()` of each module in
-  `CONFIG_SOURCES` (the seven config submodules whose settings go into `app.config`), then the
-  overrides, then `INIT_STEPS` in order (`test_app_factory.py` pins it). `proxy.py`,
-  `session_secret.py` and `paths.py` read the environment themselves when used.
-- `config/`: `application.py` (the bare app, and `add_after_request_once`), `logs.py`,
-  `session_secret.py`, `compression.py`, `proxy.py`, `fetch_metadata.py` (a write under `/api/`
-  whose `Sec-Fetch-Site` names another site is refused, 403), `session_cookie.py` (the cookie's
-  flags and lifetime; only an answer that changed the session sets the cookie
-  (`SESSION_REFRESH_EACH_REQUEST` off), so nothing landing after a ceremony's begin can undo it;
-  and `cookie_size`), `security_headers.py` (the strict CSP, Trusted Types enforced for Next's
-  two policies, reporting to `/api/csp-report`; `FIDO_SERVER_CONTENT_SECURITY_POLICY` replaces
-  it; Cross-Origin-Opener-Policy and Cross-Origin-Resource-Policy `same-origin`),
-  `origins.py`, `attestation_trust.py`, `relying_party.py` (the default RP name is the
-  site's, `APP_TITLE`; an RP ID a request names is used as named, and with an origin allowlist
-  only when an allowed origin can use it, `requested_rp_id_refusal`), `paths.py` (the project and instance roots; `store_dir`: every local
-  store under `instance/`, its setting read when used; `LOCAL_STORES`, the three stores' settings
-  and folders), `request_limits.py` (8 MiB, the metadata
-  upload 16 MiB, `/api/codec` 1 MiB, a registration's or a sign-in's credential response 256 KiB
-  (a Simple registration's body, a Simple sign-in's `credential`, an Advanced complete's
-  `__credential_response` or `__assertion_response`, never the saved credentials beside it); 413 in JSON; the namespace's
-  quotas, `artifacts_quota` and `metadata_quota`, and the Simple credentials a username keeps; the codec's 20,000 items read per request,
-  `decoder/item_budget.py`, 422 past it, and the 16,000,000 weighted units of EDN it spells per request
-  to name container keys, repeated keys' values and tagged CTAP members, 422 past them too; and the metadata upload's 200,000 JSON values and 1 MiB
-  stored entry, each refused in its errors, with one upload read at a time and another 503 with
-  `Retry-After`), `web_export.py`. Importing it configures nothing, and
-  the package re-exports nothing: routes call `relying_party.create_fido_server` and
-  `origins.determine_expected_origin` through their modules, where tests patch them. Tests reach
-  the entry point's app through `tests/app/entry_app.py`.
+  `CONFIG_SOURCES`, then the overrides, then `INIT_STEPS` in order (`test_app_factory.py` pins it).
+- `config/`: one module per concern. Importing it configures nothing, and the package
+  re-exports nothing: routes call `relying_party.create_fido_server` and
+  `origins.determine_expected_origin` through their modules, where tests patch them. Every
+  limit and quota the environment can set is read in `request_limits.py`; the figures are in
+  deploy/README.md ("Environment variables"), docs/STORAGE.md ("Quotas") and docs/DECODER.md
+  ("Limits"). A fixed bound is a constant of the module that applies it. Tests reach the entry
+  point's app through `tests/app/entry_app.py`.
 - Importing any module but the entry point writes nothing (`test_import_side_effects.py`). Log
   with `logging.getLogger(__name__)`, and text a client chose (a file name, a path, the Advanced
-  tab's free-text username) through `log_text.client_text`, which keeps it on its line, quoted
-  and cut short when not one plain word. On Cloud Run (`K_SERVICE`) the app refuses to start
-  without `FIDO_SERVER_SECRET_KEY` or `FIDO_SERVER_SECRET_KEY_FILE`; only local development
-  generates `instance/session-secret.key`, and tests never do.
-- `mds/`: the FIDO MDS snapshot. Its `__init__` imports nothing, so the updater takes `trust.py`
-  (the MDS trust anchor), `blob.py` (the BLOB's chain to that root, which may end in a
-  cross-certificate fido2's `parse_blob` refuses, its signature and payload), `revocation.py`
-  (that chain against its issuers' CRLs, which the updater fetches: a revoked certificate, or
-  one no current CRL can be had for, fails its run; a set taken from the bucket is not checked
-  again), `files.py` (the snapshot's file names, its directory, the whole-file writer,
-  Last-Modified), `build.py` (the explorer rows; `statement_fields.py`, a statement's fields as
-  the explorer shows them, MDS values as words with a fixed list of acronyms in capitals,
-  `tests/fixtures/mds-enum-spellings.json`, which the page's static filter options are held to;
-  `certificates.py`, what their roots say), `entries.py`,
-  `snapshot.py` (a snapshot's seven files, from its BLOB, payload and cache state),
-  `explorer_files.py` (what browsers load, derived from the full explorer snapshot: the list,
-  the icons, each entry's detail; kept per snapshot by `cache.load_explorer_files`) and `sets.py`
-  (the snapshot in Cloud Storage) without Flask. The runtime: `provisioning.py` (local files,
-  Cloud Storage, upstream), `cache.py` (the loaders and their one `SnapshotCache`),
-  `uploads.py` (a visitor's uploaded metadata), `listed_uploads.py` (each upload's explorer row,
-  Manage Metadata item and lookup keys, worked out when it is saved and kept in its info file
-  under a format, `ROW_FORMAT`, which a change of what is kept bumps; then in memory by
-  namespace, name and version, within a budget: a listing reads only the info files of what
-  was written since, and the upload itself only when its info keeps none of the format), `effective.py` (a visitor's
-  uploads as the explorer lists them, `explorer/custom`, and resolve with them in front),
-  `verifier.py` (the verified entries indexed from their JSON by fido2's keys, each parsed when
-  found, a visitor's uploads in front; a revoked entry is never found, but asked for apart by
-  its AAGUID, so a registration whose authenticator has only a revoked entry reports
-  `metadata_entry_revoked`, not a missing entry).
+  tab's free-text username) through `log_text.client_text`. `config/logs.py` holds
+  `fido2.server`'s logger at WARNING: fido2 logs credential IDs at INFO. Tests never generate
+  the session secret.
+- `mds/`: the FIDO MDS snapshot. Its `__init__` imports nothing, so the updater takes the leaves
+  (`trust`, `blob`, `revocation`, `files`, `build`, `statement_fields`, `certificates`,
+  `entries`, `snapshot`, `explorer_files`, `sets`) without Flask. `statement_fields.py`'s
+  spellings, and the page's static filter options, are held to
+  `tests/fixtures/mds-enum-spellings.json`. `listed_uploads.ROW_FORMAT` and
+  `explorer_files.DERIVED_FORMAT` move with what they keep or derive.
 - Leaves the rest import: `encoding.py` (base64, base64url and hex, written and read strictly),
   `json_values.py` (`make_json_safe`, and `as_bytes`, the one reading of a value as bytes),
-  `aaguid.py` (an AAGUID's GUID spelling), `env_flags.py`, `log_text.py` (a client's text as a
-  log line carries it), `accept_encoding.py` (whether a request's
-  Accept-Encoding takes gzip, its weights read as RFC 9110 writes them: what every gzipped answer asks).
-- `visitor_session.py`: the namespace a visitor's uploads and credentials are stored under (its id
-  in a signed cookie of its own, never the Flask session; the last-access touch, throttled in
-  memory; and the one sweep of idle namespaces, on both backends: a namespace whole, by its
-  marker's time or else its newest object's, locally its folder in all three stores,
-  `storage/session_metadata.py`). `challenge_registry.py`: each
+  `aaguid.py`, `env_flags.py`, `log_text.py`, `accept_encoding.py`.
+- `visitor_session.py`: the visitor's namespace (docs/STORAGE.md). `challenge_registry.py`: each
   ceremony's challenge used once (the session is a client-side cookie, so popping it does not
-  stop a replay). `csp_reports.py`: a CSP report read in either format and logged in one line.
-  `startup.py`: the Cloud Run warm-up after the worker starts (the bucket, the MDS snapshot, the
-  explorer's files and the verifier's index).
-- Routes: `routes/simple/` and `routes/advanced/` (begin/complete; the bodies are short
-  orchestrators over modules named for their stage, `routes/simple/stored_sign_count.py` the
-  Simple tab's checks against the stored record: a sign-in's userHandle, when it carries one,
-  must be the account's handle the record keeps, or it is refused (`userHandleStatus`
-  `mismatch`); none is compared without a record (a swept namespace), or with one that keeps
-  the username's bytes (stored before accounts had handles of their own: their authenticators
-  were given `b"user_id"`); then its counter. That record, `counter_record`: the
-  credential's ID, its counter, its registration's time and user handle, nothing else (records
-  stored whole before are brought to it as their file is written); `routes/simple/deletion.py`
-  the DELETE that removes a record when the page deletes its credential (compare-and-swap,
-  answering `deleted` / `absent` / `failed` as the artifact DELETE does); `routes/simple/account.py` the username
-  both Simple begins check before any options (trimmed as JavaScript's `trim()` trims, what the
-  store accepts, at most 64 bytes; then compared exactly, so "Alice" and "alice" are two accounts,
-  as in the browser: `tests/fixtures/simple-usernames.json`), which each complete must name again, and the user handle a Simple registration
-  issues: an HMAC-SHA256 of the visitor's namespace and the username under the app's secret,
-  so that begin mints the namespace, kept in the session for complete to store;
-  `routes/simple/registration_request.py` what a Simple registration asks for; each Simple ceremony keeps its state under its own session key; the try blocks and
-  the order of session reads are behaviour; a registration complete reads the attestation
-  (`extract_attestation_details`) only once the state is consumed and fido2 accepted the
-  response; the Simple tab refuses a registration only on an integrity error, every other
-  attestation finding its warning, while the Advanced tab completes and reports them all as
-  errors; a sign-in's checks (`webauthn/assertion_checks.py`) answer the same way: the Simple
-  tab refuses one on an integrity error (400 with `assertionErrors`), the Advanced tab reports
-  them (`assertionErrors`), and a warning is the answer's `warnings` in both; an Advanced ceremony is for the RP ID its request names (`rp.id`, `rpId`), else the
-  configured one, and its complete for the one its begin kept beside its state (`advanced_rp`,
-  `advanced_auth_rp`); `routes/advanced/request_members.py` names the member of the wrong JSON
-  type, or a registration's `excludeCredentials` past 2,000 entries or `pubKeyCredParams` past 256, 400); `routes/ceremony_session.py` (every begin: refused, the session kept as
-  it was, when its cookie would pass `MAX_COOKIE_SIZE`); `routes/json_body.py` (every route's
-  JSON body: an object, or read as an empty one, malformed JSON too; RFC 8259's JSON only, so `NaN`,
-  `Infinity`, `-Infinity` and a number no double holds are refused, 400 in JSON, the CSP report's
-  too, never through `request.get_json`, whose reader takes them; one nested more than 64 deep
-  refused, 400 in JSON, before it is parsed, as the CSP report and the metadata upload's files are,
-  and one holding more than 100,000 values (`MAX_VALUES`), as the CSP report is; once read, a body
-  over 256 KiB takes one of two places a process until the request ends, a teardown giving it back,
-  and one that waits 2 s for a place answers 503 with `Retry-After`);
-  `routes/ceremony_errors.py`
-  (what a ceremony's complete answers when a response is refused: fido2's own findings, the challenge,
-  origin, RP ID hash, UP, UV, signature, as fido2 wrote them, else a sentence of the app's own; each
-  refusal one WARNING line, the route and fido2's finding or the exception's type and where it was
-  raised, never its text; what fails after fido2 accepted is not a refusal, but `routes/errors.py`'s
-  500; no answer carries an exception's text but the codec's, written to be shown;
-  and the 400 for a response whose CBOR, the attestation object or the authenticator data's key and
-  extensions, nests deeper than 50 levels or holds more than 400 items, walked before fido2's decoder
-  reads it, `webauthn/cbor_bounds.py`, on both tabs' completes);
-  `routes/mds.py` (the MDS routes and certificate decoding; an upload's refusal names its file, with
-  `mds/entries.py`'s `MetadataRefused` sentence or a fixed one, a JSON error's line and column);
-  `routes/codec.py` (`/api/codec`); `routes/web_export.py` (`/health`,
-  and the export at `/`: the site's catch-all, since Flask has no static rule; HTML `no-cache`,
-  `/_next/static/` immutable with the build's `.gz`, the export's 404 page, a 404 in JSON under
-  `/api/`; `send_precompressed`); `routes/assets.py` (the explorer's files under `/assets/mds/`:
-  the list at one URL revalidated by its ETag, the icons by digest, each entry's detail at
-  `?v=<version>` (other versions revalidate by a weak ETag, including gzip);
-  no snapshot file at any path); `routes/csp_report.py` (one WARNING line per
-  violation, bounded); `routes/errors.py` (every HTTP error under `/api/` answered in JSON,
-  `{"error": sentence}`: a path no API route holds 404 whatever the method, a method a route
-  does not take 405 with `Allow`, an unhandled exception's 500; pages keep their HTML).
-- `webauthn/attestation/` (`checks.py` runs every check in order over `request_expectations.py`,
-  `response_checks.py`, `statement_checks.py` and `metadata_checks.py`; `response_checks.py`
-  holds BS set without BE an integrity error, `backup_state_without_eligibility` (L3 section 7.1
-  step 17); a compound attestation (L3 section 8.9), which fido2 2.2.1 does not verify and every
-  check after the signature reads as one statement, is `unsupported_attestation` naming its
-  format (the Codec shows each statement), as any format fido2 cannot verify is: not checked,
-  its signature and root `null`, never `attestation_signature_invalid`; `public_key_checks.py`,
-  whether the credential's COSE key can be used: its key type and curve its algorithm's (L3
-  section 5.8.5: EdDSA on Ed25519 alone), and a key `cryptography` loads (an EC2 point on its
-  curve, an OKP or ML-DSA key of its length), else `cose_key_invalid` and why, and an RSA
-  modulus under 2048 bits the warning `rsa_modulus_too_short`; trust, the root
-  evaluation for every algorithm, ML-DSA included, certificate serialisation; `chain.py` verifies certificate chains with
-  `verify_directly_issued_by` (RSA-PSS, EdDSA and ML-DSA too, which fido2's `verify_x509_chain`
-  does not); `evaluation.py` checks an attestation against the MDS metadata step by step;
-  a root is valid only once the chain verified to it (a date out of range fails the chain), and
-  one from the visitor's own uploaded metadata is valid with the warning
-  `metadata_not_fido_trusted`; `error_codes.py`, the codes the checks report (every finding a
-  code, `tests/fixtures/attestation-finding-codes.json` lists them for the page's sentences too;
-  a reason after `: ` only when the exception has one, so none is empty) and
-  `INTEGRITY_ERRORS`, the ones that say the ceremony did not hold, on which alone the Simple
-  tab refuses, and `UNSAFE_STATUSES`, the MDS statuses (a compromise, a user verification
-  bypass) that are a finding, `metadata_status_unsafe: <STATUS>`, when the matched entry's latest
-  report says one (`metadata_checks.py`, which also gives both tabs' answers the entry's latest
-  status and certification as the explorer reads them); `constants.py`'s `UNREADABLE_EXTENSIONS`, what cryptography raises reading a
-  loaded certificate's extensions, caught wherever they are read, and the limits both x5c
-  readers, `certificates.py` and
-  `trust.py`, apply: a certificate of at most 64 KiB, a chain's first 10 entries; an x5c entry
-  is read only from bytes, text or a certificate view, never with `bytes(value)`; a certificate's
-  view is whole for the Codec and the MDS pages, and a registration keeps each value in one form,
-  `certificates._registration_view`, once: docs/STORAGE.md),
-  `webauthn/signature_algorithms.py`
-  (the one spelling of a signature algorithm), `webauthn/cose_algorithms.py` (a named COSE
-  algorithm read, for both tabs; and `PREFERRED_REGISTRATION_ALGORITHMS`, the one order a
-  registration offers algorithms in, most preferred first: ML-DSA-44, ML-DSA-65, ML-DSA-87,
-  EdDSA, ES256, RS256, ES384. The Simple tab offers them, less any fido2 cannot verify here; an
-  Advanced request that names none gets them; `tests/fixtures/registration-algorithms.json`
-  holds the Advanced form to the same list), `webauthn/attachments.py` (the authenticator attachment
-  hints), `webauthn/pqc.py` (the ML-DSA adapter), `webauthn/mldsa.py` (ML-DSA parameter sets,
-  sizes and certificate keys), `webauthn/cose_keys.py` (RS384, RS512, PS384, PS512: the package
-  imports it so fido2's `CoseKey` lookups find them), `webauthn/assertion_hash.py` (the Advanced
-  tab's hash choice for an assertion), `webauthn/sign_count.py`, `webauthn/client_binary.py`
-  (bytes a client sends, read one way for both tabs), `webauthn/byte_members.py` (a number
-  where fido2 reads bytes, which it would make that many zero bytes: found by fido2's own
-  declared types, and inside the client data, the attestation object and a safetynet JWS, and
-  refused with a 400 by the four completes, before the ceremony's state is read except on the
-  Advanced registration, which consumes its state first, and in an upload's errors),
-  `webauthn/assertion_checks.py` (an
-  assertion's authenticator data and userHandle, read one way for both tabs; the userHandle's
-  `match`, `mismatch`, `absent` or `not-compared`, every sign-in answer's `userHandleStatus`
-  (a mismatch the integrity error `user_handle_mismatch`): the Simple tab's against the
-  account's record, the Advanced tab's against the saved credential's, which the page sends
-  with each credential as `userHandleHex`; and its backup
-  flags: BS set without BE an integrity error, a BE that is not the one the page's record kept
-  from the registration, sent with each credential as `backupEligible`, a warning, since this
-  site has no backup policy), `webauthn/client_credentials.py` (a saved
-  credential the page sends back, read into its key material for both tabs),
-  `webauthn/registration_facts.py` (what a verified registration's authData and extension
-  outputs say, the relying party's view of it and the saved credential record, each in one key
-  order for both tabs; the record keeps each part once, its attestation object only in the
-  browser's response: docs/STORAGE.md). `config/logs.py` holds `fido2.server`'s logger at WARNING: fido2 logs
-  credential IDs at INFO; the app logs at WARNING but for `mds/provisioning.py`,
-  `storage/github_mirror.py` and `storage/github_outbox.py`, at INFO (where the MDS snapshot
-  came from, the credential log's deliveries), whose lines write a client's text through
-  `log_text.client_text`.
+  stop a replay). `csp_reports.py`, `startup.py` (the Cloud Run warm-up).
+- `routes/simple/` and `routes/advanced/`: begin and complete, short orchestrators over modules
+  named for their stage. Each Simple ceremony keeps its state under its own session key; the try
+  blocks and the order of session reads are behaviour. A registration complete reads the
+  attestation (`extract_attestation_details`) only once the state is consumed and fido2
+  accepted the response. The Simple tab refuses a registration or a sign-in only on an integrity
+  error (`INTEGRITY_ERRORS`), every other finding its warning; the Advanced tab completes and
+  reports them all (`attestationErrors`, `assertionErrors`); a warning is the answer's `warnings`
+  in both. An Advanced complete is for the RP ID its begin kept beside its state.
+- `routes/json_body.py`: every route's JSON body, an object or read as an empty one (malformed
+  JSON too). Only RFC 8259's JSON: `NaN`, `Infinity`, `-Infinity` and a number no double holds
+  are refused, and so is a body nested more than 64 deep or holding more than 100,000 values
+  (`MAX_VALUES`), each a 400 in JSON, the CSP report's too. Never read a body through
+  `request.get_json`, whose reader takes them.
+- `routes/ceremony_errors.py`: a refused response's answer, fido2's findings as fido2 wrote
+  them, else a sentence of the app's own, and one WARNING line, never the exception's text; what
+  fails after fido2 accepted is a 500. No answer carries an exception's text but the codec's,
+  written to be shown. Both tabs' completes refuse, before fido2 reads it, CBOR past its bounds
+  (`webauthn/cbor_bounds.py`) and a number where fido2 reads bytes (`webauthn/byte_members.py`).
+- `routes/errors.py`: every HTTP error under `/api/` is answered in JSON, `{"error": sentence}`
+  (a path no API route holds 404 whatever the method, a method a route does not take 405 with
+  `Allow`, an unhandled exception 500); pages keep their HTML.
+- `routes/web_export.py` (`/health` and the export at `/`: docs/DESIGN.md), `routes/assets.py`
+  (the explorer's files, never a snapshot file: docs/MDS_SNAPSHOT.md), `routes/mds.py`,
+  `routes/codec.py`, `routes/csp_report.py`, `routes/ceremony_session.py` (a begin's cookie size).
+- `webauthn/attestation/`: a registration's checks, which `checks.py` runs in order. A format
+  fido2 cannot verify, a compound attestation included, is `unsupported_attestation` naming it:
+  not checked, its signature and root `null`, never `attestation_signature_invalid`. A root is
+  valid only once the chain verified to it; one from the visitor's own uploads is valid with
+  `metadata_not_fido_trusted`.
+  Every finding is a code from `error_codes.py` (`tests/fixtures/attestation-finding-codes.json`
+  lists them), with a reason after `: ` only when the exception has one; `INTEGRITY_ERRORS` are
+  the ones the Simple tab refuses on. `constants.UNREADABLE_EXTENSIONS` is caught wherever a
+  certificate's extensions are read. Both x5c readers (`certificates.py`, `trust.py`) take a
+  certificate of at most 64 KiB and a chain's first 10 entries, and read an entry only from
+  bytes, text or a certificate view, never with `bytes(value)`. What a registration keeps, once
+  each: docs/STORAGE.md.
+- `webauthn/`: `signature_algorithms.py` (the one spelling of a signature algorithm),
+  `cose_algorithms.py` (a named COSE algorithm read; `PREFERRED_REGISTRATION_ALGORITHMS`, the one
+  order a registration offers, most preferred first: docs/FEATURES.md, "Algorithms";
+  `tests/fixtures/registration-algorithms.json` holds the Advanced form to it), `cose_keys.py`
+  (RS384, RS512, PS384, PS512: the package's `__init__` imports it so fido2's `CoseKey` lookups
+  find them), `pqc.py` and `mldsa.py` (ML-DSA); `assertion_checks.py`, `client_credentials.py`,
+  `client_binary.py` and `registration_facts.py` read or build each thing one way, in one key
+  order, for both tabs.
 - `storage/` (`credentials.py`, `credential_artifacts.py`, `session_metadata.py`,
   `github_mirror.py`, `github_outbox.py`, over `cloud.py`, `common.py` and `record_format.py`):
-  every read-modify-write is compare-and-swap; a failed read raises `StorageReadError` (503), never
-  a shorter list; a write past a namespace's quota raises `StorageQuotaExceeded` (409 for a count,
-  413 for bytes), and a begin refuses a namespace already full, before the authenticator is asked.
-  The credential log on GitHub (on only with `GITHUB_TOKEN`): a saved registration's file, at most
-  1,000 and 64 MiB delivered a day for all visitors (`github-outbox/registration-budget`, counted when
-  written, one past it dropped before GitHub is asked), and an uploaded metadata file of at most
-  1 MiB once one of its entries saved, within a daily budget of 50 such files and 8 MiB for all
-  visitors (`github-outbox/metadata-budget`, counted when queued; both compare-and-swap), is
-  queued in an outbox (`github-outbox/` in
-  the bucket, outside `user-data/`; `instance/github-outbox` locally) with its repository path fixed
-  then, and a worker that requests start delivers it, one flusher at a time under one lease
-  (generation-checked on Cloud Storage, an `flock` locally), never in a request's time
-  (`github_mirror.init_app`). **Read
-  `docs/STORAGE.md` first.** `decoder/`: the Codec's server side (`decode/text.py` the entry,
-  `decode/answer.py` what it answers, `encode/text.py` the encoder's, `values.py` the leaf both
-  share); it shows what was sent and
-  never repairs it. **Read `docs/DECODER.md` first.**
+  the stores (docs/STORAGE.md: compare-and-swap, what a failed read raises, the quotas, and the
+  credential log on GitHub, on only with `GITHUB_TOKEN`; no request waits for it).
+- `decoder/`: the Codec's server side (docs/DECODER.md); it shows what was sent and never
+  repairs it.
 - A package's `__init__.py` is a docstring (`webauthn`'s imports `cose_keys`, and `decoder/edn`
   exports its two functions); the code lives in submodules named for what they do. Import the
-  module that defines a name, call it through that module, and patch it there. Nothing in
-  `server/app` imports in a cycle.
+  module that defines a name, call it through that module, and patch it there.
 
 Data flow of a ceremony: the page collects the stored credentials; begin issues options and
-keeps state in the Flask session, and only there; the browser
-runs `navigator.credentials.create/get`; complete verifies with `create_fido_server(...)`; the
-page updates the saved credentials, which both tabs show.
+keeps state in the Flask session, and only there; the browser runs
+`navigator.credentials.create/get`; complete verifies with `create_fido_server(...)`; the page
+updates the saved credentials, which both tabs show.
 
 ## Testing
 
@@ -602,31 +363,20 @@ deliberate change (the characterization goldens show what it changes).
 
 ## CI, deploys and bots
 
-- Two independent pipelines run on a push to `main`: GitHub Actions and Cloud Build. A red CI
-  run does not stop Cloud Build, so `cloudbuild.yaml` runs its own gate first: `Python tests`
-  (ruff, pytest with `.coveragerc`'s floor) and `Web tests` (typecheck, both vitest projects
-  with coverage, build, CSP scan, size budget) in parallel, then Build, Push, `GitHub checks`
-  (`tools/required_checks.py`: GitHub's check runs for the commit, read without a token, must
-  show the Playwright job and `docker-build` succeeded; it waits up to 10 minutes for runs not
-  ended, and fails on anything else, an answer it cannot read too) and Deploy (Cloud
-  Run `pqcwebauthn`, `deploy/deploy-revision.sh`: a revision with no traffic, tagged `candidate`,
-  `/health`, `/` and `/api/mds/metadata/info` checked at the tag's URL, then all the traffic to
-  it; a failure leaves the traffic where it was, a build whose commit is no longer main's tip
-  (read from the public repository before it deploys and again before it promotes) leaves it
-  there too, and `tests/app/tooling/test_deploy_revision.py` holds it to that). Playwright runs
-  in GitHub CI only, and the GitHub checks step's job names are held to the workflows'
-  (`test_required_checks.py`). Keep that gate: it is all that stands between a commit and
-  production.
+- Two independent pipelines run on a push to `main`: GitHub Actions and Cloud Build, whose
+  `cloudbuild.yaml` runs its own test gate, then builds, waits for GitHub's checks and deploys
+  (deploy/README.md says how). Keep that gate: it is all that stands between a commit and
+  production. Playwright runs in GitHub CI only; the GitHub checks step's job names are held to
+  the workflows' (`test_required_checks.py`), and `deploy/deploy-revision.sh` to its checks
+  (`test_deploy_revision.py`).
 - Workflows (`ci-*.yml` run on `pull_request` and on `push` to `main`; `ci-security.yml` also
   weekly, since advisories land without a commit): `ci-python.yml`, `ci-web.yml` (web and the
-  Playwright tests), `ci-docker.yml` (builds the image and, with the fixture snapshot, checks it
-  answers: the export's caching and gzip, COOP and CORP, uid 10001 writing `/app/instance`, the
-  MDS list and an entry), `ci-security.yml` (`pip-audit`, `npm audit --audit-level=moderate` in
-  `web/`, Trivy (its image pinned by digest) on the image; fix the dependency, never widen a
-  threshold), `ci-repository.yml` (actionlint with shellcheck from its author's image pinned by
-  digest, moved by hand; and on a push, `tools/commit_messages.py` over the pushed commits),
-  `ci-scheduled-runs.yml` (warns while a scheduled workflow's latest run on `main` has failed:
-  add any new scheduled workflow to its list).
+  Playwright tests), `ci-docker.yml` (builds the image and checks what it answers),
+  `ci-security.yml` (`pip-audit`, `npm audit --audit-level=moderate` in `web/`, Trivy on the
+  image; fix the dependency, never widen a threshold), `ci-repository.yml` (actionlint, and on a
+  push `tools/commit_messages.py` over the pushed commits), `ci-scheduled-runs.yml` (warns while a
+  scheduled workflow's latest run on `main` has failed: add any new scheduled workflow to its
+  list).
 - Every action is pinned to a commit SHA (or an image digest) with its version in a trailing
   comment. No workflow pushes to `main`: `update-footer-year.yml` opens pull requests through
   `.github/actions/open-bot-pr` (merge them by rebase or cherry-pick, so each commit keeps a
@@ -642,30 +392,21 @@ deliberate change (the characterization goldens show what it changes).
   `ci-security.yml`'s audits, on every push and weekly, are the alert, and a dependency moves by
   hand when one fails or a change needs it.
 - The Dockerfile's first stage builds `web/` and scans the export; only `web/out` reaches the
-  runtime image, at `/app/web/out`, precompressed by `tools/build_static_assets.py`. The runtime
-  stage's `apt-get upgrade` keeps fixable Debian CVEs out of the image. The server runs as uid and
-  gid 10001, which owns only `/app/instance`, all it writes at run time (the MDS snapshot a cold
-  start provisions; locally the session secret and the stores); gunicorn's control socket is off.
-  `docker compose` keeps `/app/instance` in a named volume, `instance`.
+  runtime image, precompressed by `tools/build_static_assets.py`. The runtime stage's
+  `apt-get upgrade` keeps fixable Debian CVEs out of the image. The server runs as uid and gid
+  10001, which owns only `/app/instance`: whatever it writes at run time goes there (the MDS
+  snapshot a cold start provisions; locally the session secret and the stores). gunicorn's
+  control socket is off.
 
 ## The FIDO MDS snapshot
 
-- About 34 MB of generated files in `instance/mds-snapshot/` (in the image,
-  `/app/instance/mds-snapshot`); `FIDO_SERVER_MDS_SNAPSHOT_DIR` puts it elsewhere. Not tracked in
-  git and not baked into the image: `server/app/mds/provisioning.py` provides it at runtime
-  (local files, then the set Cloud Storage's pointer names, then a verified upstream refresh).
-  Without a usable pointer or set, a cold instance goes on to upstream. Whatever writes the
-  snapshot writes each file whole, metas last. Browsers load none of them: the server derives
-  the explorer's list, icons and entry details from the snapshot it holds (`mds/explorer_files.py`).
-- Cloud Storage holds immutable sets and `mds/current.json`, the pointer to one
-  (`server/app/mds/sets.py`: create-only sets, a generation-checked pointer that only
-  moves forward); `tools/update_mds_snapshot.py --publish` publishes a verified snapshot, and a
-  running instance takes a newer set from `/api/mds/metadata/info` (`follow_newer_snapshot`).
-- Locally, run `python tools/update_mds_snapshot.py` once. Without a snapshot the list answers 404,
-  `explorer/custom` 200 with the session's uploads and no packaged entry, and the explorer shows
-  only those uploads, if any: the documented fallback, not a bug.
+Generated files in `instance/mds-snapshot/` (`FIDO_SERVER_MDS_SNAPSHOT_DIR` puts them
+elsewhere), provided at run time; docs/MDS_SNAPSHOT.md has the whole picture.
+
+- Locally, run `python tools/update_mds_snapshot.py` once. Without a snapshot the list answers
+  404 and the explorer shows only the session's uploads, if any: the documented fallback, not a
+  bug.
 - Never commit those files, and never write a test that reads the real snapshot directory.
-  `docs/MDS_SNAPSHOT.md` has the whole picture.
 
 ## Gotchas
 
@@ -677,15 +418,9 @@ deliberate change (the characterization goldens show what it changes).
   `FIDO_SERVER_RP_ID`: the two agree in production and in the e2e tests (`localhost`). It
   writes nothing on the server, so the server's record of a Simple credential's counter lags
   until the next Simple sign-in, which compares with the page's copy too.
-- Begin/complete flows depend on Flask session state.
 - fido2 finds a COSE key class by walking `CoseKey`'s subclasses, and the first class with an
   algorithm ID wins: an app subclass can add an algorithm, never replace fido2's.
 - Exported HTML carries attributes: state that feeds an attribute starts at its build-time
   value and changes after hydration, or hydration differs.
 - A hash navigation does not reload the page: in a Playwright test, reload after writing to
   `localStorage` before going to a deep URL.
-
-Before changing code: find which section or route owns the behaviour, whether the saved
-credentials are involved, whether the server already returns what the page needs, and the
-smallest test that proves the change. Prefer focused fixes; when you add a response field,
-change the page's handling and at least one app test with it.

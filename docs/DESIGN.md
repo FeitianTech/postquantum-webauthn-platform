@@ -113,6 +113,10 @@ the page in a real browser.
   site loads what this one answers). The page keeps no handle on a window it opens
   (the GitHub link is `noopener`) and loads nothing from another origin, so neither
   changes what it does.
+- A request under `/api/` that may change something (any method but GET, HEAD and
+  OPTIONS) is refused, 403, unless the browser's `Sec-Fetch-Site` says it comes from this
+  origin (`same-origin`) or from no page (`none`); the CSP reports stay open, and a
+  request without the header is let through (`server/app/config/fetch_metadata.py`).
 - So in `web/src` (`tests/app/tooling/test_web_source_rules.py` holds it): no `style`
   prop (the export would render a style attribute; set `element.style` through a ref),
   no `<style>` or `<script>` element, no `next/script`, no `next/link` (links are plain
