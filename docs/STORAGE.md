@@ -169,6 +169,13 @@ Two cookies, both signed with the app's secret, `HttpOnly`, `SameSite=Lax`, and
   removes all three folders. Deleting a visitor's last upload leaves the namespace,
   its marker with it, for the sweep.
 
+On Cloud Storage the bucket keeps each object deleted or overwritten for 7 days (soft delete, a
+bucket setting): within them the maintainer can restore what a visitor deleted, what the sweep
+removed or a record a write replaced, and after them nothing. The app cannot read such a copy, so
+a deletion takes effect at once on the site, but the bytes stay in the bucket, billed, for those 7
+days. `gcloud storage ls 'gs://<bucket>/user-data/<namespace>/**' --soft-deleted` lists them, and
+`gcloud storage restore 'gs://<bucket>/<object>#<generation>'` restores one.
+
 ## The credential log
 
 Each registration, and each uploaded metadata file, is copied to the owners' credential
@@ -182,8 +189,8 @@ quotas do not bound what the log keeps), which is not copied, with a warning nam
 most 1,000 registrations and 64 MiB of them, counted when they are written (one found at its
 path from an earlier delivery is not counted), each in one object beside the outbox
 written by compare-and-swap (`github_outbox.take_metadata_budget`; `github_outbox._delivered`).
-Past its budget, or while the budget cannot be read or written, an upload's files are not
-queued, with one warning, and the upload goes on. Past its budget a registration's entry is
+An upload's files past its budget are not queued, nor any of them while the budget cannot be read
+or written, with one warning, and the upload goes on. Past its budget a registration's entry is
 dropped from the outbox before GitHub is asked, with a warning naming it; while the budget
 cannot be read, the entry stays queued, as one GitHub cannot take does, but never gets a failed
 attempt (GitHub was not asked), and a delivery whose count cannot be written is warned about.

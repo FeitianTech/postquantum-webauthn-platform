@@ -299,6 +299,15 @@ its logic out here first.
 
 ## Backend (`server/app`)
 
+Running it (Python 3.12+, at the root): `uv sync --locked`, then
+`ENABLE_GITHUB_LOGGING=0 uv run flask --app server.app.app run --port 8000` serves the API and
+the export in `web/out` (after `npm run build`) at `http://localhost:8000/`, where `npm run dev`'s
+`FLASK_URL` finds it; open `localhost`, not `127.0.0.1`, which is no RP ID. A first run writes
+`instance/session-secret.key`, and the stores fill `instance/` as you use them; without a snapshot
+(`python tools/update_mds_snapshot.py`) the explorer lists only your uploads.
+`ENABLE_GITHUB_LOGGING=0` keeps a `GITHUB_TOKEN` in your shell from copying your registrations and
+uploads to the credential log.
+
 - `app.py`: the WSGI entry point, `server.app.app:app = create_app()`, in a checkout and in the
   image alike (the Dockerfile copies `server/app` to `/app/server/app`). No `server.X` import
   fallbacks.

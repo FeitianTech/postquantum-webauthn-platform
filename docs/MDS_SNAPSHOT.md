@@ -120,8 +120,9 @@ meanwhile as if there were no snapshot, and after the first attempt they return 
 once. From Cloud Storage that wait is the download of the BLOB and its meta (10.6 MB
 for no. 288) and about 0.7 s of CPU to verify the BLOB and derive the other five files
 (measured on no. 288 with the download taken out; Cloud Run's CPU may be slower). It
-has no bound of its own: a request waits up to the service's request timeout (300 s,
-`deploy/service.yaml`). The pages are static (the UI's export) and never wait,
+has no bound of its own: after the service's request timeout (300 s,
+`deploy/service.yaml`) Cloud Run answers the client 504, but the request's thread waits
+on until the provisioning ends. The pages are static (the UI's export) and never wait,
 so a cold instance's first page is not held; the explorer asks the info route, which
 waits.
 
