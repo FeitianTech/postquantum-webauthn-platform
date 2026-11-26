@@ -217,8 +217,10 @@ the visitor's error.
   can keep the outbox full, and later entries out of it, while it lasts. The budgets let the log
   grow by about 1,050 files a day at most.
 - **What delivers them.** `github_outbox.flush`, on a worker thread that requests start
-  (`schedule_flush`): one before each request at most every 30 s per process
-  (`github_mirror.init_app`), and one at once when a request has queued an entry. On Cloud Run
+  (`schedule_flush`): one before a request at most every 30 s per process, or every 10 minutes
+  while its last run found the outbox empty (`github_mirror.init_app`), and one at once when a
+  request has queued an entry, so entries another process queued and never delivered wait up to
+  10 minutes for an idle one. On Cloud Run
   a run has CPU only while some request is being served, so it goes on through the requests
   that follow; one that stalls resumes at the next, and an instance that is stopped leaves its
   entries for the next instance's first request. A run delivers at most 20 entries; one that

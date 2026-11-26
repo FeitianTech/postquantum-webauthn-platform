@@ -234,7 +234,7 @@ def test_the_outbox_folder_is_ignored_by_git_and_holds_only_entries_and_the_leas
 def test_nothing_queued_writes_nothing(outbox):
     assert github_outbox.enqueue([]) == 0
     assert outbox.is_empty()
-    assert github_outbox.flush(_Deliverer()) == github_outbox.FlushRun(0, 0.0)
+    assert github_outbox.flush(_Deliverer()) == github_outbox.FlushRun(0, 0.0, empty=True)
     # A run with nothing to deliver lists the outbox and takes no lease.
     assert outbox.is_empty()
 
@@ -246,7 +246,7 @@ def test_a_run_with_nothing_queued_leaves_the_lease_alone(bucket_outbox):
     lease = bucket.objects["github-outbox/lease"]
     listings, downloads = len(bucket.list_calls), len(bucket.download_options)
 
-    assert github_outbox.flush(_Deliverer()) == github_outbox.FlushRun(0, 0.0)
+    assert github_outbox.flush(_Deliverer()) == github_outbox.FlushRun(0, 0.0, empty=True)
 
     assert bucket.objects["github-outbox/lease"] == lease
     assert len(bucket.list_calls) == listings + 1
@@ -1139,6 +1139,42 @@ def test_a_process_flushes_at_most_once_an_interval_unless_kicked(outbox, clock)
     assert deliverer.paths[-1] == "logs/unknown/three.json"
 
 
+def test_after_a_run_that_found_the_outbox_empty_a_process_waits_the_idle_interval(outbox, clock):
+    deliverer = _Deliverer()
+    github_outbox.schedule_flush(deliverer)
+    outbox.put("other", github_outbox.encode_entry(_entry("other")))  # Another process queued it and stopped.
+
+    clock.now += github_outbox.IDLE_FLUSH_INTERVAL_SECONDS - 1
+    github_outbox.schedule_flush(deliverer)
+    assert deliverer.paths == []
+
+    clock.now += 1
+    github_outbox.schedule_flush(deliverer)
+    assert deliverer.paths == ["logs/unknown/other.json"]
+
+
+def test_an_entry_queued_after_a_run_that_found_the_outbox_empty_is_delivered_at_once(outbox, clock):
+    deliverer = _Deliverer()
+    github_outbox.schedule_flush(deliverer)
+
+    github_outbox.enqueue([_entry("one")])
+    github_outbox.schedule_flush(deliverer, kick=True)
+
+    assert deliverer.paths == ["logs/unknown/one.json"]
+
+
+def test_after_a_run_that_found_entries_a_process_waits_the_short_interval(outbox, clock):
+    deliverer = _Deliverer()
+    github_outbox.enqueue([_entry("one")])
+    github_outbox.schedule_flush(deliverer)  # It delivers the one entry: the outbox is empty now.
+    outbox.put("other", github_outbox.encode_entry(_entry("other")))
+
+    clock.now += github_outbox.FLUSH_INTERVAL_SECONDS
+    github_outbox.schedule_flush(deliverer)
+
+    assert deliverer.paths == ["logs/unknown/one.json", "logs/unknown/other.json"]
+
+
 def test_a_process_leaves_the_outbox_alone_while_it_backs_off_even_when_kicked(outbox, clock):
     github_outbox.enqueue([_entry("one")])
     refusing = _Deliverer({"logs/unknown/one.json": Delivery.UNAVAILABLE})
@@ -1185,6 +1221,25 @@ def test_a_run_that_fails_is_logged_and_the_process_tries_again_later(outbox, mo
     deliverer = _Deliverer()
     github_outbox.schedule_flush(deliverer)
     assert deliverer.paths == ["logs/unknown/one.json"]
+
+
+def test_a_listing_that_fails_after_an_empty_run_is_tried_again_after_the_short_interval(outbox, monkeypatch, clock):
+    github_outbox.schedule_flush(_Deliverer())  # The outbox is empty: the process waits the idle interval.
+    names = outbox.backend.names
+
+    def _fails(self):
+        raise OSError("listing failed")
+
+    monkeypatch.setattr(outbox.backend, "names", _fails)
+    clock.now += github_outbox.IDLE_FLUSH_INTERVAL_SECONDS
+    github_outbox.schedule_flush(_Deliverer())
+    monkeypatch.setattr(outbox.backend, "names", names)
+    outbox.put("other", github_outbox.encode_entry(_entry("other")))
+
+    clock.now += github_outbox.FLUSH_INTERVAL_SECONDS
+    deliverer = _Deliverer()
+    github_outbox.schedule_flush(deliverer)
+    assert deliverer.paths == ["logs/unknown/other.json"]
 
 
 def test_a_run_goes_on_a_worker_and_a_kick_meanwhile_runs_it_again(outbox, monkeypatch):

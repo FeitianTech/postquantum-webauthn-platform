@@ -87,6 +87,8 @@ MAX_ATTEMPTS = 5
 RUN_LIMIT = 20
 # How often a process starts a run by itself; a kick (an entry just queued) starts one at once.
 FLUSH_INTERVAL_SECONDS = 30.0
+# How often instead while this process's last run found the outbox empty: a listing is all it costs.
+IDLE_FLUSH_INTERVAL_SECONDS = 600.0
 # Whether a run goes on a worker thread. Tests run it inline.
 FLUSH_ASYNC = True
 
@@ -126,10 +128,11 @@ class Delivery(Enum):
 
 class FlushRun(NamedTuple):
     """What a run did: how many entries it delivered or dropped (given up ones too), and when the
-    outbox may next be tried."""
+    outbox may next be tried, and whether it found nothing queued."""
 
     handled: int
     not_before: float
+    empty: bool = False
 
 
 @dataclass
@@ -587,7 +590,7 @@ def flush(deliver: Callable[[OutboxEntry], Delivery], *, limit: int = RUN_LIMIT)
 
     backend = _backend()
     if not backend.names():
-        return FlushRun(0, 0.0)
+        return FlushRun(0, 0.0, empty=True)
     with backend.lease(time.time()) as lease:
         if not lease.held:
             return FlushRun(0, lease.not_before)
@@ -598,10 +601,12 @@ def flush(deliver: Callable[[OutboxEntry], Delivery], *, limit: int = RUN_LIMIT)
 @dataclass
 class FlushState:
     """This process's flushing: when it last started a run, when the outbox may next be tried
-    (as its last run found), the worker running one, and whether a kick came meanwhile."""
+    (as its last run found), whether that run found the outbox empty, the worker running one, and
+    whether a kick came meanwhile."""
 
     last_run: float = 0.0
     not_before: float = 0.0
+    empty: bool = False
     worker: threading.Thread | None = None
     pending: bool = False
     lock: threading.Lock = field(default_factory=threading.Lock)
@@ -612,8 +617,10 @@ FLUSH = FlushState()
 
 def _run(deliver: Callable[[OutboxEntry], Delivery]) -> None:
     try:
-        FLUSH.not_before = flush(deliver).not_before
+        run = flush(deliver)
+        FLUSH.not_before, FLUSH.empty = run.not_before, run.empty
     except Exception:
+        FLUSH.empty = False
         logger.warning("Could not flush the credential log outbox", exc_info=True)
 
 
@@ -630,7 +637,8 @@ def _work(deliver: Callable[[OutboxEntry], Delivery]) -> None:
 
 def schedule_flush(deliver: Callable[[OutboxEntry], Delivery], *, kick: bool = False) -> None:
     """Start a run on a worker thread, unless this process started one within
-    ``FLUSH_INTERVAL_SECONDS`` (a kick does not wait for that) or the outbox is backing off.
+    ``FLUSH_INTERVAL_SECONDS`` (``IDLE_FLUSH_INTERVAL_SECONDS`` after a run that found the outbox
+    empty; a kick does not wait for either) or the outbox is backing off.
 
     Requests call it, so a run goes on while a request holds the CPU, which is when Cloud Run
     gives an instance any; a run that stalls between requests goes on at the next. A kick while
@@ -638,7 +646,8 @@ def schedule_flush(deliver: Callable[[OutboxEntry], Delivery], *, kick: bool = F
     """
 
     now = time.time()
-    if now < FLUSH.not_before or (not kick and now - FLUSH.last_run < FLUSH_INTERVAL_SECONDS):
+    interval = IDLE_FLUSH_INTERVAL_SECONDS if FLUSH.empty else FLUSH_INTERVAL_SECONDS
+    if now < FLUSH.not_before or (not kick and now - FLUSH.last_run < interval):
         return
     if not FLUSH_ASYNC:
         FLUSH.last_run = now
