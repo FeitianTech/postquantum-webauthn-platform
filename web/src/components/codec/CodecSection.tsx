@@ -1,5 +1,5 @@
 import { type CodecMode, ENCODER_FORMATS, codecProgressText } from '@/logic/codec/request.js';
-import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
+import { type ReactNode, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 import { Button } from '@/components/ui/Button';
 import { Select, TextArea } from '@/components/ui/Field';
@@ -47,8 +47,32 @@ function Workspace({ input, output }: { input: ReactNode; output: ReactNode }) {
   );
 }
 
-function ModePanel({ mode, active, codec }: { mode: CodecMode; active: boolean; codec: CodecPanelState }) {
+// The input fits its text, with no handle to resize it by: never shorter than its
+// ten rows, and no taller than leaves its buttons in the window under the
+// section's heading, past which it scrolls (FITTED). Its height is set through the CSSOM whenever the text changes,
+// the panel is shown (a hidden one has no height to read) or the window's width
+// wraps the text anew.
+const FITTED = '[&_textarea]:max-h-[max(14.5rem,calc(100dvh-var(--header-height)-25rem))] [&_textarea]:resize-none';
+
+function useFittedHeight(text: string, shown: boolean) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+  useLayoutEffect(() => {
+    const area = ref.current!;
+    const fit = () => {
+      area.style.height = 'auto';
+      // What the text needs, and the borders the box's height counts.
+      area.style.height = `${area.scrollHeight + area.offsetHeight - area.clientHeight}px`;
+    };
+    fit();
+    window.addEventListener('resize', fit);
+    return () => window.removeEventListener('resize', fit);
+  }, [text, shown]);
+  return ref;
+}
+
+function ModePanel({ mode, active, shown, codec }: { mode: CodecMode; active: boolean; shown: boolean; codec: CodecPanelState }) {
   const entrance = useEntrance(active);
+  const inputRef = useFittedHeight(codec.input, shown);
   const [rawOpen, setRawOpen] = useState(false);
   const rawButtonRef = useRef<HTMLButtonElement>(null);
   const ids = segmentIds(MODE_ID, mode);
@@ -73,6 +97,8 @@ function ModePanel({ mode, active, codec }: { mode: CodecMode; active: boolean; 
         </Select>
       ) : null}
       <TextArea
+        ref={inputRef}
+        className={FITTED}
         label={mode === 'encode' ? 'Input to encode' : 'Input to decode'}
         mono
         rows={10}
@@ -192,8 +218,8 @@ export function CodecSection({ active, route = CLOSED_ROUTE }: { active: boolean
         </div>
         <SegmentedControl label="Codec mode" options={MODES} value={mode} onChange={setMode} idBase={MODE_ID} size="sm" />
       </div>
-      <ModePanel mode="decode" active={mode === 'decode'} codec={decode} />
-      <ModePanel mode="encode" active={mode === 'encode'} codec={encode} />
+      <ModePanel mode="decode" active={mode === 'decode'} shown={active && mode === 'decode'} codec={decode} />
+      <ModePanel mode="encode" active={mode === 'encode'} shown={active && mode === 'encode'} codec={encode} />
     </section>
   );
 }

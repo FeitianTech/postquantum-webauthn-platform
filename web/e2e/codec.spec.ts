@@ -137,6 +137,39 @@ test.describe('the Codec', () => {
     await expect(encoding.getByRole('button', { name: 'Raw' })).toBeFocused();
   });
 
+  test('fits the input to its text, up to the window, with no handle to resize it by', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await openCodec(page);
+    const decoding = panel(page, 'decode');
+    const input = decoding.getByRole('textbox', { name: 'Input to decode' });
+    const height = async () => (await input.boundingBox())!.height;
+    const scrolls = () => input.evaluate((area) => area.scrollHeight > area.clientHeight);
+    expect(await input.evaluate((area) => getComputedStyle(area).resize)).toBe('none');
+    const empty = await height();
+
+    // A few lines leave it as it was: ten rows at least.
+    await input.fill('a1\n02\n03');
+    expect(await height()).toBe(empty);
+    // More lines than it had rows: it grows to hold them all.
+    await input.fill(Array.from({ length: 18 }, (_, line) => `line ${line}`).join('\n'));
+    const grown = await height();
+    expect(grown).toBeGreaterThan(empty + 100);
+    expect(await scrolls()).toBe(false);
+    // Far more than the window holds: it stops where its buttons still show, and scrolls.
+    await input.fill(Array.from({ length: 400 }, (_, line) => `line ${line}`).join('\n'));
+    expect(await height()).toBeGreaterThan(grown);
+    expect(await scrolls()).toBe(true);
+    await expect(decoding.getByRole('button', { name: 'Decode', exact: true })).toBeInViewport();
+    // Cleared, it is back to its ten rows.
+    await decoding.getByRole('button', { name: 'Clear' }).click();
+    expect(await height()).toBe(empty);
+
+    // The other mode's input, hidden until now, is measured when it is shown.
+    await page.getByRole('tab', { name: 'Encode' }).click();
+    const encoding = panel(page, 'encode').getByRole('textbox', { name: 'Input to encode' });
+    expect((await encoding.boundingBox())!.height).toBe(empty);
+  });
+
   test('puts the input beside the output at 1440 px, one above the other at 375 px, and never scrolls sideways', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await openCodec(page);

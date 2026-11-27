@@ -66,6 +66,8 @@ the page in a real browser.
   header takes two rows; from 1280 px one.
 - From 1024 px the Simple tab's form sits beside the saved credentials; from 1280 px the
   Advanced form sits beside its JSON editor and the Codec's input beside its output.
+- The Codec's input fits its text, with no handle to resize it by: ten rows at least,
+  and no taller than leaves its buttons in the window, past which it scrolls.
 
 ## The MDS page
 

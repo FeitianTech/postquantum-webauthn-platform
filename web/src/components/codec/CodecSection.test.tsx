@@ -35,8 +35,8 @@ function sentBodies() {
   return fetchMock.mock.calls.map(([, init]) => JSON.parse(String(init.body)));
 }
 
-function renderCodec() {
-  renderPage(
+function mountCodec() {
+  return renderPage(
     <ToastProvider>
       {/* The header's tab, which names the section's panel. */}
       <div role="tablist" aria-label="Sections">
@@ -47,6 +47,10 @@ function renderCodec() {
       <CodecSection active />
     </ToastProvider>,
   );
+}
+
+function renderCodec() {
+  mountCodec();
   return screen.getByRole('tabpanel', { name: 'Codec' });
 }
 
@@ -95,6 +99,50 @@ afterEach(() => {
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
   Reflect.deleteProperty(navigator, 'clipboard');
+});
+
+describe('the Codec input', () => {
+  it('fits its text, the height set as the text changes, with no handle to resize it by', async () => {
+    renderCodec();
+    const input = within(decodePanel()).getByRole<HTMLTextAreaElement>('textbox');
+    expect(input.closest('[class*="[&_textarea]:resize-none"]')).not.toBeNull();
+    expect(input).toHaveAttribute('rows', '10');
+    // What the text needs, a border above and below it.
+    const size = (scrollHeight: number) => {
+      for (const [key, value] of Object.entries({ scrollHeight, offsetHeight: 232, clientHeight: 230 })) {
+        Object.defineProperty(input, key, { configurable: true, value });
+      }
+    };
+    size(300);
+    await typeInto(decodePanel(), 'a1');
+    expect(input.style.height).toBe('302px');
+
+    // A narrower window wraps the text onto more lines.
+    size(400);
+    fireEvent(window, new Event('resize'));
+    expect(input.style.height).toBe('402px');
+
+    size(230);
+    await typeInto(decodePanel(), '');
+    expect(input.style.height).toBe('232px');
+  });
+
+  it('measures a mode\'s input again when the mode is shown, and stops following the window when the section goes', async () => {
+    const { unmount } = mountCodec();
+    const input = within(encodePanel()).getByRole<HTMLTextAreaElement>('textbox', { hidden: true });
+    // Hidden, it has no height to read.
+    expect(input.style.height).toBe('0px');
+    for (const [key, value] of Object.entries({ scrollHeight: 230, offsetHeight: 232, clientHeight: 230 })) {
+      Object.defineProperty(input, key, { configurable: true, value });
+    }
+    await userEvent.click(screen.getByRole('tab', { name: 'Encode' }));
+    expect(input.style.height).toBe('232px');
+
+    unmount();
+    Object.defineProperty(input, 'scrollHeight', { configurable: true, value: 900 });
+    fireEvent(window, new Event('resize'));
+    expect(input.style.height).toBe('232px');
+  });
 });
 
 describe('the Codec section', () => {
