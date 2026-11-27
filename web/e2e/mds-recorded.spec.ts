@@ -6,8 +6,8 @@ import { recorded } from './recorded';
 
 // What the MDS table shows for each filter, over the fixture snapshot
 // serve-flask.mjs serves (tests/fixtures/mds), against its recording (recorded.ts):
-// every row's cells word for word (layout, separators and controls' own labels set
-// aside: recorded-words.ts), the rows keyed by their ID, and the order of the rows.
+// every row's cells word for word, the row expanded (layout, separators and controls'
+// own labels set aside: recorded-words.ts), the rows keyed by their ID, and the order of the rows.
 // Every difference must be one listed below, with its reason.
 
 // Each filter: its field's label and the text typed, then the column whose header it marks
@@ -73,6 +73,10 @@ async function shownRows(page: Page, filters: Record<string, readonly string[]>)
   for (const [, label, , column = label] of Object.values(filters)) {
     await expect(section.getByRole('columnheader', { name: `${column} (filtered)` })).toBeVisible();
   }
+  // A row's two lines hold what the window has columns for: each is expanded, so every
+  // cell of it is shown, and read.
+  const collapsed = section.locator('tbody tr[data-entry-id]:not([hidden])').getByRole('button', { name: /^Show all of/ });
+  for (let left = await collapsed.count(); left > 0; left -= 1) await collapsed.first().click();
   return readShownRows(section.locator('tbody'), 'tr[data-entry-id]:not([hidden])', 5);
 }
 

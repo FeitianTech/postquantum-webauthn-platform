@@ -70,8 +70,48 @@ describe('the MDS table: its columns', () => {
     renderTable();
     expect(screen.getAllByRole('columnheader').map((cell) => cell.querySelector('button span')?.textContent)).toEqual(HEADERS);
     expect(screen.getByRole('table', { name: 'FIDO MDS authenticators' })).toBeInTheDocument();
-    // Each row is a grid on the table's columns, which the browser skips laying out while it is out of view.
+    // Each row is a grid of two lines, which the browser skips laying out while it is out of view.
     expect(rowOf(FIXTURE_ENTRIES[0])).toHaveClass('grid', '[content-visibility:auto]');
+  });
+
+  it('puts the name over the ID, the status over the protocol and the transports over the attachment', () => {
+    renderTable();
+    const cells = cellsOf(entryNamed('Fixture Security Key L2'));
+    const line = (index: number) => cells[index].className.split(' ').filter((name) => /^(md:|lg:)?row-start-/.test(name));
+    expect(line(1)).toEqual(['row-start-1']);
+    expect(line(5)).toEqual(['row-start-2']);
+    expect(line(4)).toEqual(['row-start-3', 'md:row-start-1']);
+    expect(line(2)).toEqual(['row-start-3', 'md:row-start-2']);
+    expect(line(8)).toEqual(['lg:row-start-1']);
+    expect(line(7)).toEqual(['lg:row-start-2']);
+    // The header mirrors them.
+    expect(header('Name')).toHaveClass('row-start-1', 'col-start-2');
+    expect(header('ID')).toHaveClass('row-start-2', 'col-start-2');
+  });
+
+  it('hides, for the eye only, a column the window has no room for, with its header and that header\'s button', () => {
+    renderTable();
+    const cells = cellsOf(entryNamed('Fixture Security Key L2'));
+    for (const index of [3, 9, 11, 12]) expect(cells[index].className).toBe('sr-only truncate whitespace-nowrap');
+    expect(cells[6]).toHaveClass('max-[88rem]:sr-only');
+    expect(cells[10]).toHaveClass('max-[72rem]:sr-only');
+    expect(cells[8]).toHaveClass('max-lg:sr-only');
+    for (const name of ['Icon', 'Certification', 'Key Protection', 'Algorithm Info', 'CN']) {
+      expect(header(name)).toHaveClass('sr-only', '*:invisible');
+    }
+    expect(header('User Verification')).toHaveClass('max-[88rem]:sr-only', 'max-[88rem]:*:invisible');
+    // Every header keeps its name, hidden or not.
+    expect(screen.getAllByRole('columnheader').map((cell) => cell.getAttribute('aria-label'))).toEqual(
+      HEADERS.map((name) => (name === 'Name' ? 'Name (filtered)' : name)),
+    );
+  });
+
+  it('runs a long list onto the second line where its column has two', () => {
+    renderTable();
+    const cells = cellsOf(entryNamed('Fixture Security Key L2'));
+    expect(cells[10].querySelector('span')).toHaveClass('line-clamp-2');
+    expect(cells[6].querySelector('span')).toHaveClass('line-clamp-2');
+    expect(cells[8].querySelector('span')).toBeNull();
   });
 
   it('shows each column of an entry', () => {
@@ -161,12 +201,6 @@ describe('the MDS table: its columns', () => {
     expect(cells[13]).toHaveTextContent('—');
   });
 
-  it('reads the Icon column\'s name on a phone without showing it', () => {
-    renderTable();
-    expect(within(header('Icon')).getByText('Icon')).toHaveClass('max-sm:sr-only');
-    expect(within(header('Name')).getByText('Name')).not.toHaveClass('max-sm:sr-only');
-  });
-
   it('marks a filtered column in its header', () => {
     renderTable();
     expect(header('Name')).toHaveTextContent('(filtered)');
@@ -175,22 +209,44 @@ describe('the MDS table: its columns', () => {
 });
 
 describe('the MDS table: rows that expand', () => {
-  it('shows a long value on one line, whole in its tooltip, and every word when expanded', async () => {
+  it('shows what has no column on a labelled line of its own when expanded, every word of it', async () => {
     renderTable();
     const entry = entryNamed('Fixture Key With Many Attestation Roots');
     const cn = () => cellsOf(entry)[12];
-    expect(cn()).toHaveClass('truncate');
+    expect(cn()).toHaveClass('sr-only');
     expect(cn()).toHaveAttribute('title', entry.certificateCommonNameList.join(', '));
 
     const toggle = within(cellsOf(entry)[1]).getByRole('button', { name: 'Show all of Fixture Key With Many Attestation Roots' });
     await userEvent.click(toggle);
     expect(rowOf(entry)).toHaveAttribute('aria-expanded', 'true');
+    expect(cn()).not.toHaveClass('sr-only');
     expect(cn()).not.toHaveClass('truncate');
     expect(cn()).not.toHaveAttribute('title');
     expect(cn().querySelectorAll('span > span')).toHaveLength(15);
+    // The line's label is for the eye: a screen reader has the column's header.
+    const label = cn().firstElementChild!;
+    expect(label).toHaveTextContent('CN');
+    expect(label).toHaveAttribute('aria-hidden', 'true');
+    expect(cn()).toHaveClass('col-[2/-1]', 'flex');
+    // What the two lines hold stays where it is, unlabelled.
+    expect(cellsOf(entry)[2]).toHaveClass('md:row-start-2');
+    expect(cellsOf(entry)[2].querySelector('[aria-hidden]')).toBeNull();
+    // A list with a column of its own takes a line too, so its pills have the room.
+    expect(cellsOf(entry)[8]).toHaveClass('col-[2/-1]');
+    expect(cellsOf(entry)[8]).not.toHaveClass('max-lg:sr-only');
 
     await userEvent.click(within(cellsOf(entry)[1]).getByRole('button', { name: /^Show less of/ }));
     expect(rowOf(entry)).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  it('shows a long identifier whole when expanded', async () => {
+    renderTable();
+    const entry = entryNamed('Fixture U2F Key');
+    expect(within(cellsOf(entry)[5]).getByText(entry.id)).toHaveClass('truncate');
+    await userEvent.click(within(cellsOf(entry)[1]).getByRole('button', { name: /^Show all of/ }));
+    expect(within(cellsOf(entry)[5]).getByText(entry.id)).toHaveClass('break-all');
+    // Nothing to list: the line holds a dash.
+    expect(cellsOf(entry)[8]).toHaveTextContent('Transports—');
   });
 
   it('wraps the certification detail when expanded', async () => {
@@ -232,33 +288,6 @@ describe('the MDS table: sorting', () => {
     expect(header('Date Updated')).toHaveAttribute('aria-sort', 'ascending');
     await userEvent.click(within(header('Date Updated')).getByRole('button'));
     expect(header('Date Updated')).toHaveAttribute('aria-sort', 'descending');
-  });
-});
-
-describe('the MDS table: its frame', () => {
-  it('fades its right edge while it can scroll further that way, beside its scrollbar', () => {
-    renderTable();
-    const frame = document.querySelector<HTMLDivElement>('[data-mds-frame]')!;
-    const fade = document.querySelector<HTMLElement>('[data-mds-fade]')!;
-    const size = { scrollWidth: 2940, clientWidth: 941, offsetWidth: 958, clientHeight: 600, offsetHeight: 617 };
-    for (const [key, value] of Object.entries(size)) Object.defineProperty(frame, key, { configurable: true, value });
-
-    fireEvent.scroll(frame);
-    expect(fade).toBeVisible();
-    expect(fade).toHaveAttribute('aria-hidden', 'true');
-    expect(fade.style.right).toBe('16px');
-    expect(fade.style.bottom).toBe('16px');
-
-    frame.scrollLeft = 2940 - 941;
-    fireEvent.scroll(frame);
-    expect(fade).not.toBeVisible();
-
-    frame.scrollLeft = 0;
-    Object.defineProperty(frame, 'offsetWidth', { configurable: true, value: 942 });
-    Object.defineProperty(frame, 'offsetHeight', { configurable: true, value: 601 });
-    fireEvent.scroll(frame);
-    expect(fade.style.right).toBe('1px');
-    expect(fade.style.bottom).toBe('1px');
   });
 });
 

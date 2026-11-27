@@ -1,6 +1,6 @@
 import type { ExplorerSort } from '@/logic/mds/explorer/filter-sort.js';
 import type { MdsEntry } from '@/logic/mds/explorer/loading.js';
-import { type ReactNode, type RefObject, useEffect, useRef, useState } from 'react';
+import { type ReactNode, type RefObject, useEffect, useState } from 'react';
 
 import { ChevronDownIcon } from '@/components/ui/icons';
 import { cx } from '@/lib/cx';
@@ -9,53 +9,13 @@ import { ExplorerRow } from './ExplorerRow';
 import { ROW_GRID } from './grid';
 import { EXPLORER_COLUMNS, type ExplorerColumn } from './columns';
 
+// A header: a line of the row's two, over its cells.
+const HEAD = 'min-w-0 px-3 text-caption leading-5 font-medium whitespace-nowrap text-ink-muted max-md:*:invisible';
+
 const ROWS_BEFORE_BACK_TO_TOP = 5;
 
-// A quiet sign that the table goes on to the right: a white fade over the
-// frame's right edge while it can scroll further that way (never a grey fill or a
-// shadow), inside the frame's border and beside its vertical scrollbar.
-function EdgeFade({
-  frameRef,
-  tableRef,
-}: {
-  frameRef: RefObject<HTMLDivElement | null>;
-  tableRef: RefObject<HTMLTableElement | null>;
-}) {
-  const fadeRef = useRef<HTMLDivElement>(null);
-  const [more, setMore] = useState(false);
-
-  useEffect(() => {
-    const frame = frameRef.current;
-    if (!frame) return undefined;
-    const measure = () => {
-      setMore(frame.scrollLeft + frame.clientWidth < frame.scrollWidth - 1);
-      const fade = fadeRef.current;
-      if (!fade) return;
-      // The frame's border is 1 px; what else it gives up is its scrollbars.
-      fade.style.right = `${Math.max(1, frame.offsetWidth - frame.clientWidth - 1)}px`;
-      fade.style.bottom = `${Math.max(1, frame.offsetHeight - frame.clientHeight - 1)}px`;
-    };
-    measure();
-    frame.addEventListener('scroll', measure, { passive: true });
-    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure);
-    observer?.observe(frame);
-    if (tableRef.current) observer?.observe(tableRef.current);
-    return () => {
-      frame.removeEventListener('scroll', measure);
-      observer?.disconnect();
-    };
-  }, [frameRef, tableRef]);
-
-  return (
-    <div
-      ref={fadeRef}
-      aria-hidden="true"
-      data-mds-fade=""
-      hidden={!more}
-      className="pointer-events-none absolute top-px z-[15] w-10 rounded-r-[13px] bg-linear-to-l from-white to-transparent"
-    />
-  );
-}
+// A header no width shows takes none of a header's padding.
+const hiddenAlways = (column: ExplorerColumn) => column.head.startsWith('sr-only');
 
 function HeaderCell({
   column,
@@ -75,7 +35,9 @@ function HeaderCell({
       scope="col"
       role="columnheader"
       aria-sort={ariaSort}
-      className="flex h-10 items-center border-b border-line bg-surface px-3 text-caption font-medium whitespace-nowrap text-ink-muted"
+      // Its name, read where the header is hidden with its button.
+      aria-label={filtered ? `${column.header} (filtered)` : column.header}
+      className={hiddenAlways(column) ? column.head : cx(HEAD, column.head)}
     >
       <button
         type="button"
@@ -85,8 +47,7 @@ function HeaderCell({
           direction !== 'none' && 'text-ink',
         )}
       >
-        {/* On a phone the Icon column is only as wide as an icon: its name is read, not shown. */}
-        <span className={cx('truncate', column.key === 'icon' && 'max-sm:sr-only')}>{column.header}</span>
+        <span className="truncate">{column.header}</span>
         {filtered ? (
           <>
             <span aria-hidden="true" className="size-1.5 shrink-0 rounded-full bg-accent" />
@@ -154,14 +115,14 @@ type ExplorerTableProps = {
   frameRef: RefObject<HTMLDivElement | null>;
 };
 
-// The 14 columns in a frame that scrolls both ways by itself: the header stays in
-// view as the list scrolls, the sideways scrollbar is always within reach, and
-// the page never scrolls sideways. Every row is in the page (find-in-page finds
-// it), but each row is a grid on the one column template, not a table row, so
-// the browser can skip laying out and painting the rows out of view
-// (content-visibility, which table rows do not take): a filter that brings back
-// all 517 rows lays out only those in view. The table roles are written out,
-// since the display is not a table's.
+// The list in a frame that scrolls by itself, down only: every row fits the
+// frame's width in two lines (grid.ts), under a header row that stays in view and
+// mirrors them. All 14 columns are in every row and in the header, in order, for a
+// screen reader; the ones the window has no room for are hidden until their row
+// is expanded. Every row is in the page (find-in-page finds it), but each is a
+// grid, not a table row, so the browser can skip laying out and painting the rows
+// out of view (content-visibility, which table rows do not take). The table roles
+// are written out, since the display is not a table's.
 export function ExplorerTable({
   rows,
   shown,
@@ -174,8 +135,6 @@ export function ExplorerTable({
   state,
   frameRef,
 }: ExplorerTableProps) {
-  const tableRef = useRef<HTMLTableElement>(null);
-
   return (
     <div className="relative">
       <div
@@ -183,11 +142,11 @@ export function ExplorerTable({
         data-mds-frame=""
         // Positioned, so what is absolutely placed inside (a cell's screen-reader
         // status) is clipped by the frame instead of widening the page.
-        className="relative max-h-[calc(100dvh-var(--header-height)-2rem)] min-h-80 overflow-auto overscroll-x-contain rounded-md border border-line"
+        className="relative max-h-[calc(100dvh-var(--header-height)-2rem)] min-h-80 overflow-y-auto rounded-md border border-line"
       >
-        <table ref={tableRef} role="table" aria-label="FIDO MDS authenticators" className="block w-max text-left text-body">
-          <thead role="rowgroup" className="sticky top-0 z-10 block bg-surface">
-            <tr role="row" className={ROW_GRID}>
+        <table role="table" aria-label="FIDO MDS authenticators" className="block text-left text-body">
+          <thead role="rowgroup" className="sticky top-0 z-10 block border-b border-line bg-surface max-md:sr-only">
+            <tr role="row" className={cx(ROW_GRID, 'py-1.5')}>
               {EXPLORER_COLUMNS.map((column) => (
                 <HeaderCell
                   key={column.key}
@@ -220,7 +179,6 @@ export function ExplorerTable({
           </tbody>
         </table>
       </div>
-      <EdgeFade frameRef={frameRef} tableRef={tableRef} />
       <BackToTop frameRef={frameRef} />
     </div>
   );

@@ -96,16 +96,16 @@ test.describe('/#mds', () => {
     await expect(header(page, 'Status')).toContainText('(filtered)');
   });
 
-  test('keeps a long CN within reach: one line with the whole value as a tooltip, every word when expanded', async ({ page }) => {
+  test('keeps a long CN out of the two lines, and shows every word of it on a line of its own when expanded', async ({ page }) => {
     await openList(page);
     const cn = row(page, MANY_ROOTS).locator('td').nth(12);
-    const title = await cn.getAttribute('title');
-    expect(title!.length).toBeGreaterThanOrEqual(954);
+    expect((await cn.getAttribute('title'))!.length).toBeGreaterThanOrEqual(954);
     const collapsed = (await row(page, MANY_ROOTS).boundingBox())!.height;
 
     await row(page, MANY_ROOTS).getByRole('button', { name: /^Show all of/ }).click();
     await expect(row(page, MANY_ROOTS)).toHaveAttribute('aria-expanded', 'true');
     expect((await row(page, MANY_ROOTS).boundingBox())!.height).toBeGreaterThan(collapsed * 4);
+    await expect(cn.getByText('CN', { exact: true })).toBeVisible();
     const pills = cn.locator('span > span');
     await expect(pills).toHaveCount(15);
     // Nothing clipped: every value sits inside its cell.
@@ -113,6 +113,44 @@ test.describe('/#mds', () => {
     for (const box of await pills.evaluateAll((elements) => elements.map((element) => element.getBoundingClientRect().right))) {
       expect(box).toBeLessThanOrEqual(cell.x + cell.width);
     }
+  });
+
+  for (const width of [1440, 1152, 1024, 768, 375]) {
+    test(`fits every row in a ${width} px window: nothing scrolls sideways, no identifier is cut`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 800 });
+      await openList(page);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+      expect(await frame(page).evaluate((element) => element.scrollWidth - element.clientWidth)).toBe(0);
+      const cut = await rows(page)
+        .locator('code')
+        .evaluateAll((codes) => codes.filter((code) => code.scrollWidth > code.clientWidth).map((code) => code.textContent));
+      expect(cut).toEqual([]);
+    });
+  }
+
+  test('gives a column its place from the width at which it fits, and keeps a hidden one\'s header for a screen reader', async ({ page }) => {
+    await openList(page);
+    const sortButton = (name: string) => header(page, name).locator('button');
+    await expect(section(page).getByRole('columnheader')).toHaveCount(14);
+    // Never a column: out of sight and out of the tab order, its row's cell too.
+    await expect(sortButton('CN')).toBeHidden();
+    expect((await header(page, 'CN').boundingBox())!.width).toBeLessThanOrEqual(1);
+    expect((await row(page, L1).locator('td').nth(12).boundingBox())!.width).toBeLessThanOrEqual(1);
+    // At 1280 px the user verification has no room yet; at 1440 it has.
+    await expect(sortButton('Algorithms')).toBeVisible();
+    await expect(sortButton('User Verification')).toBeHidden();
+    await page.setViewportSize({ width: 1440, height: 800 });
+    await expect(sortButton('User Verification')).toBeVisible();
+    await page.setViewportSize({ width: 1024, height: 800 });
+    await expect(sortButton('Algorithms')).toBeHidden();
+    await expect(sortButton('Transports')).toBeVisible();
+    await page.setViewportSize({ width: 800, height: 800 });
+    await expect(sortButton('Transports')).toBeHidden();
+    await expect(sortButton('Status')).toBeVisible();
+    // The name sits over the ID.
+    const [name, id] = [(await header(page, 'Name').boundingBox())!, (await header(page, 'ID').boundingBox())!];
+    expect(id.y).toBeGreaterThan(name.y);
+    expect(id.x).toBe(name.x);
   });
 
   test('copies an AAGUID whole', async ({ page, context }) => {
@@ -231,44 +269,6 @@ test.describe('/#mds', () => {
     await filter(page, 'User Verification').click();
     expect(await pageWidth()).toBeLessThanOrEqual(375);
     expect(await greyFills(page, '#nav-panel-mds')).toEqual([]);
-  });
-
-  test('gives the icon a narrow column on a phone', async ({ page }) => {
-    await page.setViewportSize({ width: 375, height: 812 });
-    await openList(page);
-    const icon = (await header(page, 'Icon').boundingBox())!;
-    const width = await frame(page).evaluate((element) => element.clientWidth);
-    expect(icon.width / width).toBeLessThan(0.15);
-    await expect(header(page, 'Icon')).toHaveAccessibleName(/^Icon/);
-  });
-
-  test('narrows the icon column when the window narrows to a phone after loading', async ({ page }) => {
-    await page.setViewportSize({ width: 1024, height: 800 });
-    await openList(page);
-    await page.setViewportSize({ width: 375, height: 812 });
-    await expect
-      .poll(async () => (await header(page, 'Icon').boundingBox())!.width / (await frame(page).evaluate((element) => element.clientWidth)))
-      .toBeLessThan(0.15);
-    await page.setViewportSize({ width: 1024, height: 800 });
-    await expect.poll(async () => (await header(page, 'Icon').boundingBox())!.width).toBeCloseTo(72, 0);
-  });
-
-  test('fades the table\'s right edge while it can scroll further that way', async ({ page }) => {
-    await page.setViewportSize({ width: 1024, height: 800 });
-    await openList(page);
-    const fade = section(page).locator('[data-mds-fade]');
-    await expect(fade).toBeVisible();
-    const [frameBox, fadeBox] = [(await frame(page).boundingBox())!, (await fade.boundingBox())!];
-    expect(Math.abs(frameBox.x + frameBox.width - (fadeBox.x + fadeBox.width))).toBeLessThanOrEqual(20);
-    expect(await greyFills(page, '#nav-panel-mds')).toEqual([]);
-    await frame(page).evaluate((element) => {
-      element.scrollLeft = element.scrollWidth;
-    });
-    await expect(fade).toBeHidden();
-    await frame(page).evaluate((element) => {
-      element.scrollLeft = 0;
-    });
-    await expect(fade).toBeVisible();
   });
 
   test('fits the table\'s frame under the header when the header takes two rows', async ({ page }) => {
