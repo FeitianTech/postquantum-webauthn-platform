@@ -1,14 +1,6 @@
 import type { ExplorerSort } from '@/logic/mds/explorer/filter-sort.js';
 import type { MdsEntry } from '@/logic/mds/explorer/loading.js';
-import {
-  type KeyboardEvent,
-  type PointerEvent,
-  type ReactNode,
-  type RefObject,
-  useEffect,
-  useRef,
-  useState,
-} from 'react';
+import { type ReactNode, type RefObject, useEffect, useRef, useState } from 'react';
 
 import { ChevronDownIcon } from '@/components/ui/icons';
 import { cx } from '@/lib/cx';
@@ -16,9 +8,7 @@ import { cx } from '@/lib/cx';
 import { ExplorerRow } from './ExplorerRow';
 import { ROW_GRID } from './grid';
 import { EXPLORER_COLUMNS, type ExplorerColumn } from './columns';
-import { minimumWidth, useColumnWidths } from './useColumnWidths';
 
-const KEY_STEP = 16;
 const ROWS_BEFORE_BACK_TO_TOP = 5;
 
 // A quiet sign that the table goes on to the right: a white fade over the
@@ -67,78 +57,16 @@ function EdgeFade({
   );
 }
 
-// The handle on a header's right edge: drag it, or focus it and use the arrow
-// keys. Widths last while the page is open.
-function ColumnResizer({
-  column,
-  width,
-  onResize,
-}: {
-  column: ExplorerColumn;
-  width: number;
-  onResize: (width: number) => void;
-}) {
-  const drag = useRef<{ x: number; width: number } | null>(null);
-  const onPointerDown = (event: PointerEvent<HTMLDivElement>) => {
-    if (event.button !== 0) return;
-    event.preventDefault();
-    event.stopPropagation();
-    drag.current = { x: event.clientX, width };
-    event.currentTarget.setPointerCapture?.(event.pointerId);
-  };
-  const onPointerMove = (event: PointerEvent<HTMLDivElement>) => {
-    if (!drag.current) return;
-    onResize(drag.current.width + event.clientX - drag.current.x);
-  };
-  const onPointerEnd = (event: PointerEvent<HTMLDivElement>) => {
-    drag.current = null;
-    event.currentTarget.releasePointerCapture?.(event.pointerId);
-  };
-  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
-    event.preventDefault();
-    onResize(width + (event.key === 'ArrowRight' ? KEY_STEP : -KEY_STEP));
-  };
-  return (
-    <div
-      role="separator"
-      aria-orientation="vertical"
-      aria-label={`Resize ${column.header} column`}
-      aria-valuenow={width}
-      aria-valuemin={minimumWidth(column)}
-      tabIndex={0}
-      title="Drag to resize column"
-      onPointerDown={onPointerDown}
-      onPointerMove={onPointerMove}
-      onPointerUp={onPointerEnd}
-      onPointerCancel={onPointerEnd}
-      onKeyDown={onKeyDown}
-      onClick={(event) => event.stopPropagation()}
-      className={cx(
-        'absolute inset-y-0 -right-1 z-10 w-2 cursor-col-resize touch-none rounded-xs',
-        'after:absolute after:inset-y-2 after:left-1/2 after:w-px after:-translate-x-1/2 after:bg-line-strong',
-        'hover:after:bg-accent',
-      )}
-    />
-  );
-}
-
 function HeaderCell({
   column,
   sort,
   onSort,
   filtered,
-  width,
-  onResize,
-  last,
 }: {
   column: ExplorerColumn;
   sort: ExplorerSort;
   onSort: (key: string) => void;
   filtered: boolean;
-  width: number;
-  onResize: (width: number) => void;
-  last: boolean;
 }) {
   const direction = sort.key === column.key ? sort.direction : 'none';
   const ariaSort = direction === 'asc' ? 'ascending' : direction === 'desc' ? 'descending' : 'none';
@@ -147,7 +75,7 @@ function HeaderCell({
       scope="col"
       role="columnheader"
       aria-sort={ariaSort}
-      className="relative flex h-10 items-center border-b border-line bg-surface px-3 text-caption font-medium whitespace-nowrap text-ink-muted"
+      className="flex h-10 items-center border-b border-line bg-surface px-3 text-caption font-medium whitespace-nowrap text-ink-muted"
     >
       <button
         type="button"
@@ -158,7 +86,7 @@ function HeaderCell({
         )}
       >
         {/* On a phone the Icon column is only as wide as an icon: its name is read, not shown. */}
-        <span className={cx('truncate', 'phoneWidth' in column && 'max-sm:sr-only')}>{column.header}</span>
+        <span className={cx('truncate', column.key === 'icon' && 'max-sm:sr-only')}>{column.header}</span>
         {filtered ? (
           <>
             <span aria-hidden="true" className="size-1.5 shrink-0 rounded-full bg-accent" />
@@ -169,7 +97,6 @@ function HeaderCell({
           <ChevronDownIcon size={12} className={cx('shrink-0 text-accent', direction === 'asc' && 'rotate-180')} />
         ) : null}
       </button>
-      {last ? null : <ColumnResizer column={column} width={width} onResize={onResize} />}
     </th>
   );
 }
@@ -234,8 +161,7 @@ type ExplorerTableProps = {
 // the browser can skip laying out and painting the rows out of view
 // (content-visibility, which table rows do not take): a filter that brings back
 // all 517 rows lays out only those in view. The table roles are written out,
-// since the display is not a table's. Widths are set through the CSSOM (the CSP
-// refuses style attributes).
+// since the display is not a table's.
 export function ExplorerTable({
   rows,
   shown,
@@ -249,7 +175,6 @@ export function ExplorerTable({
   frameRef,
 }: ExplorerTableProps) {
   const tableRef = useRef<HTMLTableElement>(null);
-  const { widths, resize } = useColumnWidths(tableRef);
 
   return (
     <div className="relative">
@@ -260,19 +185,16 @@ export function ExplorerTable({
         // status) is clipped by the frame instead of widening the page.
         className="relative max-h-[calc(100dvh-var(--header-height)-2rem)] min-h-80 overflow-auto overscroll-x-contain rounded-md border border-line"
       >
-        <table ref={tableRef} role="table" aria-label="FIDO MDS authenticators" className="block text-left text-body">
+        <table ref={tableRef} role="table" aria-label="FIDO MDS authenticators" className="block w-max text-left text-body">
           <thead role="rowgroup" className="sticky top-0 z-10 block bg-surface">
             <tr role="row" className={ROW_GRID}>
-              {EXPLORER_COLUMNS.map((column, index) => (
+              {EXPLORER_COLUMNS.map((column) => (
                 <HeaderCell
                   key={column.key}
                   column={column}
                   sort={sort}
                   onSort={onSort}
                   filtered={filteredColumns.has(column.key)}
-                  width={widths[index]}
-                  onResize={(width) => resize(index, width)}
-                  last={index === EXPLORER_COLUMNS.length - 1}
                 />
               ))}
             </tr>

@@ -85,23 +85,6 @@ test.describe('/#mds', () => {
     await expect(header(page, 'Status')).toContainText('(filtered)');
   });
 
-  test('resizes a column by keyboard and by dragging', async ({ page }) => {
-    await openList(page);
-    const width = async () => (await header(page, 'Protocol').boundingBox())!.width;
-    const before = await width();
-    const handle = section(page).getByRole('separator', { name: 'Resize Protocol column' });
-    await handle.focus();
-    await page.keyboard.press('ArrowRight');
-    expect(await width()).toBe(before + 16);
-
-    const box = (await handle.boundingBox())!;
-    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-    await page.mouse.down();
-    await page.mouse.move(box.x + box.width / 2 + 60, box.y + box.height / 2, { steps: 4 });
-    await page.mouse.up();
-    expect(await width()).toBe(before + 16 + 60);
-  });
-
   test('keeps a long CN within reach: one line with the whole value as a tooltip, every word when expanded', async ({ page }) => {
     await openList(page);
     const cn = row(page, MANY_ROOTS).locator('td').nth(12);

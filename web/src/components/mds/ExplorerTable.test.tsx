@@ -161,6 +161,12 @@ describe('the MDS table: its columns', () => {
     expect(cells[13]).toHaveTextContent('—');
   });
 
+  it('reads the Icon column\'s name on a phone without showing it', () => {
+    renderTable();
+    expect(within(header('Icon')).getByText('Icon')).toHaveClass('max-sm:sr-only');
+    expect(within(header('Name')).getByText('Name')).not.toHaveClass('max-sm:sr-only');
+  });
+
   it('marks a filtered column in its header', () => {
     renderTable();
     expect(header('Name')).toHaveTextContent('(filtered)');
@@ -253,101 +259,6 @@ describe('the MDS table: its frame', () => {
     fireEvent.scroll(frame);
     expect(fade.style.right).toBe('1px');
     expect(fade.style.bottom).toBe('1px');
-  });
-});
-
-describe('the MDS table: column widths', () => {
-  const separator = (name: string) => screen.getByRole('separator', { name: `Resize ${name} column` });
-  const width = (index: number) => document.querySelector('table')!.style.getPropertyValue('--mds-columns').split(' ')[index];
-
-  it('sets the column widths on the table, which every row lines up on, and every header but the last can be resized', () => {
-    renderTable();
-    expect(width(1)).toBe('280px');
-    expect(document.querySelector('table')!.style.width).toBe('2940px');
-    expect(screen.getAllByRole('separator')).toHaveLength(13);
-    expect(separator('Name')).toHaveAttribute('title', 'Drag to resize column');
-  });
-
-  it('starts the Icon column as wide as an icon on a phone, its name read but not shown, and keeps a width a person set', () => {
-    const query = vi.spyOn(window, 'matchMedia').mockImplementation(
-      (media: string) => ({ matches: media === '(max-width: 639px)', media, addEventListener() {}, removeEventListener() {} }) as unknown as MediaQueryList,
-    );
-    renderTable();
-    expect(width(0)).toBe('44px');
-    expect(document.querySelector('table')!.style.width).toBe('2912px');
-    expect(within(header('Icon')).getByText('Icon')).toHaveClass('max-sm:sr-only');
-    expect(within(header('Name')).getByText('Name')).not.toHaveClass('max-sm:sr-only');
-    expect(separator('Icon')).toHaveAttribute('aria-valuemin', '40');
-    fireEvent.keyDown(separator('Icon'), { key: 'ArrowLeft' });
-    expect(width(0)).toBe('40px');
-    query.mockRestore();
-  });
-
-  it('narrows the Icon column when the window narrows to a phone, and widens it back', () => {
-    let phone = false;
-    const listeners = new Set<(event: MediaQueryListEvent) => void>();
-    const query = vi.spyOn(window, 'matchMedia').mockImplementation(
-      (media: string) =>
-        ({
-          get matches() {
-            return media === '(max-width: 639px)' && phone;
-          },
-          media,
-          addEventListener: (_type: string, listener: (event: MediaQueryListEvent) => void) => listeners.add(listener),
-          removeEventListener: (_type: string, listener: (event: MediaQueryListEvent) => void) => listeners.delete(listener),
-        }) as unknown as MediaQueryList,
-    );
-    const resize = (narrow: boolean) => {
-      phone = narrow;
-      act(() => listeners.forEach((listener) => listener({ matches: narrow } as MediaQueryListEvent)));
-    };
-    const { unmount } = renderTable();
-    expect(width(0)).toBe('72px');
-
-    resize(true);
-    expect(width(0)).toBe('44px');
-    resize(false);
-    expect(width(0)).toBe('72px');
-
-    fireEvent.keyDown(separator('Icon'), { key: 'ArrowRight' });
-    resize(true);
-    expect(width(0)).toBe('88px');
-    resize(false);
-    expect(width(0)).toBe('88px');
-
-    unmount();
-    expect(listeners.size).toBe(0);
-    query.mockRestore();
-  });
-
-  it('resizes from the keyboard, never under the minimum', () => {
-    renderTable();
-    fireEvent.keyDown(separator('Name'), { key: 'ArrowRight' });
-    expect(width(1)).toBe('296px');
-    expect(separator('Name')).toHaveAttribute('aria-valuenow', '296');
-    fireEvent.keyDown(separator('Name'), { key: 'Enter' });
-    expect(width(1)).toBe('296px');
-    for (let step = 0; step < 20; step += 1) fireEvent.keyDown(separator('Name'), { key: 'ArrowLeft' });
-    expect(width(1)).toBe('64px');
-    for (let step = 0; step < 3; step += 1) fireEvent.keyDown(separator('ID'), { key: 'ArrowLeft' });
-    expect(width(5)).toBe('320px');
-  });
-
-  it('resizes by dragging with the main button', () => {
-    renderTable();
-    const handle = separator('Protocol');
-    fireEvent.pointerDown(handle, { button: 2, clientX: 100, pointerId: 1 });
-    fireEvent.pointerMove(handle, { clientX: 150, pointerId: 1 });
-    expect(width(2)).toBe('104px');
-
-    fireEvent.pointerDown(handle, { button: 0, clientX: 100, pointerId: 1 });
-    fireEvent.pointerMove(handle, { clientX: 150, pointerId: 1 });
-    expect(width(2)).toBe('154px');
-    fireEvent.pointerUp(handle, { clientX: 150, pointerId: 1 });
-    fireEvent.pointerMove(handle, { clientX: 400, pointerId: 1 });
-    expect(width(2)).toBe('154px');
-    fireEvent.click(handle);
-    expect(header('Protocol')).toHaveAttribute('aria-sort', 'none');
   });
 });
 

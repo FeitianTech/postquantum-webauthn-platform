@@ -40,7 +40,7 @@ bytes, and EDN as exactly the CBOR it notates ([DECODER.md](DECODER.md)).
 
 Every authenticator in the FIDO Metadata Service, from a snapshot of its BLOB verified against the
 FIDO root and the chain's revocation lists, and checked twice a day for a newer one
-([MDS_SNAPSHOT.md](MDS_SNAPSHOT.md)). Filter, sort and resize the table; open an entry's statement,
+([MDS_SNAPSHOT.md](MDS_SNAPSHOT.md)). Filter and sort the table; open an entry's statement,
 status reports, certificates, raw JSON and the credentials saved for its AAGUID. Try in Advanced
 sets up a registration with what the statement says the authenticator takes. Manage Metadata
 uploads statements of your own: listed in front of FIDO's, and registrations are checked against

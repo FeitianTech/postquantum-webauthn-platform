@@ -176,7 +176,7 @@ its logic out here first.
   (`schemaVersion` 2) hold the registration as data, never markup, and its certificates without
   their DER; older composed HTML is never read.
 - `codec/`: the Codec's requests, results and values. `mds/`: the explorer's loading, filters,
-  sort, columns, rows, entry, certificate and Manage Metadata (the server builds each row:
+  sort, rows, entry, certificate and Manage Metadata (the server builds each row:
   `mds/build.py`, and the list: `mds/explorer_files.py`).
 - `browser/`: the Analyze Browser's facts. It reports what the browser says and where each answer
   came from, or that it cannot know; it never guesses. Web pages cannot ask which transports a

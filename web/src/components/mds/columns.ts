@@ -1,28 +1,26 @@
-// The explorer table's layout, the words the logic does not hold: the columns'
-// headers and widths, and the filters' labels and placeholders.
+// The explorer table's words the logic does not hold: the columns' headers, and
+// the filters' labels and placeholders.
 import { FILTER_CONFIG } from '@/logic/mds/constants.js';
 import type { MdsEntry } from '@/logic/mds/explorer/loading.js';
 
-// The 14 columns, in order, with their headers; `list` names the
-// entry's list a tag column shows. The widths are where each column starts (the
-// ID column fits a whole AAGUID and its copy button; on a phone the Icon column
-// starts narrower, only as wide as its icon); a person can resize them.
+// The 14 columns, in order, with their headers; `list` names the entry's list a
+// tag column shows.
 export const EXPLORER_COLUMNS = [
-  { key: 'icon', header: 'Icon', width: 72, phoneWidth: 44, min: 40 },
-  { key: 'name', header: 'Name', width: 280 },
-  { key: 'protocol', header: 'Protocol', width: 104 },
-  { key: 'certification', header: 'Certification', width: 300 },
-  { key: 'latestStatus', header: 'Status', width: 200 },
-  { key: 'id', header: 'ID', width: 352, min: 320 },
-  { key: 'userVerification', header: 'User Verification', width: 240, list: 'userVerificationList' },
-  { key: 'attachment', header: 'Attachment', width: 180, list: 'attachmentList' },
-  { key: 'transports', header: 'Transports', width: 160, list: 'transportsList' },
-  { key: 'keyProtection', header: 'Key Protection', width: 180, list: 'keyProtectionList' },
-  { key: 'algorithms', header: 'Algorithms', width: 260, list: 'algorithmsList' },
-  { key: 'algorithmInfo', header: 'Algorithm Info', width: 220, list: 'certificateAlgorithmInfoList' },
-  { key: 'commonName', header: 'CN', width: 260, list: 'certificateCommonNameList' },
-  { key: 'dateUpdated', header: 'Date Updated', width: 132 },
-] as const satisfies readonly { key: string; header: string; width: number; phoneWidth?: number; min?: number; list?: keyof MdsEntry }[];
+  { key: 'icon', header: 'Icon' },
+  { key: 'name', header: 'Name' },
+  { key: 'protocol', header: 'Protocol' },
+  { key: 'certification', header: 'Certification' },
+  { key: 'latestStatus', header: 'Status' },
+  { key: 'id', header: 'ID' },
+  { key: 'userVerification', header: 'User Verification', list: 'userVerificationList' },
+  { key: 'attachment', header: 'Attachment', list: 'attachmentList' },
+  { key: 'transports', header: 'Transports', list: 'transportsList' },
+  { key: 'keyProtection', header: 'Key Protection', list: 'keyProtectionList' },
+  { key: 'algorithms', header: 'Algorithms', list: 'algorithmsList' },
+  { key: 'algorithmInfo', header: 'Algorithm Info', list: 'certificateAlgorithmInfoList' },
+  { key: 'commonName', header: 'CN', list: 'certificateCommonNameList' },
+  { key: 'dateUpdated', header: 'Date Updated' },
+] as const satisfies readonly { key: string; header: string; list?: keyof MdsEntry }[];
 
 export type ExplorerColumn = (typeof EXPLORER_COLUMNS)[number];
 
