@@ -191,16 +191,23 @@ type RowProps = {
 
 // One authenticator, in two lines that fit the page: its name over its ID, and
 // what the window has columns for. Expanded, every word, and a labelled line for
-// each thing the two lines do not hold. The name opens the entry (a link, so Enter
-// works), and so does a click anywhere else in the row that is not on one of its
-// controls or a text selection.
+// each thing the two lines do not hold. A click anywhere in the row that is not on
+// one of its controls or a text selection expands it, or collapses it; the name
+// opens the entry (a link, so Enter works), and so does "Open entry", which an
+// expanded row has whether or not it has a name.
 export const ExplorerRow = memo(function ExplorerRow({ entry, hidden, expanded, onToggle, onOpen }: RowProps) {
   const name = entry.name?.trim() ? entry.name : '';
-  const open = onOpen ? () => onOpen(entry.entryId) : undefined;
+  const called = name || entry.id || entry.entryId;
+  const href = `#${entryHashPath(entry.entryId)}`;
   const onRowClick = (event: MouseEvent<HTMLTableRowElement>) => {
-    if (!open || (event.target as HTMLElement).closest('a, button')) return;
+    if ((event.target as HTMLElement).closest('a, button')) return;
     if (window.getSelection()?.toString()) return;
-    open();
+    onToggle(entry.entryId);
+  };
+  const onLinkClick = (event: MouseEvent<HTMLAnchorElement>) => {
+    if (!onOpen) return;
+    event.preventDefault();
+    onOpen(entry.entryId);
   };
 
   return (
@@ -216,8 +223,7 @@ export const ExplorerRow = memo(function ExplorerRow({ entry, hidden, expanded, 
         // Out of view, a row is neither laid out nor painted: it keeps the size it last had,
         // and until it has one, its two lines' (three on a phone).
         '[contain-intrinsic-size:auto_3rem] [content-visibility:auto] max-md:[contain-intrinsic-size:auto_4.75rem]',
-        'transition-colors duration-(--duration-fast)',
-        open && 'cursor-pointer hover:bg-accent-tint',
+        'cursor-pointer transition-colors duration-(--duration-fast) hover:bg-accent-tint',
       )}
     >
       <Cell column={ICON} expanded={expanded}>
@@ -230,7 +236,7 @@ export const ExplorerRow = memo(function ExplorerRow({ entry, hidden, expanded, 
       <Cell column={NAME} expanded={expanded} title={name || undefined}>
         <span className="flex items-start gap-1">
           <SmallControl
-            label={`${expanded ? 'Show less of' : 'Show all of'} ${name || entry.id || entry.entryId}`}
+            label={`${expanded ? 'Show less of' : 'Show all of'} ${called}`}
             aria-expanded={expanded}
             onClick={() => onToggle(entry.entryId)}
           >
@@ -238,13 +244,9 @@ export const ExplorerRow = memo(function ExplorerRow({ entry, hidden, expanded, 
           </SmallControl>
           {name ? (
             <a
-              href={`#${entryHashPath(entry.entryId)}`}
+              href={href}
               data-entry-link={entry.entryId}
-              onClick={(event) => {
-                if (!open) return;
-                event.preventDefault();
-                open();
-              }}
+              onClick={onLinkClick}
               className={cx('min-w-0 text-ink no-underline hover:underline', expanded ? null : 'truncate')}
             >
               {name}
@@ -252,6 +254,16 @@ export const ExplorerRow = memo(function ExplorerRow({ entry, hidden, expanded, 
           ) : (
             <span>{MISSING_CELL_TEXT}</span>
           )}
+          {expanded ? (
+            <a
+              href={href}
+              aria-label={`Open entry: ${called}`}
+              onClick={onLinkClick}
+              className="ml-auto shrink-0 pl-3 text-label font-medium whitespace-nowrap text-accent-ink no-underline hover:underline"
+            >
+              Open entry
+            </a>
+          ) : null}
         </span>
       </Cell>
       <Cell column={PROTOCOL} expanded={expanded}>

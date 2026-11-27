@@ -322,27 +322,56 @@ describe('the MDS table: copying an identifier', () => {
 });
 
 describe('the MDS table: opening an entry', () => {
-  it('opens an entry from its name, or a click anywhere else in its row', async () => {
+  it('opens an entry from its name, and from the link an expanded row has', async () => {
     const onOpen = vi.fn();
     renderTable(FIXTURE_ENTRIES, onOpen);
     const entry = entryNamed('Fixture U2F Key');
-    await userEvent.click(within(cellsOf(entry)[1]).getByRole('link'));
+    await userEvent.click(within(cellsOf(entry)[1]).getByRole('link', { name: 'Fixture U2F Key' }));
     expect(onOpen).toHaveBeenLastCalledWith(entry.entryId);
+    expect(within(rowOf(entry)).queryByRole('link', { name: /^Open entry/ })).toBeNull();
 
+    await userEvent.click(within(cellsOf(entry)[1]).getByRole('button', { name: /^Show all of/ }));
+    const link = within(rowOf(entry)).getByRole('link', { name: 'Open entry: Fixture U2F Key' });
+    expect(link).toHaveTextContent(/^Open entry$/);
+    expect(link).toHaveAttribute('href', `#mds/${entry.entryId}`);
+    await userEvent.click(link);
+    expect(onOpen).toHaveBeenCalledTimes(2);
+    expect(rowOf(entry)).toHaveAttribute('aria-expanded', 'true');
+  });
+
+  it('expands a row, and collapses it, on a click anywhere in it but its controls', async () => {
+    const onOpen = vi.fn();
+    renderTable(FIXTURE_ENTRIES, onOpen);
+    const entry = entryNamed('Fixture U2F Key');
+    await userEvent.click(cellsOf(entry)[4]);
+    expect(rowOf(entry)).toHaveAttribute('aria-expanded', 'true');
     await userEvent.click(cellsOf(entry)[9]);
-    expect(onOpen).toHaveBeenCalledTimes(2);
+    expect(rowOf(entry)).toHaveAttribute('aria-expanded', 'false');
 
+    // Its own button expands it once, not twice.
     await userEvent.click(within(cellsOf(entry)[1]).getByRole('button'));
-    expect(onOpen).toHaveBeenCalledTimes(2);
+    expect(rowOf(entry)).toHaveAttribute('aria-expanded', 'true');
+    await userEvent.click(within(cellsOf(entry)[5]).getByRole('button', { name: 'Copy key identifier' }));
+    expect(rowOf(entry)).toHaveAttribute('aria-expanded', 'true');
+    expect(onOpen).not.toHaveBeenCalled();
   });
 
   it('leaves a text selection alone', async () => {
+    renderTable();
+    const entry = entryNamed('Fixture U2F Key');
+    window.getSelection()!.selectAllChildren(cellsOf(entry)[4]);
+    fireEvent.click(cellsOf(entry)[4]);
+    expect(rowOf(entry)).toHaveAttribute('aria-expanded', 'false');
+    window.getSelection()!.removeAllRanges();
+  });
+
+  it('gives an entry without a name a link to open it by, named for its ID', async () => {
     const onOpen = vi.fn();
-    renderTable(FIXTURE_ENTRIES, onOpen);
-    const cell = cellsOf(entryNamed('Fixture U2F Key'))[9];
-    window.getSelection()!.selectAllChildren(cell);
-    fireEvent.click(cell);
-    expect(onOpen).not.toHaveBeenCalled();
+    const nameless = { ...entryNamed('Fixture U2F Key'), name: '' } as MdsEntry;
+    renderTable([nameless], onOpen);
+    await userEvent.click(cellsOf(nameless)[4]);
+    await userEvent.click(within(rowOf(nameless)).getByRole('link', { name: `Open entry: ${nameless.id}` }));
+    expect(onOpen).toHaveBeenCalledWith(nameless.entryId);
   });
 
   it('keeps the link a plain link with no opener', async () => {

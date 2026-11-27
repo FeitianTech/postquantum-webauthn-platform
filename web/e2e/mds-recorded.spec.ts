@@ -26,6 +26,11 @@ const REVOKED_KEY = 'f1d0f1d0-0000-4000-8000-000000000005';
 // The words are the server's, in both tables; what differs is listed with its reason.
 const EXPECTED: ExpectedDifference[] = [
   {
+    only: 'shown',
+    token: /^(Open|entry)$/,
+    reason: 'the link to its entry that an expanded row has, since a click on a row expands it rather than opening the entry',
+  },
+  {
     only: 'recorded',
     token: /^(Nfc|Usb|Ble|Tee|Uaf|Ecdsa|Eddsa|ED25519|NOT)$/,
     reason: 'the MDS words as now spelled: a fixed list of acronyms in capitals (NFC, USB, BLE, TEE, UAF, ECDSA), EdDSA and Ed25519 in their own case, every other word title-cased (Not)',

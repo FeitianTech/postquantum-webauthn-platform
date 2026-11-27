@@ -77,9 +77,9 @@ the page in a real browser.
   behind "Show filters" on a phone.
 - The **table**: every row fits the page's width in two lines, so nothing scrolls
   sideways: the name over the ID, the status over the protocol, the transports over the
-  attachment, and a column only from the width at which it fits (`grid.ts`). A row
-  expands to show every word, with a labelled line for each thing its two lines do not
-  hold. All 14 columns stay in every row and in the header, in order, for a screen
+  attachment, and a column only from the width at which it fits (`grid.ts`). A click
+  on a row expands it to show every word, with a labelled line for each thing its two
+  lines do not hold, and a link to its entry (its name is one too). All 14 columns stay in every row and in the header, in order, for a screen
   reader. The frame scrolls by itself, its header in view; sortable columns; Back to
   top. Every row stays in the page, rendered cheaply (`content-visibility: auto`).
 - **An entry is a URL and a page** (`#mds/<entryId>`; a saved credential opens

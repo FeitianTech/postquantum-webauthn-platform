@@ -100,7 +100,7 @@ function useEntryRouting(route: SectionRoute) {
 
 // The FIDO MDS section: every authenticator the FIDO Metadata Service
 // publishes, with what the explorer's logic shows of each, in a table that
-// sorts, filters and expands. A row opens its entry (#mds/<entryId>);
+// sorts, filters and expands. A row's name opens its entry (#mds/<entryId>);
 // the list stays in the page meanwhile, so going back finds it as it was: its
 // filters, sort and scroll, with the focus on the row.
 export function MdsSection({ active, route = CLOSED_ROUTE }: { active: boolean; route?: SectionRoute }) {

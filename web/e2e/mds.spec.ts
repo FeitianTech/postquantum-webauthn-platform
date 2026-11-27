@@ -223,8 +223,10 @@ test.describe('/#mds', () => {
     const entryId = (await target.getAttribute('data-entry-id'))!;
     const name = (await target.locator('a').textContent())!;
 
-    // A click anywhere in the row but its controls.
+    // A click anywhere in the row but its controls expands it; its link opens the entry.
     await target.locator('td').nth(2).click();
+    await expect(target).toHaveAttribute('aria-expanded', 'true');
+    await target.getByRole('link', { name: /^Open entry/ }).click();
     await expect(page).toHaveURL(new RegExp(`#mds/${entryId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`));
     await expect(section(page).getByRole('heading', { level: 3, name })).toBeFocused();
     await expect(section(page).locator('[data-mds-list]')).toBeHidden();
