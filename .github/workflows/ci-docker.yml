@@ -51,6 +51,7 @@ jobs:
           curl -fsS -D /tmp/index.headers -o /tmp/index.html http://localhost:8080/
           grep -qi '^cache-control: no-cache' /tmp/index.headers
           curl -fsS -o /dev/null http://localhost:8080/favicon.ico
+          curl -fsS -o /dev/null http://localhost:8080/favicon.svg
           chunk=$(grep -o '/_next/static/chunks/[^"]*\.js' /tmp/index.html | head -1)
           test -n "$chunk"
           curl -fsS -D /tmp/chunk.headers -o /dev/null -H 'Accept-Encoding: gzip' "http://localhost:8080${chunk}"

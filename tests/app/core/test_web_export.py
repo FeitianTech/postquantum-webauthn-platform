@@ -119,6 +119,16 @@ def test_a_file_at_the_export_root_is_served_and_revalidated(site, export_root):
     assert response.headers["Cache-Control"] == "no-cache"
 
 
+def test_an_svg_at_the_export_root_is_served_as_an_svg_image(site, export_root):
+    # The page's icon: with nosniff, a browser draws it only under this type.
+    write(export_root / "favicon.svg", b'<svg xmlns="http://www.w3.org/2000/svg"/>')
+    response = site.get("/favicon.svg")
+
+    assert response.status_code == 200
+    assert response.mimetype == "image/svg+xml"
+    assert response.headers["X-Content-Type-Options"] == "nosniff"
+
+
 @pytest.mark.parametrize(
     "url",
     ["/nothing-here", "/_next/static/chunks/missing.js", "/index", "/404", "/404.html", "/500.html", "/scripts/main.js"],
