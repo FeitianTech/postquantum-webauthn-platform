@@ -79,9 +79,11 @@ the page in a real browser.
   sideways: the name over the ID, the status over the protocol, the transports over the
   attachment, and a column only from the width at which it fits (`grid.ts`). A click
   on a row expands it to show every word, with a labelled line for each thing its two
-  lines do not hold, and a link to its entry (its name is one too). All 14 columns stay in every row and in the header, in order, for a screen
-  reader. The frame scrolls by itself, its header in view; sortable columns; Back to
-  top. Every row stays in the page, rendered cheaply (`content-visibility: auto`).
+  lines do not hold, and a link to its entry (its name is one too). All 14 columns
+  stay in every row and in the header, in order, for a screen reader. The page scrolls
+  the list (nothing in the section scrolls by itself), its header row staying under the
+  site's header; sortable columns; Back to top. Every row stays in the page, rendered
+  cheaply (`content-visibility: auto`).
 - **An entry is a URL and a page** (`#mds/<entryId>`; a saved credential opens
   `#mds/aaguid:<aaguid>`): sections as headings and hairlines, identifiers whole in
   Geist Mono with copy, status reports that stack on a phone, a condensed bar once the

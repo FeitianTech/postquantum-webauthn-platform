@@ -28,7 +28,7 @@ function openAt(hash: string, records: object[] = []) {
 }
 
 const list = () => document.querySelector<HTMLElement>('[data-mds-list]')!;
-const frame = () => document.querySelector<HTMLDivElement>('[data-mds-frame]')!;
+const row = (entryId: string) => document.querySelector<HTMLElement>(`tr[data-entry-id="${CSS.escape(entryId)}"]`)!;
 const link = (entryId: string) => document.querySelector<HTMLElement>(`[data-entry-link="${CSS.escape(entryId)}"]`)!;
 const loaded = () => waitFor(() => expect(link('aaguid:f1d0f1d0-0000-4000-8000-000000000001')).toBeTruthy());
 
@@ -47,7 +47,9 @@ describe('an MDS entry in the URL', () => {
     await loaded();
     const entry = entryNamed('Fixture U2F Key');
     await userEvent.type(screen.getByRole('searchbox', { name: 'Search' }), 'Fixture');
-    frame().scrollTop = 120;
+    // The row is 300 px down the window when it is opened.
+    const top = vi.spyOn(row(entry.entryId), 'getBoundingClientRect').mockReturnValue({ top: 300 } as DOMRect);
+    const scrollTo = vi.spyOn(window, 'scrollTo');
     const length = window.history.length;
 
     await userEvent.click(link(entry.entryId));
@@ -56,13 +58,16 @@ describe('an MDS entry in the URL', () => {
     expect(window.history.state).toEqual({ fromNext: true, pqcOpened: 1 });
     expect(list()).not.toBeVisible();
     expect(screen.getByRole('heading', { level: 3, name: 'Fixture U2F Key' })).toHaveFocus();
-    frame().scrollTop = 0;
+    expect(scrollTo).toHaveBeenLastCalledWith({ top: 0 });
+    // Back in the page, with the window at its top, the row is 1,000 px down: 700 too far.
+    top.mockReturnValue({ top: 1000 } as DOMRect);
 
     await userEvent.click(screen.getByRole('button', { name: 'Back' }));
     await waitFor(() => expect(list()).toBeVisible());
     expect(window.location.hash).toBe('#mds');
     expect(link(entry.entryId)).toHaveFocus();
-    expect(frame().scrollTop).toBe(120);
+    expect(scrollTo).toHaveBeenLastCalledWith({ top: 700 });
+    scrollTo.mockRestore();
     expect(screen.getByRole('searchbox', { name: 'Search' })).toHaveValue('Fixture');
   });
 

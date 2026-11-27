@@ -22,7 +22,6 @@ const filter = (page: Page, name: string) => {
   return bar.getByRole('combobox', { name, exact: true }).or(bar.getByRole('searchbox', { name, exact: true }));
 };
 const header = (page: Page, name: string) => section(page).getByRole('columnheader', { name: new RegExp(`^${name}`) });
-const frame = (page: Page) => section(page).locator('[data-mds-frame]');
 
 async function openList(page: Page, path = '/#mds') {
   await page.goto(path);
@@ -120,7 +119,6 @@ test.describe('/#mds', () => {
       await page.setViewportSize({ width, height: 800 });
       await openList(page);
       expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
-      expect(await frame(page).evaluate((element) => element.scrollWidth - element.clientWidth)).toBe(0);
       const cut = await rows(page)
         .locator('code')
         .evaluateAll((codes) => codes.filter((code) => code.scrollWidth > code.clientWidth).map((code) => code.textContent));
@@ -216,9 +214,7 @@ test.describe('/#mds', () => {
     await openList(page);
     await filter(page, 'Search').fill('Fixture');
     await header(page, 'Name').getByRole('button').click();
-    await frame(page).evaluate((element) => {
-      element.scrollTop = 400;
-    });
+    await page.evaluate(() => window.scrollTo(0, 700));
     const target = rows(page).nth(15);
     const entryId = (await target.getAttribute('data-entry-id'))!;
     const name = (await target.locator('a').textContent())!;
@@ -226,6 +222,8 @@ test.describe('/#mds', () => {
     // A click anywhere in the row but its controls expands it; its link opens the entry.
     await target.locator('td').nth(2).click();
     await expect(target).toHaveAttribute('aria-expanded', 'true');
+    const top = (await target.boundingBox())!.y;
+    expect(top).toBeGreaterThan(100);
     await target.getByRole('link', { name: /^Open entry/ }).click();
     await expect(page).toHaveURL(new RegExp(`#mds/${entryId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`));
     await expect(section(page).getByRole('heading', { level: 3, name })).toBeFocused();
@@ -235,7 +233,9 @@ test.describe('/#mds', () => {
     await expect(section(page).locator('[data-mds-list]')).toBeVisible();
     await expect(page).toHaveURL(/#mds$/);
     await expect(section(page).locator(`[data-entry-link="${entryId}"]`)).toBeFocused();
-    expect(await frame(page).evaluate((element) => element.scrollTop)).toBe(400);
+    // The row is where it was in the window, still expanded.
+    expect(Math.abs((await target.boundingBox())!.y - top)).toBeLessThanOrEqual(1);
+    await expect(target).toHaveAttribute('aria-expanded', 'true');
     await expect(filter(page, 'Search')).toHaveValue('Fixture');
     await expect(header(page, 'Name')).toHaveAttribute('aria-sort', 'ascending');
 
@@ -273,24 +273,35 @@ test.describe('/#mds', () => {
     expect(await greyFills(page, '#nav-panel-mds')).toEqual([]);
   });
 
-  test('fits the table\'s frame under the header when the header takes two rows', async ({ page }) => {
+  test('scrolls the list with the page, its header row staying under the site\'s header, two rows of it too', async ({ page }) => {
     await page.setViewportSize({ width: 1100, height: 800 });
     await openList(page);
     const shellHeight = (await page.locator('[data-shell-header]').boundingBox())!.height;
     expect(shellHeight).toBeGreaterThan(90);
     const variable = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--header-height'));
     expect(Number.parseFloat(variable)).toBeCloseTo(shellHeight, 0);
-    const frameHeight = (await frame(page).boundingBox())!.height;
-    expect(frameHeight).toBeLessThanOrEqual(800 - shellHeight - 32 + 1);
+
+    // Nothing in the section scrolls by itself: the wheel always moves the page.
+    const scrollers = await section(page).evaluate((panel) =>
+      [...panel.querySelectorAll('*')].filter((element) => element.scrollHeight > element.clientHeight + 1 && /auto|scroll/.test(getComputedStyle(element).overflowY)).length,
+    );
+    expect(scrollers).toBe(0);
+    await page.evaluate(() => window.scrollTo(0, 1200));
+    const head = (await section(page).locator('thead').boundingBox())!;
+    expect(Math.abs(head.y - shellHeight)).toBeLessThanOrEqual(1);
+    expect(await greyFills(page, '#nav-panel-mds')).toEqual([]);
   });
 
-  test('keeps the header row in view while the list scrolls', async ({ page }) => {
+  test('offers the way back to the top once the page is well into the list', async ({ page }) => {
     await openList(page);
-    await frame(page).evaluate((element) => {
-      element.scrollTop = 600;
-    });
-    const top = (await frame(page).boundingBox())!.y;
-    const head = (await section(page).locator('thead').boundingBox())!.y;
-    expect(Math.abs(head - top)).toBeLessThanOrEqual(2);
+    const toTop = section(page).getByRole('button', { name: 'Back to top of the authenticator list' });
+    await expect(toTop).toBeHidden();
+    await page.evaluate(() => window.scrollTo(0, 1500));
+    await expect(toTop).toBeVisible();
+    const box = (await toTop.boundingBox())!;
+    expect(box.y + box.height).toBeLessThanOrEqual(720 - 16 + 1);
+    await toTop.click();
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+    await expect(toTop).toBeHidden();
   });
 });

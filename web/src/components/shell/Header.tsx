@@ -22,7 +22,7 @@ type HeaderProps = {
 
 // The header's height, in --header-height on <html>, which the page's sticky and
 // window-high parts subtract (the scroll padding, the Codec's input column, the
-// MDS table's frame, the Simple tab's form): one row on a phone and on a wide
+// MDS table's header row, the Simple tab's form): one row on a phone and on a wide
 // screen, two between 900 and 1280 px, where the sections wrap. The stylesheet's
 // 3.75rem is the first paint's; the header is measured once it is in the page,
 // and again whenever its size changes. Set through the CSSOM, which the CSP

@@ -2,7 +2,6 @@
 import type { MdsEntry } from '@/logic/mds/explorer/loading.js';
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { useRef } from 'react';
 
 import { ToastProvider } from '@/components/ui/Toast';
 import { FIXTURE_ENTRIES, entryNamed } from '@/test/mds';
@@ -14,7 +13,6 @@ import { holdingTimers } from '@/test/timers';
 
 function Harness({ entries, onOpen }: { entries: MdsEntry[]; onOpen?: (entryId: string) => void }) {
   const view = useExplorerView(entries, 1);
-  const frameRef = useRef<HTMLDivElement>(null);
   return (
     <ExplorerTable
       rows={view.rows}
@@ -26,7 +24,6 @@ function Harness({ entries, onOpen }: { entries: MdsEntry[]; onOpen?: (entryId: 
       onToggle={view.onToggle}
       onOpen={onOpen}
       state={null}
-      frameRef={frameRef}
     />
   );
 }
@@ -384,28 +381,45 @@ describe('the MDS table: opening an entry', () => {
 });
 
 describe('the MDS table: Back to top', () => {
-  it('appears once five rows have scrolled by and takes the list back to its top', async () => {
+  it('appears once the page has scrolled about five rows into the list, and takes the page back to its top', async () => {
+    const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
     renderTable();
-    const frame = document.querySelector<HTMLDivElement>('[data-mds-frame]')!;
-    const scrollTo = vi.fn();
-    frame.scrollTo = scrollTo;
-    const rows = [...document.querySelectorAll<HTMLTableRowElement>('tbody tr')];
-    const header = document.querySelector('thead')!;
-    vi.spyOn(header, 'getBoundingClientRect').mockReturnValue({ bottom: 100 } as DOMRect);
-    const fifth = vi.spyOn(rows[4], 'getBoundingClientRect').mockReturnValue({ top: 150 } as DOMRect);
+    const top = vi.spyOn(screen.getByRole('table'), 'getBoundingClientRect').mockReturnValue({ top: -300 } as DOMRect);
+    const button = () => screen.queryByRole('button', { name: 'Back to top of the authenticator list' });
 
-    act(() => {
-      frame.dispatchEvent(new Event('scroll'));
-    });
-    expect(screen.queryByRole('button', { name: 'Back to top of the authenticator list' })).toBeNull();
+    fireEvent.scroll(window);
+    expect(button()).toBeNull();
 
-    fifth.mockReturnValue({ top: 40 } as DOMRect);
-    act(() => {
-      frame.dispatchEvent(new Event('scroll'));
-    });
-    const button = screen.getByRole('button', { name: 'Back to top of the authenticator list' });
-    expect(button).toHaveAttribute('title', 'Back to top');
-    await userEvent.click(button);
+    top.mockReturnValue({ top: -321 } as DOMRect);
+    fireEvent.scroll(window);
+    expect(button()).toHaveAttribute('title', 'Back to top');
+    // Held at the window's bottom by a sticky line, not a fixed position.
+    expect(button()!.parentElement).toHaveClass('sticky', 'bottom-4', 'h-0');
+    await userEvent.click(button()!);
     expect(scrollTo).toHaveBeenCalledWith({ top: 0, behavior: 'smooth' });
+
+    top.mockReturnValue({ top: 0 } as DOMRect);
+    fireEvent.scroll(window);
+    expect(button()).toBeNull();
+    scrollTo.mockRestore();
+  });
+
+  it('goes back at once for a person who asked for less motion, and stops listening when the table goes', async () => {
+    const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
+    const query = vi.spyOn(window, 'matchMedia').mockImplementation((media: string) => ({ matches: true, media }) as MediaQueryList);
+    const removed = vi.spyOn(window, 'removeEventListener');
+    const { unmount } = renderTable();
+    vi.spyOn(screen.getByRole('table'), 'getBoundingClientRect').mockReturnValue({ top: -900 } as DOMRect);
+    fireEvent.scroll(window);
+    await userEvent.click(screen.getByRole('button', { name: 'Back to top of the authenticator list' }));
+    expect(scrollTo).toHaveBeenCalledWith({ top: 0, behavior: 'auto' });
+    unmount();
+    expect(removed).toHaveBeenCalledWith('scroll', expect.any(Function));
+    for (const spy of [scrollTo, query, removed]) spy.mockRestore();
+  });
+
+  it('keeps the header row under the site\'s header as the page scrolls', () => {
+    renderTable();
+    expect(document.querySelector('thead')).toHaveClass('sticky', 'top-(--header-height)', 'max-md:sr-only');
   });
 });

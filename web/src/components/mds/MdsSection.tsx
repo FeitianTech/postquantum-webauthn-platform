@@ -52,13 +52,17 @@ function listState(explorer: Explorer, view: ReturnType<typeof useExplorerView>)
   return null;
 }
 
-type ListPlace = { entryId: string; windowY: number; top: number; left: number };
+type ListPlace = { entryId: string; top: number };
+
+const rowOf = (list: HTMLElement, entryId: string) =>
+  list.querySelector<HTMLElement>(`tr[data-entry-id="${CSS.escape(entryId)}"]`);
 
 // Which entry the route opens (#mds/<entryId>), and the list's place kept while
-// it is open: back to the list finds it where it was, the focus on the row that
-// was opened (or on the entry a link opened, brought into view).
+// it is open: back to the list puts the row that was opened where it was in the
+// window, whatever the rows above it now measure (one out of view has no height
+// of its own), the focus on its name; an entry a link opened is brought into view.
 function useEntryRouting(route: SectionRoute) {
-  const frameRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
   const place = useRef<ListPlace | null>(null);
   const shownEntry = useRef('');
   const openEntryId = route.path[0] ?? '';
@@ -66,8 +70,7 @@ function useEntryRouting(route: SectionRoute) {
 
   const openEntry = useCallback(
     (entryId: string) => {
-      const frame = frameRef.current;
-      place.current = { entryId, windowY: window.scrollY, top: frame?.scrollTop ?? 0, left: frame?.scrollLeft ?? 0 };
+      place.current = { entryId, top: rowOf(listRef.current!, entryId)!.getBoundingClientRect().top };
       open([entryId]);
     },
     [open],
@@ -81,21 +84,16 @@ function useEntryRouting(route: SectionRoute) {
       return;
     }
     if (!closed) return;
-    const frame = frameRef.current;
     const saved = place.current?.entryId === closed ? place.current : null;
     place.current = null;
-    const link = frame?.querySelector<HTMLElement>(`[data-entry-link="${CSS.escape(closed)}"]`);
-    if (saved && frame) {
-      window.scrollTo({ top: saved.windowY });
-      frame.scrollTop = saved.top;
-      frame.scrollLeft = saved.left;
-    } else {
-      link?.scrollIntoView({ block: 'center' });
-    }
+    const row = rowOf(listRef.current!, closed);
+    const link = row?.querySelector<HTMLElement>('[data-entry-link]');
+    if (saved && row) window.scrollTo({ top: window.scrollY + row.getBoundingClientRect().top - saved.top });
+    else link?.scrollIntoView({ block: 'center' });
     link?.focus({ preventScroll: true });
   }, [openEntryId]);
 
-  return { frameRef, openEntryId, openEntry };
+  return { listRef, openEntryId, openEntry };
 }
 
 // The FIDO MDS section: every authenticator the FIDO Metadata Service
@@ -109,7 +107,7 @@ export function MdsSection({ active, route = CLOSED_ROUTE }: { active: boolean; 
   const ids = segmentIds(NAV_ID, 'mds');
   const explorer = useMdsExplorer(active);
   const view = useExplorerView(explorer.entries, explorer.version);
-  const { frameRef, openEntryId, openEntry } = useEntryRouting(route);
+  const { listRef, openEntryId, openEntry } = useEntryRouting(route);
   const manageRef = useRef<HTMLButtonElement>(null);
   const [managing, setManaging] = useState(false);
 
@@ -145,7 +143,7 @@ export function MdsSection({ active, route = CLOSED_ROUTE }: { active: boolean; 
           <EntryRouter route={route} entries={explorer.entries} phase={explorer.phase} />
         </div>
       ) : null}
-      <div hidden={Boolean(openEntryId)} data-mds-list="">
+      <div ref={listRef} hidden={Boolean(openEntryId)} data-mds-list="">
         <div className="mt-5">
           <StatusLine
             status={explorer.status}
@@ -177,7 +175,6 @@ export function MdsSection({ active, route = CLOSED_ROUTE }: { active: boolean; 
             onToggle={view.onToggle}
             onOpen={openEntry}
             state={listState(explorer, view)}
-            frameRef={frameRef}
           />
         </div>
       </div>
