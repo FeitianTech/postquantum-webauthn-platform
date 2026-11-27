@@ -46,7 +46,7 @@ describe('an MDS entry in the URL', () => {
     openAt('#mds');
     await loaded();
     const entry = entryNamed('Fixture U2F Key');
-    await userEvent.type(screen.getByRole('searchbox', { name: 'Name' }), 'Fixture');
+    await userEvent.type(screen.getByRole('searchbox', { name: 'Search' }), 'Fixture');
     frame().scrollTop = 120;
     const length = window.history.length;
 
@@ -63,7 +63,7 @@ describe('an MDS entry in the URL', () => {
     expect(window.location.hash).toBe('#mds');
     expect(link(entry.entryId)).toHaveFocus();
     expect(frame().scrollTop).toBe(120);
-    expect(screen.getByRole('searchbox', { name: 'Name' })).toHaveValue('Fixture');
+    expect(screen.getByRole('searchbox', { name: 'Search' })).toHaveValue('Fixture');
   });
 
   it('closes with the browser Back too, and opens again with Forward', async () => {

@@ -6,6 +6,7 @@ import {
   DEFAULT_SORT_DIRECTION,
   DEFAULT_SORT_KEY,
   defaultExplorerSort,
+  filteredExplorerColumns,
   isExplorerSortKey,
   matchesExplorerFilters,
   MDS_SORT_ACCESSORS,
@@ -139,6 +140,19 @@ describe('filters', () => {
     expect(matchesExplorerFilters({ commonName: 'Yubico U2F Root CA' }, { commonName: 'u2f root' })).toBe(true);
     expect(matchesExplorerFilters({ commonName: 'Yubico' }, { commonName: 'feitian' })).toBe(false);
     expect(matchesExplorerFilters({}, { commonName: 'x' })).toBe(false);
+  });
+
+  it('finds the search text in the name or the ID', () => {
+    const key = { name: 'Fixture Key', id: 'f1d0f1d0-0000-4000-8000-000000000002' };
+    expect(matchesExplorerFilters(key, { search: 'fixture' })).toBe(true);
+    expect(matchesExplorerFilters(key, { search: 'F1D0F1D0-0000' })).toBe(true);
+    expect(matchesExplorerFilters(key, { search: 'yubico' })).toBe(false);
+    expect(matchesExplorerFilters({}, { search: 'x' })).toBe(false);
+  });
+
+  it('names the columns the filters in use read', () => {
+    expect([...filteredExplorerColumns({ search: 'x', protocol: '', commonName: 'y' })]).toEqual(['name', 'id', 'commonName']);
+    expect(filteredExplorerColumns({ search: '' }).size).toBe(0);
   });
 
   it.each(['certification', 'latestStatus'])('matches a named status of %s exactly, and FIDO Certified to every level', key => {

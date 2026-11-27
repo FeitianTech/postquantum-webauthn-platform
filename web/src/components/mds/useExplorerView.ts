@@ -2,6 +2,7 @@ import {
   type ExplorerSort,
   countActiveExplorerFilters,
   defaultExplorerSort,
+  filteredExplorerColumns,
   matchesExplorerFilters,
   nextExplorerSort,
   sortExplorerEntries,
@@ -56,10 +57,7 @@ export function useExplorerView(entries: MdsEntry[], version: number) {
     () => new Set(entries.filter((entry) => matchesExplorerFilters(entry, trimmed, options)).map((entry) => entry.entryId)),
     [entries, trimmed, options],
   );
-  const filteredColumns = useMemo(
-    () => new Set(Object.entries(trimmed).filter(([, value]) => value).map(([key]) => key)),
-    [trimmed],
-  );
+  const filteredColumns = useMemo(() => filteredExplorerColumns(trimmed), [trimmed]);
 
   return {
     filters,

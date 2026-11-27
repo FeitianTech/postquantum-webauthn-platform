@@ -71,9 +71,9 @@ the page in a real browser.
 
 - The dataset's summary and status line, with **Manage Metadata** (a dialog listing
   the session's uploads with Delete).
-- A **filter bar above the table**, each field labelled with its column (the eight
-  filters with a list are ARIA comboboxes), one "Clear filters", folded behind "Show
-  filters" on a phone.
+- A **filter bar above the table**, each field labelled with what it reads (one search
+  for the name and the ID; the eight filters with a list are ARIA comboboxes), one
+  "Clear filters", folded behind "Show filters" on a phone.
 - The **table**: 14 columns in a frame that scrolls both ways by itself (the page never
   scrolls sideways), its header in view; one-line left-aligned rows that expand;
   sortable and resizable columns (by pointer and keys); Back to top. Every row stays in

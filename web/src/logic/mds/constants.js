@@ -25,11 +25,13 @@ export const STATUS_OPTIONS = [
 ];
 
 /**
- * A filter: the column it reads, its input's id, and the entry list its options
- * come from (with those always offered, and whether the list shows whole).
+ * A filter: the column it reads (or the columns, any of which may hold the text),
+ * its input's id, and the entry list its options come from (with those always
+ * offered, and whether the list shows whole).
  * @typedef {object} FilterConfig
  * @property {string} key
  * @property {string} inputId
+ * @property {string[]} [columns]
  * @property {string} [optionsKey]
  * @property {string[]} [staticOptions]
  * @property {boolean} [expandDropdown]
@@ -37,7 +39,7 @@ export const STATUS_OPTIONS = [
 
 /** @type {FilterConfig[]} */
 export const FILTER_CONFIG = [
-    { key: 'name', inputId: 'mds-filter-name' },
+    { key: 'search', inputId: 'mds-filter-search', columns: ['name', 'id'] },
     { key: 'protocol', inputId: 'mds-filter-protocol', optionsKey: 'protocol' },
     {
         key: 'certification',
@@ -51,7 +53,6 @@ export const FILTER_CONFIG = [
         optionsKey: 'latestStatus',
         staticOptions: STATUS_OPTIONS,
     },
-    { key: 'id', inputId: 'mds-filter-id' },
     {
         key: 'userVerification',
         inputId: 'mds-filter-user-verification',

@@ -16,7 +16,7 @@ type FilterBarProps = {
   onClear: () => void;
 };
 
-// The 12 filters, each labelled with its column, above the table rather than
+// The 11 filters, each labelled with what it reads, above the table rather than
 // squeezed into a second header row: 6 to a row on a wide screen (two rows),
 // down to one on a phone, where they fold away behind a button. How many are in use, and one
 // button that clears them all.

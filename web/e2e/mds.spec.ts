@@ -46,13 +46,13 @@ test.describe('/#mds', () => {
 
   test('filters, clears, and sorts', async ({ page }) => {
     await openList(page);
-    await filter(page, 'Name').fill('u2f');
+    await filter(page, 'Search').fill('u2f');
     await expect(rows(page)).toHaveCount(1);
     await expect(header(page, 'Name')).toContainText('(filtered)');
     await expect(section(page).getByText('1 active')).toBeVisible();
 
     await filter(page, 'Certification').click();
-    await filter(page, 'Name').fill('');
+    await filter(page, 'Search').fill('');
     await filter(page, 'Certification').fill('FIDO Certified L');
     await section(page).getByRole('option', { name: 'FIDO Certified L2' }).click();
     await expect(rows(page)).toHaveCount(2);
@@ -182,7 +182,7 @@ test.describe('/#mds', () => {
 
   test('opens an entry from its row and goes back, by the page and by the browser, to the list as it was', async ({ page }) => {
     await openList(page);
-    await filter(page, 'Name').fill('Fixture');
+    await filter(page, 'Search').fill('Fixture');
     await header(page, 'Name').getByRole('button').click();
     await frame(page).evaluate((element) => {
       element.scrollTop = 400;
@@ -202,7 +202,7 @@ test.describe('/#mds', () => {
     await expect(page).toHaveURL(/#mds$/);
     await expect(section(page).locator(`[data-entry-link="${entryId}"]`)).toBeFocused();
     expect(await frame(page).evaluate((element) => element.scrollTop)).toBe(400);
-    await expect(filter(page, 'Name')).toHaveValue('Fixture');
+    await expect(filter(page, 'Search')).toHaveValue('Fixture');
     await expect(header(page, 'Name')).toHaveAttribute('aria-sort', 'ascending');
 
     await section(page).locator(`[data-entry-link="${entryId}"]`).press('Enter');

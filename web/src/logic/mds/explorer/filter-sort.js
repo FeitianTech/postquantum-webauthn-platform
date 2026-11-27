@@ -1,5 +1,6 @@
 // How the explorer's filters match and its columns sort. No DOM.
 
+import { FILTER_CONFIG } from '../constants.js';
 import { isCertifiedStatus, normaliseEnumKey } from '../formatters.js';
 
 export function normaliseSortValueInput(value) {
@@ -105,9 +106,25 @@ function matchesStatusFilter(text, value, options) {
         .some(candidate => candidate && candidate.includes(query));
 }
 
+// The columns a filter reads: its own, unless its configuration names others.
+const FILTER_COLUMNS = Object.fromEntries(FILTER_CONFIG.map(config => [config.key, config.columns]));
+
+function filterColumns(key) {
+    return FILTER_COLUMNS[key] || [key];
+}
+
+// The columns the filters in use read, for the table to mark.
+/**
+ * @param {Record<string, string>} filters
+ * @returns {Set<string>}
+ */
+export function filteredExplorerColumns(filters) {
+    return new Set(Object.entries(filters).filter(([, value]) => value).flatMap(([key]) => filterColumns(key)));
+}
+
 // Whether an entry passes every filter (all must). A filter is the text typed or
-// picked, found in the column's text ignoring case; Certification and Status read
-// as status filters, against the options each offers.
+// picked, found ignoring case in the text of a column it reads; Certification and
+// Status read as status filters, against the options each offers.
 /**
  * @param {Record<string, any>} entry
  * @param {Record<string, string>} filters
@@ -122,8 +139,8 @@ export function matchesExplorerFilters(entry, filters, optionLists = {}) {
         if (STATUS_COLUMNS.has(key)) {
             return matchesStatusFilter(entry[key], value, optionLists[key] || []);
         }
-        const haystack = (entry[key] || '').toLowerCase();
-        return haystack.includes(value.toLowerCase());
+        const query = value.toLowerCase();
+        return filterColumns(key).some(column => (entry[column] || '').toLowerCase().includes(query));
     });
 }
 

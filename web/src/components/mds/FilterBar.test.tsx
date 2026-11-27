@@ -38,10 +38,10 @@ afterEach(() => {
 });
 
 describe('the MDS filters', () => {
-  it('has the 12 filters, labelled by their column, with the current placeholders', async () => {
+  it('has the 11 filters, labelled by what they read, with their placeholders', async () => {
     await renderLoaded();
     const fields = within(filters()).getAllByRole('combobox').concat(within(filters()).getAllByRole('searchbox'));
-    expect(fields).toHaveLength(12);
+    expect(fields).toHaveLength(11);
     expect(within(filters()).getAllByRole('combobox').map((field) => [field.getAttribute('placeholder'), field.id !== ''])).toEqual([
       ['Protocol', true],
       ['Certification', true],
@@ -53,36 +53,36 @@ describe('the MDS filters', () => {
       ['Algorithms', true],
     ]);
     expect(within(filters()).getAllByRole('searchbox').map((field) => field.getAttribute('placeholder'))).toEqual([
-      'Search name',
-      'AAGUID or AAID',
+      'Search name or ID',
       'Algorithm info',
       'CN',
     ]);
-    expect(search('Name')).toBeInTheDocument();
-    expect(search('ID')).toBeInTheDocument();
+    expect(search('Search')).toBeInTheDocument();
     expect(search('Algorithm Info')).toBeInTheDocument();
     expect(search('CN')).toBeInTheDocument();
     expect(combobox('User Verification')).toBeInTheDocument();
   });
 
-  it('filters as it is typed, counts what is shown, marks the column and says how many filters are in use', async () => {
+  it('filters as it is typed, counts what is shown, marks the columns read and says how many filters are in use', async () => {
     await renderLoaded();
-    await userEvent.type(search('Name'), '  u2f ');
+    await userEvent.type(search('Search'), '  u2f ');
     await waitFor(() => expect(shownNames()).toEqual(['Fixture U2F Key']));
     expect(count()).toHaveTextContent('Entries: 1 of 32 total');
-    expect(screen.getAllByRole('columnheader').find((cell) => cell.textContent?.startsWith('Name'))).toHaveTextContent('(filtered)');
+    for (const column of ['Name', 'ID']) {
+      expect(screen.getAllByRole('columnheader').find((cell) => cell.textContent?.startsWith(column))).toHaveTextContent('(filtered)');
+    }
     expect(within(filters()).getByText('1 active')).toBeInTheDocument();
 
     await userEvent.click(within(filters()).getByRole('button', { name: 'Clear filters' }));
     await waitFor(() => expect(shownNames()).toHaveLength(32));
-    expect(search('Name')).toHaveValue('');
+    expect(search('Search')).toHaveValue('');
     expect(within(filters()).queryByText(/active$/)).toBeNull();
   });
 
   it('combines filters, all of which must match', async () => {
     await renderLoaded();
     await userEvent.type(combobox('Protocol'), 'FIDO2');
-    await userEvent.type(search('Name'), 'Security Key');
+    await userEvent.type(search('Search'), 'Security Key');
     await waitFor(() => expect(shownNames()).toEqual(['Fixture Security Key L1', 'Fixture Security Key L2']));
     expect(within(filters()).getByText('2 active')).toBeInTheDocument();
   });
@@ -115,12 +115,12 @@ describe('the MDS filters', () => {
 
   it('clears a text filter with Escape', async () => {
     await renderLoaded();
-    await userEvent.type(search('ID'), 'f1d0f1d0-0000-4000-8000-000000000002');
+    await userEvent.type(search('Search'), 'f1d0f1d0-0000-4000-8000-000000000002');
     await waitFor(() => expect(shownNames()).toEqual(['Fixture Security Key L2']));
-    fireEvent.keyDown(search('ID'), { key: 'Escape' });
-    expect(search('ID')).toHaveValue('');
-    fireEvent.keyDown(search('ID'), { key: 'Escape' });
-    expect(search('ID')).toHaveValue('');
+    fireEvent.keyDown(search('Search'), { key: 'Escape' });
+    expect(search('Search')).toHaveValue('');
+    fireEvent.keyDown(search('Search'), { key: 'Escape' });
+    expect(search('Search')).toHaveValue('');
     await waitFor(() => expect(shownNames()).toHaveLength(32));
   });
 

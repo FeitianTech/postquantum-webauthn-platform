@@ -26,15 +26,15 @@ export const EXPLORER_COLUMNS = [
 
 export type ExplorerColumn = (typeof EXPLORER_COLUMNS)[number];
 
-// The 12 filters: the column each one reads, the current template's placeholder,
-// and, from the shared configuration, whether it offers a list (and shows that
-// list whole).
+// The 11 filters: each labelled with the column it reads (the search reads two,
+// and has its own label), its placeholder, and, from the shared configuration,
+// whether it offers a list (and shows that list whole).
+const LABELS: Record<string, string> = { search: 'Search' };
 const PLACEHOLDERS: Record<string, string> = {
-  name: 'Search name',
+  search: 'Search name or ID',
   protocol: 'Protocol',
   certification: 'Certification',
   latestStatus: 'Status',
-  id: 'AAGUID or AAID',
   userVerification: 'User verification',
   attachment: 'Attachment',
   transports: 'Transports',
@@ -46,7 +46,7 @@ const PLACEHOLDERS: Record<string, string> = {
 
 export const EXPLORER_FILTERS = FILTER_CONFIG.map((config) => ({
   key: config.key,
-  label: EXPLORER_COLUMNS.find((column) => column.key === config.key)!.header,
+  label: LABELS[config.key] ?? EXPLORER_COLUMNS.find((column) => column.key === config.key)!.header,
   placeholder: PLACEHOLDERS[config.key],
   offersOptions: Boolean(config.optionsKey),
   showsWholeList: Boolean(config.expandDropdown),

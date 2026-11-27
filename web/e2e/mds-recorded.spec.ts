@@ -10,13 +10,14 @@ import { recorded } from './recorded';
 // aside: recorded-words.ts), the rows keyed by their ID, and the order of the rows.
 // Every difference must be one listed below, with its reason.
 
-// The filters are labelled by their column.
+// Each filter: its field's label and the text typed, then the column whose header it marks
+// when that is not its label.
 const CASES = [
   { label: 'no filter', filters: {} },
   { label: 'protocol Uaf', filters: { protocol: ['#mds-filter-protocol', 'Protocol', 'Uaf'] } },
   { label: 'certification FIDO Certified L2', filters: { certification: ['#mds-filter-certification', 'Certification', 'FIDO Certified L2'] } },
   { label: 'certification FIDO Certified (every level)', filters: { certification: ['#mds-filter-certification', 'Certification', 'FIDO Certified'] } },
-  { label: 'name Security Key', filters: { name: ['#mds-filter-name', 'Name', 'Security Key'] } },
+  { label: 'name Security Key', filters: { name: ['#mds-filter-search', 'Search', 'Security Key', 'Name'] } },
   { label: 'user verification and transports', filters: { uv: ['#mds-filter-user-verification', 'User Verification', 'Fingerprint Internal'], transports: ['#mds-filter-transports', 'Transports', 'Nfc'] } },
 ] as const;
 
@@ -69,8 +70,8 @@ async function shownRows(page: Page, filters: Record<string, readonly string[]>)
   }
   // The rows follow the filters through React's deferred value, after the typing: the
   // render that hides them marks each filtered column's header, so read once all are marked.
-  for (const [, label] of Object.values(filters)) {
-    await expect(section.getByRole('columnheader', { name: `${label} (filtered)` })).toBeVisible();
+  for (const [, label, , column = label] of Object.values(filters)) {
+    await expect(section.getByRole('columnheader', { name: `${column} (filtered)` })).toBeVisible();
   }
   return readShownRows(section.locator('tbody'), 'tr[data-entry-id]:not([hidden])', 5);
 }
