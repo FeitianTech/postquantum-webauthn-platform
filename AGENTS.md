@@ -34,6 +34,9 @@ Read first:
 - `deploy/README.md` before changing the deploy (`cloudbuild.yaml`, `deploy/`) or a setting the
   server reads: its "Environment variables" table lists every one, size limits included.
 
+Write a fact once, in the document that owns its topic; elsewhere, point to it. `README.md` holds
+only what a first visitor needs, and this file only rules, commands and a map.
+
 ## Layout
 
 - `server/app/`: the Flask app (factory, config, routes, WebAuthn, storage, the visitor session,
