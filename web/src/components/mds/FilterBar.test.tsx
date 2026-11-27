@@ -30,6 +30,8 @@ const shownNames = () =>
 const count = () => screen.getByText(/^Entries:/);
 const filters = () => screen.getByRole('region', { name: 'Filters' });
 const combobox = (name: string) => within(filters()).getByRole('combobox', { name });
+// The filters that offer a list: the sort's select is a combobox too.
+const lists = () => within(filters()).getAllByRole('combobox').filter((field) => field.tagName === 'INPUT');
 const search = (name: string) => within(filters()).getByRole('searchbox', { name });
 const options = () => within(screen.getByRole('listbox')).getAllByRole('option').map((option) => option.textContent);
 
@@ -37,12 +39,40 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+describe('the MDS sort', () => {
+  it('sorts by any column picked by name, and turns the order round', async () => {
+    await renderLoaded();
+    const sort = within(filters()).getByRole('combobox', { name: 'Sort' });
+    expect(sort).toHaveValue('dateUpdated');
+    expect(within(sort).getAllByRole('option').map((option) => option.textContent)).toHaveLength(14);
+
+    await userEvent.selectOptions(sort, 'CN');
+    expect(sort).toHaveValue('commonName');
+    const first = shownNames()[0];
+    await userEvent.click(within(filters()).getByRole('button', { name: 'Sort descending' }));
+    expect(shownNames().at(-1)).toBe(first);
+    await userEvent.click(within(filters()).getByRole('button', { name: 'Sort ascending' }));
+    expect(shownNames()[0]).toBe(first);
+
+    await userEvent.selectOptions(sort, 'Date Updated');
+    expect(shownNames()[0]).toBe('Fixture Security Key L1');
+    expect(within(filters()).getByRole('button', { name: 'Sort ascending' })).toBeInTheDocument();
+  });
+
+  it('follows a sort made from a header', async () => {
+    await renderLoaded();
+    await userEvent.click(within(screen.getAllByRole('columnheader')[1]).getByRole('button'));
+    expect(within(filters()).getByRole('combobox', { name: 'Sort' })).toHaveValue('name');
+    expect(within(filters()).getByRole('button', { name: 'Sort descending' })).toBeInTheDocument();
+  });
+});
+
 describe('the MDS filters', () => {
   it('has the 11 filters, labelled by what they read, with their placeholders', async () => {
     await renderLoaded();
-    const fields = within(filters()).getAllByRole('combobox').concat(within(filters()).getAllByRole('searchbox'));
+    const fields = lists().concat(within(filters()).getAllByRole('searchbox'));
     expect(fields).toHaveLength(11);
-    expect(within(filters()).getAllByRole('combobox').map((field) => [field.getAttribute('placeholder'), field.id !== ''])).toEqual([
+    expect(lists().map((field) => [field.getAttribute('placeholder'), field.id !== ''])).toEqual([
       ['Protocol', true],
       ['Certification', true],
       ['Status', true],

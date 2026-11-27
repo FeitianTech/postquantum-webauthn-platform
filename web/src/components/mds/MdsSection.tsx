@@ -161,6 +161,9 @@ export function MdsSection({ active, route = CLOSED_ROUTE }: { active: boolean; 
             activeFilters={view.activeFilters}
             onChange={view.setFilter}
             onClear={view.clearFilters}
+            sort={view.sort}
+            onSortBy={view.onSortBy}
+            onReverse={view.onReverse}
           />
         </div>
         <div className="mt-6">

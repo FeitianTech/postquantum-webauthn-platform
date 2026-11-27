@@ -1,14 +1,46 @@
+import type { ExplorerSort } from '@/logic/mds/explorer/filter-sort.js';
 import { useId, useState } from 'react';
 
 import { Badge } from '@/components/ui/Badge';
-import { Button } from '@/components/ui/Button';
-import { TextField } from '@/components/ui/Field';
+import { Button, IconButton } from '@/components/ui/Button';
+import { Select, TextField } from '@/components/ui/Field';
+import { ChevronDownIcon } from '@/components/ui/icons';
 import { cx } from '@/lib/cx';
 
 import { FilterCombobox } from './FilterCombobox';
-import { EXPLORER_FILTERS } from './columns';
+import { EXPLORER_COLUMNS, EXPLORER_FILTERS } from './columns';
 
-type FilterBarProps = {
+type SortProps = {
+  sort: ExplorerSort;
+  onSortBy: (key: string) => void;
+  onReverse: () => void;
+};
+
+// The sort, by name: any column, the ones a narrow window has no header for too,
+// and a button that turns it round (its arrow points the way the list runs).
+function SortField({ sort, onSortBy, onReverse }: SortProps) {
+  const descending = sort.direction === 'desc';
+  return (
+    <div className="flex items-end gap-2">
+      <Select label="Sort" className="min-w-0 flex-1" value={sort.key} onChange={(event) => onSortBy(event.target.value)}>
+        {EXPLORER_COLUMNS.map((column) => (
+          <option key={column.key} value={column.key}>
+            {column.header}
+          </option>
+        ))}
+      </Select>
+      <IconButton
+        variant="secondary"
+        className="size-10"
+        label={descending ? 'Sort ascending' : 'Sort descending'}
+        icon={<ChevronDownIcon className={cx(!descending && 'rotate-180')} />}
+        onClick={onReverse}
+      />
+    </div>
+  );
+}
+
+type FilterBarProps = SortProps & {
   filters: Record<string, string>;
   options: Record<string, string[]>;
   activeFilters: number;
@@ -16,11 +48,11 @@ type FilterBarProps = {
   onClear: () => void;
 };
 
-// The 11 filters, each labelled with what it reads, above the table rather than
-// squeezed into a second header row: 6 to a row on a wide screen (two rows),
-// down to one on a phone, where they fold away behind a button. How many are in use, and one
-// button that clears them all.
-export function FilterBar({ filters, options, activeFilters, onChange, onClear }: FilterBarProps) {
+// The 11 filters, each labelled with what it reads, and the sort, above the table
+// rather than squeezed into a second header row: 6 to a row on a wide screen (two
+// rows), down to one on a phone, where they fold away behind a button. How many
+// filters are in use, and one button that clears them all.
+export function FilterBar({ filters, options, activeFilters, onChange, onClear, ...sort }: FilterBarProps) {
   const [open, setOpen] = useState(false);
   const gridId = `${useId()}-filters`;
   const titleId = `${gridId}-title`;
@@ -87,6 +119,7 @@ export function FilterBar({ filters, options, activeFilters, onChange, onClear }
             />
           ),
         )}
+        <SortField {...sort} />
       </div>
     </section>
   );

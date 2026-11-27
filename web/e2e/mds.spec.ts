@@ -66,6 +66,17 @@ test.describe('/#mds', () => {
     expect((await names(rows(page)))[0]).toMatch(/^Fixture Authenticator With A Deliberately Long Description/);
   });
 
+  test('sorts by a column picked by name, and turns the order round', async ({ page }) => {
+    await openList(page);
+    const sort = section(page).getByRole('combobox', { name: 'Sort', exact: true });
+    await sort.selectOption('Name');
+    await expect(header(page, 'Name')).toHaveAttribute('aria-sort', 'ascending');
+    const first = (await names(rows(page)))[0];
+    await section(page).getByRole('button', { name: 'Sort descending' }).click();
+    await expect(header(page, 'Name')).toHaveAttribute('aria-sort', 'descending');
+    expect((await names(rows(page))).at(-1)).toBe(first);
+  });
+
   test('shows the level a revoked key reached beside its revocation', async ({ page }) => {
     await openList(page);
     const revoked = row(page, 'aaguid:f1d0f1d0-0000-4000-8000-000000000005');

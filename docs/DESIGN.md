@@ -73,7 +73,8 @@ the page in a real browser.
   the session's uploads with Delete).
 - A **filter bar above the table**, each field labelled with what it reads (one search
   for the name and the ID; the eight filters with a list are ARIA comboboxes), one
-  "Clear filters", folded behind "Show filters" on a phone.
+  "Clear filters", and a Sort select with a button that turns the order round; folded
+  behind "Show filters" on a phone.
 - The **table**: 14 columns in a frame that scrolls both ways by itself (the page never
   scrolls sideways), its header in view; one-line left-aligned rows that expand;
   sortable columns; Back to top. Every row stays in the page, rendered cheaply

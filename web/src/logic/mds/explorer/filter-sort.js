@@ -245,6 +245,25 @@ export function nextExplorerSort(sort, key) {
     return nextDirection === SORT_NONE ? defaultExplorerSort() : { key, direction: nextDirection };
 }
 
+// The sort a column picked by name starts with: ascending, or newest first for the
+// date; the default for a column that does not sort.
+/**
+ * @param {string} key
+ * @returns {ExplorerSort}
+ */
+export function firstExplorerSort(key) {
+    return isExplorerSortKey(key) ? { key, direction: nextExplorerSortDirection(key, SORT_NONE) } : defaultExplorerSort();
+}
+
+// The same column, the other way round.
+/**
+ * @param {ExplorerSort} sort
+ * @returns {ExplorerSort}
+ */
+export function reversedExplorerSort(sort) {
+    return { key: sort.key, direction: sort.direction === SORT_DESCENDING ? SORT_ASCENDING : SORT_DESCENDING };
+}
+
 /**
  * @param {Record<string, string> | null | undefined} filters
  * @returns {number}

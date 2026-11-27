@@ -3,8 +3,10 @@ import {
   countActiveExplorerFilters,
   defaultExplorerSort,
   filteredExplorerColumns,
+  firstExplorerSort,
   matchesExplorerFilters,
   nextExplorerSort,
+  reversedExplorerSort,
   sortExplorerEntries,
 } from '@/logic/mds/explorer/filter-sort.js';
 import type { MdsEntry } from '@/logic/mds/explorer/loading.js';
@@ -13,8 +15,9 @@ import { useCallback, useDeferredValue, useEffect, useMemo, useState } from 'rea
 
 import { emptyFilters } from './columns';
 
-// How the list is looked at: the filters as typed, their options, the sort (reset
-// to the default, newest first, whenever a snapshot is shown; the filters stay),
+// How the list is looked at: the filters as typed, their options, the sort (by a
+// header's click, or a column picked by name and turned round; reset to the
+// default, newest first, whenever a snapshot is shown; the filters stay),
 // and the rows expanded to show every word. Filtering reads the typed text
 // trimmed, and follows the typing
 // through React's deferred value, so a keystroke is never kept waiting for the
@@ -36,6 +39,9 @@ export function useExplorerView(entries: MdsEntry[], version: number) {
   const onSort = useCallback((key: string) => {
     setSort((current) => nextExplorerSort(current, key) ?? current);
   }, []);
+
+  const onSortBy = useCallback((key: string) => setSort(firstExplorerSort(key)), []);
+  const onReverse = useCallback(() => setSort(reversedExplorerSort), []);
 
   const onToggle = useCallback((entryId: string) => {
     setExpanded((current) => {
@@ -68,6 +74,8 @@ export function useExplorerView(entries: MdsEntry[], version: number) {
     options,
     sort,
     onSort,
+    onSortBy,
+    onReverse,
     rows,
     shown,
     expanded,

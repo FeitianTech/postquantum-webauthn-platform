@@ -7,12 +7,14 @@ import {
   DEFAULT_SORT_KEY,
   defaultExplorerSort,
   filteredExplorerColumns,
+  firstExplorerSort,
   isExplorerSortKey,
   matchesExplorerFilters,
   MDS_SORT_ACCESSORS,
   nextExplorerSort,
   nextExplorerSortDirection,
   normaliseSortValueInput,
+  reversedExplorerSort,
   sortExplorerEntries,
 } from './filter-sort.js';
 
@@ -127,6 +129,18 @@ describe('sort clicks', () => {
     expect(nextExplorerSort({ key: 'name', direction: undefined }, 'name')).toEqual({ key: 'name', direction: 'asc' });
     expect(nextExplorerSort(null, 'dateUpdated')).toEqual({ key: 'dateUpdated', direction: 'asc' });
     expect(nextExplorerSort(defaultExplorerSort(), 'nope')).toBeNull();
+  });
+
+  it('starts a column picked by name ascending, the date newest first', () => {
+    expect(firstExplorerSort('name')).toEqual({ key: 'name', direction: 'asc' });
+    expect(firstExplorerSort('dateUpdated')).toEqual(defaultExplorerSort());
+    expect(firstExplorerSort('nope')).toEqual(defaultExplorerSort());
+  });
+
+  it('turns a sort the other way round', () => {
+    expect(reversedExplorerSort({ key: 'name', direction: 'asc' })).toEqual({ key: 'name', direction: 'desc' });
+    expect(reversedExplorerSort({ key: 'name', direction: 'desc' })).toEqual({ key: 'name', direction: 'asc' });
+    expect(reversedExplorerSort({ key: 'name', direction: 'none' })).toEqual({ key: 'name', direction: 'desc' });
   });
 
 });
