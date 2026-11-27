@@ -68,6 +68,7 @@ async function shownRows(page: Page, filters: Record<string, readonly string[]>)
   const section = page.getByRole('tabpanel', { name: 'FIDO MDS Authenticators' });
   await expect(section.locator('tbody tr[data-entry-id]:not([hidden])')).toHaveCount(32);
   const bar = section.getByRole('region', { name: 'Filters' });
+  await bar.getByRole('button', { name: 'More filters' }).click();
   for (const [, label, value] of Object.values(filters)) {
     const field = bar.getByRole('combobox', { name: label, exact: true }).or(bar.getByRole('searchbox', { name: label, exact: true }));
     await field.fill(value);
@@ -80,6 +81,8 @@ async function shownRows(page: Page, filters: Record<string, readonly string[]>)
   }
   // A row's two lines hold what the window has columns for: each is expanded, so every
   // cell of it is shown, and read.
+  // Tab left the focus in the next filter, whose list opened over the first rows.
+  await page.evaluate(() => (document.activeElement as HTMLElement).blur());
   const collapsed = section.locator('tbody tr[data-entry-id]:not([hidden])').getByRole('button', { name: /^Show all of/ });
   for (let left = await collapsed.count(); left > 0; left -= 1) await collapsed.first().click();
   return readShownRows(section.locator('tbody'), 'tr[data-entry-id]:not([hidden])', 5);

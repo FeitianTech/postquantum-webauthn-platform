@@ -71,18 +71,22 @@ the page in a real browser.
 
 - The dataset's summary and status line, with **Manage Metadata** (a dialog listing
   the session's uploads with Delete).
-- A **filter bar above the table**, each field labelled with what it reads (one search
-  for the name and the ID; the eight filters with a list are ARIA comboboxes), one
-  "Clear filters", and a Sort select with a button that turns the order round; folded
-  behind "Show filters" on a phone.
+- A **bar of filters over the table**: one search for the name and the ID; the protocol,
+  the status and a Sort select (with a button that turns the order round) beside it;
+  the other eight filters behind "More filters", which says how many of them are in
+  use (a phone keeps only the search out); the count of entries shown and one "Clear
+  filters". Each field is labelled with what it reads, and the eight with a list are
+  ARIA comboboxes. From 1024 px, in a window at least 640 px tall, the bar stays under
+  the site's header as the page scrolls, the table's header row under it (the bar's
+  height is in `--mds-toolbar-height`).
 - The **table**: every row fits the page's width in two lines, so nothing scrolls
   sideways: the name over the ID, the status over the protocol, the transports over the
   attachment, and a column only from the width at which it fits (`grid.ts`). A click
   on a row expands it to show every word, with a labelled line for each thing its two
   lines do not hold, and a link to its entry (its name is one too). All 14 columns
   stay in every row and in the header, in order, for a screen reader. The page scrolls
-  the list (nothing in the section scrolls by itself), its header row staying under the
-  site's header; sortable columns; Back to top. Every row stays in the page, rendered
+  the list (nothing in the section scrolls by itself), its header row staying in view;
+  sortable columns; Back to top. Every row stays in the page, rendered
   cheaply (`content-visibility: auto`).
 - **An entry is a URL and a page** (`#mds/<entryId>`; a saved credential opens
   `#mds/aaguid:<aaguid>`): sections as headings and hairlines, identifiers whole in

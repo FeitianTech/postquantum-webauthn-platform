@@ -418,8 +418,12 @@ describe('the MDS table: Back to top', () => {
     for (const spy of [scrollTo, query, removed]) spy.mockRestore();
   });
 
-  it('keeps the header row under the site\'s header as the page scrolls', () => {
+  it('keeps the header row under the site\'s header, and the filters\' bar where that is pinned, as the page scrolls', () => {
     renderTable();
-    expect(document.querySelector('thead')).toHaveClass('sticky', 'top-(--header-height)', 'max-md:sr-only');
+    expect(document.querySelector('thead')).toHaveClass(
+      'sticky',
+      'top-[calc(var(--header-height)+var(--mds-toolbar-height,0px)-1px)]',
+      'max-md:sr-only',
+    );
   });
 });

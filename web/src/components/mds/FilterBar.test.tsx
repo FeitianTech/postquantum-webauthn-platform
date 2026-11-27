@@ -1,5 +1,5 @@
 // The MDS filters over the fixture snapshot.
-import { fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { ToastProvider } from '@/components/ui/Toast';
@@ -74,8 +74,8 @@ describe('the MDS filters', () => {
     expect(fields).toHaveLength(11);
     expect(lists().map((field) => [field.getAttribute('placeholder'), field.id !== ''])).toEqual([
       ['Protocol', true],
-      ['Certification', true],
       ['Status', true],
+      ['Certification', true],
       ['User verification', true],
       ['Attachment', true],
       ['Transports', true],
@@ -93,7 +93,7 @@ describe('the MDS filters', () => {
     expect(combobox('User Verification')).toBeInTheDocument();
   });
 
-  it('filters as it is typed, counts what is shown, marks the columns read and says how many filters are in use', async () => {
+  it('filters as it is typed, counts what is shown, marks the columns read and offers to clear', async () => {
     await renderLoaded();
     await userEvent.type(search('Search'), '  u2f ');
     await waitFor(() => expect(shownNames()).toEqual(['Fixture U2F Key']));
@@ -101,12 +101,12 @@ describe('the MDS filters', () => {
     for (const column of ['Name', 'ID']) {
       expect(screen.getAllByRole('columnheader').find((cell) => cell.textContent?.startsWith(column))).toHaveTextContent('(filtered)');
     }
-    expect(within(filters()).getByText('1 active')).toBeInTheDocument();
 
     await userEvent.click(within(filters()).getByRole('button', { name: 'Clear filters' }));
     await waitFor(() => expect(shownNames()).toHaveLength(32));
     expect(search('Search')).toHaveValue('');
-    expect(within(filters()).queryByText(/active$/)).toBeNull();
+    expect(within(filters()).queryByRole('button', { name: 'Clear filters' })).toBeNull();
+    expect(within(filters()).getByText(/^Entries:/)).toHaveTextContent('Entries: 32 of 32 total');
   });
 
   it('combines filters, all of which must match', async () => {
@@ -114,7 +114,6 @@ describe('the MDS filters', () => {
     await userEvent.type(combobox('Protocol'), 'FIDO2');
     await userEvent.type(search('Search'), 'Security Key');
     await waitFor(() => expect(shownNames()).toEqual(['Fixture Security Key L1', 'Fixture Security Key L2']));
-    expect(within(filters()).getByText('2 active')).toBeInTheDocument();
   });
 
   it('matches a named certification level exactly, and FIDO Certified to every level reached', async () => {
@@ -154,15 +153,57 @@ describe('the MDS filters', () => {
     await waitFor(() => expect(shownNames()).toHaveLength(32));
   });
 
-  it('shows and hides the filters on a phone', async () => {
+  it('keeps eight filters behind More filters, and says on the button how many of them are in use', async () => {
     await renderLoaded();
-    const toggle = within(filters()).getByRole('button', { name: 'Show filters' });
-    const grid = document.getElementById(toggle.getAttribute('aria-controls')!)!;
-    expect(toggle).toHaveAttribute('aria-expanded', 'false');
-    expect(grid).toHaveClass('hidden');
-    await userEvent.click(toggle);
-    expect(within(filters()).getByRole('button', { name: 'Hide filters' })).toHaveAttribute('aria-expanded', 'true');
-    expect(grid).not.toHaveClass('hidden');
+    const more = within(filters()).getByRole('button', { name: 'More filters' });
+    const panel = document.getElementById(more.getAttribute('aria-controls')!)!;
+    expect(more).toHaveAttribute('aria-expanded', 'false');
+    expect(panel).toHaveClass('hidden');
+    expect(within(panel).getAllByRole('combobox').concat(within(panel).getAllByRole('searchbox'))).toHaveLength(8);
+    // The protocol, the status and the sort sit beside the search, folded with the rest on a phone only.
+    const beside = combobox('Protocol').closest('.contents')!;
+    expect(beside).toHaveClass('max-md:hidden');
+    expect(beside).toContainElement(combobox('Status'));
+    expect(beside).toContainElement(within(filters()).getByRole('combobox', { name: 'Sort' }));
+    expect(panel).not.toContainElement(combobox('Protocol'));
+
+    await userEvent.type(combobox('Protocol'), 'FIDO2');
+    await userEvent.type(search('CN'), 'Fixture');
+    // One count for a phone, which folds the protocol too, and one for a wider window.
+    const counts = [...more.querySelectorAll('span')].map((count) => [count.textContent, count.className]);
+    expect(counts).toEqual([
+      ['(2)', 'md:hidden'],
+      ['(1)', 'max-md:hidden'],
+    ]);
+
+    await userEvent.click(more);
+    const fewer = within(filters()).getByRole('button', { name: /^Fewer filters/ });
+    expect(fewer).toHaveAttribute('aria-expanded', 'true');
+    expect(panel).not.toHaveClass('hidden');
+    expect(panel).toHaveClass('grid');
+    expect(beside).not.toHaveClass('max-md:hidden');
+    await userEvent.click(fewer);
+    expect(panel).toHaveClass('hidden');
+  });
+
+  it('says how tall it is while it is pinned, for the header row under it, and nothing where it is not', async () => {
+    await renderLoaded();
+    const height = () => document.documentElement.style.getPropertyValue('--mds-toolbar-height');
+    expect(filters()).toHaveClass('lg:[@media(min-height:40rem)]:sticky', 'top-(--header-height)');
+    expect(height()).toBe('0px');
+
+    const rect = vi.spyOn(filters(), 'getBoundingClientRect').mockReturnValue({ height: 90 } as DOMRect);
+    const style = vi.spyOn(window, 'getComputedStyle').mockReturnValue({ position: 'sticky' } as CSSStyleDeclaration);
+    fireEvent(window, new Event('resize'));
+    expect(height()).toBe('90px');
+    style.mockReturnValue({ position: 'static' } as CSSStyleDeclaration);
+    fireEvent(window, new Event('resize'));
+    expect(height()).toBe('0px');
+    style.mockRestore();
+    rect.mockRestore();
+
+    cleanup();
+    expect(height()).toBe('');
   });
 });
 
@@ -204,7 +245,8 @@ describe('an MDS filter that offers a list', () => {
     expect(screen.getByRole('listbox')).not.toHaveClass('max-h-64');
     expect(options()).toHaveLength(11);
     await userEvent.click(combobox('Algorithms'));
-    expect(screen.getByRole('listbox')).not.toHaveClass('max-h-64');
+    // Whole, but never past the window's bottom, which a pinned bar could not scroll into view.
+    expect(screen.getByRole('listbox').className).toContain('max-h-[calc(100dvh-');
     await userEvent.click(combobox('Attachment'));
     expect(screen.getByRole('listbox')).toHaveClass('max-h-64');
   });

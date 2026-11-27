@@ -223,6 +223,8 @@ export const ExplorerRow = memo(function ExplorerRow({ entry, hidden, expanded, 
         // Out of view, a row is neither laid out nor painted: it keeps the size it last had,
         // and until it has one, its two lines' (three on a phone).
         '[contain-intrinsic-size:auto_3rem] [content-visibility:auto] max-md:[contain-intrinsic-size:auto_4.75rem]',
+        // Brought into view, it stops below the pinned bar and header row.
+        'md:scroll-mt-[calc(var(--mds-toolbar-height,0px)+3.5rem)]',
         'cursor-pointer transition-colors duration-(--duration-fast) hover:bg-accent-tint',
       )}
     >

@@ -21,6 +21,9 @@ const filter = (page: Page, name: string) => {
   const bar = section(page).getByRole('region', { name: 'Filters' });
   return bar.getByRole('combobox', { name, exact: true }).or(bar.getByRole('searchbox', { name, exact: true }));
 };
+const bar = (page: Page) => section(page).getByRole('region', { name: 'Filters' });
+// Eight of the filters wait behind this button.
+const moreFilters = (page: Page) => bar(page).getByRole('button', { name: /^More filters/ }).click();
 const header = (page: Page, name: string) => section(page).getByRole('columnheader', { name: new RegExp(`^${name}`) });
 
 async function openList(page: Page, path = '/#mds') {
@@ -48,13 +51,16 @@ test.describe('/#mds', () => {
     await filter(page, 'Search').fill('u2f');
     await expect(rows(page)).toHaveCount(1);
     await expect(header(page, 'Name')).toContainText('(filtered)');
-    await expect(section(page).getByText('1 active')).toBeVisible();
+    await expect(header(page, 'ID')).toContainText('(filtered)');
 
+    await expect(filter(page, 'Certification')).toBeHidden();
+    await moreFilters(page);
     await filter(page, 'Certification').click();
     await filter(page, 'Search').fill('');
     await filter(page, 'Certification').fill('FIDO Certified L');
     await section(page).getByRole('option', { name: 'FIDO Certified L2' }).click();
     await expect(rows(page)).toHaveCount(2);
+    await expect(bar(page).getByRole('button', { name: 'Fewer filters (1)' })).toBeVisible();
 
     await section(page).getByRole('button', { name: 'Clear filters' }).first().click();
     await expect(rows(page)).toHaveCount(32);
@@ -80,6 +86,7 @@ test.describe('/#mds', () => {
     await openList(page);
     const revoked = row(page, 'aaguid:f1d0f1d0-0000-4000-8000-000000000005');
     await expect(revoked.locator('td').nth(3)).toHaveText(/^FIDO Certified L1/);
+    await moreFilters(page);
     await filter(page, 'Certification').fill('FIDO Certified');
     await section(page).getByRole('option', { name: 'FIDO Certified', exact: true }).click();
     await expect(rows(page)).toHaveCount(29);
@@ -266,20 +273,24 @@ test.describe('/#mds', () => {
     await row(page, MANY_ROOTS).getByRole('button', { name: /^Show all of/ }).click();
     expect(await pageWidth()).toBeLessThanOrEqual(375);
 
-    await section(page).getByRole('button', { name: 'Show filters' }).click();
+    // A phone keeps only the search out.
+    await expect(filter(page, 'Search')).toBeVisible();
+    await expect(filter(page, 'Protocol')).toBeHidden();
+    await moreFilters(page);
+    await expect(filter(page, 'Protocol')).toBeVisible();
     await expect(filter(page, 'User Verification')).toBeVisible();
     await filter(page, 'User Verification').click();
     expect(await pageWidth()).toBeLessThanOrEqual(375);
     expect(await greyFills(page, '#nav-panel-mds')).toEqual([]);
   });
 
-  test('scrolls the list with the page, its header row staying under the site\'s header, two rows of it too', async ({ page }) => {
+  test('scrolls the list with the page, the filters and the header row staying under the site\'s header, two rows of it too', async ({ page }) => {
     await page.setViewportSize({ width: 1100, height: 800 });
     await openList(page);
     const shellHeight = (await page.locator('[data-shell-header]').boundingBox())!.height;
     expect(shellHeight).toBeGreaterThan(90);
-    const variable = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--header-height'));
-    expect(Number.parseFloat(variable)).toBeCloseTo(shellHeight, 0);
+    const variable = (name: string) => page.evaluate((property) => Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue(property)), name);
+    expect(await variable('--header-height')).toBeCloseTo(shellHeight, 0);
 
     // Nothing in the section scrolls by itself: the wheel always moves the page.
     const scrollers = await section(page).evaluate((panel) =>
@@ -287,9 +298,33 @@ test.describe('/#mds', () => {
     );
     expect(scrollers).toBe(0);
     await page.evaluate(() => window.scrollTo(0, 1200));
-    const head = (await section(page).locator('thead').boundingBox())!;
-    expect(Math.abs(head.y - shellHeight)).toBeLessThanOrEqual(1);
+    const pinned = async () => {
+      const [filters, head] = [(await bar(page).boundingBox())!, (await section(page).locator('thead').boundingBox())!];
+      expect(Math.abs(filters.y - shellHeight)).toBeLessThanOrEqual(1);
+      expect(await variable('--mds-toolbar-height')).toBeCloseTo(filters.height, 0);
+      // The header row tucks a pixel under the bar: no row shows between them.
+      expect(Math.abs(head.y - (filters.y + filters.height - 1))).toBeLessThanOrEqual(1);
+    };
+    await pinned();
+    // The bar grows with its other filters, and the header row moves down with it.
+    await moreFilters(page);
+    await expect(filter(page, 'CN')).toBeVisible();
+    await pinned();
+    // A list a filter offers ends above the window's bottom.
+    await filter(page, 'User Verification').click();
+    const list = (await page.getByRole('listbox').boundingBox())!;
+    expect(list.y + list.height).toBeLessThanOrEqual(800);
     expect(await greyFills(page, '#nav-panel-mds')).toEqual([]);
+  });
+
+  test('leaves the filters in the page in a short window, the header row alone under the site\'s header', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 600 });
+    await openList(page);
+    await page.evaluate(() => window.scrollTo(0, 1200));
+    expect(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--mds-toolbar-height'))).toBe('0px');
+    await expect(bar(page)).not.toBeInViewport();
+    const shellHeight = (await page.locator('[data-shell-header]').boundingBox())!.height;
+    expect(Math.abs((await section(page).locator('thead').boundingBox())!.y - (shellHeight - 1))).toBeLessThanOrEqual(1);
   });
 
   test('offers the way back to the top once the page is well into the list', async ({ page }) => {

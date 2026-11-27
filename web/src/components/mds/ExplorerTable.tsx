@@ -115,19 +115,20 @@ type ExplorerTableProps = {
 
 // The list, scrolled by the page: every row fits the page's width in two lines
 // (grid.ts), under a header row that mirrors them and stays under the site's
-// header as the page scrolls. All 14 columns are in every row and in the header,
-// in order, for a screen reader; the ones the window has no room for are hidden
-// until their row is expanded. Every row is in the page (find-in-page finds it),
-// but each is a grid, not a table row, so the browser can skip laying out and
-// painting the rows out of view (content-visibility, which table rows do not
-// take). The table roles are written out, since the display is not a table's.
+// header, and the filters' bar where that is pinned, as the page scrolls. All 14
+// columns are in every row and in the header, in order, for a screen reader; the
+// ones the window has no room for are hidden until their row is expanded. Every
+// row is in the page (find-in-page finds it), but each is a grid, not a table
+// row, so the browser can skip laying out and painting the rows out of view
+// (content-visibility, which table rows do not take). The table roles are
+// written out, since the display is not a table's.
 export function ExplorerTable({ rows, shown, sort, onSort, filteredColumns, expanded, onToggle, onOpen, state }: ExplorerTableProps) {
   const tableRef = useRef<HTMLTableElement>(null);
 
   return (
     <div data-mds-table="">
       <table ref={tableRef} role="table" aria-label="FIDO MDS authenticators" className="block text-left text-body">
-        <thead role="rowgroup" className="sticky top-(--header-height) z-10 block border-b border-line bg-surface max-md:sr-only">
+        <thead role="rowgroup" className="sticky top-[calc(var(--header-height)+var(--mds-toolbar-height,0px)-1px)] z-10 block border-b border-line bg-surface max-md:sr-only">
           <tr role="row" className={cx(ROW_GRID, 'py-1.5')}>
             {EXPLORER_COLUMNS.map((column) => (
               <HeaderCell key={column.key} column={column} sort={sort} onSort={onSort} filtered={filteredColumns.has(column.key)} />

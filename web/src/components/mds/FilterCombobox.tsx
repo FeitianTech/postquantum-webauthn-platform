@@ -6,6 +6,11 @@ import { cx } from '@/lib/cx';
 
 import type { ExplorerFilter } from './columns';
 
+// A list shown whole: every option at once, down to the window's bottom and no
+// further (the bar it hangs from may be pinned, where the page cannot scroll it
+// into view).
+const WHOLE_LIST = 'max-h-[calc(100dvh-var(--header-height)-var(--mds-toolbar-height,0px)-1rem)]';
+
 // A filter that offers the values present, as an
 // ARIA combobox: typing narrows the list and filters at once; the arrow keys
 // move through the list (wrapping), Enter picks, Escape closes the list and then
@@ -94,8 +99,8 @@ export function FilterCombobox({
           role="listbox"
           aria-label={filter.label}
           className={cx(
-            'absolute inset-x-0 top-full z-30 mt-1 rounded-sm border border-line bg-surface py-1 shadow-float',
-            filter.showsWholeList ? null : 'max-h-64 overflow-y-auto overscroll-contain',
+            'absolute inset-x-0 top-full z-30 mt-1 overflow-y-auto overscroll-contain rounded-sm border border-line bg-surface py-1 shadow-float',
+            filter.showsWholeList ? WHOLE_LIST : 'max-h-64',
           )}
         >
           {matching.length ? (

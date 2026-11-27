@@ -9,7 +9,7 @@ import { NAV_ID, SECTIONS } from '@/lib/sections';
 import { CLOSED_ROUTE, type SectionRoute } from '@/lib/useSection';
 
 import { EntryRouter } from './EntryRouter';
-import { EntryCount, StatusLine } from './ExplorerHeader';
+import { StatusLine } from './ExplorerHeader';
 import { ExplorerTable } from './ExplorerTable';
 import { FilterBar } from './FilterBar';
 import { ManageMetadataDialog } from './ManageMetadataDialog';
@@ -123,9 +123,6 @@ export function MdsSection({ active, route = CLOSED_ROUTE }: { active: boolean; 
         <div className="min-w-0">
           <h2 className="text-display font-semibold text-ink">{section.label}</h2>
           <p className="mt-2 max-w-prose text-body-lg text-ink-muted">{section.description}</p>
-          <div className="mt-3" hidden={Boolean(openEntryId)}>
-            <EntryCount shown={view.shown.size} total={explorer.entries.length} />
-          </div>
         </div>
         <Button
           ref={manageRef}
@@ -152,19 +149,20 @@ export function MdsSection({ active, route = CLOSED_ROUTE }: { active: boolean; 
             onRetry={explorer.retry}
           />
         </div>
-        <div className="mt-6">
-          <FilterBar
-            filters={view.filters}
-            options={view.options}
-            activeFilters={view.activeFilters}
-            onChange={view.setFilter}
-            onClear={view.clearFilters}
-            sort={view.sort}
-            onSortBy={view.onSortBy}
-            onReverse={view.onReverse}
-          />
-        </div>
-        <div className="mt-6">
+        {/* The bar and the table are the list's own children: the bar is pinned for as long as the table runs. */}
+        <FilterBar
+          filters={view.filters}
+          options={view.options}
+          activeFilters={view.activeFilters}
+          onChange={view.setFilter}
+          onClear={view.clearFilters}
+          shown={view.shown.size}
+          total={explorer.entries.length}
+          sort={view.sort}
+          onSortBy={view.onSortBy}
+          onReverse={view.onReverse}
+        />
+        <div>
           <ExplorerTable
             rows={view.rows}
             shown={view.shown}
